@@ -1,4 +1,4 @@
-"""Space Fury - Viagem Interdimensional.
+"""VOID//SHIFT - Enter the Rift.
 
 Ponto de entrada do jogo. Execute com:  python main.py
 """

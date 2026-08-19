@@ -1,4 +1,4 @@
-"""Smoke tests headless do Space Fury.
+"""Smoke tests headless do VOID//SHIFT.
 
 Roda sem janela (drivers dummy do SDL) para verificar que o jogo inicia,
 executa o loop de combate e desenha cenas sem excecoes. Uso:

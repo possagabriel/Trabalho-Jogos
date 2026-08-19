@@ -1,17 +1,18 @@
 """Interface do usuario: botoes, paineis e auxiliares de desenho.
 
 Estilo visual unico: neon-glass com cantos em L (brackets) e bordas com glow.
-Todas as cores de destaque vem do tema ativo (NEON/AURORA/MAGMA).
+Todas as cores de destaque vem do tema ativo (NEON/AURORA/MAGMA). O
+posicionamento usa o sistema de layout responsivo (``game.layout``).
 """
 
 import math
 
 import pygame
 
-from .config import BRANCO
+from .config import BRANCO, LARGURA
 from .fonts import fonte_texto, fonte_titulo
 from .smooth import barra_suave, desenhar_cantos, desenhar_circulo, \
-    desenhar_glow, desenhar_painel, desenhar_texto_suave
+    desenhar_glow, desenhar_painel, desenhar_texto_suave, retangulo_suave
 from .theme import cor_tema
 
 
@@ -32,17 +33,40 @@ def cor_borda_forte():
 
 
 class BotaoNeon:
-    """Compatibilidade: botao com hover para telas internas do menu."""
+    """Botao com hover, nas duas variantes visuais do jogo.
+
+    - Com ``cor``/``cor_hover`` explicitos: estilo solido usado nas sub-telas
+      do menu (painel arredondado + borda).
+    - Sem cores explicitas: estilo glass com as cores do tema ativo.
+    """
 
     def __init__(self, texto, rect, cor=None, cor_hover=None):
         self.texto = texto
         self.rect = pygame.Rect(rect)
+        self.cor = cor
+        self.cor_hover = cor_hover
         self.hover = False
 
     def atualizar(self, mouse_pos):
         self.hover = self.rect.collidepoint(mouse_pos)
 
     def desenhar(self, tela, fonte):
+        if self.cor is not None:
+            self._desenhar_solido(tela, fonte)
+        else:
+            self._desenhar_glass(tela, fonte)
+
+    def _desenhar_solido(self, tela, fonte):
+        cor = self.cor_hover if self.hover else self.cor
+        borda = BRANCO if self.hover else (150, 130, 255)
+        retangulo_suave(tela, cor, self.rect, 10,
+                        glow_cor=cor if self.hover else None,
+                        glow_raio=max(4, self.rect.h) if self.hover else 0)
+        pygame.draw.rect(tela, borda, self.rect, 2, border_radius=10)
+        desenhar_texto_suave(tela, fonte, self.texto, self.rect.center, BRANCO,
+                             glow_raio=2)
+
+    def _desenhar_glass(self, tela, fonte):
         cor = cor_primaria()
         if self.hover:
             cor = cor_borda_forte()
@@ -102,11 +126,11 @@ def desenhar_painel_titulo(tela, titulo, subtitulo=None, y=55,
     """Cabecalho padrao das telas do menu: titulo + linha decorativa."""
     if cor is None:
         cor = cor_primaria()
-    desenhar_titulo(tela, titulo, (900 // 2, y), cor)
+    desenhar_titulo(tela, titulo, (LARGURA // 2, y), cor)
     t = pygame.time.get_ticks() * 0.002
-    x0 = 900 // 2 - 150
+    x0 = LARGURA // 2 - 150
     largura = 300
-    desenhar_glow(tela, cor, (900 // 2, y + 34), 20, 0.4)
+    desenhar_glow(tela, cor, (LARGURA // 2, y + 34), 20, 0.4)
     for i in range(0, largura, 6):
         brilho = 0.4 + 0.6 * abs(math.sin(i / 40 + t))
         cor_linha = tuple(int(c * brilho) for c in cor)
@@ -117,4 +141,4 @@ def desenhar_painel_titulo(tela, titulo, subtitulo=None, y=55,
             subtitulo_cor = (200, 205, 240)
         surface = fonte_texto(20).render(subtitulo, True, subtitulo_cor)
         surface.set_alpha(200)
-        tela.blit(surface, surface.get_rect(center=(900 // 2, y + 62)))
+        tela.blit(surface, surface.get_rect(center=(LARGURA // 2, y + 62)))

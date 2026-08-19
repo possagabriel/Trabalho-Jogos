@@ -16,32 +16,32 @@ from .weapons import Projetil
 # ---------------------------------------------------------------------------
 
 TIPOS = {
-    # Cenario 1 - Espaco Profundo
+    # Dimensao 1 - Deep Space
     "scout": {"cor": VERDE, "raio": 12, "vida": 1, "pontos": 10,
               "vel": 2.5, "mov": "reta", "ataque": "nenhum"},
     "soldado": {"cor": AMARELO, "raio": 12, "vida": 2, "pontos": 20,
                 "vel": 2.2, "mov": "zigzag", "ataque": "nenhum"},
-    # Cenario 2 - Nebulosa Flamejante
+    # Dimensao 2 - Flame Nebula
     "flamifero": {"cor": VERMELHO, "raio": 12, "vida": 3, "pontos": 30,
                   "vel": 2.0, "mov": "espiral", "ataque": "baixo"},
     "forja": {"cor": LARANJA, "raio": 20, "vida": 5, "pontos": 50,
               "vel": 1.4, "mov": "zigzag_lento", "ataque": "leque"},
-    # Cenario 3 - Oceano Cosmico
+    # Dimensao 3 - Cosmic Ocean
     "abissal": {"cor": AZUL, "raio": 16, "vida": 4, "pontos": 45,
                 "vel": 1.8, "mov": "gira", "ataque": "4dir"},
     "estelar": {"cor": ROXO, "raio": 12, "vida": 3, "pontos": 40,
                 "vel": 3.0, "mov": "persegue", "ataque": "nenhum"},
-    # Cenario 4 - Floresta de Cristais
+    # Dimensao 4 - Crystal Forest
     "cristalino": {"cor": VERDE, "raio": 16, "vida": 5, "pontos": 50,
                    "vel": 1.7, "mov": "ondulacao", "ataque": "baixo"},
     "guardiao": {"cor": BRANCO, "raio": 15, "vida": 4, "pontos": 55,
                  "vel": 1.5, "mov": "reta", "ataque": "tudo"},
-    # Cenario 5 - Vazio Dimensional
+    # Dimensao 5 - Null Space
     "espectro": {"cor": (120, 60, 180), "raio": 12, "vida": 4, "pontos": 60,
                  "vel": 2.4, "mov": "erratico", "ataque": "nenhum"},
     "distorcao": {"cor": ROXO, "raio": 18, "vida": 6, "pontos": 70,
                   "vel": 1.1, "mov": "flutua", "ataque": "baixo"},
-    # Cenario 6 - Plano Divino
+    # Dimensao 6 - Divine Plane
     "celestial": {"cor": DOURADO, "raio": 16, "vida": 6, "pontos": 80,
                   "vel": 2.0, "mov": "zigzag", "ataque": "leque"},
     "sentinela": {"cor": (240, 235, 200), "raio": 15, "vida": 8, "pontos": 100,

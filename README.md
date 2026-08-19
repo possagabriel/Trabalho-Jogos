@@ -1,8 +1,9 @@
-# Space Fury - Viagem Interdimensional
+# VOID//SHIFT - Enter the Rift
 
 Shoot 'em up vertical em **Pygame** com progressão, personalização de nave,
-6 cenários, inimigos especiais e bosses. O código é 100% procedural
-(visual, sons e música são gerados em runtime, sem assets externos).
+6 dimensões, inimigos especiais e entidades RIFT (bosses). O código é 100%
+procedural (visual, sons e música são gerados em runtime, sem assets
+externos).
 
 > Este README é orientado a **desenvolvedores e IAs**: explica a arquitetura,
 > o fluxo de dados e as convenções para que qualquer pessoa (ou modelo) possa
@@ -36,6 +37,32 @@ Sem áudio/vídeo (CI, servidores, debugging):
 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python main.py
 ```
 
+### Resolução e responsividade
+
+O jogo renderiza numa superfície interna de **900×700** e a ajusta à janela
+preservando a proporção (scale-to-fit). O posicionamento de **toda** a UI passa
+pelo módulo `game/layout.py` — um sistema responsivo com **ancoras** (grade
+3x3), **containers** ancorados, **proporções** da superfície, **escala** de uma
+base de design (900×700) e **safe areas** (margem interna). Nenhum elemento usa
+coordenada rígida em pixels: se a superfície lógica mudar de tamanho, o menu se
+recompõe automaticamente.
+
+- **Resoluções suportadas:** `900x700`, `1280x720`, `1366x768`, `1920x1080`,
+  `2560x1440`, `3840x2160` (a lista vive em `settings.RESOLUCOES`).
+- **Modo de aspecto** (configuração `aspecto`, disponível em Settings):
+  - `AJUSTAR` (padrão): *scale-to-fit* com **safe areas** (letterbox) em
+    `VOID_BLACK`, mantendo proporções iguais em qualquer formato de tela.
+  - `PREENCHE`: estica a cena para preencher a janela inteira.
+- **Tela cheia:** usa a resolução nativa do monitor (sem `SCALED`, sem esticar).
+- **Conversão do mouse:** `MenuPrincipal._pos_logica` converte coordenadas da
+  janela para a superfície interna aplicando escala + offsets do letterbox
+  (ou proporção direta no modo `PREENCHE`).
+- **Layout responsivo:** `game/layout.py` define `Layout`, com `x()/y()`
+  (frações da superfície), `px()` (escala da base de design), `rect(ancora, …)`
+  (containers), `ponto(ancora, …)` e `fonte(...)` (fontes escaladas). Todas as
+  telas do menu (`menu.py`) e os elementos visuais (`menu_scene.py`) derivam
+  suas geometrias dele.
+
 ---
 
 ## Arquitetura
@@ -58,7 +85,7 @@ space_fury/
 │   ├── settings.py       # Configuracoes: persistidas em data/settings.json
 │   ├── player.py         # Jogador, SistemaCombo, catálogo de Skins
 │   ├── enemies.py        # Inimigo, InimigoEspecial (sistema de carga), ondas
-│   ├── bosses.py         # Boss: 6 bosses, um por cenário, com ataques próprios
+│   ├── bosses.py         # Entidade RIFT: 6 bosses, um por dimensão, com ataques próprios
 │   ├── scenarios.py      # Cenario: gradiente, estrelas, nebulosas e efeitos
 │   ├── weapons.py        # ARMARIA (7 armas) e Projetil (inclui ion/feixe)
 │   ├── particles.py      # SistemaParticulas, MensagemFlutuante
@@ -66,6 +93,8 @@ space_fury/
 │   ├── shop.py           # LojaSkins: compra/equipa skins (data/skins.json)
 │   ├── save_system.py    # SistemaProgressao: save, recordes, estatísticas
 │   ├── menu.py           # MenuPrincipal: todas as telas fora do gameplay
+│   ├── menu_scene.py     # componentes visuais do menu (fundo, HUD, nave…)
+│   ├── layout.py         # layout responsivo: ancoras, containers, proporções, safe areas
 │   ├── ui.py             # BotaoNeon e helpers de desenho (HUD, textos, barras)
 │   ├── smooth.py         # renderização suave: glow, AA, gradientes, easing
 │   ├── theme.py          # paletas NEON/AURORA/MAGMA + utilidades de cor
@@ -114,16 +143,16 @@ A cada frame, na ordem:
 5. `_atualizar_powerups()` — coleta e aplica efeitos.
 6. Se não há onda/inimigos/boss → `_iniciar_nivel(nivel + 1)`.
 
-### Níveis e cenários
+### Níveis e dimensões
 
 - `cenario_do_nivel(nivel)` → `min((nivel-1)//5 + 1, 6)`.
-- A cada `5` níveis nasce um `Boss` do cenário atual.
+- A cada `5` níveis nasce uma **entidade RIFT** (boss) da dimensão atual.
 - `_transicao_cenario()` executa o "salto dimensional": partículas em
-  espiral → flash branco → troca do `Cenario` → revelação.
+  espiral → flash branco → troca da `Dimensao` → revelação.
 
 ### Fim de jogo (`_fim_de_jogo`)
 
-Salva recorde, calcula moedas ganhas (bonus por cenário + bosses **da
+Salva recorde, calcula moedas ganhas (bonus por dimensão + entidades RIFT **da
 partida atual**), atualiza estatísticas, sincroniza a loja e vai para
 `GAME_OVER`.
 
@@ -137,7 +166,7 @@ Tudo é persistido em `data/` como JSON. **Não há banco de dados.**
 |---------|----------|
 | `save.json` | Progresso: nome, moedas, skins desbloqueadas/atual, total de pontos, bosses, nível máximo, cenários desbloqueados, estatísticas |
 | `records.json` | Top 10 recordes (`{nome, pontos, nivel, skin}`) |
-| `settings.json` | Configurações: volumes, resolução, tela cheia, sensibilidade, controles, tema |
+| `settings.json` | Configurações: volumes, resolução, tela cheia, sensibilidade, controles, tema, aspecto |
 | `skins.json` | Catálogo de skins (criado na primeira execução, espelha `player.SKINS`) |
 
 **Fluxo de gravação:** `MenuPrincipal`/`Jogo` mutam os objetos em memória
@@ -232,4 +261,8 @@ pytest tests/ -v               # se pytest estiver instalado
 
 Os testes rodam **headless** (drivers dummy do SDL) e cobrem: inicialização,
 loop de combate avançando níveis, desenho dos 6 cenários, mapeamento
-nível→cenário e a propriedade de atravessar do canhão de íons.
+nível→cenário e a propriedade de atravessar do canhão de íons. Em
+`tests/test_layout.py` o **layout responsivo** é verificado nas resoluções-alvo
+(`1280x720`, `1366x768`, `1920x1080`, `2560x1440`, `3840x2160`): ancoras
+dentro dos limites (safe areas), proporções preservadas e recomposição do menu
+(desenho + conferência de que nenhum botão/painel sai da tela).

@@ -6,36 +6,36 @@ Todos os elementos da UI (menu, HUD, botoes, paineis) usam estas cores.
 
 import math
 
-from .config import CIANO
+from .config import QUANTUM_CYAN, RIFT_MAGENTA, DIMENSION_GOLD, VOID_BLACK
 
-# Paleta de acentos por tema
+# Paleta de acentos por tema (todos derivados da marca VOID//SHIFT)
 TEMAS_CORES = {
     "NEON": {
-        "primaria": CIANO,            # (0, 200, 255)
-        "secundaria": (160, 60, 255), # magenta-violeta
-        "terciaria": (60, 220, 255),
-        "detalhe": (255, 60, 200),
-        "fundo_painel": (12, 14, 32),
-        "borda_forte": (0, 235, 255),
-        "borda_fraco": (50, 90, 160),
+        "primaria": RIFT_MAGENTA,        # assinatura da marca
+        "secundaria": QUANTUM_CYAN,      # HUD e tecnologia
+        "terciaria": (255, 120, 200),
+        "detalhe": QUANTUM_CYAN,
+        "fundo_painel": VOID_BLACK,
+        "borda_forte": RIFT_MAGENTA,
+        "borda_fraco": (120, 30, 70),
     },
     "AURORA": {
-        "primaria": (0, 255, 170),
-        "secundaria": (80, 200, 255),
+        "primaria": QUANTUM_CYAN,
+        "secundaria": RIFT_MAGENTA,
         "terciaria": (120, 255, 220),
-        "detalhe": (200, 80, 255),
-        "fundo_painel": (10, 22, 30),
-        "borda_forte": (0, 235, 170),
-        "borda_fraco": (40, 110, 140),
+        "detalhe": RIFT_MAGENTA,
+        "fundo_painel": (6, 14, 20),
+        "borda_forte": QUANTUM_CYAN,
+        "borda_fraco": (30, 90, 120),
     },
     "MAGMA": {
-        "primaria": (255, 120, 30),
-        "secundaria": (255, 60, 60),
+        "primaria": DIMENSION_GOLD,
+        "secundaria": (255, 90, 40),
         "terciaria": (255, 200, 90),
-        "detalhe": (255, 90, 160),
-        "fundo_painel": (30, 14, 12),
-        "borda_forte": (255, 150, 40),
-        "borda_fraco": (150, 70, 40),
+        "detalhe": RIFT_MAGENTA,
+        "fundo_painel": (24, 12, 10),
+        "borda_forte": DIMENSION_GOLD,
+        "borda_fraco": (120, 70, 30),
     },
 }
 

@@ -6,8 +6,9 @@ import sys
 
 import pygame
 
-from .config import ALTURA, AMARELO, AZUL, BRANCO, CIANO, DOURADO, FPS, LARGURA, \
-    NEGRO, TITULO, VERDE, VERMELHO
+from .config import ALTURA, AMARELO, AZUL, BRANCO, CIANO, DIMENSION_GOLD, \
+    DOURADO, FPS, LARGURA, NEGRO, QUANTUM_CYAN, RIFT_MAGENTA, TITULO, VERDE, \
+    VOID_BLACK
 from .bosses import Boss
 from .enemies import Inimigo, InimigoEspecial, composicao_onda, \
     sortear_inimigo_especial
@@ -29,14 +30,14 @@ from .ui import desenhar_barra, desenhar_cantos, desenhar_coracoes, \
 from .weapons import ARMARIA
 
 DICAS_CARREGAMENTO = [
-    "Prepare-se para a batalha!",
+    "Prepare-se para atravessar a fenda!",
     "Use combos para ganhar mais pontos!",
     "Troque de arma com as teclas 1 a 7.",
-    "Derrote bosses para desbloquear cenarios.",
-    "Skin raras caem dos inimigos cristalinos.",
-    "Junte moedas para comprar novas skins.",
-    "A cada 5 niveis surge um boss poderoso.",
-    "Cada cenario tem inimigos e armadilhas proprios.",
+    "Derrote entidades RIFT para abrir novas dimensoes.",
+    "Skins raras caem dos inimigos cristalinos.",
+    "Junte moedas para expandir o hangar.",
+    "A cada 5 niveis surge uma entidade RIFT.",
+    "Cada dimensao tem inimigos e armadilhas proprios.",
 ]
 
 
@@ -76,6 +77,7 @@ class Jogo:
         self.novo_recorde = False
         self.moedas_ganhas = 0
         self.bosses_abates = 0
+        self.boss_intro = 0
         self.fade = 0
         self.flash = 0
         self.cenario = Cenario(1)
@@ -93,34 +95,75 @@ class Jogo:
 
     # ----- modo de video -----
 
+    def _escala_janela(self):
+        """Fator de escala e offsets para encaixar a tela 900x700 na janela.
+
+        Usa scale-to-fit (proporcao preservada) e centraliza a cena, criando
+        as "safe areas" (letterbox) nos lados. Com isso o menu e o jogo ficam
+        identicos e proporcionais em qualquer resolucao/formato de janela.
+        Retorna (escala, offset_x, offset_y).
+        """
+        w, h = self.janela.get_size()
+        escala = min(w / LARGURA, h / ALTURA)
+        return escala, (w - LARGURA * escala) / 2, (h - ALTURA * escala) / 2
+
     def _aplicar_modo_video(self):
-        """Reconfigura a janela: tela cheia ou resolucao escolhida."""
+        """Reconfigura a janela: tela cheia (resolucao nativa) ou escolhida."""
+        from .settings import parse_resolucao
         if self.config["tela_cheia"]:
-            self.janela = pygame.display.set_mode(
-                (LARGURA, ALTURA), pygame.FULLSCREEN | pygame.SCALED)
+            try:
+                w, h = pygame.display.get_desktop_sizes()[0]
+            except (IndexError, pygame.error):
+                w, h = parse_resolucao(self.config["resolucao"])
+            self.janela = pygame.display.set_mode((w, h), pygame.FULLSCREEN)
         else:
-            from .settings import parse_resolucao
             self.janela = pygame.display.set_mode(
                 parse_resolucao(self.config["resolucao"]))
         return self.janela
 
     def _apresentar(self):
-        """Redimensiona a superficie interna para a janela e atualiza a tela."""
-        if self.janela.get_size() != (LARGURA, ALTURA):
-            superficie = pygame.transform.smoothscale(self.tela,
-                                                      self.janela.get_size())
-            self.janela.blit(superficie, (0, 0))
-        else:
+        """Redimensiona a superficie interna para a janela e atualiza a tela.
+
+        No modo AJUSTAR preserva as proporcoes com safe areas (letterbox) em
+        qualquer resolucao; no modo PREENCHE estica a cena para a janela.
+        """
+        w, h = self.janela.get_size()
+        if (w, h) == (LARGURA, ALTURA):
             self.janela.blit(self.tela, (0, 0))
+            pygame.display.flip()
+            return
+        if self.config["aspecto"] == "PREENCHE":
+            superficie = pygame.transform.smoothscale(self.tela, (w, h))
+            self.janela.blit(superficie, (0, 0))
+            pygame.display.flip()
+            return
+        escala, off_x, off_y = self._escala_janela()
+        superficie = pygame.transform.smoothscale(
+            self.tela,
+            (max(1, int(LARGURA * escala)), max(1, int(ALTURA * escala))))
+        self.janela.fill(VOID_BLACK)
+        self.janela.blit(superficie, (int(off_x), int(off_y)))
+        cor_safe = (32, 28, 48)
+        pygame.draw.aaline(self.janela, cor_safe,
+                           (int(off_x), int(off_y)),
+                           (int(off_x + LARGURA * escala), int(off_y)), 1)
+        pygame.draw.aaline(
+            self.janela, cor_safe,
+            (int(off_x), int(off_y + ALTURA * escala)),
+            (int(off_x + LARGURA * escala),
+             int(off_y + ALTURA * escala)), 1)
         pygame.display.flip()
 
     # ----- utilidades -----
 
     def _criar_icone(self):
         surf = pygame.Surface((32, 32), pygame.SRCALPHA)
-        desenhar_glow(surf, CIANO, (16, 16), 16, 0.7)
-        desenhar_poligono(surf, CIANO, [(16, 2), (6, 26), (16, 20),
-                                        (26, 26)])
+        desenhar_glow(surf, RIFT_MAGENTA, (16, 16), 16, 0.7)
+        desenhar_poligono(surf, RIFT_MAGENTA,
+                          [(8, 4), (12, 4), (16, 20), (20, 4), (24, 4),
+                           (16, 26)])
+        pygame.draw.line(surf, QUANTUM_CYAN, (26, 6), (22, 24), 2)
+        pygame.draw.line(surf, QUANTUM_CYAN, (30, 6), (26, 24), 2)
         return surf
 
     def _novo_jogo(self, nome, zerar_estado=True):
@@ -137,6 +180,7 @@ class Jogo:
         self.timer_spawn = 0
         self.inimigos_abates = 0
         self.bosses_abates = 0
+        self.boss_intro = 0
         self.tiros_disparados = 0
         self.tempo_partida = 0
         self.particulas.limpar()
@@ -177,9 +221,10 @@ class Jogo:
         self._verificar_desbloqueio_arma()
         if nivel % 5 == 0:
             self.boss = Boss(nivel, self.cenario)
+            self.boss_intro = 130
             self.mensagens.append(MensagemFlutuante(
-                f"BOSS: {self.boss.nome}", LARGURA // 2, ALTURA // 2 + 40,
-                VERMELHO, 130))
+                f"RIFT ENTITY // {self.boss.nome}", LARGURA // 2,
+                ALTURA // 2 + 40, DIMENSION_GOLD, 130))
             self.sons.tocar("boss")
         else:
             tipos, quantidade = composicao_onda(nivel, self.cenario.inimigos)
@@ -204,7 +249,8 @@ class Jogo:
         cor = cfg["cor_transicao"]
 
         self.mensagens.append(MensagemFlutuante(
-            f"CENARIO: {cfg['nome']}", LARGURA // 2, ALTURA // 2, cor, 140))
+            f"DIMENSION 0{novo_id} // {cfg['nome']}", LARGURA // 2,
+            ALTURA // 2, cor, 140))
 
         # 1. particulas em espiral do salto dimensional
         self.particulas.salto_dimensional(LARGURA // 2, ALTURA // 2, cor)
@@ -517,6 +563,8 @@ class Jogo:
             self.fade = max(0, self.fade - 18)
         if self.flash > 0:
             self.flash -= 1
+        if self.boss_intro > 0:
+            self.boss_intro -= 1
 
     # ----- eventos -----
 
@@ -578,10 +626,11 @@ class Jogo:
             desenhar_texto(self.tela, "ESCUDO", (44, 76), AZUL, 16,
                            "esquerda", self.fontes)
 
-        # ---- centro: nivel + cenario ----
+        # ---- centro: nivel + dimensao ----
         desenhar_texto(self.tela, f"NIVEL {self.jogador.nivel}",
                        (LARGURA // 2, 34), BRANCO, 26, "centro", self.fontes)
-        desenhar_texto(self.tela, self.cenario.nome, (LARGURA // 2, 62),
+        desenhar_texto(self.tela, f"DIMENSION 0{self.cenario.id} // "
+                       f"{self.cenario.nome}", (LARGURA // 2, 62),
                        self.cenario.cor_transicao, 18, "centro", self.fontes)
 
         # ---- direita: pontuacao, arma, skin, combo ----
@@ -613,16 +662,20 @@ class Jogo:
             desenhar_barra(self.tela, barra_x, y + 8, largura, 10, fracao,
                            AMARELO)
 
-        # ---- barra do boss ----
+        # ---- barra do boss (entidade RIFT) ----
         if self.boss:
             largura = 420
             x = (LARGURA - largura) // 2
             fracao = max(0.0, self.boss.vida / self.boss.vida_max)
-            desenhar_painel(self.tela, VERMELHO,
-                            pygame.Rect(x - 8, 106, largura + 16, 26),
-                            cor_fundo=(40, 6, 6), raio_canto=10, alpha=190,
+            desenhar_texto(self.tela, f"RIFT ENTITY // {self.boss.nome}",
+                           (LARGURA // 2, 103), DIMENSION_GOLD, 16, "centro",
+                           self.fontes)
+            desenhar_painel(self.tela, DIMENSION_GOLD,
+                            pygame.Rect(x - 8, 116, largura + 16, 26),
+                            cor_fundo=(24, 16, 6), raio_canto=10, alpha=190,
                             glow_raio=10)
-            desenhar_barra(self.tela, x, 112, largura, 14, fracao, VERMELHO)
+            desenhar_barra(self.tela, x, 122, largura, 14, fracao,
+                           DIMENSION_GOLD)
 
     def _desenhar_jogo(self):
         self.cenario.desenhar(self.tela)
@@ -639,6 +692,39 @@ class Jogo:
             mensagem.desenhar(self.tela)
         self.particulas.desenhar(self.tela)
         desenhar_vignette(self.tela, intensidade=0.45, raio_interno=0.5)
+        if self.boss_intro > 0:
+            self._desenhar_boss_intro()
+
+    def _desenhar_boss_intro(self):
+        """Overlay de apresentacao da entidade RIFT ao entrar num boss."""
+        boss = self.boss
+        alfa = max(0.0, min(1.0, self.boss_intro / 45.0))
+        if alfa <= 0 or boss is None:
+            return
+        largura, altura = 460, 240
+        x = LARGURA // 2 - largura // 2
+        y = ALTURA // 2 - altura // 2
+        painel = pygame.Rect(x, y, largura, altura)
+        desenhar_painel(self.tela, DIMENSION_GOLD, painel,
+                        cor_fundo=(16, 12, 6), raio_canto=12,
+                        alpha=int(215 * alfa), glow_raio=24)
+        desenhar_cantos(self.tela, DIMENSION_GOLD, painel, tamanho=16)
+
+        desenhar_texto(self.tela, "RIFT ENTITY DETECTED",
+                       (LARGURA // 2, y + 30), DIMENSION_GOLD, 24, "centro",
+                       self.fontes)
+        desenhar_texto(self.tela, f"ENTITY // {boss.nivel // 5:02d}",
+                       (LARGURA // 2, y + 64), QUANTUM_CYAN, 20, "centro",
+                       self.fontes)
+        desenhar_texto(self.tela, boss.nome, (LARGURA // 2, y + 102), BRANCO,
+                       34, "centro", self.fontes)
+        desenhar_texto(self.tela, "THREAT LEVEL", (LARGURA // 2, y + 150),
+                       (220, 190, 130), 16, "centro", self.fontes)
+        desenhar_barra(self.tela, x + 120, y + 172, largura - 240, 12, 0.8,
+                       DIMENSION_GOLD)
+        desenhar_texto(self.tela, f"DIMENSION 0{boss.cenario_id}",
+                       (LARGURA // 2, y + 206), boss.cor, 18, "centro",
+                       self.fontes)
 
     def _desenhar_pausa(self):
         self._tela_sombra.fill((0, 0, 0, 190))
@@ -680,9 +766,9 @@ class Jogo:
         tema = tema_atual(self.config["tema"])
 
         t = pygame.time.get_ticks() * 0.001
-        desenhar_glow(self.tela, VERMELHO, (LARGURA // 2, 76), 120, 0.5)
-        desenhar_titulo(self.tela, "GAME OVER", (LARGURA // 2, 84), VERMELHO,
-                        54)
+        desenhar_glow(self.tela, RIFT_MAGENTA, (LARGURA // 2, 76), 120, 0.5)
+        desenhar_titulo(self.tela, "RIFT COLLAPSED", (LARGURA // 2, 84),
+                        RIFT_MAGENTA, 48)
 
         painel = pygame.Rect(LARGURA // 2 - 250, 140, 500, 300)
         desenhar_painel(self.tela, tema["secundaria"], painel,
@@ -732,15 +818,21 @@ class Jogo:
         desenhar_vignette(self.tela, intensidade=0.7, raio_interno=0.45)
         tema = tema_atual(self.config["tema"])
 
-        desenhar_titulo(self.tela, "PREPARANDO...",
-                        (LARGURA // 2, ALTURA // 2 - 110), tema["primaria"],
-                        40)
+        desenhar_titulo(self.tela, "VOID//SHIFT",
+                        (LARGURA // 2, ALTURA // 2 - 130), RIFT_MAGENTA, 44)
+        desenhar_texto(self.tela, "DIMENSIONAL TRANSIT",
+                       (LARGURA // 2, ALTURA // 2 - 92), QUANTUM_CYAN, 22,
+                       "centro", self.fontes)
 
         painel = pygame.Rect(LARGURA // 2 - 250, ALTURA // 2 - 60, 500, 120)
         desenhar_painel(self.tela, tema["primaria"], painel,
                         cor_fundo=tema["fundo_painel"], raio_canto=14,
                         alpha=200, glow_raio=16)
         desenhar_cantos(self.tela, tema["borda_forte"], painel, tamanho=12)
+
+        desenhar_texto(self.tela, "CALIBRATING RIFT...",
+                       (LARGURA // 2, ALTURA // 2 - 44), (200, 205, 235), 18,
+                       "centro", self.fontes)
 
         barra = pygame.Rect(LARGURA // 2 - 210, ALTURA // 2 - 26, 420, 28)
         retangulo_suave(self.tela, (40, 40, 70), barra, 8)
@@ -752,8 +844,12 @@ class Jogo:
         desenhar_texto(self.tela, f"{int(self.carregamento)}%",
                        (LARGURA // 2, ALTURA // 2 + 12), BRANCO, 22, "centro",
                        self.fontes)
+        desenhar_texto(self.tela,
+                       f"RIFT STABILITY  {self.carregamento * 0.8742:.2f}%",
+                       (LARGURA // 2, ALTURA // 2 + 46), QUANTUM_CYAN, 18,
+                       "centro", self.fontes)
         dica = random.choice(DICAS_CARREGAMENTO)
-        desenhar_texto(self.tela, dica, (LARGURA // 2, ALTURA // 2 + 70),
+        desenhar_texto(self.tela, dica, (LARGURA // 2, ALTURA // 2 + 78),
                        (200, 205, 235), 22, "centro", self.fontes)
 
     def _desenhar_recordes(self, lista, y_inicio):

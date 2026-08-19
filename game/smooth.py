@@ -104,7 +104,7 @@ def luz_radial(cor, raio, intensidade=1.0):
     cor3 = tuple(cor[:3])
     for r in range(ext, 0, -1):
         t = r / ext
-        alfa = int(255 * (1 - t) ** 2.2 * intensidade)
+        alfa = int(min(255, 255 * (1 - t) ** 2.2 * intensidade))
         if alfa <= 0:
             continue
         pygame.draw.circle(surf, cor3 + (alfa,), (cx, cy), r)

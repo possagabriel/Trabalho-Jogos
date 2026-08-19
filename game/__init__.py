@@ -1,5 +1,5 @@
-"""Space Fury - Viagem Interdimensional.
+"""VOID//SHIFT - Enter the Rift.
 
-Pacote do jogo: cenarios dinamicos, skins, inimigos especiais,
-bosses, sistema de progressao e loja.
+Pacote do jogo: dimensoes dinamicas, skins, inimigos especiais,
+entidades RIFT, sistema de progressao e loja.
 """
