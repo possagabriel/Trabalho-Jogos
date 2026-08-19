@@ -5,6 +5,7 @@ import random
 
 import pygame
 
+from .assets import carregar_imagem
 from .config import ALTURA, LARGURA
 from .geometry import cruz, losango
 from .smooth import desenhar_circulo, desenhar_glow
@@ -18,6 +19,72 @@ def _superficie_alpha(raio, cor):
     """
     from .smooth import luz_radial
     return luz_radial(cor, raio, 1.0)
+
+
+# ---------------------------------------------------------------------------
+# Imagens de fundo por cenario (na pasta images/)
+# ---------------------------------------------------------------------------
+
+# Arquivo padrao usado quando o cenario nao tem imagem propria.
+_FUNDO_PADRAO = "imagem-fundo.png"
+
+# Mapeamento cenario -> arquivo de fundo (por cor dominante da imagem):
+#   1 Deep Space   -> imagem-fundo.png   (azul escuro)
+#   2 Flame Nebula -> imagem-fundo4.png  (laranja/vermelho)
+#   3 Cosmic Ocean -> padrao
+#   4 Crystal Forest -> imagem-fundo3.png (verde)
+#   5 Null Space   -> imagens-fundo2.png  (violeta)
+#   6 Divine Plane -> padrao
+_FUNDO_POR_CENARIO = {
+    1: "imagem-fundo.png",
+    2: "imagem-fundo4.png",
+    4: "imagem-fundo3.png",
+    5: "imagens-fundo2.png",
+}
+
+_CACHE_FUNDO = {"imagens": {}, "carregada": False}
+
+
+def _ajustar_cover(img, larg, alt):
+    """Redimensiona com scale-to-cover e corta centralmente para (larg, alt).
+
+    Preenche toda a superficie preservando a proporcao e corta as sobras.
+    """
+    iw, ih = img.get_size()
+    escala = max(larg / iw, alt / ih)
+    novow = max(larg, int(iw * escala))
+    novoh = max(alt, int(ih * escala))
+    if (novow, novoh) != (iw, ih):
+        img = pygame.transform.smoothscale(img, (novow, novoh))
+    ox = (novow - larg) // 2
+    oy = (novoh - alt) // 2
+    if (ox, oy) != (0, 0):
+        img = img.subsurface((ox, oy, larg, alt)).copy()
+    return img
+
+
+def _imagem_fundo(cenario_id=None):
+    """Carrega o fundo do cenario (cover 900x700) e o cacheia.
+
+    Cada cenario usa a imagem mapeada em ``_FUNDO_POR_CENARIO``; os demais
+    usam ``_FUNDO_PADRAO``. Retorna ``None`` se o arquivo nao existir.
+    """
+    if not _CACHE_FUNDO["carregada"]:
+        _CACHE_FUNDO["carregada"] = True
+        caminhos = set(_FUNDO_POR_CENARIO.values())
+        caminhos.add(_FUNDO_PADRAO)
+        for nome in caminhos:
+            img = carregar_imagem(nome)
+            if img is None:
+                continue
+            _CACHE_FUNDO["imagens"][nome] = _ajustar_cover(img, LARGURA, ALTURA)
+    if cenario_id is None:
+        return _CACHE_FUNDO["imagens"].get(_FUNDO_PADRAO)
+    nome = _FUNDO_POR_CENARIO.get(cenario_id, _FUNDO_PADRAO)
+    imagem = _CACHE_FUNDO["imagens"].get(nome)
+    if imagem is None and nome != _FUNDO_PADRAO:
+        imagem = _CACHE_FUNDO["imagens"].get(_FUNDO_PADRAO)
+    return imagem
 
 
 # Raios de luz do Plano Divino, cacheados por largura (evita alocar
@@ -95,6 +162,7 @@ class Cenario:
         self.nebulosas = self._criar_nebulosas(cfg["cores_nebulosa"])
         self.estrelas = self._criar_estrelas(cfg["camadas_estrelas"])
         self.efeitos = []
+        self.fundo_imagem = _imagem_fundo(self.id)
 
     # ----- construcao -----
 
@@ -167,7 +235,11 @@ class Cenario:
     # ----- desenho -----
 
     def desenhar(self, tela):
-        tela.blit(self.gradiente, (0, 0))
+        fundo = self.fundo_imagem
+        if fundo is not None:
+            tela.blit(fundo, (0, 0))
+        else:
+            tela.blit(self.gradiente, (0, 0))
         for nebulosa in self.nebulosas:
             tela.blit(nebulosa, (0, 0))
         for estrela in self.estrelas:
@@ -250,8 +322,9 @@ CENARIOS = [
         "camadas_estrelas": [(50, 0.5, 2), (30, 1.1, 3), (15, 2.2, 4)],
         "efeito": "fogo", "cor_transicao": (255, 60, 120),
         "cores_principais": [(255, 150, 50), (255, 60, 120), (255, 220, 90)],
-        "inimigos": ["flamifero", "forja"],
-        "especiais": ["acumulador", "esponja", "condutor", "mutante"],
+        "inimigos": ["flamifero", "forja", "artilheiro", "bomba"],
+        "especiais": ["acumulador", "esponja", "condutor", "mutante",
+                      "evocador"],
     },
     {
         "id": 3, "nome": "COSMIC OCEAN",
@@ -261,7 +334,7 @@ CENARIOS = [
         "camadas_estrelas": [(50, 0.5, 2), (30, 1.2, 3), (15, 2.4, 4)],
         "efeito": "bolhas", "cor_transicao": (100, 200, 220),
         "cores_principais": [(25, 217, 255), (80, 160, 255), (160, 220, 235)],
-        "inimigos": ["abissal", "estelar"],
+        "inimigos": ["abissal", "estelar", "bomba"],
         "especiais": ["acumulador", "condutor", "mutante"],
     },
     {
@@ -272,7 +345,7 @@ CENARIOS = [
         "camadas_estrelas": [(50, 0.5, 2), (30, 1.2, 3), (15, 2.4, 4)],
         "efeito": "cristais", "cor_transicao": (150, 255, 180),
         "cores_principais": [(120, 255, 160), (200, 160, 255), (150, 255, 180)],
-        "inimigos": ["cristalino", "guardiao"],
+        "inimigos": ["cristalino", "guardiao", "artilheiro", "bomba"],
         "especiais": ["cristalino", "acumulador", "esponja"],
     },
     {
@@ -283,8 +356,8 @@ CENARIOS = [
         "camadas_estrelas": [(50, 0.6, 2), (30, 1.4, 3), (15, 2.6, 4)],
         "efeito": "distorcao", "cor_transicao": (170, 90, 255),
         "cores_principais": [(170, 90, 255), (120, 40, 200), (220, 160, 255)],
-        "inimigos": ["espectro", "distorcao"],
-        "especiais": ["mutante", "condutor", "esponja"],
+        "inimigos": ["espectro", "distorcao", "assombra"],
+        "especiais": ["mutante", "condutor", "esponja", "evocador"],
     },
     {
         "id": 6, "nome": "DIVINE PLANE",
@@ -294,8 +367,9 @@ CENARIOS = [
         "camadas_estrelas": [(50, 0.5, 2), (30, 1.2, 3), (15, 2.4, 4)],
         "efeito": "raios", "cor_transicao": (255, 235, 160),
         "cores_principais": [(255, 235, 160), (240, 220, 190), (255, 255, 255)],
-        "inimigos": ["celestial", "sentinela"],
-        "especiais": ["cristalino", "mutante", "acumulador", "condutor"],
+        "inimigos": ["celestial", "sentinela", "assombra"],
+        "especiais": ["cristalino", "mutante", "acumulador", "condutor",
+                      "evocador"],
     },
 ]
 

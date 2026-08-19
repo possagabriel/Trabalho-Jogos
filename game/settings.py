@@ -14,8 +14,9 @@ PASTA_DADOS = (os.environ.get("SPACEFURY_DATA_DIR")
                    os.path.abspath(__file__))), "data"))
 ARQUIVO_CONFIG = os.path.join(PASTA_DADOS, "settings.json")
 
-RESOLUCOES = ["900x700", "1280x720", "1366x768", "1920x1080", "2560x1440",
-              "3840x2160"]
+RESOLUCOES = ["900x700", "1024x768", "1280x720", "1280x800", "1366x768",
+              "1440x900", "1600x900", "1680x1050", "1920x1080", "2560x1080",
+              "2560x1440", "3440x1440", "3840x2160"]
 TEMAS = ["NEON", "AURORA", "MAGMA"]
 
 ACOES_CONTROLE = ["cima", "baixo", "esquerda", "direita", "atirar", "pausar"]
@@ -38,6 +39,9 @@ _DEFAULT = {
     "controles": DEFAULT_CONTROLES,
     "tema": "NEON",
     "aspecto": "AJUSTAR",  # AJUSTAR (letterbox/safe area) ou PREENCHE (esticar)
+    "ajuste_escala": 1.0,  # zoom manual da imagem (0.9 - 1.2)
+    "ajuste_off_x": 0,     # deslocamento horizontal da imagem (px da janela)
+    "ajuste_off_y": 0,     # deslocamento vertical da imagem (px da janela)
 }
 
 

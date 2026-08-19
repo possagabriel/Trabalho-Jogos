@@ -5,7 +5,7 @@ import random
 
 import pygame
 
-from .config import AMARELO, AZUL, BRANCO, DOURADO, LARGURA, \
+from .config import AMARELO, AZUL, BRANCO, CIANO, DOURADO, LARGURA, \
     LARANJA, ROXO, VERDE, VERMELHO
 from .geometry import estrela, losango, pentagono, poligono, quadrado, triangulo
 from .smooth import desenhar_circulo, desenhar_glow, desenhar_poligono
@@ -31,16 +31,22 @@ TIPOS = {
                 "vel": 1.8, "mov": "gira", "ataque": "4dir"},
     "estelar": {"cor": ROXO, "raio": 12, "vida": 3, "pontos": 40,
                 "vel": 3.0, "mov": "persegue", "ataque": "nenhum"},
+    "bomba": {"cor": VERMELHO, "raio": 10, "vida": 1, "pontos": 15,
+              "vel": 3.0, "mov": "investida", "ataque": "nenhum"},
     # Dimensao 4 - Crystal Forest
     "cristalino": {"cor": VERDE, "raio": 16, "vida": 5, "pontos": 50,
                    "vel": 1.7, "mov": "ondulacao", "ataque": "baixo"},
     "guardiao": {"cor": BRANCO, "raio": 15, "vida": 4, "pontos": 55,
                  "vel": 1.5, "mov": "reta", "ataque": "tudo"},
+    "artilheiro": {"cor": CIANO, "raio": 14, "vida": 4, "pontos": 40,
+                   "vel": 1.2, "mov": "flutua", "ataque": "rajada"},
     # Dimensao 5 - Null Space
     "espectro": {"cor": (120, 60, 180), "raio": 12, "vida": 4, "pontos": 60,
                  "vel": 2.4, "mov": "erratico", "ataque": "nenhum"},
     "distorcao": {"cor": ROXO, "raio": 18, "vida": 6, "pontos": 70,
                   "vel": 1.1, "mov": "flutua", "ataque": "baixo"},
+    "assombra": {"cor": (150, 150, 200), "raio": 12, "vida": 3, "pontos": 35,
+                 "vel": 2.4, "mov": "fada", "ataque": "mira"},
     # Dimensao 6 - Divine Plane
     "celestial": {"cor": DOURADO, "raio": 16, "vida": 6, "pontos": 80,
                   "vel": 2.0, "mov": "zigzag", "ataque": "leque"},
@@ -52,9 +58,10 @@ TIPOS = {
 FORMAS = {
     "scout": "triangulo", "soldado": "quadrado", "flamifero": "circulo",
     "forja": "hexagono", "abissal": "losango", "estelar": "estrela",
-    "cristalino": "hexagono", "guardiao": "pentagono", "espectro": "aleatoria",
-    "distorcao": "circulo_pulsante", "celestial": "estrela",
-    "sentinela": "olho",
+    "bomba": "circulo", "cristalino": "hexagono", "guardiao": "pentagono",
+    "artilheiro": "pentagono", "espectro": "aleatoria",
+    "distorcao": "circulo_pulsante", "assombra": "circulo_pulsante",
+    "celestial": "estrela", "sentinela": "olho",
 }
 
 
@@ -64,9 +71,11 @@ class Inimigo:
     def __init__(self, tipo, nivel, x=None, y=-40, escala=1.0):
         cfg = TIPOS[tipo]
         self.tipo = tipo
+        self.nivel = nivel
         self.cor = cfg["cor"]
         self.raio = cfg["raio"] * escala
-        self.vida = cfg["vida"]
+        self.vida = cfg["vida"] * (1 + 0.03 * max(0, nivel - 1))
+        self.vida = max(1, int(self.vida))
         self.vida_max = self.vida
         self.pontos = cfg["pontos"]
         self.vel = cfg["vel"] * (1 + 0.04 * (nivel - 1)) * escala
@@ -79,6 +88,7 @@ class Inimigo:
         self.angulo = random.uniform(0, math.tau)
         self.timer_ataque = random.randint(90, 140)
         self.flash = 0
+        self.invisivel = 0
         self.vel_x = random.uniform(-1, 1)
         self.vel_y = 0
         self.timer_feixe = 0
@@ -141,7 +151,21 @@ class Inimigo:
             self.fase += 0.05
             self.x = self.base_x + math.sin(self.fase) * 30
             self.angulo += 0.03
+        elif self.mov == "investida":
+            self.y += self.vel * (1 + self.fase * 0.06)
+            self.x += (jogador.x - self.x) * 0.03
+            self.fase += 0.01
+            self.angulo += 0.1
+        elif self.mov == "fada":
+            self.y += self.vel
+            self.fase += 0.03
+            self.x = self.base_x + math.sin(self.fase * 1.3) * 80
+            self.angulo += 0.05
+            if self.invisivel <= 0 and random.random() < 0.006:
+                self.invisivel = 40
 
+        if self.invisivel > 0:
+            self.invisivel -= 1
         self.timer_ataque -= 1
         if self.timer_ataque <= 0:
             self.timer_ataque = random.randint(110, 170)
@@ -172,6 +196,18 @@ class Inimigo:
             return [Projetil(x, y, dx / norma * 6, dy / norma * 6, 1,
                              (240, 235, 200), 3, tipo="feixe",
                              origem="inimigo")]
+        if self.ataque == "mira":
+            dx, dy = jogador.x - x, jogador.y - y
+            norma = math.hypot(dx, dy) or 1
+            return [Projetil(x, y, dx / norma * 5, dy / norma * 5, 1,
+                             self.cor, 4, origem="inimigo")]
+        if self.ataque == "rajada":
+            dx, dy = jogador.x - x, jogador.y - y
+            norma = math.hypot(dx, dy) or 1
+            base = (dx / norma, dy / norma)
+            return [Projetil(x, y, base[0] * 5, base[1] * 5, 1, CIANO, 4,
+                             origem="inimigo")
+                    for _ in range(3)]
         return []
 
     def sofrer_dano(self, dano):
@@ -202,9 +238,22 @@ class Inimigo:
         return poligono(centro, raio, 3, self.angulo)
 
     def desenhar(self, tela):
+        if self.invisivel > 0:
+            if (self.invisivel // 4) % 2 == 0:
+                return
         x, y = int(self.x), int(self.y)
         cor = BRANCO if self.flash > 0 else self.cor
         centro = (x, y)
+        if self.tipo == "bomba":
+            pulso = 1 + 0.2 * math.sin(self.tempo_global() * 6)
+            desenhar_glow(tela, cor, centro, self.raio * 1.8, 0.7)
+            desenhar_circulo(tela, cor, centro, self.raio * pulso)
+            desenhar_circulo(tela, (80, 0, 0), centro, self.raio * 0.55)
+            desenhar_circulo(tela, AMARELO, centro, self.raio * 0.28,
+                             brilho=1.5)
+            pygame.draw.aaline(tela, (255, 120, 80), (x - self.raio, y - 10),
+                               (x - 4, y - 2), 2)
+            return
         if self.tipo == "espectro":
             # forma aleatoria (versao escura de todas as formas)
             formas = ["triangulo", "quadrado", "circulo", "estrela",
@@ -279,19 +328,19 @@ class InimigoEspecial(Inimigo):
 
     CARGA_POR_TIRO = {
         "acumulador": 5, "esponja": 3, "condutor": 8, "mutante": 10,
-        "cristalino": 15,
+        "cristalino": 15, "evocador": 12,
     }
     CORES = {
         "acumulador": (255, 200, 40), "esponja": (150, 60, 200),
         "condutor": (80, 160, 255), "mutante": (200, 40, 255),
-        "cristalino": (210, 235, 245),
+        "cristalino": (210, 235, 245), "evocador": (200, 120, 255),
     }
 
     def __init__(self, tipo_especial, nivel, cenario_id=1):
         # tipo base (forma) com base nos TIPOS atuais
         base = {"acumulador": "flamifero", "esponja": "soldado",
                 "condutor": "estelar", "mutante": "forja",
-                "cristalino": "guardiao"}[tipo_especial]
+                "cristalino": "guardiao", "evocador": "celestial"}[tipo_especial]
         super().__init__(base, nivel)
         self.tipo = base
         self.tipo_especial = tipo_especial
@@ -311,7 +360,7 @@ class InimigoEspecial(Inimigo):
         # comportamento proprio de cada tipo
         self.mov = {"acumulador": "flutua", "esponja": "zigzag",
                     "condutor": "gira", "mutante": "reta",
-                    "cristalino": "flutua"}[tipo_especial]
+                    "cristalino": "flutua", "evocador": "flutua"}[tipo_especial]
         self.ataque = "nenhum"
         self.vel = 1.2
 
@@ -383,6 +432,16 @@ class InimigoEspecial(Inimigo):
         elif self.tipo_especial == "cristalino":
             self.campo_forca = True
             acoes["mensagem"] = "CAMPO DE FORCA!"
+        elif self.tipo_especial == "evocador":
+            for _ in range(3):
+                acoes["inimigos"].append(Inimigo(
+                    self.tipo, self.nivel,
+                    x + random.randint(-40, 40), y))
+            self.efeito_ja_atirado = False
+            self.carga = 0
+            self.carregado = False
+            self._teleportar()
+            acoes["mensagem"] = "EVOCACAO!"
         return acoes
 
     def e_feito_ja_atirado(self):
@@ -489,6 +548,18 @@ class InimigoEspecial(Inimigo):
             pygame.draw.polygon(surf, self.cor + (150,), pts)
             pygame.draw.polygon(surf, (255, 255, 255, 230), pts, 2)
             tela.blit(surf, (x - self.raio - 4, y - self.raio - 4))
+        elif self.tipo_especial == "evocador":
+            desenhar_glow(tela, cor, centro, self.raio * 1.5, 0.6)
+            desenhar_poligono(tela, cor, estrela(centro, self.raio,
+                                                 angulo=self.angulo),
+                              glow_cor=cor, glow_raio=self.raio)
+            for i in range(4):
+                a = t * 1.5 + i * math.tau / 4
+                px = self.x + math.cos(a) * (self.raio + 9)
+                py = self.y + math.sin(a) * (self.raio + 9)
+                desenhar_circulo(tela, (255, 200, 255), (px, py), 3,
+                                 brilho=1.3)
+            desenhar_circulo(tela, (80, 20, 120), centro, 6, brilho=1.4)
 
         # campo de forca refletor
         if self.campo_forca:
@@ -507,9 +578,21 @@ class InimigoEspecial(Inimigo):
 # ---------------------------------------------------------------------------
 
 def composicao_onda(nivel, tipos):
-    """Define a quantidade de inimigos da onda de acordo com o nivel."""
+    """Define a quantidade de inimigos e as posicoes de spawn da onda.
+
+    Retorna ``(tipos, qtd, xs)`` onde ``xs`` e uma lista do mesmo tamanho
+    de ``qtd`` com a posicao x de cada inimigo da onda (ou ``None`` para
+    posicao aleatoria), permitindo formacoes em "V" em ondas maiores.
+    """
     qtd = min(5 + nivel // 2, 22)
-    return tipos, qtd
+    xs = [None] * qtd
+    if qtd >= 5 and random.random() < 0.35:
+        posicoes = [max(25, min(LARGURA - 25,
+                                LARGURA // 2 + (i - (qtd - 1) / 2) * 52))
+                    for i in range(qtd)]
+        posicoes.sort(key=lambda v: abs(v - LARGURA // 2))
+        xs = posicoes
+    return tipos, qtd, xs
 
 
 def sortear_inimigo_especial(nivel, especiais):

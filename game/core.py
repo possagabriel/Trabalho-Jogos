@@ -6,13 +6,14 @@ import sys
 
 import pygame
 
-from .config import ALTURA, AMARELO, AZUL, BRANCO, CIANO, DIMENSION_GOLD, \
-    DOURADO, FPS, LARGURA, NEGRO, QUANTUM_CYAN, RIFT_MAGENTA, TITULO, VERDE, \
-    VOID_BLACK
+from .config import ALTURA, AMARELO, BRANCO, CIANO, DIMENSION_GOLD, \
+    DOURADO, FPS, LARGURA, LARANJA, NEGRO, QUANTUM_CYAN, RIFT_MAGENTA, \
+    TITULO, VERDE, VOID_BLACK
 from .bosses import Boss
 from .enemies import Inimigo, InimigoEspecial, composicao_onda, \
     sortear_inimigo_especial
 from .fonts import fonte_texto, fonte_titulo
+from .hud import HudJogo
 from .menu import MenuPrincipal
 from .particles import MensagemFlutuante, SistemaParticulas
 from .player import Jogador
@@ -22,17 +23,18 @@ from .scenarios import CENARIOS, Cenario, cenario_do_nivel
 from .settings import Configuracoes
 from .shop import LojaSkins
 from .sounds import Sons
-from .smooth import desenhar_circulo, desenhar_glow, desenhar_painel, \
-    desenhar_poligono, desenhar_vignette, retangulo_suave
+from .smooth import desenhar_glow, desenhar_painel, desenhar_poligono, \
+    desenhar_vignette, retangulo_suave
 from .theme import tema_atual
-from .ui import desenhar_barra, desenhar_cantos, desenhar_coracoes, \
-    desenhar_texto, desenhar_titulo
-from .weapons import ARMARIA
+from .ui import desenhar_barra, desenhar_cantos, desenhar_texto, \
+    desenhar_titulo
+from .weapons import ARMARIA, Projetil
 
 DICAS_CARREGAMENTO = [
     "Prepare-se para atravessar a fenda!",
     "Use combos para ganhar mais pontos!",
-    "Troque de arma com as teclas 1 a 7.",
+    "Troque de arma com as teclas 1 a 9.",
+    "Abates carregam a Bomba Vortex (tecla E).",
     "Derrote entidades RIFT para abrir novas dimensoes.",
     "Skins raras caem dos inimigos cristalinos.",
     "Junte moedas para expandir o hangar.",
@@ -88,7 +90,11 @@ class Jogo:
         self._tela_flash = pygame.Surface((LARGURA, ALTURA),
                                           pygame.SRCALPHA)
         self._tela_fade = pygame.Surface((LARGURA, ALTURA))
+        self._tela_shake = pygame.Surface((LARGURA, ALTURA))
+        self.trauma = 0.0
+        self.hitstop = 0
         self.recordes = SistemaProgressao.carregar_recordes()
+        self.hud = HudJogo()
         self.menu = MenuPrincipal(self)
         self._novo_jogo("Jogador", zerar_estado=False)
         self.estado = "MENU"
@@ -106,6 +112,23 @@ class Jogo:
         w, h = self.janela.get_size()
         escala = min(w / LARGURA, h / ALTURA)
         return escala, (w - LARGURA * escala) / 2, (h - ALTURA * escala) / 2
+
+    def _transformacao_janela(self):
+        """(escala, off_x, off_y) aplicando os ajustes manuais do usuario.
+
+        Combina o scale-to-fit com o zoom e deslocamentos configurados em
+        "Ajustar Tela" (``ajuste_escala``, ``ajuste_off_x/y``), permitindo
+        calibrar a imagem para o monitor (overscan, TVs, etc.). Usada tanto
+        no ``_apresentar`` quanto na conversao de mouse (``_pos_logica``).
+        """
+        if self.config["aspecto"] == "PREENCHE":
+            return (self.config["ajuste_escala"],
+                    self.config["ajuste_off_x"], self.config["ajuste_off_y"])
+        escala, off_x, off_y = self._escala_janela()
+        escala *= max(0.5, self.config["ajuste_escala"])
+        off_x += self.config["ajuste_off_x"]
+        off_y += self.config["ajuste_off_y"]
+        return escala, off_x, off_y
 
     def _aplicar_modo_video(self):
         """Reconfigura a janela: tela cheia (resolucao nativa) ou escolhida."""
@@ -133,11 +156,16 @@ class Jogo:
             pygame.display.flip()
             return
         if self.config["aspecto"] == "PREENCHE":
-            superficie = pygame.transform.smoothscale(self.tela, (w, h))
-            self.janela.blit(superficie, (0, 0))
+            escala = max(0.5, self.config["ajuste_escala"])
+            superficie = pygame.transform.smoothscale(
+                self.tela,
+                (max(1, int(w * escala)), max(1, int(h * escala))))
+            self.janela.fill(VOID_BLACK)
+            self.janela.blit(superficie, (int(self.config["ajuste_off_x"]),
+                                          int(self.config["ajuste_off_y"])))
             pygame.display.flip()
             return
-        escala, off_x, off_y = self._escala_janela()
+        escala, off_x, off_y = self._transformacao_janela()
         superficie = pygame.transform.smoothscale(
             self.tela,
             (max(1, int(LARGURA * escala)), max(1, int(ALTURA * escala))))
@@ -177,15 +205,21 @@ class Jogo:
         self.powerups = []
         self.mensagens = []
         self.fila_onda = []
+        self.xs_onda = []
         self.timer_spawn = 0
         self.inimigos_abates = 0
         self.bosses_abates = 0
         self.boss_intro = 0
         self.tiros_disparados = 0
         self.tempo_partida = 0
+        self.boost = 1.0            # medidor de boost (0..1)
+        self.especial = 0.0         # carga do especial (0..1)
+        self.energia = 100.0        # energia de sistemas (0..100)
         self.particulas.limpar()
         self.flash = 0
         self.fade = 255
+        self.trauma = 0.0
+        self.hitstop = 0
         self.novo_recorde = False
         self.moedas_ganhas = 0
         self.cenario = Cenario(1)
@@ -227,9 +261,12 @@ class Jogo:
                 ALTURA // 2 + 40, DIMENSION_GOLD, 130))
             self.sons.tocar("boss")
         else:
-            tipos, quantidade = composicao_onda(nivel, self.cenario.inimigos)
+            self.boss = None
+            tipos, quantidade, xs = composicao_onda(
+                nivel, self.cenario.inimigos)
             self.fila_onda = [random.choice(tipos)
                               for _ in range(quantidade)]
+            self.xs_onda = list(xs)
 
     def _verificar_desbloqueio_arma(self):
         for indice, arma in enumerate(ARMARIA):
@@ -240,7 +277,7 @@ class Jogo:
                 self.mensagens.append(MensagemFlutuante(
                     f"ARMA NOVA: {arma['nome']}!", LARGURA // 2,
                     ALTURA // 2 + 80, arma["cor"], 130))
-                self.sons.tocar("coleta")
+                self.sons.tocar("arma")
 
     def _transicao_cenario(self, novo_id):
         """Transicao de salto dimensional entre cenarios."""
@@ -286,6 +323,105 @@ class Jogo:
 
     # ----- combate -----
 
+    def _adicionar_trauma(self, qtd):
+        """Adiciona intensidade ao screen shake (0..1, decai a cada frame)."""
+        self.trauma = min(1.0, self.trauma + qtd)
+
+    def _congelar(self, quadros):
+        """Pausa breve o mundo (hit-stop) para dar peso a acoes grandes."""
+        self.hitstop = max(self.hitstop, quadros)
+
+    def _aplicar_shake(self):
+        """Desloca a cena desenhada conforme o trauma restante."""
+        if self.trauma <= 0:
+            return
+        mag = self.trauma ** 2 * 16
+        off = (random.uniform(-mag, mag), random.uniform(-mag, mag))
+        self._tela_shake.fill(NEGRO)
+        self._tela_shake.blit(self.tela, (int(off[0]), int(off[1])))
+        self.tela.blit(self._tela_shake, (0, 0))
+        self.trauma = max(0.0, self.trauma - 0.035)
+
+    def _aplicar_dano_jogador(self):
+        """Centraliza o dano ao jogador, tratando escudo e feedback."""
+        tinha_escudo = self.jogador.escudo
+        if not self.jogador.sofrer_dano():
+            return False
+        self._ao_dano()
+        if tinha_escudo:
+            self.sons.tocar("escudo")
+            self._adicionar_trauma(0.3)
+        return True
+
+    def _explodir_nova(self, proj):
+        """Explosao de area da arma Nova: dano a todos os alvos proximos.
+
+        So explode quando um alvo esta no raio ou a orbita chega ao topo da
+        tela. Retorna True se explodiu (consumindo o projetil).
+        """
+        raio = 90
+        tem_alvo = any(math.hypot(i.x - proj.x, i.y - proj.y) < raio
+                       for i in self.inimigos)
+        if not tem_alvo and self.boss and math.hypot(
+                self.boss.x - proj.x, self.boss.y - proj.y) < raio:
+            tem_alvo = True
+        if not tem_alvo and proj.y > 40:
+            return False
+        self.sons.tocar("nova")
+        self.particulas.explosao(proj.x, proj.y, LARANJA, 26, 7)
+        self.particulas.explosao(proj.x, proj.y, (255, 220, 120), 14, 4)
+        self._adicionar_trauma(0.35)
+        self._congelar(2)
+        for inimigo in self.inimigos[:]:
+            if math.hypot(inimigo.x - proj.x, inimigo.y - proj.y) < raio:
+                if inimigo.sofrer_dano(proj.dano):
+                    self._explodir_inimigo(inimigo)
+                else:
+                    inimigo.flash = 8
+        if self.boss and math.hypot(self.boss.x - proj.x,
+                                    self.boss.y - proj.y) < raio:
+            if self.boss.sofrer_dano(proj.dano):
+                self._derrotar_boss()
+            else:
+                self._adicionar_trauma(0.15)
+        return True
+
+    def _explodir_bomba(self, proj):
+        """Explosao da Bomba Vortex: area enorme com dano massivo.
+
+        A bomba explode quando um alvo entra no raio ou ao chegar ao topo
+        da tela, destruindo tudo proximo (incluindo o boss). Retorna True
+        se explodiu (consumindo o projetil).
+        """
+        raio = 150
+        tem_alvo = any(math.hypot(i.x - proj.x, i.y - proj.y) < raio
+                       for i in self.inimigos)
+        if not tem_alvo and self.boss and math.hypot(
+                self.boss.x - proj.x, self.boss.y - proj.y) < raio:
+            tem_alvo = True
+        if not tem_alvo and proj.y > 60:
+            return False
+        self.sons.tocar("especial")
+        self.particulas.explosao(proj.x, proj.y, (255, 90, 30), 42, 9)
+        self.particulas.explosao(proj.x, proj.y, (255, 220, 120), 20, 5)
+        self.particulas.mega(proj.x, proj.y)
+        self.flash = 16
+        self._adicionar_trauma(0.7)
+        self._congelar(4)
+        for inimigo in self.inimigos[:]:
+            if math.hypot(inimigo.x - proj.x, inimigo.y - proj.y) < raio:
+                if inimigo.sofrer_dano(proj.dano):
+                    self._explodir_inimigo(inimigo)
+                else:
+                    inimigo.flash = 10
+        if self.boss and math.hypot(self.boss.x - proj.x,
+                                    self.boss.y - proj.y) < raio:
+            if self.boss.sofrer_dano(proj.dano):
+                self._derrotar_boss()
+            else:
+                self._adicionar_trauma(0.2)
+        return True
+
     def _explodir_inimigo(self, inimigo):
         bonus = self.jogador.combo.combo_atual * 5
         multiplicador = self.jogador.combo.get_bonus()
@@ -295,19 +431,31 @@ class Jogo:
                                                 inimigo.y, inimigo.cor))
         self.particulas.explosao(inimigo.x, inimigo.y, inimigo.cor, 18, 6)
         self.sons.tocar("explosao")
+        self._adicionar_trauma(0.2)
         self.inimigos_abates += 1
+        # carga do especial: mais lenta agora (bomba pesada demora mais)
+        self.especial = min(1.0, self.especial + 0.02)
+        if inimigo.tipo == "bomba":
+            self.particulas.explosao(inimigo.x, inimigo.y, (255, 120, 40),
+                                     24, 6.5)
+            self._adicionar_trauma(0.35)
+            if math.hypot(self.jogador.x - inimigo.x,
+                          self.jogador.y - inimigo.y) < 70:
+                self._aplicar_dano_jogador()
         if isinstance(inimigo, InimigoEspecial):
             self._drop_especial(inimigo)
-        elif random.random() < 0.08:
-            self.powerups.append(PowerUp(sortear_tipo(), inimigo.x,
-                                         inimigo.y))
+        else:
+            chance = 0.08 + min(0.12, self.jogador.combo.combo_atual * 0.004)
+            if random.random() < chance:
+                self.powerups.append(PowerUp(sortear_tipo(), inimigo.x,
+                                             inimigo.y))
         self.inimigos.remove(inimigo)
 
     def _drop_especial(self, inimigo):
         """Quedas especiais de acordo com o tipo de inimigo especial."""
         tipo = inimigo.tipo_especial
         chance = {"acumulador": 0.50, "esponja": 0.30, "condutor": 0.40,
-                  "mutante": 0.80, "cristalino": 0.05}[tipo]
+                  "mutante": 0.80, "cristalino": 0.05, "evocador": 0.30}[tipo]
         if random.random() > chance:
             return
         if tipo == "acumulador":
@@ -318,6 +466,8 @@ class Jogo:
             drop = "escudo"
         elif tipo == "mutante":
             drop = "moedas"
+        elif tipo == "evocador":
+            drop = "arma"
         else:
             drop = "skin"
         self.powerups.append(PowerUp(drop, inimigo.x, inimigo.y))
@@ -344,6 +494,8 @@ class Jogo:
         elif boss.efeito == "pulsacao":
             self.particulas.pulsacao(boss.x, boss.y, boss.cor, boss.part_qtd)
         self.sons.tocar("explosao")
+        self._adicionar_trauma(0.8)
+        self._congelar(3)
         for _ in range(3):
             self.powerups.append(PowerUp(sortear_tipo(), boss.x,
                                          boss.y + random.randint(-20, 20)))
@@ -352,6 +504,7 @@ class Jogo:
         self.jogador.combo.zerar()
         self.flash = 10
         self.sons.tocar("dano")
+        self._adicionar_trauma(0.5)
 
     def _fim_de_jogo(self):
         melhor_anterior = SistemaProgressao.melhor_pontuacao()
@@ -386,6 +539,20 @@ class Jogo:
 
     def _atualizar_jogando(self):
         teclas = pygame.key.get_pressed()
+        usando_boost = (teclas[pygame.K_LSHIFT] or teclas[pygame.K_RSHIFT]
+                        or teclas[pygame.K_LCTRL] or teclas[pygame.K_RCTRL])
+        if usando_boost and self.boost > 0 and self.jogador.vivo:
+            self.boost = max(0.0, self.boost - 0.008)
+            self.jogador.velocidade = 5.0 * self.sensibilidade * 2.1
+        else:
+            self.boost = min(1.0, self.boost + 0.006)
+            self.jogador.velocidade = 5.0 * self.sensibilidade
+        # energia: esgota ao turbinar, regenera aos poucos
+        if usando_boost and self.boost > 0:
+            self.energia = max(0.0, self.energia - 1.6)
+        else:
+            self.energia = min(100.0, self.energia + 0.7)
+
         self.jogador.atualizar(teclas, self.controles)
         tecla_atirar = self.controles.get("atirar", 0)
         if teclas[pygame.K_SPACE] or teclas[pygame.K_z] or teclas[tecla_atirar]:
@@ -397,10 +564,12 @@ class Jogo:
 
         if self.fila_onda:
             self.timer_spawn += 1
-            if self.timer_spawn >= 35:
+            intervalo = max(18, 35 - self.jogador.nivel // 3)
+            if self.timer_spawn >= intervalo:
                 self.timer_spawn = 0
                 tipo = self.fila_onda.pop(0)
-                self.inimigos.append(Inimigo(tipo, self.jogador.nivel))
+                x = (self.xs_onda.pop(0) if self.xs_onda else None)
+                self.inimigos.append(Inimigo(tipo, self.jogador.nivel, x=x))
                 # chance de 10-15% de surgir um inimigo especial ao lado
                 especial = sortear_inimigo_especial(self.jogador.nivel,
                                                     self.cenario.especiais)
@@ -436,14 +605,12 @@ class Jogo:
 
         for inimigo in self.inimigos[:]:
             if inimigo.rect.colliderect(self.jogador.rect):
-                if self.jogador.sofrer_dano():
-                    self._ao_dano()
+                self._aplicar_dano_jogador()
                 if not isinstance(inimigo, InimigoEspecial):
                     self._explodir_inimigo(inimigo)
 
         if self.boss and self.boss.rect.colliderect(self.jogador.rect):
-            if self.jogador.sofrer_dano():
-                self._ao_dano()
+            self._aplicar_dano_jogador()
 
         if random.random() < 0.5:
             self.particulas.rastro(self.jogador.x + random.uniform(-4, 4),
@@ -460,6 +627,24 @@ class Jogo:
 
         if not self.jogador.vivo:
             self._fim_de_jogo()
+
+    def _ativar_especial(self):
+        """Dispara o especial (tecla E): lança a Bomba Vortex.
+
+        Consome a carga do medidor (SPECIAL READY). A bomba é grande, viaja
+        devagar e explode em área enorme causando dano massivo. Não afeta o
+        boss diretamente por colisão, mas a explosão em área sim.
+        """
+        if self.especial < 1.0 or self.estado != "JOGANDO":
+            return False
+        self.especial = 0.0
+        x, y = self.jogador.x, self.jogador.y - 24
+        self.projeteis.append(Projetil(x, y, 0, -3.5, 25, LARANJA, 20,
+                                       tipo="bomba"))
+        self.flash = 10
+        self.sons.tocar("especial")
+        self._adicionar_trauma(0.3)
+        return True
 
     def _atualizar_projeteis(self):
         for proj in self.projeteis[:]:
@@ -485,20 +670,24 @@ class Jogo:
                             proj.vel_x += dx / dist * 0.35
                             proj.vel_y += dy / dist * 0.35
                 acertou = self._projetil_jogador_atinge(proj)
-                if acertou and proj.tipo != "ion" and proj.origem == "jogador":
+                if acertou and proj.tipo not in ("ion", "gauss") and \
+                        proj.origem == "jogador":
                     self.projeteis.remove(proj)
             elif proj.rect.colliderect(self.jogador.rect):
                 self.projeteis.remove(proj)
-                if self.jogador.sofrer_dano():
-                    self._ao_dano()
+                self._aplicar_dano_jogador()
 
     def _projetil_jogador_atinge(self, proj):
         """Aplica dano do projetil do jogador. Retorna True se acertou algo.
 
-        Projeteis ``ion`` atravessam (acertam todos os inimigos na coluna);
-        os demais param no primeiro alvo.
+        Projeteis ``ion`` e ``gauss`` atravessam (acertam todos os inimigos na
+        coluna); a ``nova`` explode em area; os demais param no primeiro alvo.
         """
-        penetrante = proj.tipo == "ion"
+        if proj.tipo == "nova":
+            return self._explodir_nova(proj)
+        if proj.tipo == "bomba":
+            return self._explodir_bomba(proj)
+        penetrante = proj.tipo in ("ion", "gauss")
         acertou = False
         for inimigo in self.inimigos[:]:
             if not proj.rect.colliderect(inimigo.rect):
@@ -513,17 +702,25 @@ class Jogo:
             if isinstance(inimigo, InimigoEspecial):
                 morreu = inimigo.receber_tiro(proj.dano)
                 self.sons.tocar("carga")
+                self.particulas.faiscas(proj.x, proj.y, proj.cor, 5)
                 if morreu:
                     self._explodir_inimigo(inimigo)
             else:
                 if inimigo.sofrer_dano(proj.dano):
                     self._explodir_inimigo(inimigo)
+                else:
+                    self.sons.tocar("acerto")
+                    self.particulas.faiscas(proj.x, proj.y, proj.cor, 5)
             acertou = True
             if not penetrante:
                 return True
         if self.boss and proj.rect.colliderect(self.boss.rect):
             if self.boss.sofrer_dano(proj.dano):
                 self._derrotar_boss()
+            else:
+                self.sons.tocar("acerto")
+                self.particulas.faiscas(proj.x, proj.y, proj.cor, 6)
+                self._adicionar_trauma(0.15)
             acertou = True
         return acertou
 
@@ -586,7 +783,9 @@ class Jogo:
                         evento.key == pygame.K_ESCAPE or
                         evento.key == tecla_pausar):
                     self.estado = "PAUSA"
-                elif pygame.K_1 <= evento.key <= pygame.K_7:
+                elif evento.key == pygame.K_e:
+                    self._ativar_especial()
+                elif pygame.K_1 <= evento.key <= pygame.K_9:
                     self.jogador.selecionar_arma(evento.key - pygame.K_1)
             elif self.estado == "PAUSA":
                 if evento.key in (pygame.K_p, pygame.K_ESCAPE):
@@ -606,76 +805,7 @@ class Jogo:
     # ----- desenho -----
 
     def _desenhar_hud(self):
-        tema = tema_atual(self.config["tema"])
-        cor_acento = tema["primaria"]
-        cor_painel = tema["fundo_painel"]
-
-        # painel superior de vidro
-        painel = pygame.Rect(8, 8, LARGURA - 16, 92)
-        desenhar_painel(self.tela, cor_acento, painel,
-                        cor_fundo=cor_painel, raio_canto=14, alpha=170,
-                        glow_raio=12)
-        desenhar_cantos(self.tela, tema["borda_forte"], painel, tamanho=10)
-
-        # ---- esquerda: vida + escudo ----
-        desenhar_texto(self.tela, "VIDA", (30, 26), (200, 205, 235), 16,
-                       "esquerda", self.fontes)
-        desenhar_coracoes(self.tela, self.jogador.vida, 30, 52)
-        if self.jogador.escudo:
-            desenhar_circulo(self.tela, AZUL, (30, 80), 8, 2, brilho=1.2)
-            desenhar_texto(self.tela, "ESCUDO", (44, 76), AZUL, 16,
-                           "esquerda", self.fontes)
-
-        # ---- centro: nivel + dimensao ----
-        desenhar_texto(self.tela, f"NIVEL {self.jogador.nivel}",
-                       (LARGURA // 2, 34), BRANCO, 26, "centro", self.fontes)
-        desenhar_texto(self.tela, f"DIMENSION 0{self.cenario.id} // "
-                       f"{self.cenario.nome}", (LARGURA // 2, 62),
-                       self.cenario.cor_transicao, 18, "centro", self.fontes)
-
-        # ---- direita: pontuacao, arma, skin, combo ----
-        x = LARGURA - 30
-        desenhar_texto(self.tela, "PONTOS", (x, 26), (200, 205, 235), 16,
-                       "direita", self.fontes)
-        desenhar_texto(self.tela, f"{self.jogador.pontuacao:,}".replace(",", "."),
-                       (x, 48), DOURADO, 26, "direita", self.fontes)
-        arma = ARMARIA[self.jogador.arma_atual]
-        cor_arma = arma["cor"]
-        desenhar_texto(self.tela, arma["nome"], (x, 74), cor_arma, 18,
-                       "direita", self.fontes)
-        desenhar_glow(self.tela, cor_arma, (x - 10, 74), 6, 0.8)
-        desenhar_circulo(self.tela, cor_arma, (x - 22, 74), 4, brilho=1.4)
-
-        # ---- combo ----
-        combo = self.jogador.combo.combo_atual
-        if combo > 1:
-            mult = self.jogador.combo.get_bonus()
-            fracao = min(1.0, combo / 20.0)
-            largura = 170
-            y = 118
-            desenhar_texto(self.tela,
-                           f"COMBO x{combo}", (LARGURA - 30, y), AMARELO,
-                           20, "direita", self.fontes)
-            desenhar_texto(self.tela, f"{mult:.1f}x", (LARGURA - 30, y + 24),
-                           AMARELO, 16, "direita", self.fontes)
-            barra_x = LARGURA - 30 - largura
-            desenhar_barra(self.tela, barra_x, y + 8, largura, 10, fracao,
-                           AMARELO)
-
-        # ---- barra do boss (entidade RIFT) ----
-        if self.boss:
-            largura = 420
-            x = (LARGURA - largura) // 2
-            fracao = max(0.0, self.boss.vida / self.boss.vida_max)
-            desenhar_texto(self.tela, f"RIFT ENTITY // {self.boss.nome}",
-                           (LARGURA // 2, 103), DIMENSION_GOLD, 16, "centro",
-                           self.fontes)
-            desenhar_painel(self.tela, DIMENSION_GOLD,
-                            pygame.Rect(x - 8, 116, largura + 16, 26),
-                            cor_fundo=(24, 16, 6), raio_canto=10, alpha=190,
-                            glow_raio=10)
-            desenhar_barra(self.tela, x, 122, largura, 14, fracao,
-                           DIMENSION_GOLD)
+        self.hud.desenhar(self.tela, self)
 
     def _desenhar_jogo(self):
         self.cenario.desenhar(self.tela)
@@ -889,6 +1019,7 @@ class Jogo:
             self._tela_fade.set_alpha(self.fade)
             self.tela.blit(self._tela_fade, (0, 0))
 
+        self._aplicar_shake()
         self._apresentar()
 
     def executar(self):
@@ -897,7 +1028,10 @@ class Jogo:
             rodando = self._tratar_eventos()
             if not rodando:
                 break
-            self._atualizar()
+            if self.hitstop > 0:
+                self.hitstop -= 1
+            else:
+                self._atualizar()
             self._desenhar()
             self.relogio.tick(FPS)
         pygame.quit()

@@ -5,11 +5,54 @@ import random
 
 import pygame
 
+from .assets import carregar_imagem_alpha
 from .config import ALTURA, AZUL, AZUL_CLARO, BRANCO, CIANO, DOURADO, INDIGO, \
     LARGURA, LARANJA, ROXO, VERDE, VERMELHO
 from .geometry import losango
 from .smooth import desenhar_circulo, desenhar_glow, desenhar_poligono
 from .weapons import ARMARIA, Projetil
+
+
+# ---------------------------------------------------------------------------
+# Sprite da nave padrao (extraido de images/naves.png -> nave-padrao.png)
+# ---------------------------------------------------------------------------
+
+_ALTURA_SPRITE = 52  # altura exibida em pixels (proporcao preservada)
+
+_SPRITE_PADRAO = None
+_ROTACOES_SPRITE = {}
+
+
+def _sprite_padrao():
+    """Sprite escalado da nave padrao, carregado uma unica vez (cache)."""
+    global _SPRITE_PADRAO
+    if _SPRITE_PADRAO is None:
+        img = carregar_imagem_alpha("nave-padrao.png")
+        if img is not None:
+            largura = max(
+                1, int(_ALTURA_SPRITE * img.get_width() / img.get_height()))
+            try:
+                img = pygame.transform.smoothscale(img, (largura,
+                                                         _ALTURA_SPRITE))
+            except pygame.error:
+                img = pygame.transform.scale(img, (largura, _ALTURA_SPRITE))
+        _SPRITE_PADRAO = img
+    return _SPRITE_PADRAO
+
+
+def _sprite_padrao_rotacionada(tilt):
+    """Sprite rotacionado para a inclinacao (banking) atual do jogador."""
+    chave = int(round(tilt * 2))
+    if chave not in _ROTACOES_SPRITE:
+        base = _sprite_padrao()
+        if base is None:
+            _ROTACOES_SPRITE[chave] = None
+        else:
+            try:
+                _ROTACOES_SPRITE[chave] = pygame.transform.rotate(base, -tilt)
+            except pygame.error:
+                _ROTACOES_SPRITE[chave] = base
+    return _ROTACOES_SPRITE[chave]
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +110,9 @@ class Skin:
         """Desenha a nave do jogador com a skin aplicada."""
         x, y = int(jogador.x), int(jogador.y)
         t = pygame.time.get_ticks() * 0.001
-        if self.efeito == "transparencia":
+        if self.id == "padrao":
+            self._desenhar_sprite(tela, x, y, jogador.tilt)
+        elif self.efeito == "transparencia":
             self._desenhar_transparente(tela, x, y, jogador.tilt, t)
         elif self.efeito == "diamante":
             self._desenhar_diamante(tela, x, y, jogador.tilt, t)
@@ -93,6 +138,13 @@ class Skin:
 
     def _pontos_nave(self, x, y, tilt):
         return [(x, y - 20), (x - 15, y + 16), (x, y + 7), (x + 15, y + 16)]
+
+    def _desenhar_sprite(self, tela, x, y, tilt):
+        sprite = _sprite_padrao_rotacionada(tilt)
+        if sprite is None:
+            self._desenhar_nave_base(tela, x, y, tilt)
+            return
+        tela.blit(sprite, sprite.get_rect(center=(x, y - 8)))
 
     def _desenhar_nave_base(self, tela, x, y, tilt):
         pts = self._pontos_nave(x, y, tilt)
@@ -282,6 +334,12 @@ class Jogador:
             return projs
         if tipo == "ion":
             return [Projetil(x, y, 0, 0, arma["dano"], arma["cor"],
+                             arma["raio"], tipo=tipo)]
+        if tipo == "gauss":
+            return [Projetil(x, y, 0, -arma["vel"], arma["dano"], arma["cor"],
+                             arma["raio"], tipo=tipo)]
+        if tipo == "nova":
+            return [Projetil(x, y, 0, -arma["vel"], arma["dano"], arma["cor"],
                              arma["raio"], tipo=tipo)]
 
         return [Projetil(x, y, 0, -arma["vel"], arma["dano"], arma["cor"],

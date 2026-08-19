@@ -99,6 +99,16 @@ class Sons:
             _sweep(300, 1400, 0.7, 0.3, "seno"))
         self._sons["gameover"] = self._novo_som(
             _sweep(400, 70, 1.0, 0.5, "seno"))
+        self._sons["acerto"] = self._novo_som(_tone(2100, 0.05, 0.22))
+        self._sons["escudo"] = self._novo_som(
+            _sweep(900, 220, 0.3, 0.4, "seno"))
+        self._sons["arma"] = self._novo_som(
+            _tone(520, 0.1, 0.3) + _tone(780, 0.16, 0.3) +
+            _tone(1040, 0.2, 0.3))
+        self._sons["nova"] = self._novo_som(
+            _ruido(0.35, 0.5) + _sweep(1400, 300, 0.3, 0.35))
+        self._sons["especial"] = self._novo_som(
+            _sweep(180, 900, 0.5, 0.4, "serra") + _tone(1400, 0.4, 0.25))
 
     def _criar_musica(self):
         try:

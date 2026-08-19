@@ -27,8 +27,9 @@ from .player import Jogador
 from .save_system import ARQUIVO_RECORDES, SistemaProgressao
 from .settings import ACOES_CONTROLE, RESOLUCOES, TEMAS
 from .shop import LojaSkins
-from .smooth import desenhar_circulo as desenhar_circulo_suave, \
-    desenhar_glow, ease_out, ease_out_back, retangulo_suave, texto_suave
+from .smooth import desenhar_cantos, desenhar_circulo as \
+    desenhar_circulo_suave, desenhar_glow, ease_out, ease_out_back, \
+    painel_glass, retangulo_suave, texto_suave
 from .theme import tema_atual
 from .ui import BotaoNeon
 
@@ -66,13 +67,17 @@ class OpcaoMenu:
         self.hover = self.get_rect(x, fonte, layout).collidepoint(mouse_pos)
 
     @staticmethod
-    def _blit(tela, surf, x, y, alfa):
+    def _blit(tela, surf, x, y, alfa, centrado=False):
+        if alfa <= 0:
+            return
+        rect = (surf.get_rect(center=(x, y)) if centrado
+                else surf.get_rect(midleft=(x, y)))
         if alfa >= 255:
-            tela.blit(surf, surf.get_rect(center=(x, y)))
-        elif alfa > 0:
+            tela.blit(surf, rect)
+        else:
             s = surf.copy()
             s.set_alpha(int(alfa))
-            tela.blit(s, s.get_rect(center=(x, y)))
+            tela.blit(s, rect)
 
     def desenhar(self, tela, fonte, fonte_sel, tema, x, selecionado,
                  deslocamento, alfa, layout):
@@ -85,7 +90,7 @@ class OpcaoMenu:
         if selecionado:
             surf = texto_suave(fonte_ativa, self.texto, secundaria, primaria,
                                6, True)
-            self._blit(tela, surf, xf + layout.px(3), y + layout.px(2), alfa)
+            self._blit(tela, surf, xf + layout.px(4), y + layout.px(2), alfa)
         surf = texto_suave(fonte_ativa, self.texto, cor,
                            primaria if selecionado else None,
                            5 if selecionado else 0, True)
@@ -93,9 +98,9 @@ class OpcaoMenu:
         if selecionado and alfa >= 255:
             larg = fonte_ativa.size(self.texto)[0]
             pygame.draw.line(tela, primaria,
-                             (xf - layout.px(8),
-                              y + fonte_ativa.get_height() // 2 + layout.px(4)),
-                             (xf + larg - layout.px(4),
+                             (xf, y + fonte_ativa.get_height() // 2 +
+                              layout.px(4)),
+                             (xf + larg,
                               y + fonte_ativa.get_height() // 2 + layout.px(4)),
                              3)
 
@@ -146,7 +151,13 @@ class SistemaNotificacao:
 
 
 class Dialogo:
-    """Dialogo modal com confirmar/cancelar (mouse e teclado)."""
+    """Dialogo modal de confirmacao com visual cinematografico.
+
+    Painel glass com borda neon, icone de alerta pulsante, titulo com acento,
+    mensagem com sombra, botoes com glow no hover e dicas de teclado. Possui
+    animacao de entrada (fade-in com "pop" de escala) e aceita mouse e teclado
+    (ENTER confirma, ESC cancela).
+    """
 
     def __init__(self, titulo, mensagem, funcao_confirmar, funcao_cancelar,
                  layout=None):
@@ -156,18 +167,21 @@ class Dialogo:
         self.funcao_confirmar = funcao_confirmar
         self.funcao_cancelar = funcao_cancelar
         self.ativo = True
-        self._largura, self._altura = self._layout.px(500), self._layout.px(250)
+        self._t0 = pygame.time.get_ticks()
+        self._largura, self._altura = self._layout.px(520), self._layout.px(300)
         self._x = self._layout.x(0.5) - self._largura // 2
         self._y = self._layout.y(0.5) - self._altura // 2
+        self._rect = pygame.Rect(self._x, self._y, self._largura, self._altura)
 
     def _retangulos(self):
         l = self._layout
-        confirmar = pygame.Rect(self._x + l.px(90),
-                                self._y + self._altura - l.px(70),
-                                l.px(130), l.px(42))
-        cancelar = pygame.Rect(self._x + l.px(280),
-                               self._y + self._altura - l.px(70),
-                               l.px(130), l.px(42))
+        rect = self._rect
+        confirmar = pygame.Rect(rect.x + l.px(90),
+                                rect.bottom - l.px(78),
+                                l.px(150), l.px(46))
+        cancelar = pygame.Rect(rect.x + l.px(280),
+                               rect.bottom - l.px(78),
+                               l.px(150), l.px(46))
         return confirmar, cancelar
 
     def tratar_evento(self, evento, mouse_pos=None):
@@ -186,55 +200,133 @@ class Dialogo:
                 self._cancelar()
 
     def _confirmar(self):
-        self.ativo = False
-        self.funcao_confirmar()
+        if self.ativo:
+            self.ativo = False
+            self.funcao_confirmar()
 
     def _cancelar(self):
-        self.ativo = False
-        self.funcao_cancelar()
+        if self.ativo:
+            self.ativo = False
+            self.funcao_cancelar()
 
-    def desenhar(self, tela, fonte_titulo, fonte_texto, mouse_pos=(0, 0)):
+    def _animacao(self):
+        """Progresso da entrada (0..1) e fator de escala do painel."""
+        t = (pygame.time.get_ticks() - self._t0) / 220.0
+        p = max(0.0, min(1.0, t))
+        return p, ease_out_back(p)
+
+    def desenhar(self, tela, fonte_titulo, fonte_texto, mouse_pos=(0, 0),
+                 tema=None):
         l = self._layout
-        overlay = pygame.Surface((l.largura, l.altura), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 175))
-        tela.blit(overlay, (0, 0))
-        rect = pygame.Rect(self._x, self._y, self._largura, self._altura)
-        retangulo_suave(tela, (25, 25, 48), rect, 12)
-        retangulo_suave(tela, (120, 90, 220), rect, 12, 2,
-                        glow_cor=(120, 90, 220), glow_raio=12)
-        titulo = fonte_titulo.render(self.titulo, True, (255, 200, 100))
-        tela.blit(titulo, titulo.get_rect(center=(rect.centerx,
-                                                  rect.y + l.px(34))))
+        tema = tema or {
+            "primaria": (120, 90, 220), "secundaria": (0, 200, 120),
+            "terciaria": (255, 70, 90), "fundo_painel": (12, 14, 32),
+            "borda_forte": (200, 200, 230),
+        }
+        p, escala = self._animacao()
+        t = pygame.time.get_ticks() * 0.001
 
+        # overlay de foco (escurece o fundo)
+        overlay = pygame.Surface((l.largura, l.altura), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, int(175 * p)))
+        tela.blit(overlay, (0, 0))
+
+        # painel com entrada em escala (pop suave)
+        largura = int(self._largura * (0.94 + 0.06 * escala))
+        altura = int(self._altura * (0.94 + 0.06 * escala))
+        x = self._x - (largura - self._largura) // 2
+        y = self._y - (altura - self._altura) // 2
+        rect = pygame.Rect(x, y, largura, altura)
+        self._rect = rect
+
+        # glow pulsante atras do painel
+        pulso = 0.5 + 0.5 * math.sin(t * 2.6)
+        desenhar_glow(tela, tema["primaria"], rect.center,
+                      max(rect.w, rect.h) // 2, 0.35 + 0.25 * pulso)
+
+        # painel glass com borda neon
+        painel = painel_glass(tema["primaria"], rect,
+                              cor_fundo=tema["fundo_painel"], raio_canto=16,
+                              alpha=238, glow_raio=26)
+        tela.blit(painel, (rect.x - 12, rect.y - 12))
+        desenhar_cantos(tela, tema["borda_forte"], rect, tamanho=16)
+        # linha de acento superior
+        pygame.draw.line(tela, tema["primaria"], (rect.x + 44, rect.y + 10),
+                         (rect.right - 44, rect.y + 10), 2)
+
+        alfa = int(255 * p)
+
+        # icone de alerta (triangulo pulsante)
+        icone_cor = tema["terciaria"]
+        ix, iy = rect.centerx, rect.y + l.px(48)
+        desenhar_glow(tela, icone_cor, (ix, iy), l.px(30),
+                      0.45 + 0.35 * pulso)
+        desenhar_circulo_suave(tela, icone_cor, (ix, iy), l.px(22), 2,
+                               brilho=1.1)
+        tri = [(ix, iy - l.px(9)), (ix + l.px(13), iy + l.px(12)),
+               (ix - l.px(13), iy + l.px(12))]
+        pygame.draw.polygon(tela, icone_cor, tri)
+        pygame.draw.line(tela, BRANCO, (ix, iy - l.px(2)), (ix, iy + l.px(5)),
+                         2)
+        pygame.draw.circle(tela, BRANCO, (ix, iy + l.px(9)), 2)
+
+        # titulo
+        titulo_surf = texto_suave(fonte_titulo, self.titulo,
+                                  tema["primaria"],
+                                  glow_cor=tema["primaria"], glow_raio=5)
+        titulo_surf.set_alpha(alfa)
+        tela.blit(titulo_surf, titulo_surf.get_rect(center=(rect.centerx,
+                                                            rect.y + l.px(96))))
+
+        # mensagem (quebrada em linhas, com sombra suave)
         palavras = self.mensagem.split()
         linhas, atual = [], []
         for palavra in palavras:
             teste = " ".join(atual + [palavra])
-            if fonte_texto.size(teste)[0] > self._largura - l.px(40):
+            if fonte_texto.size(teste)[0] > self._largura - l.px(56):
                 linhas.append(" ".join(atual))
                 atual = [palavra]
             else:
                 atual.append(palavra)
         if atual:
             linhas.append(" ".join(atual))
-        for i, linha in enumerate(linhas):
-            surface = fonte_texto.render(linha, True, (200, 205, 255))
-            tela.blit(surface, surface.get_rect(center=(rect.centerx,
-                                                        rect.y + l.px(84) +
-                                                        i * l.px(30))))
+        y_texto = rect.y + l.px(128)
+        for linha in linhas:
+            surface = texto_suave(fonte_texto, linha, (206, 210, 246),
+                                  glow_cor=(40, 40, 90), glow_raio=2)
+            surface.set_alpha(alfa)
+            tela.blit(surface, surface.get_rect(center=(rect.centerx, y_texto)))
+            y_texto += l.px(32)
 
+        # botoes
         confirmar, cancelar = self._retangulos()
-        mouse = mouse_pos
-        cor = (0, 150, 60) if confirmar.collidepoint(mouse) else (0, 80, 40)
-        pygame.draw.rect(tela, cor, confirmar, border_radius=8)
-        pygame.draw.rect(tela, BRANCO, confirmar, 1, border_radius=8)
-        surface = fonte_texto.render("Confirmar", True, BRANCO)
-        tela.blit(surface, surface.get_rect(center=confirmar.center))
-        cor = (170, 30, 30) if cancelar.collidepoint(mouse) else (90, 20, 20)
-        pygame.draw.rect(tela, cor, cancelar, border_radius=8)
-        pygame.draw.rect(tela, BRANCO, cancelar, 1, border_radius=8)
-        surface = fonte_texto.render("Cancelar", True, BRANCO)
-        tela.blit(surface, surface.get_rect(center=cancelar.center))
+        hover_confirmar = confirmar.collidepoint(mouse_pos)
+        hover_cancelar = cancelar.collidepoint(mouse_pos)
+        self._desenhar_botao(tela, confirmar, "CONFIRMAR", fonte_texto,
+                             (0, 180, 80) if hover_confirmar else (0, 100, 50),
+                             alfa, l, glow=hover_confirmar)
+        self._desenhar_botao(tela, cancelar, "CANCELAR", fonte_texto,
+                             (220, 45, 45) if hover_cancelar else (130, 28, 28),
+                             alfa, l, glow=hover_cancelar)
+
+        # dica de teclado
+        dica = texto_suave(fonte_texto,
+                           "ENTER confirmar   |   ESC cancelar",
+                           (150, 155, 190), glow_cor=(30, 30, 60), glow_raio=2)
+        dica.set_alpha(int(200 * p))
+        tela.blit(dica, dica.get_rect(center=(rect.centerx,
+                                              rect.bottom - l.px(26))))
+
+    def _desenhar_botao(self, tela, rect, texto, fonte, cor, alfa, l, glow):
+        if glow:
+            desenhar_glow(tela, cor, rect.center, max(rect.w, rect.h) // 2,
+                          0.5)
+        retangulo_suave(tela, cor, rect, 10)
+        retangulo_suave(tela, BRANCO, rect, 10, 1)
+        surf = texto_suave(fonte, texto, BRANCO, glow_cor=(20, 20, 40),
+                           glow_raio=2)
+        surf.set_alpha(int(255 * alfa))
+        tela.blit(surf, surf.get_rect(center=rect.center))
 
 
 class TransicaoTela:
@@ -319,6 +411,13 @@ class MenuPrincipal:
         self.config_submodo = None
         self.controle_selecao = 0
         self.remapando = None
+        self.resolucao_selecao = 0
+        self.resolucao_scroll = 0
+        self.config_scroll = 0
+        self.ajuste_snapshot = (1.0, 0, 0)
+        self.sub_anim = 0.0
+        self.sub_anim_total = 0.9
+        self.preview_anim = 0.0
 
     # ------------------------------------------------------------------ sons
 
@@ -336,6 +435,12 @@ class MenuPrincipal:
             ("05 // SETTINGS", self._abrir_config),
             ("06 // EXIT", self._sair),
         ]
+        # ancora a coluna alinhada a esquerda: nunca deixa o texto mais longo
+        # estourar a borda direita da tela (usa a fonte da opcao selecionada)
+        largura_max = max(self.fonte_opcao_sel.size(texto)[0]
+                          for texto, _ in itens)
+        x_max = self.layout.largura - largura_max - self.layout.px(24)
+        self.x_opcoes = min(self.layout.x(0.61), x_max)
         y = self.layout.px(180)
         self.opcoes = []
         for texto, funcao in itens:
@@ -362,6 +467,7 @@ class MenuPrincipal:
     def _abrir_continuar(self):
         self._som("navegar")
         self.continuar_selecao = 0
+        self.sub_anim = 0.0
         self.subestado = "CONTINUAR"
         self.transicao.iniciar()
 
@@ -372,12 +478,15 @@ class MenuPrincipal:
         self._som("navegar")
         self.loja_selecao = self._indice_skin_atual()
         self.preview_skin = None
+        self.preview_anim = 0.0
+        self.sub_anim = 0.0
         self.subestado = "LOJA"
         self.transicao.iniciar()
 
     def _abrir_recordes(self):
         self._som("navegar")
         self.jogo.recordes = SistemaProgressao.carregar_recordes()
+        self.sub_anim = 0.0
         self.subestado = "RECORDES"
         self.transicao.iniciar()
 
@@ -386,6 +495,10 @@ class MenuPrincipal:
         self.config_selecao = 0
         self.config_submodo = None
         self.remapando = None
+        self.resolucao_selecao = 0
+        self.resolucao_scroll = 0
+        self.config_scroll = 0
+        self.sub_anim = 0.0
         self.subestado = "CONFIG"
         self.transicao.iniciar()
 
@@ -402,8 +515,13 @@ class MenuPrincipal:
     def _voltar_menu(self):
         self._som("navegar")
         self.preview_skin = None
+        self.preview_anim = 0.0
         self.config_submodo = None
         self.remapando = None
+        self.resolucao_selecao = 0
+        self.resolucao_scroll = 0
+        self.config_scroll = 0
+        self.sub_anim = 0.0
         self.subestado = "MENU"
         self.transicao.iniciar()
         self.entrada_t = 0.0
@@ -471,18 +589,22 @@ class MenuPrincipal:
 
     def _desenhar_continuar(self, tela):
         l = self.layout
-        self._cabecalho_sub(tela, "CARREGANDO JOGO", (130, 205, 255))
+        tema = tema_atual(self.jogo.config["tema"])
+        self._cabecalho_sub_animado(tela, "CARREGANDO JOGO",
+                                    tema["secundaria"])
         tem = self._tem_save()
         painel = self._painel_central(520, 330, -35)
-        retangulo_suave(tela, (22, 22, 46), painel, 12)
-        retangulo_suave(tela, (110, 90, 220), painel, 12, 2,
-                        glow_cor=(110, 90, 220), glow_raio=12)
+        self._painel_sub(tela, painel, tema)
+        self._detalhe_painel(tela, painel, tema, tema["secundaria"])
         jog = self.jogo.progresso.jogador
-        titulo = ("Save Encontrado" if tem else "Nenhum Save")
+        titulo = ("SAVE ENCONTRADO" if tem else "NENHUM SAVE")
         cor = (150, 230, 120) if tem else (230, 120, 120)
+        dx, dy, alfa = self._entrada_anim(self._frac_sub(0.14, 0.3),
+                                          dy_design=-14)
         surface = self.fonte_media.render(titulo, True, cor)
-        tela.blit(surface, surface.get_rect(center=(painel.centerx,
-                                                    painel.y + l.px(28))))
+        self._blit_alfa(tela, surface, surface.get_rect(
+            center=(painel.centerx + dx, painel.y + l.px(28) + dy)),
+            int(255 * alfa))
         if tem:
             skin = self.jogo.loja.pegar_skin(jog["skin_atual"])
             linhas = [
@@ -495,23 +617,33 @@ class MenuPrincipal:
                 ("Cenarios", f"{len(jog['cenarios_desbloqueados'])}/6"),
             ]
             y = painel.y + l.px(62)
-            for rotulo, valor in linhas:
-                surface = self.fonte_media.render(f"{rotulo}:", True,
-                                                  (170, 175, 225))
-                tela.blit(surface, (painel.x + l.px(70), y))
-                surface = self.fonte_media.render(valor, True, BRANCO)
-                tela.blit(surface, surface.get_rect(midleft=(painel.x +
-                                                             l.px(250),
-                                                             y + l.px(9))))
+            for i, (rotulo, valor) in enumerate(linhas):
+                dx, dy, alfa = self._entrada_anim(
+                    self._frac_sub(0.20 + i * 0.05, 0.35), dx_design=-30)
+                surf_r = self.fonte_media.render(f"{rotulo}:", True,
+                                                 (170, 175, 225))
+                self._blit_alfa(tela, surf_r,
+                                (painel.x + l.px(70) + dx, y + dy),
+                                int(255 * alfa))
+                surf_v = self.fonte_media.render(valor, True, BRANCO)
+                self._blit_alfa(tela, surf_v, surf_v.get_rect(
+                    midleft=(painel.x + l.px(250) + dx, y + l.px(9) + dy)),
+                    int(255 * alfa))
                 y += l.px(36)
         else:
+            dx, dy, alfa = self._entrada_anim(self._frac_sub(0.2, 0.35),
+                                              dx_design=-20)
             surface = self.fonte_media.render(
                 "Nenhum progresso salvo ainda.", True, (200, 200, 240))
-            tela.blit(surface, surface.get_rect(center=painel.center))
+            self._blit_alfa(tela, surface, surface.get_rect(
+                center=(painel.centerx + dx, painel.centery + dy)),
+                int(255 * alfa))
         botoes = self._botoes_continuar()
-        for botao in botoes:
+        for i, botao in enumerate(botoes):
             botao.atualizar(self.mouse)
-            botao.desenhar(tela, self.fonte_media)
+            self._desenhar_botao_entrada(
+                tela, botao, self.fonte_media,
+                self._frac_sub(0.55 + i * 0.06, 0.3))
         if self.continuar_selecao < 2:
             pygame.draw.rect(tela, (255, 200, 100),
                              botoes[self.continuar_selecao].rect, 3,
@@ -555,92 +687,151 @@ class MenuPrincipal:
 
     def _desenhar_loja(self, tela):
         l = self.layout
-        self._cabecalho_sub(tela, "LOJA DE SKINS", (150, 90, 255))
+        tema = tema_atual(self.jogo.config["tema"])
+        self._cabecalho_sub_animado(tela, "LOJA DE SKINS", tema["primaria"])
+        dx, dy, alfa = self._entrada_anim(self._frac_sub(0.06, 0.3),
+                                          dx_design=-16)
         surface = self.fonte_media.render(
             f"Moedas: {formatar_pontos(self.jogo.loja.moedas)}", True,
             DOURADO)
-        tela.blit(surface, (l.px(20), l.px(30)))
+        self._blit_alfa(tela, surface, (l.px(20) + dx, l.px(30) + dy),
+                        int(255 * alfa))
         skin_atual = self.jogo.loja.pegar_skin(self.jogo.loja.skin_atual)
         surface = self.fonte_media.render(
-            f"Skin atual: {skin_atual.nome}", True, CIANO)
-        tela.blit(surface, surface.get_rect(topright=(l.largura - l.px(20),
-                                                      l.px(30))))
+            f"Skin atual: {skin_atual.nome}", True, tema["secundaria"])
+        self._blit_alfa(tela, surface, surface.get_rect(
+            topright=(l.largura - l.px(20) - dx, l.px(30) + dy)),
+            int(255 * alfa))
+
+        n_skin = len(self.jogo.loja.skins)
+        desbloqueadas = len(self.jogo.loja.lista_desbloqueadas())
+        surface = self.fonte_pequena.render(
+            f"{desbloqueadas}/{n_skin} skins desbloqueadas", True,
+            (150, 155, 200))
+        self._blit_alfa(tela, surface, surface.get_rect(
+            topright=(l.largura - l.px(20), l.px(56))), int(255 * alfa))
 
         rects = self._rects_loja()
         for i, skin in enumerate(self.jogo.loja.skins):
-            rect = rects[i]
-            selecionada = (i == self.loja_selecao)
-            hover = rect.collidepoint(self.mouse)
-            fundo = (52, 46, 92) if selecionada else (36, 34, 62) if hover \
-                else (28, 27, 50)
-            borda = (255, 190, 90) if selecionada else (150, 130, 255) \
-                if hover else (85, 80, 130)
-            retangulo_suave(tela, fundo, rect, 10,
-                            glow_cor=borda if (selecionada or hover) else None,
-                            glow_raio=10 if (selecionada or hover) else 0)
-            pygame.draw.rect(tela, borda, rect, 2, border_radius=10)
-            self._desenhar_preview_skin(tela, skin, rect.centerx,
-                                        rect.y + l.px(62))
-            surface = self.fonte_pequena.render(skin.nome, True, BRANCO)
-            tela.blit(surface, surface.get_rect(center=(rect.centerx,
-                                                        rect.y + l.px(18))))
-            if skin.desbloqueada:
-                status = ("EQUIPADA" if skin.id == self.jogo.loja.skin_atual
-                          else "DESBLOQ.")
-                cor = CIANO if skin.id == self.jogo.loja.skin_atual else VERDE
-            else:
-                status = f"{formatar_pontos(skin.preco)} pts"
-                cor = DOURADO
-            surface = self.fonte_pequena.render(status, True, cor)
-            tela.blit(surface, surface.get_rect(center=(rect.centerx,
-                                                        rect.y + l.px(122))))
+            p = self._frac_sub(0.16 + (i % 4) * 0.05 + (i // 4) * 0.09, 0.35)
+            self._desenhar_cartao_skin(
+                tela, rects[i], skin, i == self.loja_selecao,
+                rects[i].collidepoint(self.mouse), tema, p)
 
-        for botao in self._botoes_loja().values():
+        botoes = self._botoes_loja()
+        for i, (nome, botao) in enumerate(botoes.items()):
             botao.atualizar(self.mouse)
-            botao.desenhar(tela, self.fonte_media)
+            self._desenhar_botao_entrada(
+                tela, botao, self.fonte_media, self._frac_sub(0.6 + i * 0.05,
+                                                              0.25))
         skin = self.jogo.loja.skins[self.loja_selecao]
+        dx, dy, alfa = self._entrada_anim(self._frac_sub(0.62, 0.25),
+                                          dy_design=16)
         surface = self.fonte_pequena.render(skin.descricao, True,
                                             (170, 175, 220))
-        tela.blit(surface, surface.get_rect(center=(l.x(0.5),
-                                                    l.altura - l.px(36))))
+        self._blit_alfa(tela, surface, surface.get_rect(
+            center=(l.x(0.5) + dx, l.altura - l.px(36) + dy)),
+            int(255 * alfa))
 
         if self.preview_skin:
             self._desenhar_preview_overlay(tela)
 
+    def _desenhar_cartao_skin(self, tela, rect, skin, selecionada, hover,
+                              tema, p):
+        """Card de skin com entrada animada (fade + slide)."""
+        l = self.layout
+        if p <= 0:
+            return
+        alfa = ease_out(p)
+        dy = int((1 - alfa) * l.px(30))
+        fundo = (52, 46, 92) if selecionada else (36, 34, 62) if hover \
+            else (28, 27, 50)
+        borda = (255, 190, 90) if selecionada else tema["secundaria"] \
+            if hover else tema["borda_fraco"]
+        if p >= 1:
+            self._renderizar_cartao_skin(tela, rect, skin, fundo, borda)
+            return
+        off = pygame.Surface((rect.w + l.px(24), rect.h + l.px(24)),
+                             pygame.SRCALPHA)
+        local = pygame.Rect(l.px(12), l.px(12), rect.w, rect.h)
+        self._renderizar_cartao_skin(off, local, skin, fundo, borda)
+        off.set_alpha(int(255 * alfa))
+        tela.blit(off, (rect.x - l.px(12), rect.y - l.px(12) + dy))
+
+    def _renderizar_cartao_skin(self, tela, rect, skin, fundo, borda):
+        """Desenha o conteudo de um card de skin num rect (tela ou offscreen)."""
+        l = self.layout
+        tem_alpha = bool(tela.get_flags() & pygame.SRCALPHA)
+        if tem_alpha:
+            desenhar_glow(tela, borda, rect.center, max(rect.w, rect.h) // 2,
+                          0.4)
+            pygame.draw.rect(tela, fundo + (255,), rect, border_radius=10)
+            pygame.draw.rect(tela, borda + (255,), rect, 2, border_radius=10)
+        else:
+            retangulo_suave(tela, fundo, rect, 10,
+                            glow_cor=borda, glow_raio=10)
+            pygame.draw.rect(tela, borda, rect, 2, border_radius=10)
+        if skin.id == self.jogo.loja.skin_atual:
+            desenhar_cantos(tela, borda, rect, tamanho=l.px(8),
+                            espessura=l.px(2))
+        self._desenhar_preview_skin(tela, skin, rect.centerx,
+                                    rect.y + l.px(62))
+        surface = self.fonte_pequena.render(skin.nome, True, BRANCO)
+        tela.blit(surface, surface.get_rect(center=(rect.centerx,
+                                                    rect.y + l.px(18))))
+        if skin.desbloqueada:
+            status = ("EQUIPADA" if skin.id == self.jogo.loja.skin_atual
+                      else "DESBLOQ.")
+            cor = CIANO if skin.id == self.jogo.loja.skin_atual else VERDE
+        else:
+            status = f"{formatar_pontos(skin.preco)} pts"
+            cor = DOURADO
+        surface = self.fonte_pequena.render(status, True, cor)
+        tela.blit(surface, surface.get_rect(center=(rect.centerx,
+                                                    rect.y + l.px(122))))
+
     def _desenhar_preview_overlay(self, tela):
         l = self.layout
+        tema = tema_atual(self.jogo.config["tema"])
+        p = self._frac_preview(0.0, 0.3)
+        if p <= 0:
+            return
         overlay = pygame.Surface((l.largura, l.altura), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 195))
+        overlay.fill((0, 0, 0, int(195 * ease_out(p))))
         tela.blit(overlay, (0, 0))
         skin = self.preview_skin
-        self._cabecalho_sub(tela, skin.nome.upper(), (170, 120, 255),
-                            y=l.px(128))
-        prev = Jogador(skin=skin)
-        prev.x, prev.y = l.x(0.5), l.y(0.5) - l.px(60)
-        prev.tilt = 0
-        prev.invencivel = 0
-        prev.desenhar(tela, None)
-        surface = self.fonte_media.render(skin.descricao, True, (200, 205, 240))
-        tela.blit(surface, surface.get_rect(center=(l.x(0.5),
-                                                    l.y(0.5) + l.px(90))))
+        self._cabecalho_sub_animado(
+            tela, skin.nome.upper(), (170, 120, 255), y=128,
+            p=self._frac_preview(0.08, 0.3))
+        cx, cy = l.x(0.5), l.y(0.5) - l.px(60)
+        self._desenhar_nave_escala(tela, skin, cx, cy, 1.25,
+                                   self._frac_preview(0.12, 0.4))
+        dx, dy, alfa = self._entrada_anim(self._frac_preview(0.32, 0.3),
+                                          dy_design=16)
+        surface = self.fonte_media.render(skin.descricao, True,
+                                          (200, 205, 240))
+        self._blit_alfa(tela, surface, surface.get_rect(
+            center=(cx + dx, l.y(0.5) + l.px(90) + dy)), int(255 * alfa))
         if skin.id == self.jogo.loja.skin_atual:
-            status, cor = "Equipada", CIANO
+            status, cor = "Equipada", tema["secundaria"]
         elif skin.desbloqueada:
             status, cor = "Desbloqueada", VERDE
         else:
             status, cor = f"Preco: {formatar_pontos(skin.preco)} pts", DOURADO
         surface = self.fonte_media.render(status, True, cor)
-        tela.blit(surface, surface.get_rect(center=(l.x(0.5),
-                                                    l.y(0.5) + l.px(130))))
+        self._blit_alfa(tela, surface, surface.get_rect(
+            center=(cx + dx, l.y(0.5) + l.px(130) + dy)), int(255 * alfa))
         botoes = {"equipar": BotaoNeon("EQUIPAR", (l.x(0.5) - l.px(170),
                                                    l.altura - l.px(120),
                                                    l.px(160), l.px(48))),
                   "fechar": BotaoNeon("FECHAR", (l.x(0.5) + l.px(10),
                                                  l.altura - l.px(120),
                                                  l.px(160), l.px(48)))}
-        for botao in botoes.values():
+        for i, botao in enumerate(botoes.values()):
             botao.atualizar(self.mouse)
-            botao.desenhar(tela, self.fonte_media)
+            self._desenhar_botao_entrada(
+                tela, botao, self.fonte_media,
+                self._frac_preview(0.44 + i * 0.06, 0.25))
 
     def _acao_botao_loja(self, nome):
         loja = self.jogo.loja
@@ -672,6 +863,7 @@ class MenuPrincipal:
                 self._som("erro")
         elif nome == "preview":
             self.preview_skin = skin
+            self.preview_anim = 0.0
             self._som("navegar")
         elif nome == "voltar":
             self._voltar_menu()
@@ -694,30 +886,39 @@ class MenuPrincipal:
 
     def _desenhar_recordes(self, tela):
         l = self.layout
-        self._cabecalho_sub(tela, "RECORDES", (140, 120, 255))
+        tema = tema_atual(self.jogo.config["tema"])
+        self._cabecalho_sub_animado(tela, "RECORDES", tema["secundaria"])
         lista = self.jogo.recordes
         painel = self._painel_central(520, 330, -35)
-        retangulo_suave(tela, (22, 22, 46), painel, 12)
-        retangulo_suave(tela, (110, 90, 220), painel, 12, 2,
-                        glow_cor=(110, 90, 220), glow_raio=12)
-        surface = self.fonte_media.render("TOP 5", True, CIANO)
-        tela.blit(surface, surface.get_rect(center=(painel.centerx,
-                                                    painel.y + l.px(28))))
+        self._painel_sub(tela, painel, tema)
+        self._detalhe_painel(tela, painel, tema, DOURADO)
+        dx, dy, alfa = self._entrada_anim(self._frac_sub(0.12, 0.3),
+                                          dy_design=-10)
+        surface = self.fonte_media.render("TOP 5", True, tema["secundaria"])
+        self._blit_alfa(tela, surface, surface.get_rect(
+            center=(painel.centerx + dx, painel.y + l.px(28) + dy)),
+            int(255 * alfa))
         if not lista:
+            dx, dy, alfa = self._entrada_anim(self._frac_sub(0.2, 0.35),
+                                              dx_design=-18)
             surface = self.fonte_media.render(
                 "Nenhum recorde ainda.", True, (200, 205, 240))
-            tela.blit(surface, surface.get_rect(center=painel.center))
+            self._blit_alfa(tela, surface, surface.get_rect(
+                center=(painel.centerx + dx, painel.centery + dy)),
+                int(255 * alfa))
         else:
             y = painel.y + l.px(70)
             for i, reg in enumerate(lista[:5]):
+                p = self._frac_sub(0.2 + i * 0.06, 0.35)
+                dx, dy, alfa = self._entrada_anim(p, dx_design=-40)
                 cor = DOURADO if i == 0 else (205, 210, 235) if i < 3 \
                     else (150, 155, 190)
                 texto = (f"TOP {i + 1}. {reg['nome']}  "
                          f"{formatar_pontos(reg['pontos'])} pts  "
                          f"(Nivel {reg['nivel']})")
                 surface = self.fonte_media.render(texto, True, cor)
-                tela.blit(surface, surface.get_rect(center=(painel.centerx,
-                                                            y)))
+                self._blit_alfa(tela, surface, surface.get_rect(
+                    center=(painel.centerx + dx, y + dy)), int(255 * alfa))
                 y += l.px(52)
 
         jog = self.jogo.progresso.jogador
@@ -727,12 +928,16 @@ class MenuPrincipal:
                  f"Skins: {len(self.jogo.loja.lista_desbloqueadas())}/10  |  "
                  f"Inimigos: {estatisticas['inimigos_derrotados']}  |  "
                  f"Bosses: {jog['bosses_derrotados']}")
+        dx, dy, alfa = self._entrada_anim(self._frac_sub(0.55, 0.3),
+                                          dy_design=16)
         surface = self.fonte_media.render(linha, True, (170, 175, 220))
-        tela.blit(surface, surface.get_rect(center=(l.x(0.5), l.y(0.72))))
+        self._blit_alfa(tela, surface, surface.get_rect(
+            center=(l.x(0.5) + dx, l.y(0.72) + dy)), int(255 * alfa))
 
         botao = self._botao_voltar()
         botao.atualizar(self.mouse)
-        botao.desenhar(tela, self.fonte_media)
+        self._desenhar_botao_entrada(tela, botao, self.fonte_media,
+                                     self._frac_sub(0.6, 0.25))
 
     # ------------------------------------------------------------ configuracoes
 
@@ -746,7 +951,26 @@ class MenuPrincipal:
             ("Controles", "controles"),
             ("Tema", "tema"),
             ("Aspecto", "aspecto"),
+            ("Ajustar Tela", "ajuste"),
         ]
+
+    _CONFIG_VISIVEIS = 6
+
+    def _config_visiveis(self):
+        """Janela (inicio, fim) das linhas visiveis no menu de config."""
+        inicio = max(0, min(self.config_scroll,
+                            len(self._linhas_config()) - self._CONFIG_VISIVEIS))
+        fim = min(len(self._linhas_config()), inicio + self._CONFIG_VISIVEIS)
+        return inicio, fim
+
+    def _rolar_config(self, selecao):
+        inicio, fim = self._config_visiveis()
+        if selecao < inicio:
+            self.config_scroll = selecao
+        elif selecao >= fim:
+            self.config_scroll = selecao - self._CONFIG_VISIVEIS + 1
+        else:
+            self.config_scroll = inicio
 
     def _y_linha_config(self, indice):
         return self.layout.px(172) + indice * self.layout.px(54)
@@ -873,26 +1097,38 @@ class MenuPrincipal:
                     return
             if pos[1] > l.altura - l.px(70):
                 self.config_submodo = None
+                self.sub_anim = 0.0
                 self._som("navegar")
+            return
+        if self.config_submodo == "resolucao":
+            self._clique_resolucao(pos)
             return
 
         linhas = self._linhas_config()
-        for i in range(len(linhas)):
-            y = self._y_linha_config(i)
+        inicio, fim = self._config_visiveis()
+        for k in range(fim - inicio):
+            i = inicio + k
+            y = self._y_linha_config(k)
             if abs(pos[1] - y) < 24:
                 self.config_selecao = i
                 if i == 2:
-                    self._ciclar_resolucao()
+                    self.config_submodo = "resolucao"
+                    self.resolucao_selecao = self._indice_resolucao_atual()
+                    self.sub_anim = 0.0
+                    self._som("navegar")
                 elif i == 3:
                     self._toggle_tela_cheia()
                 elif i == 5:
                     self.config_submodo = "controles"
                     self.controle_selecao = 0
+                    self.sub_anim = 0.0
                     self._som("navegar")
                 elif i == 6:
                     self._ciclar_tema()
                 elif i == 7:
                     self._ajustar_config(1)
+                elif i == 8:
+                    self._abrir_ajuste_tela()
                 elif linhas[i][1] == "slider":
                     self._aplicar_slider(i, self._slider_fracao(pos[0]))
                 return
@@ -910,16 +1146,21 @@ class MenuPrincipal:
 
     def _desenhar_controles(self, tela):
         l = self.layout
+        tema = tema_atual(self.jogo.config["tema"])
         painel = self._painel_controles()
-        retangulo_suave(tela, (20, 20, 42), painel, 12)
-        retangulo_suave(tela, (110, 90, 220), painel, 12, 2,
-                        glow_cor=(110, 90, 220), glow_raio=12)
-        surface = self.fonte_media.render("CONTROLES", True, CIANO)
-        tela.blit(surface, surface.get_rect(center=(painel.centerx,
-                                                    painel.y + l.px(28))))
+        self._painel_sub(tela, painel, tema)
+        dx, dy, alfa = self._entrada_anim(self._frac_sub(0.06, 0.3),
+                                          dy_design=-10)
+        surface = self.fonte_media.render("CONTROLES", True,
+                                          tema["secundaria"])
+        self._blit_alfa(tela, surface, surface.get_rect(
+            center=(painel.centerx + dx, painel.y + l.px(28) + dy)),
+            int(255 * alfa))
         for i, acao in enumerate(ACOES_CONTROLE):
-            y = painel.y + l.px(64) + i * l.px(48)
-            rect = pygame.Rect(painel.x + l.px(30), y,
+            p = self._frac_sub(0.14 + i * 0.06, 0.35)
+            dx, dy, alfa = self._entrada_anim(p, dx_design=-26)
+            y = painel.y + l.px(64) + i * l.px(48) + dy
+            rect = pygame.Rect(painel.x + l.px(30) + dx, y,
                                painel.width - l.px(60), l.px(40))
             selecionado = (i == self.controle_selecao)
             if selecionado:
@@ -927,18 +1168,135 @@ class MenuPrincipal:
                 pygame.draw.rect(tela, (255, 200, 100), rect, 2,
                                  border_radius=8)
             surface = self.fonte_media.render(acao.upper(), True, BRANCO)
-            tela.blit(surface, (rect.x + l.px(14), rect.y + l.px(10)))
+            self._blit_alfa(tela, surface, (rect.x + l.px(14),
+                                            rect.y + l.px(10)),
+                            int(255 * alfa))
             tecla = self.jogo.config.controles.get(acao, 0)
             nome_tecla = pygame.key.name(tecla).upper() or "?"
             cor = DOURADO if selecionado else (170, 175, 220)
             surface = self.fonte_media.render(nome_tecla, True, cor)
-            tela.blit(surface, surface.get_rect(midright=(rect.right -
-                                                          l.px(14),
-                                                          rect.centery)))
+            self._blit_alfa(tela, surface, surface.get_rect(
+                midright=(rect.right - l.px(14), rect.centery)),
+                int(255 * alfa))
+        p = self._frac_sub(0.55, 0.25)
+        dx, dy, alfa = self._entrada_anim(p, dy_design=14)
         surface = self.fonte_media.render(
             "ENTER: remapear   ESC: voltar", True, (150, 155, 200))
-        tela.blit(surface, surface.get_rect(center=(l.x(0.5),
-                                                    l.altura - l.px(60))))
+        self._blit_alfa(tela, surface, surface.get_rect(
+            center=(l.x(0.5) + dx, l.altura - l.px(60) + dy)),
+            int(255 * alfa))
+
+    def _painel_resolucoes(self):
+        return self._painel_central(430, 430, -10)
+
+    def _indice_resolucao_atual(self):
+        atual = self.jogo.config["resolucao"]
+        return RESOLUCOES.index(atual) if atual in RESOLUCOES else 0
+
+    def _resolucoes_visiveis(self):
+        """Janela (inicio, fim) das resoluções visiveis no seletor."""
+        inicio = max(0, min(self.resolucao_scroll,
+                            len(RESOLUCOES) - 9))
+        fim = min(len(RESOLUCOES), inicio + 9)
+        return inicio, fim
+
+    def _rolar_resolucao(self, selecao):
+        """Mantém a selecao dentro da janela visivel (rolagem suave)."""
+        inicio, fim = self._resolucoes_visiveis()
+        if selecao < inicio:
+            self.resolucao_scroll = selecao
+        elif selecao >= fim:
+            self.resolucao_scroll = selecao - 9 + 1
+        else:
+            self.resolucao_scroll = inicio
+
+    def _clique_resolucao(self, pos):
+        l = self.layout
+        painel = self._painel_resolucoes()
+        inicio, fim = self._resolucoes_visiveis()
+        for k, i in enumerate(range(inicio, fim)):
+            rect = pygame.Rect(painel.x + l.px(30),
+                               painel.y + l.px(58) + k * l.px(42),
+                               painel.width - l.px(60), l.px(36))
+            if rect.collidepoint(pos):
+                self.resolucao_selecao = i
+                self._rolar_resolucao(i)
+                self._aplicar_resolucao(i)
+                return
+        if pos[1] > l.altura - l.px(70):
+            self.config_submodo = None
+            self.sub_anim = 0.0
+            self._som("navegar")
+
+    def _aplicar_resolucao(self, indice):
+        self.jogo.config["resolucao"] = RESOLUCOES[indice]
+        self.jogo.config.salvar()
+        self.jogo._aplicar_modo_video()
+        self.notificacoes.adicionar(
+            "Resolucao: " + RESOLUCOES[indice], "sucesso")
+        self._som("equipar")
+
+    def _desenhar_resolucoes(self, tela):
+        l = self.layout
+        tema = tema_atual(self.jogo.config["tema"])
+        painel = self._painel_resolucoes()
+        self._painel_sub(tela, painel, tema)
+        self._detalhe_painel(tela, painel, tema, tema["secundaria"])
+        dx, dy, alfa = self._entrada_anim(self._frac_sub(0.06, 0.3),
+                                          dy_design=-10)
+        surface = self.fonte_media.render("RESOLUCAO", True,
+                                          tema["secundaria"])
+        self._blit_alfa(tela, surface, surface.get_rect(
+            center=(painel.centerx + dx, painel.y + l.px(28) + dy)),
+            int(255 * alfa))
+        inicio, fim = self._resolucoes_visiveis()
+        for k, i in enumerate(range(inicio, fim)):
+            resolucao = RESOLUCOES[i]
+            p = self._frac_sub(0.12 + k * 0.04, 0.35)
+            dx, dy, alfa = self._entrada_anim(p, dx_design=-22)
+            y = painel.y + l.px(58) + k * l.px(42) + dy
+            rect = pygame.Rect(painel.x + l.px(30) + dx, y,
+                               painel.width - l.px(60), l.px(36))
+            selecionada = (i == self.resolucao_selecao)
+            if selecionada:
+                pygame.draw.rect(tela, (50, 46, 90), rect, border_radius=8)
+                pygame.draw.rect(tela, (255, 200, 100), rect, 2,
+                                 border_radius=8)
+            cor = BRANCO if selecionada else (185, 190, 230)
+            surface = self.fonte_media.render(resolucao, True, cor)
+            self._blit_alfa(tela, surface, surface.get_rect(
+                center=(rect.centerx, rect.centery)), int(255 * alfa))
+            if resolucao == self.jogo.config["resolucao"]:
+                surface = self.fonte_pequena.render("ATUAL", True, VERDE)
+                self._blit_alfa(tela, surface, surface.get_rect(
+                    midright=(rect.right - l.px(10), rect.centery)),
+                    int(255 * alfa))
+        if len(RESOLUCOES) > 9:
+            self._desenhar_indicador_rolagem(tela, painel, inicio, fim)
+        p = self._frac_sub(0.5, 0.25)
+        dx, dy, alfa = self._entrada_anim(p, dy_design=14)
+        surface = self.fonte_media.render(
+            "ENTER: aplicar   ESC: voltar", True, (150, 155, 200))
+        self._blit_alfa(tela, surface, surface.get_rect(
+            center=(l.x(0.5) + dx, l.altura - l.px(60) + dy)),
+            int(255 * alfa))
+
+    def _desenhar_indicador_rolagem(self, tela, painel, inicio, fim):
+        """Barra de rolagem lateral do seletor de resolucao."""
+        l = self.layout
+        total = len(RESOLUCOES)
+        y0 = painel.y + l.px(58)
+        y1 = painel.y + l.px(58) + 9 * l.px(42)
+        pygame.draw.line(tela, (70, 70, 110),
+                         (painel.right - l.px(18), y0),
+                         (painel.right - l.px(18), y1), 3)
+        barra_h = max(l.px(24), int((y1 - y0) * 9 / total))
+        frac = inicio / (total - 9)
+        by = y0 + int((y1 - y0 - barra_h) * frac)
+        cor = tema_atual(self.jogo.config["tema"])["secundaria"]
+        desenhar_circulo_suave(tela, cor, (painel.right - l.px(18),
+                                           by + barra_h // 2),
+                               l.px(5), brilho=1.2)
 
     def _desenhar_remapando(self, tela):
         l = self.layout
@@ -958,35 +1316,184 @@ class MenuPrincipal:
     def _painel_config(self):
         return self._painel_central(620, 468, -16)
 
+    def _abrir_ajuste_tela(self):
+        """Abre a calibracao de tela guardando o estado atual (cancelar)."""
+        cfg = self.jogo.config
+        self.ajuste_snapshot = (cfg["ajuste_escala"], cfg["ajuste_off_x"],
+                                cfg["ajuste_off_y"])
+        self.config_submodo = "ajuste"
+        self.sub_anim = 0.0
+        self._som("navegar")
+
+    def _frame_janela(self):
+        """Rect (na superficie logica) da area visivel da janela.
+
+        Projeta a janela atual de volta para a superficie interna usando a
+        transformacao vigente (scale-to-fit + ajustes manuais), para desenhar
+        a moldura de calibracao no local exato das bordas da imagem.
+        """
+        w, h = self.jogo.janela.get_size()
+        cfg = self.jogo.config
+        if cfg["aspecto"] == "PREENCHE":
+            e = max(0.5, cfg["ajuste_escala"])
+            sw = w * e
+            sh = h * e
+            vx0 = max(0, cfg["ajuste_off_x"])
+            vx1 = min(sw, cfg["ajuste_off_x"] + w)
+            vy0 = max(0, cfg["ajuste_off_y"])
+            vy1 = min(sh, cfg["ajuste_off_y"] + h)
+            if vx1 <= vx0 or vy1 <= vy0:
+                return pygame.Rect(0, 0, self.layout.largura,
+                                   self.layout.altura)
+            return pygame.Rect(int(vx0 / sw * self.layout.largura),
+                               int(vy0 / sh * self.layout.altura),
+                               max(1, int((vx1 - vx0) / sw *
+                                          self.layout.largura)),
+                               max(1, int((vy1 - vy0) / sh *
+                                          self.layout.altura)))
+        escala, off_x, off_y = self.jogo._transformacao_janela()
+        vw = w / escala
+        vh = h / escala
+        cx = (w / 2 - off_x) / escala
+        cy = (h / 2 - off_y) / escala
+        return pygame.Rect(int(cx - vw / 2), int(cy - vh / 2),
+                           max(1, int(vw)), max(1, int(vh)))
+
+    def _tecla_ajuste(self, evento):
+        cfg = self.jogo.config
+        if evento.key == pygame.K_LEFT:
+            cfg["ajuste_off_x"] = max(-400, cfg["ajuste_off_x"] - 4)
+        elif evento.key == pygame.K_RIGHT:
+            cfg["ajuste_off_x"] = min(400, cfg["ajuste_off_x"] + 4)
+        elif evento.key == pygame.K_UP:
+            cfg["ajuste_off_y"] = max(-400, cfg["ajuste_off_y"] - 4)
+        elif evento.key == pygame.K_DOWN:
+            cfg["ajuste_off_y"] = min(400, cfg["ajuste_off_y"] + 4)
+        elif evento.key in (pygame.K_w, pygame.K_PLUS, pygame.K_KP_PLUS):
+            cfg["ajuste_escala"] = min(1.2, cfg["ajuste_escala"] + 0.01)
+        elif evento.key in (pygame.K_s, pygame.K_MINUS, pygame.K_KP_MINUS):
+            cfg["ajuste_escala"] = max(0.9, cfg["ajuste_escala"] - 0.01)
+        elif evento.key == pygame.K_r:
+            cfg["ajuste_escala"] = 1.0
+            cfg["ajuste_off_x"] = 0
+            cfg["ajuste_off_y"] = 0
+            self.notificacoes.adicionar("Ajuste de tela resetado!", "info")
+        elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            cfg.salvar()
+            self.config_submodo = None
+            self.sub_anim = 0.0
+            self.notificacoes.adicionar("Ajuste de tela salvo!", "sucesso")
+            self._som("equipar")
+            return True
+        elif evento.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+            cfg["ajuste_escala"], cfg["ajuste_off_x"], cfg["ajuste_off_y"] = \
+                self.ajuste_snapshot
+            self.config_submodo = None
+            self.sub_anim = 0.0
+            self._som("navegar")
+            return True
+        else:
+            return True
+        self._som("navegar")
+        return True
+
+    def _desenhar_ajuste(self, tela):
+        l = self.layout
+        tema = tema_atual(self.jogo.config["tema"])
+        p = self._frac_sub(0.0, 0.3)
+        overlay = pygame.Surface((l.largura, l.altura), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, int(140 * ease_out(p))))
+        tela.blit(overlay, (0, 0))
+        self._cabecalho_sub_animado(tela, "AJUSTAR TELA", tema["primaria"],
+                                    p=self._frac_sub(0.0, 0.35))
+        frame = self._frame_janela()
+        cor = tema["secundaria"]
+        pygame.draw.rect(tela, cor, frame, 1)
+        desenhar_cantos(tela, cor, frame, tamanho=l.px(24), espessura=l.px(3))
+        desenhar_circulo_suave(tela, cor, frame.center, l.px(5), brilho=1.3)
+        pygame.draw.line(tela, (90, 95, 130),
+                         (frame.centerx - l.px(70), frame.centery),
+                         (frame.centerx + l.px(70), frame.centery), 1)
+        pygame.draw.line(tela, (90, 95, 130),
+                         (frame.centerx, frame.centery - l.px(70)),
+                         (frame.centerx, frame.centery + l.px(70)), 1)
+
+        cfg = self.jogo.config
+        escala_pct = cfg["ajuste_escala"] * 100
+        dx, dy, alfa = self._entrada_anim(self._frac_sub(0.15, 0.3),
+                                          dy_design=16)
+        surface = self.fonte_media.render(
+            f"ESCALA {escala_pct:.0f}%   |   X {cfg['ajuste_off_x']:+.0f}   "
+            f"|   Y {cfg['ajuste_off_y']:+.0f}", True, DOURADO)
+        self._blit_alfa(tela, surface, surface.get_rect(
+            center=(l.x(0.5) + dx, l.y(0.82) + dy)), int(255 * alfa))
+        hint = ("SETAS: mover   |   W/S: zoom   |   R: reset   |   "
+                "ENTER: salvar   |   ESC: cancelar")
+        surface = self.fonte_pequena.render(hint, True, (150, 155, 200))
+        self._blit_alfa(tela, surface, surface.get_rect(
+            center=(l.x(0.5), l.altura - l.px(34))), int(255 * alfa))
+
+    def _desenhar_indicador_config(self, tela, painel, inicio, fim):
+        """Barra de rolagem lateral do menu de configuracoes."""
+        l = self.layout
+        linhas = self._linhas_config()
+        total = len(linhas)
+        y0 = painel.y + l.px(172)
+        y1 = y0 + self._CONFIG_VISIVEIS * l.px(54)
+        pygame.draw.line(tela, (70, 70, 110),
+                         (painel.right - l.px(18), y0),
+                         (painel.right - l.px(18), y1), 3)
+        barra_h = max(l.px(20), int((y1 - y0) * self._CONFIG_VISIVEIS / total))
+        frac = inicio / (total - self._CONFIG_VISIVEIS)
+        by = y0 + int((y1 - y0 - barra_h) * frac)
+        cor = tema_atual(self.jogo.config["tema"])["secundaria"]
+        desenhar_circulo_suave(tela, cor, (painel.right - l.px(18),
+                                           by + barra_h // 2),
+                               l.px(5), brilho=1.2)
+
     def _desenhar_config(self, tela):
         l = self.layout
-        self._cabecalho_sub(tela, "CONFIGURACOES", (120, 160, 255))
+        tema = tema_atual(self.jogo.config["tema"])
+        self._cabecalho_sub_animado(tela, "CONFIGURACOES", tema["primaria"])
         if self.remapando:
             self._desenhar_remapando(tela)
             return
         if self.config_submodo == "controles":
             self._desenhar_controles(tela)
             return
+        if self.config_submodo == "resolucao":
+            self._desenhar_resolucoes(tela)
+            return
+        if self.config_submodo == "ajuste":
+            self._desenhar_ajuste(tela)
+            return
 
         painel = self._painel_config()
-        retangulo_suave(tela, (20, 20, 42), painel, 12)
-        retangulo_suave(tela, (110, 90, 220), painel, 12, 2,
-                        glow_cor=(110, 90, 220), glow_raio=12)
+        self._painel_sub(tela, painel, tema)
+        self._detalhe_painel(tela, painel, tema, tema["secundaria"])
 
-        for i, (rotulo, tipo) in enumerate(self._linhas_config()):
-            y = self._y_linha_config(i)
+        linhas = self._linhas_config()
+        inicio, fim = self._config_visiveis()
+        for k in range(fim - inicio):
+            i = inicio + k
+            rotulo, tipo = linhas[i]
+            p = self._frac_sub(0.12 + k * 0.05, 0.35)
+            dx, dy, alfa = self._entrada_anim(p, dx_design=30, dy_design=18)
+            y = self._y_linha_config(k) + dy
             selecionada = (i == self.config_selecao)
             cor = BRANCO if selecionada else (190, 195, 235)
             surface = self.fonte_media.render(rotulo, True, cor)
-            tela.blit(surface, (l.px(190), y - l.px(12)))
+            self._blit_alfa(tela, surface, (l.px(190) + dx, y - l.px(12)),
+                            int(255 * alfa))
             if selecionada:
                 pygame.draw.rect(tela, (255, 200, 100),
-                                 (l.px(175), y - l.px(24), l.px(6), l.px(30)),
-                                 border_radius=3)
+                                 (l.px(175) + dx, y - l.px(24), l.px(6),
+                                  l.px(30)), border_radius=3)
             if tipo == "slider":
                 if i == 4:
                     fracao = max(0.0, min(1.0,
-                                          self.jogo.config["sensibilidade"] - 0.5))
+                                          self.jogo.config["sensibilidade"]
+                                          - 0.5))
                     percentual = int((0.5 + fracao) * 100)
                 else:
                     chave = "musica_volume" if i == 0 else "efeitos_volume"
@@ -995,37 +1502,65 @@ class MenuPrincipal:
                 self._desenhar_slider(tela, y, fracao)
                 surface = self.fonte_media.render(f"{percentual}%", True,
                                                   (170, 175, 220))
-                tela.blit(surface, (l.px(720), y - l.px(12)))
+                self._blit_alfa(tela, surface,
+                                (l.px(720) + dx, y - l.px(12)),
+                                int(255 * alfa))
             elif tipo == "resolucao":
                 surface = self.fonte_media.render(
-                    self.jogo.config["resolucao"], True, CIANO)
-                tela.blit(surface, surface.get_rect(midleft=(l.px(420), y)))
+                    self.jogo.config["resolucao"], True, tema["secundaria"])
+                self._blit_alfa(tela, surface, surface.get_rect(
+                    midleft=(l.px(420) + dx, y)), int(255 * alfa))
+                surface = self.fonte_pequena.render("ESCOLHER >", True,
+                                                    (200, 150, 255)
+                                                    if selecionada else
+                                                    (150, 155, 200))
+                self._blit_alfa(tela, surface, surface.get_rect(
+                    midleft=(l.px(540) + dx, y)), int(255 * alfa))
             elif tipo == "toggle":
-                self._desenhar_toggle(tela, l.px(420), y,
+                self._desenhar_toggle(tela, l.px(420) + dx, y,
                                       self.jogo.config["tela_cheia"])
                 estado = self.jogo.config["tela_cheia"]
                 surface = self.fonte_media.render(
                     "LIGADO" if estado else "DESLIGADO", True,
                     VERDE if estado else (160, 160, 190))
-                tela.blit(surface, surface.get_rect(midleft=(l.px(510), y)))
+                self._blit_alfa(tela, surface, surface.get_rect(
+                    midleft=(l.px(510) + dx, y)), int(255 * alfa))
             elif tipo == "controles":
                 surface = self.fonte_media.render(
                     "PERSONALIZAR >", True,
                     (200, 150, 255) if selecionada else (150, 155, 200))
-                tela.blit(surface, surface.get_rect(midleft=(l.px(420), y)))
+                self._blit_alfa(tela, surface, surface.get_rect(
+                    midleft=(l.px(420) + dx, y)), int(255 * alfa))
             elif tipo == "tema":
                 surface = self.fonte_media.render(
                     self.jogo.config["tema"], True, (255, 160, 200))
-                tela.blit(surface, surface.get_rect(midleft=(l.px(420), y)))
+                self._blit_alfa(tela, surface, surface.get_rect(
+                    midleft=(l.px(420) + dx, y)), int(255 * alfa))
             elif tipo == "aspecto":
                 surface = self.fonte_media.render(
                     self.jogo.config["aspecto"], True, QUANTUM_CYAN)
-                tela.blit(surface, surface.get_rect(midleft=(l.px(420), y)))
+                self._blit_alfa(tela, surface, surface.get_rect(
+                    midleft=(l.px(420) + dx, y)), int(255 * alfa))
                 dica = ("SAFE AREAS" if self.jogo.config["aspecto"] ==
                         "AJUSTAR" else "ESTICA TELA")
                 surface = self.fonte_pequena.render(dica, True,
                                                     (150, 155, 200))
-                tela.blit(surface, surface.get_rect(midleft=(l.px(520), y)))
+                self._blit_alfa(tela, surface, surface.get_rect(
+                    midleft=(l.px(520) + dx, y)), int(255 * alfa))
+            elif tipo == "ajuste":
+                escala_pct = int(self.jogo.config["ajuste_escala"] * 100)
+                surface = self.fonte_media.render(
+                    f"{escala_pct}%", True, tema["secundaria"])
+                self._blit_alfa(tela, surface, surface.get_rect(
+                    midleft=(l.px(420) + dx, y)), int(255 * alfa))
+                surface = self.fonte_pequena.render(
+                    "CALIBRAR >", True,
+                    (200, 150, 255) if selecionada else (150, 155, 200))
+                self._blit_alfa(tela, surface, surface.get_rect(
+                    midleft=(l.px(540) + dx, y)), int(255 * alfa))
+
+        if len(linhas) > self._CONFIG_VISIVEIS:
+            self._desenhar_indicador_config(tela, painel, inicio, fim)
 
         b_salvar = BotaoNeon("SALVAR", (l.x(0.5) - l.px(190),
                                         l.altura - l.px(80), l.px(180),
@@ -1033,15 +1568,139 @@ class MenuPrincipal:
         b_voltar = BotaoNeon("VOLTAR", (l.x(0.5) + l.px(10),
                                         l.altura - l.px(80), l.px(180),
                                         l.px(44)))
-        for botao in (b_salvar, b_voltar):
+        for i, botao in enumerate((b_salvar, b_voltar)):
             botao.atualizar(self.mouse)
-            botao.desenhar(tela, self.fonte_media)
+            self._desenhar_botao_entrada(
+                tela, botao, self.fonte_media, self._frac_sub(0.62 + i * 0.06,
+                                                              0.25))
 
     # ------------------------------------------------------ cabecalho e titulo
 
     def _frac(self, inicio, duracao):
         p = (self.entrada_t - inicio) / duracao
         return 0.0 if p < 0 else 1.0 if p > 1 else p
+
+    def _frac_sub(self, inicio, duracao):
+        """Progresso (0-1) de um elemento na entrada dos sub-menus."""
+        p = (self.sub_anim - inicio) / duracao
+        return 0.0 if p < 0 else 1.0 if p > 1 else p
+
+    def _frac_preview(self, inicio, duracao):
+        """Progresso (0-1) de um elemento no overlay de preview da loja."""
+        p = (self.preview_anim - inicio) / duracao
+        return 0.0 if p < 0 else 1.0 if p > 1 else p
+
+    def _entrada_anim(self, p, dx_design=0, dy_design=0):
+        """Progresso de entrada -> (deslocamento_x, deslocamento_y, alfa)."""
+        e = ease_out(p)
+        return (int((1 - e) * self.layout.px(dx_design)),
+                int((1 - e) * self.layout.px(dy_design)), e)
+
+    def _painel_sub(self, tela, rect, tema, raio=14):
+        """Painel glass do tema com entrada animada (escala + fade)."""
+        l = self.layout
+        p = self._frac_sub(0.04, 0.45)
+        if p <= 0:
+            return
+        surf = painel_glass(tema["primaria"], rect,
+                            cor_fundo=tema["fundo_painel"], raio_canto=raio,
+                            glow_raio=l.px(22))
+        escala = 0.9 + 0.1 * ease_out_back(p)
+        if abs(escala - 1.0) > 0.01:
+            surf = pygame.transform.smoothscale(
+                surf, (max(1, int(surf.get_width() * escala)),
+                       max(1, int(surf.get_height() * escala))))
+        if p < 1.0:
+            surf = surf.copy()
+            surf.set_alpha(int(255 * ease_out(p)))
+        tela.blit(surf, surf.get_rect(
+            center=(rect.centerx,
+                    rect.centery + int((1 - ease_out(p)) * l.px(22)))))
+
+    def _detalhe_painel(self, tela, rect, tema, cor=None):
+        """Linha de varredura superior + cantos em L num painel."""
+        l = self.layout
+        t = pygame.time.get_ticks() * 0.001
+        cor = cor or tema["secundaria"]
+        y = rect.y + l.px(4)
+        x0 = rect.x + l.px(24)
+        compr = rect.w - l.px(48)
+        pygame.draw.line(tela, cor, (x0, y), (x0 + compr, y), 2)
+        fase = (math.sin(t * 2.2) + 1) / 2
+        xv = x0 + int(fase * compr)
+        desenhar_glow(tela, cor, (xv, y), l.px(10), 0.6)
+        desenhar_cantos(tela, cor, rect, tamanho=l.px(14), espessura=l.px(2))
+
+    def _cabecalho_sub_animado(self, tela, texto, cor, y=58, p=None):
+        """Cabecalho de sub-menu com entrada animada (desce + fade)."""
+        l = self.layout
+        if p is None:
+            p = self._frac_sub(0.0, 0.35)
+        if p <= 0:
+            return
+        alfa = ease_out(p)
+        dy = int((1 - alfa) * l.px(-28))
+        fonte = self.fonte_cabecalho
+        surf = self._espacado(fonte, texto, 3, BRANCO)
+        cx = l.x(0.5)
+        y = l.px(y) + dy
+        w = surf.get_width() + l.px(80)
+        bloco = self._cabecalho_bloco(cor, w)
+        if p < 1.0:
+            bloco = bloco.copy()
+            bloco.set_alpha(int(255 * alfa))
+            surf = surf.copy()
+            surf.set_alpha(int(255 * alfa))
+        desenhar_glow(tela, cor, (cx, y + l.px(6)), max(l.px(24), w // 8),
+                      0.35 * alfa)
+        tela.blit(bloco, bloco.get_rect(center=(cx, y + l.px(6))))
+        tela.blit(surf, surf.get_rect(center=(cx, y)))
+
+    def _desenhar_botao_entrada(self, tela, botao, fonte, p, dy_design=22):
+        """BotaoNeon com entrada animada (fade + slide, sem perder hitbox)."""
+        l = self.layout
+        if p <= 0:
+            return
+        alfa = ease_out(p)
+        dy = int((1 - alfa) * l.px(dy_design))
+        if p >= 1:
+            botao.desenhar(tela, fonte)
+            return
+        marg = l.px(28)
+        off = pygame.Surface((botao.rect.w + marg, botao.rect.h + marg),
+                             pygame.SRCALPHA)
+        b = BotaoNeon(botao.texto,
+                      pygame.Rect(marg // 2, marg // 2, botao.rect.w,
+                                  botao.rect.h),
+                      cor=botao.cor, cor_hover=botao.cor_hover)
+        b.hover = botao.hover
+        b.desenhar(off, fonte)
+        off.set_alpha(int(255 * alfa))
+        tela.blit(off, (botao.rect.x - marg // 2,
+                        botao.rect.y - marg // 2 + dy))
+
+    def _desenhar_nave_escala(self, tela, skin, x, y, escala, p):
+        """Nave do jogador com entrada animada (pop-in + fade)."""
+        l = self.layout
+        if p <= 0:
+            return
+        lado = l.px(96)
+        off = pygame.Surface((lado, lado), pygame.SRCALPHA)
+        prev = Jogador(skin=skin)
+        prev.x, prev.y = lado // 2, lado // 2 + l.px(8)
+        prev.tilt = 0
+        prev.invencivel = 0
+        prev.desenhar(off, None)
+        escala_final = escala * (0.5 + 0.5 * ease_out_back(p))
+        if abs(escala_final - 1.0) > 0.01:
+            off = pygame.transform.smoothscale(
+                off, (max(1, int(lado * escala_final)),
+                      max(1, int(lado * escala_final))))
+        alfa = ease_out(p)
+        if alfa < 1.0:
+            off = off.copy()
+            off.set_alpha(int(255 * alfa))
+        tela.blit(off, off.get_rect(center=(x, y)))
 
     def _espacado(self, fonte, texto, espacamento, cor):
         chave = (id(fonte), texto, espacamento, tuple(cor))
@@ -1106,19 +1765,6 @@ class MenuPrincipal:
         self._cabecalho_cache[chave] = surf
         return surf
 
-    def _cabecalho_sub(self, tela, texto, cor, y=58):
-        l = self.layout
-        fonte = self.fonte_cabecalho
-        surf = self._espacado(fonte, texto, 3, BRANCO)
-        cx = l.x(0.5)
-        y = l.px(y)
-        w = surf.get_width() + l.px(80)
-        bloco = self._cabecalho_bloco(cor, w)
-        desenhar_glow(tela, cor, (cx, y + l.px(6)), max(l.px(24), w // 8),
-                      0.35)
-        tela.blit(bloco, bloco.get_rect(center=(cx, y + l.px(6))))
-        tela.blit(surf, surf.get_rect(center=(cx, y)))
-
     # -------------------------------------------------------------- desenho
 
     def _desenhar_linhas_diagonais(self, tela, tema):
@@ -1161,12 +1807,10 @@ class MenuPrincipal:
         if self.entrada_t < 0.7:
             return
         op = self.opcoes[self.opcao_selecionada]
-        x = self.x_opcoes - self.layout.px(58)
+        x = self.x_opcoes - self.layout.px(26)
         y = op.y
         pygame.draw.polygon(tela, tema["secundaria"],
-                            [(x, y), (x + 15, y - 9), (x + 15, y + 9)])
-        pygame.draw.polygon(tela, tema["primaria"],
-                            [(x - 9, y), (x - 1, y - 5), (x - 1, y + 5)])
+                            [(x, y), (x - 14, y - 9), (x - 14, y + 9)])
 
     def _desenhar_rodape(self, tela, tema):
         l = self.layout
@@ -1182,7 +1826,8 @@ class MenuPrincipal:
         self._blit_alfa(tela, surf, (self.x_opcoes, l.y(0.746)), alfa)
         hint = "SETAS/WASD  NAVEGAR   |   ENTER  CONFIRMAR   |   ESC  SAIR"
         surf2 = self._espacado(f, hint, 1, (118, 130, 170))
-        self._blit_alfa(tela, surf2, (self.x_opcoes, l.y(0.78)),
+        self._blit_alfa(tela, surf2,
+                        (l.largura // 2 - surf2.get_width() // 2, l.y(0.78)),
                         int(alfa * 0.75))
         versao = self._espacado(f, "v3.0 // ENTER THE RIFT", 1,
                                 (110, 122, 160))
@@ -1238,7 +1883,7 @@ class MenuPrincipal:
         self.notificacoes.desenhar(tela, self.fonte_media)
         if self.dialogo and self.dialogo.ativo:
             self.dialogo.desenhar(tela, self.fonte_sub, self.fonte_media,
-                                  self.mouse)
+                                  self.mouse, tema)
         self.transicao.desenhar(tela)
         self.transicao_missao.desenhar(tela, tema)
         if self.alpha_entrada < 255:
@@ -1256,6 +1901,10 @@ class MenuPrincipal:
         self.transicao_missao.atualizar()
         self.notificacoes.atualizar()
         self.alpha_entrada = min(255, self.alpha_entrada + 4)
+        if self.preview_skin and self.preview_anim < 0.5:
+            self.preview_anim += 1 / 60.0
+        if self.subestado != "MENU" and self.sub_anim < self.sub_anim_total:
+            self.sub_anim += 1 / 60.0
         if self.subestado == "MENU":
             if self.entrada_t < self.entrada_total:
                 self.entrada_t += 1 / 60.0
@@ -1288,16 +1937,20 @@ class MenuPrincipal:
     def _pos_logica(self, pos):
         """Converte coordenadas da janela para a superficie logica.
 
-        No modo AJUSTAR aplica escala proporcional e offsets do letterbox
-        (safe areas); no PREENCHE usa a proporcao direta da janela. A
-        superficie logica e a grade do ``Layout`` atual.
+        Aplica a transformacao vigente somada aos ajustes manuais de "Ajustar
+        Tela". No AJUSTAR usa o scale-to-fit; no PREENCHE considera a
+        proporcao da janela. O clique continua alinhado a imagem mesmo apos
+        calibrar a tela.
         """
         try:
             if self.jogo.config["aspecto"] == "PREENCHE":
                 w, h = self.jogo.janela.get_size()
-                return (int(pos[0] * self.layout.largura / w),
-                        int(pos[1] * self.layout.altura / h))
-            escala, off_x, off_y = self.jogo._escala_janela()
+                e = self.jogo.config["ajuste_escala"]
+                return (int((pos[0] - self.jogo.config["ajuste_off_x"]) *
+                            self.layout.largura / (w * e)),
+                        int((pos[1] - self.jogo.config["ajuste_off_y"]) *
+                            self.layout.altura / (h * e)))
+            escala, off_x, off_y = self.jogo._transformacao_janela()
         except (AttributeError, TypeError):
             return pos
         return (int((pos[0] - off_x) / escala),
@@ -1399,6 +2052,7 @@ class MenuPrincipal:
         if self.config_submodo == "controles":
             if evento.key == pygame.K_ESCAPE:
                 self.config_submodo = None
+                self.sub_anim = 0.0
                 self._som("navegar")
             elif evento.key in (pygame.K_UP, pygame.K_DOWN):
                 n = len(ACOES_CONTROLE)
@@ -1410,23 +2064,51 @@ class MenuPrincipal:
                 self._som("navegar")
             return True
 
+        if self.config_submodo == "resolucao":
+            if evento.key == pygame.K_ESCAPE:
+                self.config_submodo = None
+                self.sub_anim = 0.0
+                self._som("navegar")
+            elif evento.key in (pygame.K_UP, pygame.K_DOWN):
+                n = len(RESOLUCOES)
+                passo = 1 if evento.key == pygame.K_DOWN else -1
+                self.resolucao_selecao = (self.resolucao_selecao + passo) % n
+                self._rolar_resolucao(self.resolucao_selecao)
+                self._som("navegar")
+            elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                self._aplicar_resolucao(self.resolucao_selecao)
+            return True
+
+        if self.config_submodo == "ajuste":
+            return self._tecla_ajuste(evento)
+
         linhas = self._linhas_config()
         n = len(linhas)
         if evento.key in (pygame.K_UP, pygame.K_w):
             self.config_selecao = (self.config_selecao - 1) % n
+            self._rolar_config(self.config_selecao)
             self._som("navegar")
         elif evento.key in (pygame.K_DOWN, pygame.K_s):
             self.config_selecao = (self.config_selecao + 1) % n
+            self._rolar_config(self.config_selecao)
             self._som("navegar")
         elif evento.key == pygame.K_LEFT:
             self._ajustar_config(-1)
         elif evento.key == pygame.K_RIGHT:
             self._ajustar_config(1)
         elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-            if self.config_selecao == 5:
+            if self.config_selecao == 2:
+                self.config_submodo = "resolucao"
+                self.resolucao_selecao = self._indice_resolucao_atual()
+                self.sub_anim = 0.0
+                self._som("navegar")
+            elif self.config_selecao == 5:
                 self.config_submodo = "controles"
                 self.controle_selecao = 0
+                self.sub_anim = 0.0
                 self._som("navegar")
+            elif self.config_selecao == 8:
+                self._abrir_ajuste_tela()
             else:
                 self._ajustar_config(1)
         elif evento.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):

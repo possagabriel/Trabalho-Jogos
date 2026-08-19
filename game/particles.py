@@ -120,6 +120,15 @@ class SistemaParticulas:
         self.explosao(x, y, LARANJA, 35, 7)
         self.explosao(x, y, VERMELHO, 25, 5)
 
+    def faiscas(self, x, y, cor, qtd=6, forca=4.0):
+        """Faiscas curtas de impacto ao acertar um alvo."""
+        for _ in range(qtd):
+            ang = random.uniform(0, math.tau)
+            v = random.uniform(1.5, forca)
+            self.particulas.append(
+                Particula(x, y, cor, (math.cos(ang) * v, math.sin(ang) * v),
+                          random.randint(1, 2), random.randint(5, 13)))
+
     def rastro(self, x, y, cor, forca=1.5):
         self.particulas.append(
             Particula(x + random.uniform(-2, 2), y + random.uniform(-2, 2),

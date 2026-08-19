@@ -20,6 +20,7 @@ import random
 
 import pygame
 
+from .assets import carregar_imagem
 from .config import NEGRO
 from .layout import Layout
 from .player import Jogador
@@ -60,6 +61,7 @@ class FundoCinematico:
         self.tempo = 0.0
         self._tile_largura = self._layout.px(960)
         self._tile_altura = self._layout.px(720)
+        self.fundo_imagem = self._carregar_imagem_fundo()
         self.gradiente = gradiente_vertical((10, 12, 38), (3, 3, 15))
         self.nebulosa_fundo = self._criar_nebulosa(0.13, 7)
         self.nebulosa_frente = self._criar_nebulosa(0.19, 5)
@@ -78,6 +80,29 @@ class FundoCinematico:
         self.meteoros = [self._novo_meteoro() for _ in range(3)]
 
     # ----- construcao -----
+
+    def _carregar_imagem_fundo(self):
+        """Carrega 'fundo-menuprincipal.png' (pasta images/) em cover.
+
+        Se o arquivo nao existir, retorna ``None`` e o menu usa o fundo
+        cinematico procedural normalmente.
+        """
+        img = carregar_imagem("fundo-menuprincipal.png")
+        if img is None:
+            return None
+        larg = self._layout.largura
+        alt = self._layout.altura
+        iw, ih = img.get_size()
+        escala = max(larg / iw, alt / ih)
+        novow = max(larg, int(iw * escala))
+        novoh = max(alt, int(ih * escala))
+        if (novow, novoh) != (iw, ih):
+            img = pygame.transform.smoothscale(img, (novow, novoh))
+        ox = (novow - larg) // 2
+        oy = (novoh - alt) // 2
+        if (ox, oy) != (0, 0):
+            img = img.subsurface((ox, oy, larg, alt)).copy()
+        return img
 
     def _criar_nebulosa(self, intensidade, quantidade):
         l = self._layout
@@ -216,7 +241,10 @@ class FundoCinematico:
     # ----- desenho -----
 
     def desenhar(self, tela):
-        tela.blit(self.gradiente, (0, 0))
+        if self.fundo_imagem is not None:
+            tela.blit(self.fundo_imagem, (0, 0))
+        else:
+            tela.blit(self.gradiente, (0, 0))
         dx = int(math.sin(self.tempo * 0.12) * 18)
         dy = int(math.cos(self.tempo * 0.1) * 10)
         tela.blit(self.nebulosa_fundo, (dx, dy))

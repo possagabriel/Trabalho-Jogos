@@ -47,16 +47,24 @@ base de design (900×700) e **safe areas** (margem interna). Nenhum elemento usa
 coordenada rígida em pixels: se a superfície lógica mudar de tamanho, o menu se
 recompõe automaticamente.
 
-- **Resoluções suportadas:** `900x700`, `1280x720`, `1366x768`, `1920x1080`,
-  `2560x1440`, `3840x2160` (a lista vive em `settings.RESOLUCOES`).
+- **Resoluções suportadas:** `900x700`, `1024x768`, `1280x720`, `1280x800`,
+  `1366x768`, `1440x900`, `1600x900`, `1680x1050`, `1920x1080`, `2560x1080`,
+  `2560x1440`, `3440x1440`, `3840x2160` (a lista vive em `settings.RESOLUCOES`;
+  no menu **Config → Resolução** há um seletor com rolagem para escolher).
 - **Modo de aspecto** (configuração `aspecto`, disponível em Settings):
   - `AJUSTAR` (padrão): *scale-to-fit* com **safe areas** (letterbox) em
     `VOID_BLACK`, mantendo proporções iguais em qualquer formato de tela.
   - `PREENCHE`: estica a cena para preencher a janela inteira.
 - **Tela cheia:** usa a resolução nativa do monitor (sem `SCALED`, sem esticar).
+- **Ajustar Tela** (Config → Ajustar Tela): calibra a imagem para o monitor
+  (TVs com overscan, telas com bordas cortadas etc.). Com setas move a imagem
+  (4 px por passo), `W/S` aplica zoom (0.9–1.2), `R` reseta e `Enter` confirma
+  (ou `Esc` cancela). Persistido em `ajuste_escala`, `ajuste_off_x` e
+  `ajuste_off_y`; vale tanto no modo `AJUSTAR` quanto no `PREENCHE`.
 - **Conversão do mouse:** `MenuPrincipal._pos_logica` converte coordenadas da
-  janela para a superfície interna aplicando escala + offsets do letterbox
-  (ou proporção direta no modo `PREENCHE`).
+  janela para a superfície interna aplicando a transformação vigente (escala +
+  offsets do letterbox e os ajustes manuais de Ajustar Tela; proporção direta
+  com escala no modo `PREENCHE`).
 - **Layout responsivo:** `game/layout.py` define `Layout`, com `x()/y()`
   (frações da superfície), `px()` (escala da base de design), `rect(ancora, …)`
   (containers), `ponto(ancora, …)` e `fonte(...)` (fontes escaladas). Todas as
@@ -76,24 +84,28 @@ progresso, loja e sons.
 ```
 space_fury/
 ├── main.py               # bootstrap: ajusta sys.path e chama Jogo().executar()
+├── preview_hud.py        # demonstração do HUD em 1920x1080 (janela animada ou --save)
 ├── requirements.txt      # dependências
+├── images/               # artes de fundo e sprites (carregadas por game/assets.py)
 ├── tests/
 │   └── smoke_test.py     # smoke tests headless (sem janela)
 ├── game/
 │   ├── core.py           # Jogo: estado, game loop, combate, HUD, transições
 │   ├── config.py         # constantes globais (tela, FPS, cores, limites)
+│   ├── assets.py         # caminhos e carregamento das imagens de images/
 │   ├── settings.py       # Configuracoes: persistidas em data/settings.json
 │   ├── player.py         # Jogador, SistemaCombo, catálogo de Skins
 │   ├── enemies.py        # Inimigo, InimigoEspecial (sistema de carga), ondas
 │   ├── bosses.py         # Entidade RIFT: 6 bosses, um por dimensão, com ataques próprios
 │   ├── scenarios.py      # Cenario: gradiente, estrelas, nebulosas e efeitos
-│   ├── weapons.py        # ARMARIA (7 armas) e Projetil (inclui ion/feixe)
+│   ├── weapons.py        # ARMARIA (9 armas) e Projetil (inclui ion/feixe)
 │   ├── particles.py      # SistemaParticulas, MensagemFlutuante
 │   ├── powerups.py       # PowerUp (escudo, vida, arma, velocidade, moedas, skin)
 │   ├── shop.py           # LojaSkins: compra/equipa skins (data/skins.json)
 │   ├── save_system.py    # SistemaProgressao: save, recordes, estatísticas
 │   ├── menu.py           # MenuPrincipal: todas as telas fora do gameplay
 │   ├── menu_scene.py     # componentes visuais do menu (fundo, HUD, nave…)
+│   ├── hud.py            # HUD profissional de combate (jogador, score, setor, boost, arma, especial, boss)
 │   ├── layout.py         # layout responsivo: ancoras, containers, proporções, safe areas
 │   ├── ui.py             # BotaoNeon e helpers de desenho (HUD, textos, barras)
 │   ├── smooth.py         # renderização suave: glow, AA, gradientes, easing
@@ -103,6 +115,13 @@ space_fury/
 │   └── sounds.py         # Sons: efeitos e música gerados proceduralmente
 └── data/                 # gerado em runtime (JSON de progresso/config)
 ```
+
+### Ativos visuais
+
+A pasta `images/` concentra as artes: fundos por cenário, o menu e a folha de
+sprites de naves (`naves.png`). A nave padrão do jogador é um recorte da folha
+(`nave-padrao.png`, extraído com fundo transparente) e é carregada por
+`game/player.py` com fallback para a nave procedural caso o arquivo falte.
 
 ### Responsabilidades por camada
 
@@ -252,17 +271,64 @@ O jogo roda a 60 FPS; as regras abaixo mantêm isso:
 
 ---
 
+## HUD de combate
+
+O HUD fica em `game/hud.py` (`HudJogo`) e é desenhado pelo core em
+`_desenhar_hud()`. É **responsivo** (usa `game/layout`, escala de
+1920x1080 até janelas menores) e mantém o **centro da tela sempre livre**
+para o gameplay. O **tom do HUD acompanha a fase**: cada dimensão tinge
+os painéis, o badge do jogador, boost, energia e a barra de especial com
+as cores principais do cenário (`cores_principais` em `scenarios.py`;
+sem elas usa a paleta padrão da marca ciano/magenta):
+
+| Módulo | Posição | Conteúdo |
+| --- | --- | --- |
+| Jogador | topo-esquerda | ícone da nave, `PLAYER 01`, vida segmentada + numérica, escudo (ciano), energia |
+| Score | topo-direita | `SCORE` grande, `HIGH SCORE`, abates, multiplicador combo |
+| Setor | topo-centro | `SECTOR xx`, nome da região e barra de progresso da fase (discreta) |
+| Boost | base-esquerda | medidor circular com ticks, velocidade |
+| Arma | base-direita | ícone geométrico da arma, nome, `LVL`, carga/munição |
+| Especial | base-centro | barra de especial com `SPECIAL READY` pulsando quando cheia (tecla `E`) |
+| Boss | topo-centro | barra dourada segmentada com nome (só aparece com chefe em tela) |
+
+Os medidores novos (`boost`, `especial`, `energia`) são mantidos pelo core:
+SHIFT/LCTRL turbina (drena boost e energia), abates carregam o especial.
+
+Para ver todos os componentes sobre um fundo neutro em 1920x1080:
+
+```bash
+python preview_hud.py            # janela animada
+python preview_hud.py --save     # salva images/preview_hud.png
+```
+
+---
+
 ## Testes
 
 ```bash
-python tests/smoke_test.py     # standalone
-pytest tests/ -v               # se pytest estiver instalado
+pytest tests/                  # suite completa (recomendado)
+python tests/run_all.py        # alternativa standalone, sem pytest
 ```
 
-Os testes rodam **headless** (drivers dummy do SDL) e cobrem: inicialização,
-loop de combate avançando níveis, desenho dos 6 cenários, mapeamento
-nível→cenário e a propriedade de atravessar do canhão de íons. Em
-`tests/test_layout.py` o **layout responsivo** é verificado nas resoluções-alvo
-(`1280x720`, `1366x768`, `1920x1080`, `2560x1440`, `3840x2160`): ancoras
-dentro dos limites (safe areas), proporções preservadas e recomposição do menu
-(desenho + conferência de que nenhum botão/painel sai da tela).
+Os testes rodam **headless** (drivers dummy do SDL). O `tests/conftest.py`
+define o ambiente antes de qualquer importação do jogo e cria um
+`SPACEFURY_DATA_DIR` temporário para a sessão do pytest; cada arquivo também
+funciona isolado. Cobertura por módulo:
+
+| Arquivo | Módulos | O que cobre |
+| --- | --- | --- |
+| `test_theme_geometry_smooth.py` | theme, geometry, smooth | cores (mix, ciclo, esmaecer), easing, caches e desenho suave (glow, gradientes, painéis, textos) |
+| `test_settings_save_shop.py` | settings, save_system, shop | configurações, persistência de progresso/save e loja de skins |
+| `test_weapons_powerups.py` | weapons, powerups | todos os tipos de projétil (laser, ion, gauss, espiral...) e power-ups (vida, escudo, arma, skin...) |
+| `test_player.py` | player | jogador: movimento, controles, cooldowns, rajadas, combo, dano, skins (inclui sprite da nave padrão e fallback) |
+| `test_enemies_bosses.py` | enemies, bosses | inimigos, especiais (acumulador, cristalino...), ondas, sorteios e todos os bosses |
+| `test_scenarios_particles.py` | scenarios, particles | 6 cenários, estrelas, cover, partículas e mensagens flutuantes |
+| `test_menu_scene.py` | menu_scene | fundo com `fundo-menuprincipal.png` (e fallback), HUD, nave, destaque, transições |
+| `test_menu.py` | menu | menu principal: construção, navegação entre telas, save, loja, diálogo de saída, `_pos_logica` |
+| `test_interacao.py` | core, menu | eventos reais (pygame.event): teclas de navegação, pausa/game over, remap de controles e cliques do mouse |
+| `test_core.py` | core | estados, níveis/boss a cada 5, desbloqueio de armas, combate e fim de jogo |
+| `test_hud.py` | hud | HUD: renderização de todos os módulos, segmentos, barra de boss, medidores e duck typing |
+| `test_layout.py` | layout | layout responsivo nas resoluções-alvo |
+
+O `smoke_test.py` faz um smoke test geral: inicialização, loop de combate
+avançando níveis, desenho dos 6 cenários e mapeamento nível→cenário.

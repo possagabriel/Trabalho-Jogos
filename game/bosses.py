@@ -26,7 +26,7 @@ class Boss:
         self.vida_max = self.vida
         self.pontos = cfg["pontos"]
         self.mov = cfg["mov"]
-        self.ataque = cfg["ataque"]
+        self.ataques = list(cfg["ataques"])
         self.alvo_y = cfg["alvo_y"]
         self.efeito = cfg["efeito"]
         self.part_qtd = cfg["part_qtd"]
@@ -37,6 +37,7 @@ class Boss:
         self.entrando = True
         self.timer_ataque = 90
         self.flash = 0
+        self.enraivecido = False
         self.teleportando = False
         self.teleport_timer = 130
         self.alvo = None
@@ -45,6 +46,9 @@ class Boss:
     def rect(self):
         return pygame.Rect(int(self.x - self.raio), int(self.y - self.raio),
                            self.raio * 2, self.raio * 2)
+
+    def _fracao_vida(self):
+        return max(0.0, self.vida / self.vida_max)
 
     def atualizar(self, jogador):
         novos = []
@@ -59,21 +63,25 @@ class Boss:
                 self.entrando = False
             return novos
 
+        velocidade = 1.5 if self.enraivecido else 1.0
         if self.mov == "zigzag":
             self.x = LARGURA // 2 + math.sin(self.t * 0.03) * 220
-            self.angulo += 0.02
+            self.angulo += 0.02 * velocidade
         elif self.mov == "gira":
-            self.angulo += 0.03
-            self.x += math.sin(self.t * 0.01) * 1.2
+            self.angulo += 0.03 * velocidade
+            self.x += math.sin(self.t * 0.01) * 1.2 * velocidade
             self.x = max(self.raio, min(LARGURA - self.raio, self.x))
         elif self.mov == "infinito":
             self.x = LARGURA // 2 + math.sin(self.t * 0.02) * 320
             self.y = self.alvo_y + math.sin(self.t * 0.04) * 100
-            self.angulo += 0.02
+            self.angulo += 0.02 * velocidade
         elif self.mov == "teletransporte":
             self._atualizar_teletransporte()
         elif self.mov == "centro":
-            self.angulo += 0.01
+            self.angulo += 0.01 * velocidade
+
+        if not self.enraivecido and self._fracao_vida() <= 0.33:
+            self.enraivecido = True
 
         self.timer_ataque -= 1
         if self.timer_ataque <= 0:
@@ -103,29 +111,64 @@ class Boss:
             self.angulo += 0.05
 
     def _intervalo_ataque(self):
-        if self.ataque == "combinado":
-            return 60
-        return random.randint(75, 110)
+        fracao = self._fracao_vida()
+        base = random.randint(75, 110)
+        if fracao <= 0.33:
+            base = int(base * 0.55)
+        elif fracao <= 0.66:
+            base = int(base * 0.8)
+        if self.enraivecido:
+            base = int(base * 0.85)
+        return max(28, base)
+
+    def _ataques_por_fase(self):
+        """Seleciona os ataques ativos conforme a vida restante."""
+        fracao = self._fracao_vida()
+        if fracao > 0.66:
+            return self.ataques[:1]
+        if fracao > 0.33:
+            return self.ataques[:2]
+        return self.ataques
 
     def _atacar(self, jogador):
         x, y = self.x, self.y
-        if self.ataque == "leque":
+        disponiveis = self._ataques_por_fase()
+        if not disponiveis:
+            return []
+        escolhidos = random.sample(disponiveis,
+                                   min(1 + (len(disponiveis) > 1), 3))
+        projs = []
+        for nome in escolhidos:
+            projs += self._executar_ataque(nome, jogador, x, y)
+        return projs
+
+    def _executar_ataque(self, nome, jogador, x, y):
+        if nome == "leque":
             return [Projetil(x, y, dx, 4, 1, self.cor, 5, origem="inimigo")
                     for dx in (-2, 0, 2)]
-        if self.ataque == "8dir":
+        if nome == "8dir":
             return [Projetil(x, y, math.cos(a) * 3.5, math.sin(a) * 3.5, 1,
                              self.cor, 5, origem="inimigo")
                     for a in [i * math.tau / 8 for i in range(8)]]
-        if self.ataque == "teleguiado":
+        if nome == "teleguiado":
             return [Projetil(x, y, jogador.x - x, jogador.y - y, 1,
                              self.cor, 5, origem="inimigo", teleguiado=True)
                     for _ in range(3)]
-        if self.ataque == "tudo":
+        if nome == "tudo":
             return [Projetil(x, y, math.cos(a) * 3.2, math.sin(a) * 3.2, 1,
                              self.cor, 5, origem="inimigo")
                     for a in [i * math.tau / 12 for i in range(12)]]
-        if self.ataque == "combinado":
-            fracao = self.vida / self.vida_max
+        if nome == "mira":
+            dx, dy = jogador.x - x, jogador.y - y
+            norma = math.hypot(dx, dy) or 1
+            return [Projetil(x, y, dx / norma * 7, dy / norma * 7, 1,
+                             ROSA, 5, origem="inimigo") for _ in range(3)]
+        if nome == "espiral":
+            return [Projetil(x, y, math.cos(a) * 3.4, math.sin(a) * 3.4, 1,
+                             CIANO, 5, origem="inimigo")
+                    for a in [i * math.tau / 16 for i in range(16)]]
+        if nome == "combinado":
+            fracao = self._fracao_vida()
             projs = []
             if fracao <= 0.66:
                 projs += [Projetil(x, y, math.cos(a) * 3.2,
@@ -150,6 +193,15 @@ class Boss:
         x, y = int(self.x), int(self.y)
         cor = BRANCO if self.flash > 0 else self.cor
         centro = (x, y)
+        if self.enraivecido:
+            desenhar_glow(tela, VERMELHO, centro, self.raio + 12, 0.5)
+            desenhar_circulo(tela, VERMELHO, centro, self.raio + 8, 2,
+                             brilho=1.0)
+        if 0 < self.timer_ataque <= 40:
+            pulso = 0.5 + 0.5 * math.sin(self.t * 0.6)
+            desenhar_circulo(tela, (255, 60, 90), centro,
+                             self.raio + 10 + int(pulso * 14), 2,
+                             brilho=1.2)
         if self.entrando:
             desenhar_glow(tela, cor, centro, self.raio * 1.3, 0.6)
             desenhar_circulo(tela, cor, centro, self.raio, 3)
@@ -215,23 +267,26 @@ class Boss:
 
 BOSSES_POR_CENARIO = {
     1: {"nome": "HEXAGONO", "cor": VERMELHO, "raio": 40, "vida": 30,
-        "pontos": 200, "mov": "zigzag", "ataque": "leque",
+        "pontos": 200, "mov": "zigzag", "ataques": ["leque", "8dir"],
         "alvo_y": 150, "efeito": "explosao", "part_qtd": 10, "nivel": 5},
     2: {"nome": "LOSANGO", "cor": AZUL, "raio": 45, "vida": 50,
-        "pontos": 350, "mov": "gira", "ataque": "8dir",
+        "pontos": 350, "mov": "gira", "ataques": ["8dir", "espiral"],
         "alvo_y": 150, "efeito": "espiral", "part_qtd": 20, "nivel": 10},
     3: {"nome": "ESTRELA", "cor": DOURADO, "raio": 50, "vida": 70,
-        "pontos": 500, "mov": "infinito", "ataque": "teleguiado",
+        "pontos": 500, "mov": "infinito", "ataques": ["teleguiado", "tudo"],
         "alvo_y": 180, "efeito": "estrela", "part_qtd": 30, "nivel": 15},
     4: {"nome": "PENTAGONO", "cor": ROXO, "raio": 55, "vida": 100,
-        "pontos": 750, "mov": "teletransporte", "ataque": "tudo",
+        "pontos": 750, "mov": "teletransporte",
+        "ataques": ["tudo", "leque", "mira"],
         "alvo_y": 150, "efeito": "pulsacao", "part_qtd": 40, "nivel": 20},
     5: {"nome": "ANEIS", "cor": BRANCO, "raio": 75, "vida": 150,
-        "pontos": 1000, "mov": "centro", "ataque": "combinado",
+        "pontos": 1000, "mov": "centro",
+        "ataques": ["combinado", "espiral"],
         "alvo_y": ALTURA // 2, "efeito": "mega", "part_qtd": 100,
         "nivel": 25},
     6: {"nome": "ANEIS DOURADO", "cor": DOURADO, "raio": 85, "vida": 220,
-        "pontos": 1500, "mov": "centro", "ataque": "combinado",
+        "pontos": 1500, "mov": "centro",
+        "ataques": ["combinado", "espiral", "teleguiado"],
         "alvo_y": ALTURA // 2, "efeito": "mega", "part_qtd": 140,
         "nivel": 30},
 }
