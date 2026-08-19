@@ -1,0 +1,158 @@
+"""Sons e musica gerados proceduralmente (sem arquivos externos)."""
+
+import io
+import math
+import random
+import struct
+
+import pygame
+
+SAMPLE_RATE = 22050
+
+
+def _wav_bytes(samples):
+    n = len(samples)
+    out = bytearray(b"RIFF")
+    out += struct.pack("<I", 36 + n * 2)
+    out += b"WAVEfmt "
+    out += struct.pack("<IHHIIHH", 16, 1, 1, SAMPLE_RATE, SAMPLE_RATE * 2, 2, 16)
+    out += b"data"
+    out += struct.pack("<I", n * 2)
+    for s in samples:
+        out += struct.pack("<h", int(max(-32768, min(32767, s))))
+    return bytes(out)
+
+
+def _sweep(f_inicial, f_final, duracao, vol, onda="quadrada"):
+    n = int(SAMPLE_RATE * duracao)
+    fase = 0.0
+    samples = []
+    for i in range(n):
+        f = f_inicial + (f_final - f_inicial) * i / n
+        fase += 2 * math.pi * f / SAMPLE_RATE
+        if onda == "seno":
+            v = math.sin(fase)
+        elif onda == "serra":
+            v = (fase / math.tau) % 1 * 2 - 1
+        else:
+            v = 1.0 if math.sin(fase) >= 0 else -1.0
+        samples.append(v * vol * (1 - i / n))
+    return samples
+
+
+def _tone(frequencia, duracao, vol, onda="seno"):
+    n = int(SAMPLE_RATE * duracao)
+    return [_onda_val(frequencia, i, onda) * vol * (1 - i / n)
+            for i in range(n)]
+
+
+def _onda_val(freq, i, onda):
+    if onda == "seno":
+        return math.sin(2 * math.pi * freq * i / SAMPLE_RATE)
+    if onda == "serra":
+        return (freq * i / SAMPLE_RATE) % 1 * 2 - 1
+    return 1.0 if math.sin(2 * math.pi * freq * i / SAMPLE_RATE) >= 0 else -1.0
+
+
+def _ruido(duracao, vol):
+    n = int(SAMPLE_RATE * duracao)
+    return [random.uniform(-1, 1) * vol * (1 - i / n) for i in range(n)]
+
+
+class Sons:
+    """Gerencia efeitos sonoros e musica ambiente procedural."""
+
+    def __init__(self):
+        self.habilitado = True
+        self._sons = {}
+        try:
+            pygame.mixer.init(SAMPLE_RATE, -16, 1, 512)
+        except pygame.error:
+            self.habilitado = False
+            return
+        self._criar_sons()
+        self._criar_musica()
+
+    def _novo_som(self, samples):
+        try:
+            return pygame.mixer.Sound(buffer=_wav_bytes(samples))
+        except pygame.error:
+            return None
+
+    def _criar_sons(self):
+        self._sons["tiro"] = self._novo_som(_sweep(950, 400, 0.09, 0.15))
+        self._sons["explosao"] = self._novo_som(_ruido(0.3, 0.45))
+        self._sons["dano"] = self._novo_som(_sweep(200, 70, 0.25, 0.45))
+        self._sons["coleta"] = self._novo_som(
+            _sweep(400, 950, 0.16, 0.3, "seno"))
+        self._sons["boss"] = self._novo_som(_sweep(120, 60, 0.9, 0.4, "serra"))
+        self._sons["nivel"] = self._novo_som(
+            _tone(520, 0.12, 0.3) + _tone(780, 0.16, 0.3))
+        self._sons["navegar"] = self._novo_som(_tone(600, 0.06, 0.2))
+        self._sons["comprar"] = self._novo_som(
+            _tone(660, 0.08, 0.3) + _tone(990, 0.14, 0.3))
+        self._sons["equipar"] = self._novo_som(
+            _tone(440, 0.06, 0.25) + _tone(660, 0.1, 0.25))
+        self._sons["erro"] = self._novo_som(_sweep(220, 120, 0.2, 0.3))
+        self._sons["carga"] = self._novo_som(_tone(1200, 0.05, 0.2))
+        self._sons["transicao"] = self._novo_som(
+            _sweep(300, 1400, 0.7, 0.3, "seno"))
+        self._sons["gameover"] = self._novo_som(
+            _sweep(400, 70, 1.0, 0.5, "seno"))
+
+    def _criar_musica(self):
+        try:
+            pygame.mixer.music.load(io.BytesIO(_wav_bytes(self._gerar_musica())))
+            pygame.mixer.music.set_volume(0.22)
+            pygame.mixer.music.play(-1)
+        except pygame.error:
+            pass
+
+    def _gerar_musica(self):
+        bpm = 120
+        batida = 60 / bpm
+        bloco = int(batida * SAMPLE_RATE)
+        total = bloco * 16
+        dados = [0.0] * total
+        baixo = [110, 110, 130.8, 110, 87.3, 87.3, 98, 110,
+                 110, 110, 130.8, 110, 98, 98, 87.3, 110]
+        melodia = [220, 261.6, 329.6, 392, 329.6, 261.6, 220, 174.6,
+                   220, 261.6, 329.6, 392, 440, 392, 329.6, 261.6]
+        for b in range(16):
+            for i in range(bloco):
+                v_baixo = _onda_val(baixo[b], i, "quadrada") * 0.18
+                v_mel = _onda_val(melodia[b], i, "seno") * 0.10
+                dados[b * bloco + i] = v_baixo + v_mel
+        pico = max(abs(x) for x in dados) or 1.0
+        return [x / pico * 0.7 for x in dados]
+
+    def tocar(self, nome):
+        if not self.habilitado:
+            return
+        som = self._sons.get(nome)
+        if som:
+            try:
+                som.play()
+            except pygame.error:
+                pass
+
+    def set_volume_musica(self, volume):
+        """Ajusta o volume da musica de fundo (0.0 a 1.0)."""
+        if not self.habilitado:
+            return
+        try:
+            pygame.mixer.music.set_volume(0.22 * max(0.0, min(1.0, volume)))
+        except pygame.error:
+            pass
+
+    def set_volume_efeitos(self, volume):
+        """Ajusta o volume de todos os efeitos sonoros (0.0 a 1.0)."""
+        if not self.habilitado:
+            return
+        volume = max(0.0, min(1.0, volume))
+        for som in self._sons.values():
+            if som:
+                try:
+                    som.set_volume(volume)
+                except pygame.error:
+                    pass
