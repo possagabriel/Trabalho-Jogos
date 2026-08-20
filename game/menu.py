@@ -18,6 +18,7 @@ import os
 
 import pygame
 
+from .assets import carregar_imagem_alpha
 from .config import BRANCO, CIANO, DOURADO, QUANTUM_CYAN, VERDE
 from .layout import ALTURA_BASE, CENTRO, LARGURA_BASE, TOPO_DIREITA, \
     TOPO_ESQUERDA, Layout
@@ -403,6 +404,7 @@ class MenuPrincipal:
         self._bloco_fury_cache = {}
         self._cabecalho_cache = {}
         self._cache_espacado = {}
+        self._logo_menu = None
 
         self.continuar_selecao = 0
         self.loja_selecao = 0
@@ -1723,16 +1725,19 @@ class MenuPrincipal:
         nome = self.jogo.config["tema"]
         if nome not in self._titulo_cache:
             void = texto_suave(self.fonte_titulo_grande, "VOID", BRANCO,
-                               None, 0, True)
+                               tema["primaria"], 18, True)
+            void_eco = texto_suave(self.fonte_titulo_grande, "VOID",
+                                   tema["primaria"], None, 0, False)
             shift = texto_suave(self.fonte_fury, "//SHIFT", tema["primaria"],
-                                tema["primaria"], 8, True)
+                                tema["terciaria"], 10, True)
             shift = pygame.transform.rotate(shift, -2)
             sub = self._espacado(self.fonte_legenda, "ENTER THE RIFT.", 4,
                                  tema["primaria"])
             tag = self._espacado(self.fonte_legenda, "// DIMENSIONAL COMBAT",
                                  2, tema["secundaria"])
             self._titulo_cache[nome] = {
-                "void": void, "shift": shift, "sub": sub, "tag": tag}
+                "void": void, "void_eco": void_eco, "shift": shift,
+                "sub": sub, "tag": tag}
         return self._titulo_cache[nome]
 
     def _bloco_fury(self, tema):
@@ -1749,6 +1754,22 @@ class MenuPrincipal:
         pygame.draw.polygon(surf, tema["secundaria"] + (90,),
                             [(0, h + inc - 10), (70, h + inc - 34),
                              (0, h + inc - 34)])
+        # moldura interna em paralelogramo (tom secundario)
+        pygame.draw.polygon(surf, tema["secundaria"] + (110,),
+                            [(l.px(10), inc + l.px(10)),
+                             (w - l.px(10), l.px(10)),
+                             (w - l.px(10), h - l.px(10)),
+                             (l.px(10), h + inc - l.px(10))], 1)
+        # linha de energia vertical na direita
+        pygame.draw.line(surf, tema["secundaria"] + (140,),
+                         (w - l.px(16), l.px(8)), (w - l.px(16), h), 2)
+        # bracket HUD no canto superior esquerdo
+        cx, cy = l.px(16), inc + l.px(14)
+        comp = l.px(14)
+        pygame.draw.line(surf, tema["secundaria"] + (220,),
+                         (cx, cy), (cx + comp, cy), 2)
+        pygame.draw.line(surf, tema["secundaria"] + (220,),
+                         (cx, cy), (cx, cy + comp), 2)
         self._bloco_fury_cache[nome] = surf
         return surf
 
@@ -1781,23 +1802,67 @@ class MenuPrincipal:
         pygame.draw.aaline(tela, cor1, l.ponto(TOPO_DIREITA, 0, 330),
                            l.ponto(TOPO_ESQUERDA, 640, 486), 1)
 
+    def _logo_menu_surface(self):
+        """Logo 'logo-menu.png' redimensionada para a largura do titulo."""
+        if self._logo_menu is None:
+            img = carregar_imagem_alpha("logo-menu.png")
+            if img is None:
+                self._logo_menu = False
+            else:
+                l = self.layout
+                larg = l.px(430)
+                alt = max(1, int(img.get_height() * larg
+                                 / max(1, img.get_width())))
+                self._logo_menu = pygame.transform.smoothscale(img, (larg, alt))
+        return self._logo_menu
+
+    def _desenhar_linha_titulo(self, tela, tema, x, y, alfa):
+        """Linha de acento com gradiente e losango entre logo e subtitulo."""
+        l = self.layout
+        larg = l.px(300)
+        surf = pygame.Surface((larg, l.px(14)), pygame.SRCALPHA)
+        prim = tema["primaria"]
+        for i in range(larg):
+            t = i / max(1, larg - 1)
+            c = tuple(int(prim[j] * (0.25 + 0.75 * (1 - t)))
+                      for j in range(3))
+            pygame.draw.line(surf, c + (int(150 * alfa / 255),),
+                             (i, l.px(6)), (i, l.px(8)))
+        cx, cy = larg // 2, l.px(7)
+        pygame.draw.polygon(surf, tema["secundaria"] + (int(230 * alfa / 255),),
+                            [(cx, cy - l.px(4)), (cx + l.px(4), cy),
+                             (cx, cy + l.px(4)), (cx - l.px(4), cy)])
+        surf.set_alpha(alfa)
+        tela.blit(surf, (x, y))
+
     def _desenhar_bloco_titulo(self, tela, tema):
         l = self.layout
         ts = self._titulo_surfaces(tema)
+        logo = self._logo_menu_surface()
         p_titulo = self._frac(0.10, 0.5)
         p_bloco = self._frac(0.06, 0.28)
         p_sub = self._frac(0.55, 0.4)
         off = int((1 - ease_out_back(p_titulo)) * -l.px(300))
         alfa = int(255 * ease_out(p_titulo))
-        if p_bloco > 0:
-            bloco = self._bloco_fury(tema)
-            self._blit_alfa(tela, bloco, l.ponto(TOPO_ESQUERDA, 36, 166),
-                            255 * ease_out(p_bloco))
-        self._blit_alfa(tela, ts["void"],
-                        (l.px(56) + off, l.px(118)), alfa)
-        self._blit_alfa(tela, ts["shift"],
-                        (l.px(48) + off, l.px(208)), alfa)
+        if logo:
+            self._blit_alfa(tela, logo,
+                            (l.px(36) + off, l.px(148)),
+                            int(255 * ease_out(p_bloco)))
+        else:
+            if p_bloco > 0:
+                bloco = self._bloco_fury(tema)
+                self._blit_alfa(tela, bloco, l.ponto(TOPO_ESQUERDA, 36, 166),
+                                255 * ease_out(p_bloco))
+            alfa_eco = int(220 * ease_out(p_bloco))
+            self._blit_alfa(tela, ts["void_eco"],
+                            (l.px(62) + off, l.px(124)), alfa_eco)
+            self._blit_alfa(tela, ts["void"],
+                            (l.px(56) + off, l.px(118)), alfa)
+            self._blit_alfa(tela, ts["shift"],
+                            (l.px(48) + off, l.px(208)), alfa)
         alfa_sub = int(255 * ease_out(p_sub))
+        self._desenhar_linha_titulo(tela, tema, l.px(60) + off, l.px(318),
+                                    alfa_sub)
         self._blit_alfa(tela, ts["sub"],
                         (l.px(60) + off, l.px(340)), alfa_sub)
         self._blit_alfa(tela, ts["tag"],
