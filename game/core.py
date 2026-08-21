@@ -14,17 +14,18 @@ from .enemies import Inimigo, InimigoEspecial, composicao_onda, \
     sortear_inimigo_especial
 from .fonts import fonte_texto, fonte_titulo
 from .hud import HudJogo
-from .menu import MenuPrincipal
+from .menu import Dialogo, MenuPrincipal
 from .particles import MensagemFlutuante, SistemaParticulas
 from .player import Jogador
 from .powerups import PowerUp, sortear_tipo
 from .save_system import SistemaProgressao
 from .scenarios import CENARIOS, Cenario, cenario_do_nivel
-from .settings import Configuracoes
+from .settings import Configuracoes, TEMAS
 from .shop import LojaSkins
 from .sounds import Sons
 from .smooth import desenhar_glow, desenhar_painel, desenhar_poligono, \
-    desenhar_vignette, retangulo_suave
+    desenhar_vignette, retangulo_suave, \
+    desenhar_painel_cartoon, desenhar_botao_cartoon, desenhar_estrela
 from .theme import tema_atual
 from .ui import desenhar_barra, desenhar_cantos, desenhar_texto, \
     desenhar_titulo
@@ -96,6 +97,13 @@ class Jogo:
         self.recordes = SistemaProgressao.carregar_recordes()
         self.hud = HudJogo()
         self.menu = MenuPrincipal(self)
+        # --- estado do menu de pausa ---
+        self._pausa_selecao = 0
+        self._pausa_config_selecao = 0
+        self._pausa_config_scroll = 0
+        self._pausa_mostrando_config = False
+        self._pausa_dialogo = None
+        self._pausa_mouse = (0, 0)
         self._novo_jogo("Jogador", zerar_estado=False)
         self.estado = "MENU"
 
@@ -788,12 +796,7 @@ class Jogo:
                 elif pygame.K_1 <= evento.key <= pygame.K_9:
                     self.jogador.selecionar_arma(evento.key - pygame.K_1)
             elif self.estado == "PAUSA":
-                if evento.key in (pygame.K_p, pygame.K_ESCAPE):
-                    self.estado = "JOGANDO"
-                elif evento.key == pygame.K_m:
-                    self.estado = "MENU"
-                    self.fade = 255
-                    self._salvar_tudo()
+                self._tratar_eventos_pausa(evento)
             elif self.estado == "GAME_OVER":
                 if evento.key == pygame.K_RETURN:
                     self._preparar_jogo()
@@ -857,33 +860,442 @@ class Jogo:
                        self.fontes)
 
     def _desenhar_pausa(self):
-        self._tela_sombra.fill((0, 0, 0, 190))
+        self._tela_sombra.fill((0, 0, 0, 210))
         self.tela.blit(self._tela_sombra, (0, 0))
-        desenhar_vignette(self.tela, intensidade=0.6, raio_interno=0.35)
+        desenhar_vignette(self.tela, intensidade=0.7, raio_interno=0.3)
 
-        painel = pygame.Rect(LARGURA // 2 - 240, ALTURA // 2 - 160, 480, 320)
         tema = tema_atual(self.config["tema"])
-        desenhar_painel(self.tela, tema["primaria"], painel,
-                        cor_fundo=tema["fundo_painel"], raio_canto=18,
-                        alpha=235, glow_raio=30)
-        desenhar_cantos(self.tela, tema["borda_forte"], painel, tamanho=18)
-
-        desenhar_titulo(self.tela, "PAUSADO", (LARGURA // 2, ALTURA // 2 - 96),
-                        tema["primaria"], 44)
         t = pygame.time.get_ticks() * 0.001
-        pulso = 0.6 + 0.4 * math.sin(t * 4)
-        cor_pulso = tuple(int(c * pulso) for c in tema["secundaria"])
-        desenhar_texto(self.tela, "P / ESC  continuar", (LARGURA // 2,
-                                                         ALTURA // 2 - 30),
-                       cor_pulso, 28, "centro", self.fontes)
-        desenhar_texto(self.tela, "M  voltar ao menu", (LARGURA // 2,
-                                                        ALTURA // 2 + 20),
-                       (210, 215, 240), 28, "centro", self.fontes)
 
-        info = (f"NIVEL {self.jogador.nivel}   |   "
-                f"{self.jogador.pontuacao} pts")
-        desenhar_texto(self.tela, info, (LARGURA // 2, ALTURA // 2 + 80),
-                       DOURADO, 22, "centro", self.fontes)
+        if self._pausa_mostrando_config:
+            self._desenhar_pausa_config(tema, t)
+        else:
+            self._desenhar_pausa_principal(tema, t)
+
+        # dialogo de confirmacao por cima de tudo
+        if self._pausa_dialogo and self._pausa_dialogo.ativo:
+            self._pausa_dialogo.desenhar(
+                self.tela,
+                self.fontes.get(36) or fonte_titulo(36),
+                self.fontes.get(22) or fonte_texto(22),
+                mouse_pos=self._pausa_mouse,
+                tema=tema)
+
+    def _desenhar_pausa_principal(self, tema, t):
+        """Menu de pausa principal com 3 opcoes interativas."""
+        pw, ph = 440, 420
+        painel = pygame.Rect(LARGURA // 2 - pw // 2, ALTURA // 2 - ph // 2,
+                             pw, ph)
+        desenhar_painel_cartoon(self.tela, tema["primaria"], painel,
+                                cor_fundo=(10, 10, 26), raio_canto=28,
+                                espessura_borda=6, alpha=248, glow_raio=32)
+
+        # --- cabecalho com icone e titulo ---
+        # icone de pause (duas barras verticais)
+        ix, iy = LARGURA // 2, painel.y + 36
+        barra_w, barra_h = 10, 28
+        espaco_barra = 16
+        pygame.draw.rect(self.tela, tema["primaria"],
+                         (ix - espaco_barra - barra_w, iy - barra_h // 2,
+                          barra_w, barra_h), border_radius=4)
+        pygame.draw.rect(self.tela, tema["primaria"],
+                         (ix + espaco_barra, iy - barra_h // 2,
+                          barra_w, barra_h), border_radius=4)
+        # contorno preto nas barras
+        pygame.draw.rect(self.tela, (0, 0, 0),
+                         (ix - espaco_barra - barra_w, iy - barra_h // 2,
+                          barra_w, barra_h), 2, border_radius=4)
+        pygame.draw.rect(self.tela, (0, 0, 0),
+                         (ix + espaco_barra, iy - barra_h // 2,
+                          barra_w, barra_h), 2, border_radius=4)
+
+        desenhar_titulo(self.tela, "PAUSADO",
+                        (LARGURA // 2, painel.y + 76), tema["primaria"], 38)
+
+        # linha separadora animada
+        sep_y = painel.y + 100
+        sep_w = 260
+        desenhar_glow(self.tela, tema["primaria"],
+                      (LARGURA // 2, sep_y), 16, 0.3)
+        for i in range(0, sep_w, 5):
+            brilho = 0.3 + 0.7 * abs(math.sin(i / 30 + t * 2))
+            cor_linha = tuple(int(c * brilho) for c in tema["primaria"])
+            pygame.draw.line(self.tela, cor_linha,
+                             (LARGURA // 2 - sep_w // 2 + i, sep_y),
+                             (LARGURA // 2 - sep_w // 2 + i + 3, sep_y), 2)
+
+        # estrelas decorativas animadas
+        for i, (sx, sy, sr) in enumerate([
+            (painel.x + 24, painel.y + 24, 9),
+            (painel.right - 24, painel.y + 24, 7),
+            (painel.x + 20, painel.bottom - 24, 8),
+            (painel.right - 20, painel.bottom - 24, 10),
+        ]):
+            rot = t * 45 + i * 90
+            cor_e = tema["secundaria"] if i % 2 == 0 else tema["terciaria"]
+            desenhar_estrela(self.tela, (sx, sy), sr, cor_e, pontas=4,
+                             rotacao=rot)
+
+        # --- botoes de opcao ---
+        opcoes = [
+            ("CONTINUAR", (25, 150, 75), "retomar a missao"),
+            ("CONFIGURACOES", (50, 90, 170), "ajustar opcoes"),
+            ("SAIR DA MISSAO", (170, 50, 55), "voltar ao menu"),
+        ]
+        btn_w, btn_h = 320, 54
+        btn_x = LARGURA // 2 - btn_w // 2
+        btn_y_inicio = painel.y + 118
+        espaco = 74
+
+        for i, (texto, cor_fundo, dica) in enumerate(opcoes):
+            by = btn_y_inicio + i * espaco
+            rect = pygame.Rect(btn_x, by, btn_w, btn_h)
+            hover = (i == self._pausa_selecao)
+            desenhar_botao_cartoon(self.tela, texto, rect, cor_fundo,
+                                   fonte=self.fontes.get(24) or
+                                   fonte_texto(24),
+                                   hover=hover)
+            # dica abaixo do botao
+            if hover:
+                dica_surf = (self.fontes.get(16) or fonte_texto(16)).render(
+                    dica, True, (180, 185, 220))
+                self.tela.blit(dica_surf, dica_surf.get_rect(
+                    center=(LARGURA // 2, by + btn_h + 10)))
+
+        # --- info do jogador em painel separado ---
+        info_y = painel.bottom - 80
+        info_rect = pygame.Rect(painel.x + 30, info_y, pw - 60, 48)
+        pygame.draw.rect(self.tela, (20, 20, 40, 120), info_rect,
+                         border_radius=12)
+        pygame.draw.rect(self.tela, tema["borda_fraco"], info_rect, 1,
+                         border_radius=12)
+
+        info_texto = (f"NIVEL {self.jogador.nivel}   |   "
+                      f"{self.jogador.pontuacao} PTS   |   "
+                      f"SKIN {self.jogador.skin}")
+        desenhar_texto(self.tela, info_texto,
+                       (LARGURA // 2, info_y + 24), DOURADO, 18, "centro",
+                       self.fontes)
+
+        # dica de teclado
+        pulso = 0.4 + 0.6 * math.sin(t * 2.5)
+        cor_dica = tuple(int(c * pulso) for c in (160, 165, 200))
+        desenhar_texto(self.tela,
+                       "UP/DOWN navegar   |   ENTER selecionar   "
+                       "|   ESC retomar",
+                       (LARGURA // 2, painel.bottom - 18), cor_dica, 14,
+                       "centro", self.fontes)
+
+    def _desenhar_pausa_config(self, tema, t):
+        """Sub-painel de configuracoes dentro da pausa."""
+        pw, ph = 540, 430
+        painel = pygame.Rect(LARGURA // 2 - pw // 2, ALTURA // 2 - ph // 2,
+                             pw, ph)
+        desenhar_painel_cartoon(self.tela, tema["primaria"], painel,
+                                cor_fundo=(10, 10, 26), raio_canto=24,
+                                espessura_borda=5, alpha=248, glow_raio=26)
+
+        # titulo com seta de voltar
+        desenhar_titulo(self.tela, "CONFIGURACOES",
+                        (LARGURA // 2, painel.y + 34), tema["primaria"], 30)
+        # seta voltar (indicacao visual de que ESC volta)
+        seta_x = painel.x + 30
+        seta_y = painel.y + 34
+        pygame.draw.polygon(self.tela, tema["secundaria"],
+                            [(seta_x, seta_y), (seta_x + 14, seta_y - 8),
+                             (seta_x + 14, seta_y + 8)])
+
+        # linha separadora
+        sep_y = painel.y + 58
+        pygame.draw.line(self.tela, tema["borda_fraco"],
+                         (painel.x + 40, sep_y),
+                         (painel.right - 40, sep_y), 1)
+
+        # linhas de config
+        cfg_itens = [
+            ("Musica", "slider", self.config["musica_volume"]),
+            ("Efeitos", "slider", self.config["efeitos_volume"]),
+            ("Tema", "tema", self.config["tema"]),
+            ("Tela Cheia", "toggle", self.config["tela_cheia"]),
+        ]
+        btn_h = 44
+        y_inicio = painel.y + 76
+        espaco = 70
+
+        for i, (rotulo, tipo, valor) in enumerate(cfg_itens):
+            by = y_inicio + i * espaco
+            selecionada = (i == self._pausa_config_selecao)
+
+            # fundo da linha selecionada
+            linha_rect = pygame.Rect(painel.x + 24, by - 6, pw - 48, btn_h)
+            if selecionada:
+                hl_surf = pygame.Surface((pw - 48, btn_h), pygame.SRCALPHA)
+                pygame.draw.rect(hl_surf, (255, 255, 255, 25),
+                                 (0, 0, pw - 48, btn_h), border_radius=12)
+                self.tela.blit(hl_surf, (painel.x + 24, by - 6))
+                pygame.draw.rect(self.tela, tema["primaria"], linha_rect, 2,
+                                 border_radius=12)
+                # indicador lateral
+                pygame.draw.rect(self.tela, tema["primaria"],
+                                 (painel.x + 24, by + 4, 5, btn_h - 8),
+                                 border_radius=3)
+
+            # rotulo
+            cor_rotulo = BRANCO if selecionada else (170, 175, 215)
+            fonte_item = self.fontes.get(22) or fonte_texto(22)
+            surface = fonte_item.render(rotulo, True, cor_rotulo)
+            self.tela.blit(surface, (painel.x + 44, by + 10))
+
+            # valor / controle
+            if tipo == "slider":
+                fracao = max(0.0, min(1.0, valor))
+                percentual = int(fracao * 100)
+                track_x = painel.x + 280
+                track_y = by + 14
+                track_w = 170
+                track_h = 16
+                track_rect = pygame.Rect(track_x, track_y, track_w, track_h)
+                retangulo_suave(self.tela, (35, 35, 65), track_rect, 8)
+                if fracao > 0:
+                    preenchido = max(16, int(track_w * fracao))
+                    fill_rect = pygame.Rect(track_x, track_y,
+                                            preenchido, track_h)
+                    retangulo_suave(self.tela, CIANO, fill_rect, 8,
+                                    glow_cor=CIANO, glow_raio=6)
+                retangulo_suave(self.tela, BRANCO, track_rect, 8, 1)
+                knob_x = track_x + preenchido
+                pygame.draw.circle(self.tela, (0, 0, 0),
+                                   (knob_x, track_y + 8), 8)
+                pygame.draw.circle(self.tela, BRANCO,
+                                   (knob_x, track_y + 8), 7)
+                pygame.draw.circle(self.tela, CIANO,
+                                   (knob_x, track_y + 8), 4)
+                pct_surf = fonte_item.render(f"{percentual}%", True,
+                                             (160, 165, 210))
+                self.tela.blit(pct_surf, (track_x + track_w + 12, by + 8))
+
+            elif tipo == "tema":
+                nome = valor
+                seta_cor = tema["secundaria"]
+                # seta esquerda
+                lx = painel.x + 280
+                pygame.draw.polygon(self.tela, seta_cor,
+                                    [(lx, by + 18), (lx + 14, by + 8),
+                                     (lx + 14, by + 28)])
+                pygame.draw.polygon(self.tela, (0, 0, 0),
+                                    [(lx, by + 18), (lx + 14, by + 8),
+                                     (lx + 14, by + 28)], 2)
+                # nome do tema
+                tema_fonte = self.fontes.get(24) or fonte_texto(24)
+                ts = tema_fonte.render(nome, True, seta_cor)
+                self.tela.blit(ts, ts.get_rect(
+                    center=(LARGURA // 2, by + 16)))
+                # seta direita
+                rx = painel.x + pw - 294
+                pygame.draw.polygon(self.tela, seta_cor,
+                                    [(rx, by + 8), (rx + 14, by + 18),
+                                     (rx, by + 28)])
+                pygame.draw.polygon(self.tela, (0, 0, 0),
+                                    [(rx, by + 8), (rx + 14, by + 18),
+                                     (rx, by + 28)], 2)
+
+            elif tipo == "toggle":
+                ligado = valor
+                tx = painel.x + 310
+                tw, th = 56, 28
+                toggle_rect = pygame.Rect(tx, by + 6, tw, th)
+                cor_toggle = (35, 130, 65) if ligado else (100, 45, 45)
+                retangulo_suave(self.tela, cor_toggle, toggle_rect, 14)
+                retangulo_suave(self.tela, BRANCO, toggle_rect, 14, 1)
+                knob_cx = tx + (42 if ligado else 14)
+                pygame.draw.circle(self.tela, (0, 0, 0),
+                                   (knob_cx, by + 20), 11)
+                pygame.draw.circle(self.tela, BRANCO,
+                                   (knob_cx, by + 20), 10)
+                estado = "ON" if ligado else "OFF"
+                cor_estado = VERDE if ligado else (160, 90, 90)
+                est_surf = fonte_item.render(estado, True, cor_estado)
+                self.tela.blit(est_surf, (tx + tw + 14, by + 8))
+
+        # botoes de acao
+        b_voltar_rect = pygame.Rect(painel.x + 30, painel.bottom - 56,
+                                    150, 42)
+        b_reset_rect = pygame.Rect(painel.right - 180, painel.bottom - 56,
+                                   150, 42)
+        desenhar_botao_cartoon(self.tela, "VOLTAR", b_voltar_rect,
+                               (70, 70, 95),
+                               fonte=self.fontes.get(20) or fonte_texto(20),
+                               hover=False)
+        desenhar_botao_cartoon(self.tela, "RESETAR", b_reset_rect,
+                               (130, 45, 50),
+                               fonte=self.fontes.get(20) or fonte_texto(20),
+                               hover=False)
+
+        # dica
+        pulso = 0.4 + 0.6 * math.sin(t * 2.5)
+        cor_dica = tuple(int(c * pulso) for c in (160, 165, 200))
+        desenhar_texto(self.tela,
+                       "UP/DOWN navegar  |  LEFT/RIGHT ajustar  |  ESC voltar",
+                       (LARGURA // 2, painel.bottom - 14), cor_dica, 13,
+                       "centro", self.fontes)
+
+    # -------- eventos da pausa --------
+
+    def _tratar_eventos_pausa(self, evento):
+        """Trata eventos do menu de pausa interativo."""
+        # dialogo de confirmacao tem prioridade
+        if self._pausa_dialogo and self._pausa_dialogo.ativo:
+            self._pausa_dialogo.tratar_evento(evento,
+                                             mouse_pos=self._pausa_mouse)
+            if not self._pausa_dialogo.ativo:
+                self._pausa_dialogo = None
+            return
+
+        if self._pausa_mostrando_config:
+            self._tratar_eventos_pausa_config(evento)
+            return
+
+        if evento.type == pygame.KEYDOWN:
+            if evento.key in (pygame.K_p, pygame.K_ESCAPE):
+                self.estado = "JOGANDO"
+            elif evento.key == pygame.K_m:
+                self._pausa_sair_para_menu()
+            elif evento.key == pygame.K_UP:
+                self._pausa_selecao = (self._pausa_selecao - 1) % 3
+            elif evento.key == pygame.K_DOWN:
+                self._pausa_selecao = (self._pausa_selecao + 1) % 3
+            elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                self._acao_pausa(self._pausa_selecao)
+
+        elif evento.type == pygame.MOUSEMOTION:
+            self._pausa_mouse = evento.pos
+            self._atualizar_hover_pausa(evento.pos)
+
+        elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+            if self._colidir_pausa(evento.pos) is not None:
+                self._acao_pausa(self._pausa_selecao)
+
+    def _tratar_eventos_pausa_config(self, evento):
+        """Trata eventos do sub-painel de configuracoes da pausa."""
+        if evento.type == pygame.KEYDOWN:
+            if evento.key == pygame.K_ESCAPE:
+                self._pausa_mostrando_config = False
+            elif evento.key == pygame.K_UP:
+                self._pausa_config_selecao = (
+                    self._pausa_config_selecao - 1) % 4
+            elif evento.key == pygame.K_DOWN:
+                self._pausa_config_selecao = (
+                    self._pausa_config_selecao + 1) % 4
+            elif evento.key in (pygame.K_LEFT, pygame.K_RIGHT):
+                delta = 1 if evento.key == pygame.K_RIGHT else -1
+                self._ajustar_config_pausa(self._pausa_config_selecao, delta)
+
+        elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+            self._clique_pausa_config(evento.pos)
+
+    def _ajustar_config_pausa(self, indice, delta):
+        """Ajusta um item de configuracao na pausa."""
+        if indice == 0:
+            v = self.config["musica_volume"] + delta * 0.05
+            v = max(0.0, min(1.0, v))
+            self.config["musica_volume"] = round(v, 2)
+            self.sons.set_volume_musica(v)
+        elif indice == 1:
+            v = self.config["efeitos_volume"] + delta * 0.05
+            v = max(0.0, min(1.0, v))
+            self.config["efeitos_volume"] = round(v, 2)
+            self.sons.set_volume_efeitos(v)
+        elif indice == 2:
+            atual = self.config["tema"]
+            idx = TEMAS.index(atual) if atual in TEMAS else 0
+            idx = (idx + delta) % len(TEMAS)
+            self.config["tema"] = TEMAS[idx]
+        elif indice == 3 and delta > 0:
+            self.config["tela_cheia"] = not self.config["tela_cheia"]
+            self._aplicar_modo_video()
+        self.config.salvar()
+
+    def _clique_pausa_config(self, pos):
+        """Trata clique no sub-painel de configuracoes da pausa."""
+        pw, ph = 540, 430
+        painel = pygame.Rect(LARGURA // 2 - pw // 2, ALTURA // 2 - ph // 2,
+                             pw, ph)
+        btn_h = 44
+        y_inicio = painel.y + 76
+        espaco = 70
+
+        for i in range(4):
+            by = y_inicio + i * espaco
+            linha_rect = pygame.Rect(painel.x + 24, by - 6, pw - 48, btn_h)
+            if linha_rect.collidepoint(pos):
+                self._pausa_config_selecao = i
+                self._ajustar_config_pausa(i, 1)
+                return
+
+        b_voltar_rect = pygame.Rect(painel.x + 30, painel.bottom - 56,
+                                    150, 42)
+        if b_voltar_rect.collidepoint(pos):
+            self._pausa_mostrando_config = False
+            return
+
+        b_reset_rect = pygame.Rect(painel.right - 180, painel.bottom - 56,
+                                   150, 42)
+        if b_reset_rect.collidepoint(pos):
+            self.config["musica_volume"] = 0.8
+            self.config["efeitos_volume"] = 0.8
+            self.config["tema"] = "NEON"
+            self.config["tela_cheia"] = False
+            self.config.salvar()
+            self.sons.set_volume_musica(0.8)
+            self.sons.set_volume_efeitos(0.8)
+            self._aplicar_modo_video()
+
+    def _colidir_pausa(self, pos):
+        """Retorna o indice da opcao de pausa sob o mouse, ou None."""
+        pw, ph = 440, 420
+        painel = pygame.Rect(LARGURA // 2 - pw // 2, ALTURA // 2 - ph // 2,
+                             pw, ph)
+        btn_w, btn_h = 320, 54
+        btn_x = LARGURA // 2 - btn_w // 2
+        btn_y_inicio = painel.y + 118
+        espaco = 74
+        for i in range(3):
+            by = btn_y_inicio + i * espaco
+            rect = pygame.Rect(btn_x, by, btn_w, btn_h)
+            if rect.collidepoint(pos):
+                return i
+        return None
+
+    def _atualizar_hover_pausa(self, pos):
+        """Atualiza selecao baseado no hover do mouse."""
+        idx = self._colidir_pausa(pos)
+        if idx is not None:
+            self._pausa_selecao = idx
+
+    def _acao_pausa(self, indice):
+        """Executa a acao da opcao de pausa selecionada."""
+        if indice == 0:  # CONTINUAR
+            self.estado = "JOGANDO"
+        elif indice == 1:  # CONFIGURACOES
+            self._pausa_mostrando_config = True
+            self._pausa_config_selecao = 0
+        elif indice == 2:  # SAIR DA MISSAO
+            self._pausa_sair_para_menu()
+
+    def _pausa_sair_para_menu(self):
+        """Abre dialogo de confirmacao para voltar ao menu."""
+        self._pausa_dialogo = Dialogo(
+            "Sair da Missao",
+            "Tem certeza que deseja voltar ao menu? "
+            "O progresso desta sessao sera salvo.",
+            self._confirmar_sair_pausa,
+            lambda: None)
+
+    def _confirmar_sair_pausa(self):
+        """Confirmou saida: salva e volta ao menu."""
+        self.estado = "MENU"
+        self.fade = 255
+        self._salvar_tudo()
 
     def _formatar_tempo(self, segundos):
         m, s = divmod(int(segundos), 60)
