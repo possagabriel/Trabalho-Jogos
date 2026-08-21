@@ -5,6 +5,7 @@ import random
 
 import pygame
 
+from .cel_shading import circulo_com_contorno, desenhar_highlight
 from .config import AZUL, BRANCO, CIANO, DOURADO, LARANJA, VERDE, \
     VERDE_CLARO
 from .smooth import desenhar_circulo, desenhar_glow
@@ -71,8 +72,9 @@ class PowerUp:
         x, y = self.x, self.y
         cor = self.CORES[self.tipo]
         desenhar_glow(tela, cor, (x, y), raio * 2.2, 0.7)
-        desenhar_circulo(tela, cor, (x, y), raio, brilho=1.1)
-        desenhar_circulo(tela, BRANCO, (x, y), raio, 2, brilho=1.2)
+        circulo_com_contorno(tela, cor, (x, y), int(raio),
+                            espessura_contorno=3)
+        desenhar_highlight(tela, (x, y), raio, intensidade=0.6)
         fonte = pygame.font.Font(None, 22)
         texto = fonte.render(self.SIMBOLOS[self.tipo], True, BRANCO)
         tela.blit(texto, texto.get_rect(center=(int(x), int(y))))

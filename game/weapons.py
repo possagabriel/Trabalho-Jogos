@@ -4,6 +4,8 @@ import math
 
 import pygame
 
+from .cel_shading import (circulo_com_contorno, contorno_circulo,
+                          contorno_retangulo, escurecer_cor)
 from .config import ALTURA, AZUL_CLARO, BRANCO, CIANO, LARANJA, LARGURA, ROXO, \
     VERDE
 from .smooth import desenhar_circulo, desenhar_glow, desenhar_poligono, \
@@ -99,34 +101,36 @@ class Projetil:
         if self.tipo == "plasma":
             r = self.raio * (1 + 0.3 * math.sin(self.tempo * 0.4))
             desenhar_glow(tela, ROXO, (x, y), r + 8, 0.7)
-            desenhar_circulo(tela, ROXO, (x, y), r + 3)
-            desenhar_circulo(tela, cor, (x, y), r)
+            circulo_com_contorno(tela, ROXO, (x, y), int(r + 3),
+                                espessura_contorno=2)
+            circulo_com_contorno(tela, cor, (x, y), int(r),
+                                espessura_contorno=2)
             desenhar_circulo(tela, BRANCO, (x, y), max(2, r // 2), brilho=1.5)
         elif self.tipo == "laser":
             desenhar_glow(tela, (0, 120, 50), (x, y), 12, 0.4)
-            retangulo_suave(tela, cor,
-                            pygame.Rect(x - 2, y - 12, 4, 24), 2,
-                            glow_cor=cor, glow_raio=6)
+            rect_laser = pygame.Rect(x - 2, y - 12, 4, 24)
+            contorno_retangulo(tela, rect_laser, 2)
+            retangulo_suave(tela, cor, rect_laser, 2)
             pygame.draw.line(tela, BRANCO, (x, y - 12), (x, y + 12), 2)
             desenhar_circulo(tela, BRANCO, (x, y - 12), 2, brilho=1.8)
         elif self.tipo == "ion":
             desenhar_glow(tela, (80, 110, 180), (x, ALTURA // 2),
                           max(ALTURA, LARGURA) // 2, 0.5)
-            retangulo_suave(tela, (80, 110, 180),
-                            pygame.Rect(x - 9, 0, 18, ALTURA), 6)
+            rect_ion = pygame.Rect(x - 9, 0, 18, ALTURA)
+            contorno_retangulo(tela, rect_ion, 2)
+            retangulo_suave(tela, (80, 110, 180), rect_ion, 6)
             retangulo_suave(tela, cor, pygame.Rect(x - 3, 0, 6, ALTURA), 3,
                             glow_cor=cor, glow_raio=20)
-            retangulo_suave(tela, BRANCO, pygame.Rect(x - 1, 0, 2, ALTURA), 2,
-                            glow_cor=BRANCO, glow_raio=12)
+            pygame.draw.line(tela, BRANCO, (x - 1, 0), (x - 1, ALTURA), 2)
         elif self.tipo == "feixe":
             desenhar_glow(tela, cor, (x, y + 30), 20, 0.6)
-            pygame.draw.aaline(tela, cor + (255,), (x, y), (x, y + 60), 3)
-            pygame.draw.aaline(tela, BRANCO + (255,), (x, y), (x, y + 60), 1)
+            pygame.draw.line(tela, cor, (x, y), (x, y + 60), 3)
+            pygame.draw.line(tela, BRANCO, (x, y), (x, y + 60), 1)
         elif self.tipo == "gauss":
             desenhar_glow(tela, (90, 130, 200), (x, y), 14, 0.4)
-            retangulo_suave(tela, cor,
-                            pygame.Rect(x - 2, y - 14, 4, 28), 2,
-                            glow_cor=cor, glow_raio=6)
+            rect_gauss = pygame.Rect(x - 2, y - 14, 4, 28)
+            contorno_retangulo(tela, rect_gauss, 2)
+            retangulo_suave(tela, cor, rect_gauss, 2)
             pygame.draw.line(tela, BRANCO, (x, y - 14), (x, y + 14), 2)
             desenhar_circulo(tela, BRANCO, (x, y - 14), 2, brilho=1.8)
         elif self.tipo == "nova":
@@ -135,38 +139,39 @@ class Projetil:
                           0.8)
             desenhar_glow(tela, (255, 220, 120), (x, y),
                           (self.raio + 4) * pulso, 0.9)
-            desenhar_circulo(tela, cor, (x, y), self.raio * pulso)
+            circulo_com_contorno(tela, cor, (x, y),
+                                int(self.raio * pulso), espessura_contorno=3)
             desenhar_circulo(tela, BRANCO, (x, y), max(2, self.raio // 2),
                              brilho=1.6)
         elif self.tipo == "bomba":
-            # bomba pesada do especial: esfera grande com nucleo ardente,
-            # aletas e uma ponta de ignicao acesa no topo
             pulso = 1 + 0.15 * math.sin(self.tempo * 0.4)
             desenhar_glow(tela, (255, 60, 20), (x, y),
                           (self.raio + 16) * pulso, 0.9)
             desenhar_glow(tela, (255, 220, 120), (x, y),
                           (self.raio + 8) * pulso, 0.8)
-            desenhar_circulo(tela, (60, 40, 24), (x, y), self.raio * pulso)
-            desenhar_circulo(tela, cor, (x, y), self.raio * 0.72 * pulso)
+            circulo_com_contorno(tela, (60, 40, 24), (x, y),
+                                int(self.raio * pulso), espessura_contorno=3)
+            circulo_com_contorno(tela, cor, (x, y),
+                                int(self.raio * 0.72 * pulso),
+                                espessura_contorno=2)
             desenhar_circulo(tela, BRANCO, (x, y),
                              max(2, int(self.raio * 0.3)), brilho=1.8)
             for sinal in (-1, 1):
-                desenhar_poligono(tela, (90, 70, 40),
-                                  [(x + sinal * self.raio * 0.85,
-                                    y + self.raio * 0.1),
-                                   (x + sinal * self.raio * 1.15,
-                                    y + self.raio * 0.55),
-                                   (x + sinal * self.raio * 0.95,
-                                    y + self.raio * 0.55)],
-                                  glow_cor=(255, 140, 60), glow_raio=4)
+                from .cel_shading import contorno_poligono
+                pts = [(x + sinal * self.raio * 0.85,
+                        y + self.raio * 0.1),
+                       (x + sinal * self.raio * 1.15,
+                        y + self.raio * 0.55),
+                       (x + sinal * self.raio * 0.95,
+                        y + self.raio * 0.55)]
+                contorno_poligono(tela, pts, 2)
+                desenhar_poligono(tela, (90, 70, 40), pts)
             pygame.draw.line(tela, (255, 240, 180),
                              (x, y - self.raio * 0.9),
                              (x, y - self.raio * 1.25), 3)
             desenhar_glow(tela, (255, 240, 120), (x, y - self.raio * 1.3),
                           6, 0.9)
         else:
-            # projetil nitido: capsula alongada no sentido do movimento,
-            # nucleo branco quente e ponta brilhante (facil de ler)
             comp = max(self.raio * 2 + 4, self.speed + 4)
             ang = math.atan2(self.vel_y, self.vel_x)
             dx = math.cos(ang) * comp

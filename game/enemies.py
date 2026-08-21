@@ -5,6 +5,11 @@ import random
 
 import pygame
 
+from .cel_shading import (barra_vida_cartoon, circulo_com_contorno,
+                          contorno_circulo, contorno_poligono,
+                          desenhar_brilho_contorno, desenhar_highlight,
+                          desenhar_sombra_chapada, escurecer_cor,
+                          estrela_com_contorno, poligono_com_contorno)
 from .config import AMARELO, AZUL, BRANCO, CIANO, DOURADO, LARGURA, \
     LARANJA, ROXO, VERDE, VERMELHO
 from .geometry import estrela, losango, pentagono, poligono, quadrado, triangulo
@@ -247,12 +252,13 @@ class Inimigo:
         if self.tipo == "bomba":
             pulso = 1 + 0.2 * math.sin(self.tempo_global() * 6)
             desenhar_glow(tela, cor, centro, self.raio * 1.8, 0.7)
-            desenhar_circulo(tela, cor, centro, self.raio * pulso)
-            desenhar_circulo(tela, (80, 0, 0), centro, self.raio * 0.55)
+            circulo_com_contorno(tela, cor, centro, int(self.raio * pulso),
+                                espessura_contorno=3)
+            circulo_com_contorno(tela, (80, 0, 0), centro,
+                                int(self.raio * 0.55), espessura_contorno=2)
             desenhar_circulo(tela, AMARELO, centro, self.raio * 0.28,
                              brilho=1.5)
-            pygame.draw.aaline(tela, (255, 120, 80), (x - self.raio, y - 10),
-                               (x - 4, y - 2), 2)
+            desenhar_highlight(tela, centro, self.raio * 0.55, intensidade=0.5)
             return
         if self.tipo == "espectro":
             # forma aleatoria (versao escura de todas as formas)
@@ -262,21 +268,30 @@ class Inimigo:
             self._desenhar_forma(tela, centro, cor, forma)
             return
         if self.tipo == "distorcao":
-            # circulo pulsante com aneis
             pulso = 1 + 0.15 * math.sin(self.tempo_global())
             raio = self.raio * pulso
             desenhar_glow(tela, cor, centro, raio * 1.4, 0.6)
-            desenhar_circulo(tela, cor, centro, raio)
-            desenhar_circulo(tela, BRANCO, centro, raio, 2, brilho=1.2)
-            desenhar_circulo(tela, (40, 10, 60), centro, raio / 2)
-            desenhar_circulo(tela, (180, 100, 255), centro, raio * 1.35, 1,
-                             brilho=0.9)
+            circulo_com_contorno(tela, cor, centro, int(raio),
+                                espessura_contorno=3)
+            circulo_com_contorno(tela, BRANCO, centro, int(raio),
+                                espessura_contorno=1,
+                                desenhar_borda_interna=False)
+            circulo_com_contorno(tela, (40, 10, 60), centro, int(raio / 2),
+                                espessura_contorno=2)
+            circulo_com_contorno(tela, (180, 100, 255), centro,
+                                int(raio * 1.35), espessura_contorno=1,
+                                desenhar_borda_interna=False)
             return
         if self.tipo == "sentinela":
-            desenhar_poligono(tela, cor, self._pontos_forma(centro, "olho"),
-                              glow_cor=cor, glow_raio=self.raio)
-            desenhar_circulo(tela, DOURADO, centro, self.raio // 3, brilho=1.2)
-            desenhar_circulo(tela, BRANCO, centro, self.raio // 6, brilho=1.5)
+            desenhar_sombra_chapada(tela, self._pontos_forma(centro, "olho"),
+                                    deslocamento=(3, 5))
+            contorno_poligono(tela, self._pontos_forma(centro, "olho"), 3)
+            desenhar_poligono(tela, cor, self._pontos_forma(centro, "olho"))
+            pygame.draw.polygon(tela, escurecer_cor(cor, 0.7),
+                                self._pontos_forma(centro, "olho"), 2)
+            circulo_com_contorno(tela, DOURADO, centro, self.raio // 3,
+                                espessura_contorno=2)
+            desenhar_highlight(tela, centro, self.raio // 3, intensidade=0.6)
             return
         forma = FORMAS[self.tipo]
         self._desenhar_forma(tela, centro, cor, forma)
@@ -285,27 +300,20 @@ class Inimigo:
         x, y = centro
         if forma == "circulo":
             desenhar_glow(tela, cor, (x, y), self.raio * 1.5, 0.5)
-            desenhar_circulo(tela, cor, (x, y), self.raio)
-            desenhar_circulo(tela, (90, 0, 0), (x, y), self.raio - 4, 2)
-            desenhar_circulo(tela, BRANCO, (x, y), 3, brilho=1.5)
+            circulo_com_contorno(tela, cor, (x, y), self.raio,
+                                espessura_contorno=3)
+            desenhar_highlight(tela, (x, y), self.raio, intensidade=0.5)
         elif forma == "circulo_pulsante":
             desenhar_glow(tela, cor, (x, y), self.raio * 1.5, 0.5)
-            desenhar_circulo(tela, cor, (x, y), self.raio)
-            desenhar_circulo(tela, BRANCO, (x, y), self.raio, 2, brilho=1.2)
+            circulo_com_contorno(tela, cor, (x, y), self.raio,
+                                espessura_contorno=3)
+            contorno_circulo(tela, (x, y), self.raio, 2, BRANCO)
         else:
+            pts = self._pontos_forma(centro, forma)
             desenhar_glow(tela, cor, centro, self.raio * 1.4, 0.4)
-            desenhar_poligono(tela, cor, self._pontos_forma(centro, forma),
-                              glow_cor=cor, glow_raio=self.raio)
-            if forma == "quadrado":
-                desenhar_poligono(tela, (90, 80, 0),
-                                  quadrado(centro, self.raio, self.angulo), 2)
-            elif forma == "hexagono":
-                desenhar_poligono(tela, (120, 70, 0),
-                                  poligono(centro, self.raio, 6,
-                                           self.angulo), 2)
-            elif forma == "pentagono":
-                desenhar_poligono(tela, (150, 150, 160),
-                                  pentagono(centro, self.raio, self.angulo), 2)
+            desenhar_sombra_chapada(tela, pts, deslocamento=(3, 5))
+            poligono_com_contorno(tela, cor, pts, espessura_contorno=3)
+            desenhar_highlight(tela, centro, self.raio * 0.6, intensidade=0.4)
 
     def tempo_global(self):
         return pygame.time.get_ticks() * 0.001
@@ -451,15 +459,14 @@ class InimigoEspecial(Inimigo):
         return 0
 
     def desenhar_barra_carga(self, tela):
-        """Barra de carga acima do inimigo."""
+        """Barra de carga acima do inimigo estilo cartoon."""
         largura_barra = int(self.raio * 2)
         altura_barra = 5
         x = int(self.x) - largura_barra // 2
         y = int(self.y) - self.raio - 15
         progresso = self.carga / self.carga_maxima
-        from .smooth import barra_suave
-        barra_suave(tela, x, y, largura_barra, altura_barra, progresso,
-                    (0, 255, 0), fundo=(50, 50, 50), glow=False)
+        barra_vida_cartoon(tela, x, y, largura_barra,
+                          int(progresso * 100), 100, altura=altura_barra)
         if progresso > 0.8:
             pulso = int(128 + 127 * math.sin(pygame.time.get_ticks() * 0.01))
             brilho = pygame.Surface((int(largura_barra * progresso),
@@ -479,21 +486,25 @@ class InimigoEspecial(Inimigo):
         t = pygame.time.get_ticks() * 0.001
 
         if self.mini_boss:
-            # versao maior e ameacadora
             desenhar_glow(tela, (60, 0, 80), centro, self.raio + 10, 0.7)
-            desenhar_circulo(tela, (60, 0, 80), centro, self.raio + 8)
-            desenhar_poligono(tela, cor, poligono(centro, self.raio, 6,
-                                                  t * 2),
-                              glow_cor=cor, glow_raio=self.raio)
-            desenhar_circulo(tela, (255, 0, 255), centro, 8, brilho=1.5)
+            circulo_com_contorno(tela, (60, 0, 80), centro, self.raio + 8,
+                                espessura_contorno=4)
+            pts_hex = poligono(centro, self.raio, 6, t * 2)
+            desenhar_sombra_chapada(tela, pts_hex, deslocamento=(4, 6))
+            poligono_com_contorno(tela, cor, pts_hex, espessura_contorno=3)
+            circulo_com_contorno(tela, (255, 0, 255), centro, 8,
+                                espessura_contorno=2)
+            desenhar_highlight(tela, centro, 8, intensidade=0.7)
             self.desenhar_barra_carga(tela)
             return
 
         if self.tipo_especial == "acumulador":
-            # circulo com borda pontilhada (progresso da carga)
             desenhar_glow(tela, cor, centro, self.raio * 1.5, 0.6)
-            desenhar_circulo(tela, cor, centro, self.raio)
-            desenhar_circulo(tela, (120, 100, 0), centro, self.raio - 4, 2)
+            circulo_com_contorno(tela, cor, centro, self.raio,
+                                espessura_contorno=3)
+            circulo_com_contorno(tela, (120, 100, 0), centro,
+                                self.raio - 4, espessura_contorno=2)
+            desenhar_highlight(tela, centro, self.raio, intensidade=0.5)
             progresso = self.carga / self.carga_maxima
             pontos_borda = []
             for i in range(0, 360, 20):
@@ -505,11 +516,11 @@ class InimigoEspecial(Inimigo):
             for ponto in pontos_borda:
                 desenhar_circulo(tela, (255, 200, 50), ponto, 3, brilho=1.2)
         elif self.tipo_especial == "esponja":
-            # quadrado com listras
             desenhar_glow(tela, cor, centro, self.raio * 1.5, 0.5)
-            desenhar_poligono(tela, cor, quadrado(centro, self.raio,
-                                                  self.angulo),
-                              glow_cor=cor, glow_raio=self.raio)
+            pts_quad = quadrado(centro, self.raio, self.angulo)
+            desenhar_sombra_chapada(tela, pts_quad, deslocamento=(3, 5))
+            poligono_com_contorno(tela, cor, pts_quad, espessura_contorno=3)
+            desenhar_highlight(tela, centro, self.raio * 0.6, intensidade=0.4)
             for i in range(3):
                 a = t * 2 + i * math.tau / 3
                 px = self.x + math.cos(a) * self.raio * 0.7
@@ -517,11 +528,11 @@ class InimigoEspecial(Inimigo):
                 desenhar_circulo(tela, (100, 255, 120), (px, py), 3,
                                  brilho=1.3)
         elif self.tipo_especial == "condutor":
-            # estrela com raios eletricos girando
             desenhar_glow(tela, cor, centro, self.raio * 1.5, 0.5)
-            desenhar_poligono(tela, cor, estrela(centro, self.raio,
-                                                 angulo=self.angulo),
-                              glow_cor=cor, glow_raio=self.raio)
+            pts_est = estrela(centro, self.raio, angulo=self.angulo)
+            desenhar_sombra_chapada(tela, pts_est, deslocamento=(3, 5))
+            estrela_com_contorno(tela, cor, pts_est, espessura_contorno=3)
+            desenhar_highlight(tela, centro, self.raio * 0.5, intensidade=0.4)
             for i in range(5):
                 a = -t * 3 + i * math.tau / 5
                 px = self.x + math.cos(a) * (self.raio + 7)
@@ -531,15 +542,14 @@ class InimigoEspecial(Inimigo):
                 pygame.draw.aaline(tela, (160, 200, 255),
                                    (self.x, self.y), (px, py), 2)
         elif self.tipo_especial == "mutante":
-            # hexagono neon com olhos
             desenhar_glow(tela, cor, centro, self.raio * 1.5, 0.6)
-            desenhar_poligono(tela, cor, poligono(centro, self.raio, 6,
-                                                  self.angulo),
-                              glow_cor=cor, glow_raio=self.raio)
-            desenhar_circulo(tela, (255, 0, 255), centro, 5, brilho=1.5)
-            desenhar_circulo(tela, BRANCO, centro, 2, brilho=1.8)
+            pts_hex = poligono(centro, self.raio, 6, self.angulo)
+            desenhar_sombra_chapada(tela, pts_hex, deslocamento=(3, 5))
+            poligono_com_contorno(tela, cor, pts_hex, espessura_contorno=3)
+            circulo_com_contorno(tela, (255, 0, 255), centro, 5,
+                                espessura_contorno=2)
+            desenhar_highlight(tela, centro, 5, intensidade=0.7)
         elif self.tipo_especial == "cristalino":
-            # pentagono translucido com halo suave
             desenhar_glow(tela, self.cor, centro, self.raio * 1.6, 0.7)
             surf = pygame.Surface((self.raio * 2 + 8, self.raio * 2 + 8),
                                   pygame.SRCALPHA)
@@ -548,27 +558,34 @@ class InimigoEspecial(Inimigo):
             pygame.draw.polygon(surf, self.cor + (150,), pts)
             pygame.draw.polygon(surf, (255, 255, 255, 230), pts, 2)
             tela.blit(surf, (x - self.raio - 4, y - self.raio - 4))
+            contorno_pents = [(p[0] + x - self.raio - 4,
+                              p[1] + y - self.raio - 4) for p in pts]
+            contorno_poligono(tela, contorno_pents, 3)
         elif self.tipo_especial == "evocador":
             desenhar_glow(tela, cor, centro, self.raio * 1.5, 0.6)
-            desenhar_poligono(tela, cor, estrela(centro, self.raio,
-                                                 angulo=self.angulo),
-                              glow_cor=cor, glow_raio=self.raio)
+            pts_est = estrela(centro, self.raio, angulo=self.angulo)
+            desenhar_sombra_chapada(tela, pts_est, deslocamento=(3, 5))
+            estrela_com_contorno(tela, cor, pts_est, espessura_contorno=3)
+            desenhar_highlight(tela, centro, self.raio * 0.5, intensidade=0.4)
             for i in range(4):
                 a = t * 1.5 + i * math.tau / 4
                 px = self.x + math.cos(a) * (self.raio + 9)
                 py = self.y + math.sin(a) * (self.raio + 9)
-                desenhar_circulo(tela, (255, 200, 255), (px, py), 3,
-                                 brilho=1.3)
-            desenhar_circulo(tela, (80, 20, 120), centro, 6, brilho=1.4)
+                circulo_com_contorno(tela, (255, 200, 255), (px, py), 3,
+                                    espessura_contorno=1,
+                                    desenhar_borda_interna=False)
+            circulo_com_contorno(tela, (80, 20, 120), centro, 6,
+                                espessura_contorno=2)
 
         # campo de forca refletor
         if self.campo_forca:
             pulso = 4 + 2 * math.sin(t * 6)
             desenhar_glow(tela, (200, 240, 255), centro, self.raio + 12, 0.5)
-            desenhar_circulo(tela, (200, 240, 255), centro, self.raio + 12,
-                             pulso)
-            desenhar_circulo(tela, BRANCO, centro, self.raio + 12, 1,
-                             brilho=1.2)
+            contorno_circulo(tela, centro, self.raio + 12, int(pulso),
+                            cor_contorno=(200, 240, 255))
+            circulo_com_contorno(tela, (200, 240, 255), centro,
+                                self.raio + 12, espessura_contorno=1,
+                                desenhar_borda_interna=False)
 
         self.desenhar_barra_carga(tela)
 
