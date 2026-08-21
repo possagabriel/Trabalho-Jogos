@@ -36,7 +36,7 @@ _FUNDO_PADRAO = "imagem-fundo.png"
 #   5 Null Space   -> imagens-fundo2.png  (violeta)
 #   6 Divine Plane -> padrao
 _FUNDO_POR_CENARIO = {
-    1: "imagem-fundo.png",
+    1: "Fundo-roxo.png",
     2: "imagem-fundo4.png",
     4: "imagem-fundo3.png",
     5: "imagens-fundo2.png",
