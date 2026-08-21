@@ -1,16 +1,16 @@
-"""VOID//SHIFT — New entry point using the src.core.application Application.
+"""VOID//SHIFT - Enter the Rift.
 
-Run with:  python main.py
+Ponto de entrada do jogo. Execute com:  python main.py
 """
 
 import os
 import sys
 
-# Ensure the project root is on sys.path so ``src`` is importable.
+# Garante que o pacote game seja importavel mesmo rodando de outras pastas
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from src.core.application import Application  # noqa: E402
+from game.core import Jogo  # noqa: E402
 
 
 if __name__ == "__main__":
-    Application().run()
+    Jogo().executar()
