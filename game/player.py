@@ -9,6 +9,10 @@ from .assets import carregar_imagem_alpha
 from .config import ALTURA, AZUL, AZUL_CLARO, BRANCO, CIANO, DOURADO, INDIGO, \
     LARGURA, LARANJA, ROXO, VERDE, VERMELHO
 from .geometry import losango
+from .cel_shading import (circulo_com_contorno, clarear_cor,
+                          contorno_poligono, desenhar_highlight,
+                          desenhar_sombra_chapada, escurecer_cor,
+                          poligono_com_contorno, sprite_com_contorno)
 from .smooth import desenhar_circulo, desenhar_glow, desenhar_poligono
 from .weapons import ARMARIA, Projetil
 
@@ -144,15 +148,16 @@ class Skin:
         if sprite is None:
             self._desenhar_nave_base(tela, x, y, tilt)
             return
-        tela.blit(sprite, sprite.get_rect(center=(x, y - 8)))
+        sprite_com_contorno(tela, sprite, (x, y - 8), espessura=3)
 
     def _desenhar_nave_base(self, tela, x, y, tilt):
         pts = self._pontos_nave(x, y, tilt)
+        desenhar_sombra_chapada(tela, pts, deslocamento=(3, 5))
         desenhar_glow(tela, self.cor, (x, y), 22, 0.5)
-        desenhar_poligono(tela, self.cor, pts, glow_cor=self.cor2, glow_raio=14)
+        poligono_com_contorno(tela, self.cor, pts, espessura_contorno=3)
         desenhar_poligono(tela, self.cor2, pts, 2)
-        desenhar_circulo(tela, AZUL_CLARO, (x, y - 2), 6, brilho=1.0)
-        desenhar_circulo(tela, BRANCO, (x, y - 2), 3, brilho=1.2)
+        circulo_com_contorno(tela, AZUL_CLARO, (x, y - 2), 6)
+        desenhar_highlight(tela, (x, y - 2), 6, intensidade=0.6)
 
     def _desenhar_transparente(self, tela, x, y, tilt, t):
         alfa = int(120 + 60 * math.sin(t * 3))
@@ -164,11 +169,11 @@ class Skin:
 
     def _desenhar_diamante(self, tela, x, y, tilt, t):
         pts = losango((x, y), 14, 22, tilt + math.sin(t * 2) * 0.1)
+        desenhar_sombra_chapada(tela, pts, deslocamento=(3, 5))
         desenhar_glow(tela, self.cor, (x, y), 20, 0.5)
-        desenhar_poligono(tela, self.cor, pts, glow_cor=(220, 255, 230),
-                          glow_raio=12)
+        poligono_com_contorno(tela, self.cor, pts, espessura_contorno=3)
         desenhar_poligono(tela, self.cor2, pts, 2)
-        desenhar_circulo(tela, (220, 255, 230), (x, y - 2), 5, brilho=1.2)
+        desenhar_highlight(tela, (x, y), 14, intensidade=0.6)
 
     def _desenhar_asas(self, tela, x, y, tilt, t):
         self._desenhar_nave_base(tela, x, y, tilt)
@@ -179,17 +184,19 @@ class Skin:
                    (x + sinal * 34, ponta_y + math.sin(t * 5) * 6),
                    (x + sinal * 26, ponta_y),
                    (x + sinal * 8, base_y + 6)]
-            desenhar_poligono(tela, (255, 250, 220), pts,
-                              glow_cor=(255, 250, 220), glow_raio=8)
+            contorno_poligono(tela, pts, 3)
+            desenhar_poligono(tela, (255, 250, 220), pts)
+            pygame.draw.polygon(tela, escurecer_cor((255, 250, 220), 0.7),
+                                pts, 2)
 
     def _desenhar_relampago(self, tela, x, y, t):
         if int(t * 4) % 2 == 0:
             for sinal in (-1, 1):
-                desenhar_poligono(tela, (255, 240, 60),
-                                  [(x + sinal * 18, y - 8), (x + sinal * 8, y),
-                                   (x + sinal * 20, y + 12),
-                                   (x + sinal * 6, y + 22)],
-                                  glow_cor=(255, 240, 60), glow_raio=10)
+                pts = [(x + sinal * 18, y - 8), (x + sinal * 8, y),
+                       (x + sinal * 20, y + 12),
+                       (x + sinal * 6, y + 22)]
+                contorno_poligono(tela, pts, 2)
+                desenhar_poligono(tela, (255, 240, 60), pts)
 
     def _desenhar_brilho(self, tela, x, y, t):
         pulso = 14 + 5 * math.sin(t * 4)

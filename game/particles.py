@@ -5,6 +5,7 @@ import random
 
 import pygame
 
+from .cel_shading import escurecer_cor
 from .config import BRANCO, CIANO, DOURADO, LARANJA, ROXO, VERMELHO
 from .smooth import luz_radial
 
@@ -46,13 +47,15 @@ class Particula:
             return
         alfa = int(255 * self.vida / self.vida_max)
         tam = max(1, int(self.tamanho))
-        # glow suave por tras (copia para nao mutar a superficie cacheada)
         glow = luz_radial(self.cor, max(2, tam * 2), 0.6).copy()
         glow.set_alpha(int(alfa * 0.7))
         gx = int(self.x) - glow.get_width() // 2
         gy = int(self.y) - glow.get_height() // 2
         tela.blit(glow, (gx, gy))
-        # nucleo solido (copia para nao mutar a superficie cacheada)
+        if tam >= 3:
+            contorno = _superficie_cor((0, 0, 0), tam + 1).copy()
+            contorno.set_alpha(int(alfa * 0.8))
+            tela.blit(contorno, (int(self.x - tam - 1), int(self.y - tam - 1)))
         surf = _superficie_cor(self.cor, tam).copy()
         surf.set_alpha(alfa)
         tela.blit(surf, (int(self.x - tam), int(self.y - tam)))

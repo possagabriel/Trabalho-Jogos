@@ -5,6 +5,11 @@ import random
 
 import pygame
 
+from .cel_shading import (circulo_com_contorno, contorno_circulo,
+                          contorno_poligono, desenhar_brilho_contorno,
+                          desenhar_highlight, desenhar_sombra_chapada,
+                          escurecer_cor, estrela_com_contorno,
+                          poligono_com_contorno)
 from .config import ALTURA, AZUL, BRANCO, CIANO, DOURADO, LARGURA, ROSA, ROXO, \
     VERMELHO
 from .geometry import estrela, losango, pentagono as pent_pontos, poligono
@@ -195,52 +200,54 @@ class Boss:
         centro = (x, y)
         if self.enraivecido:
             desenhar_glow(tela, VERMELHO, centro, self.raio + 12, 0.5)
-            desenhar_circulo(tela, VERMELHO, centro, self.raio + 8, 2,
-                             brilho=1.0)
+            contorno_circulo(tela, centro, self.raio + 8, 2,
+                            cor_contorno=VERMELHO)
         if 0 < self.timer_ataque <= 40:
             pulso = 0.5 + 0.5 * math.sin(self.t * 0.6)
-            desenhar_circulo(tela, (255, 60, 90), centro,
-                             self.raio + 10 + int(pulso * 14), 2,
-                             brilho=1.2)
+            contorno_circulo(tela, centro,
+                            self.raio + 10 + int(pulso * 14), 2,
+                            cor_contorno=(255, 60, 90))
         if self.entrando:
             desenhar_glow(tela, cor, centro, self.raio * 1.3, 0.6)
-            desenhar_circulo(tela, cor, centro, self.raio, 3)
+            circulo_com_contorno(tela, cor, centro, self.raio,
+                                espessura_contorno=4)
             return
         if self.nome == "HEXAGONO":
             desenhar_glow(tela, cor, centro, self.raio * 1.6, 0.6)
-            desenhar_poligono(tela, cor, poligono(centro, self.raio, 6,
-                                                  self.angulo),
-                              glow_cor=cor, glow_raio=self.raio)
-            desenhar_poligono(tela, (120, 0, 0), poligono(centro,
-                                                          self.raio, 6,
-                                                          self.angulo), 3)
+            pts = poligono(centro, self.raio, 6, self.angulo)
+            desenhar_sombra_chapada(tela, pts, deslocamento=(5, 7))
+            poligono_com_contorno(tela, cor, pts, espessura_contorno=4)
+            desenhar_poligono(tela, (120, 0, 0), pts, 3)
+            desenhar_highlight(tela, centro, self.raio * 0.5, intensidade=0.4)
         elif self.nome == "LOSANGO":
             desenhar_glow(tela, cor, centro, self.raio * 1.6, 0.6)
-            desenhar_poligono(tela, cor, losango(centro, self.raio * 0.7,
-                                                 self.raio, self.angulo),
-                              glow_cor=cor, glow_raio=self.raio)
-            desenhar_poligono(tela, (0, 60, 130),
-                              losango(centro, self.raio * 0.4,
-                                      self.raio * 0.6, -self.angulo),
-                              glow_cor=(0, 120, 200), glow_raio=14)
+            pts = losango(centro, self.raio * 0.7, self.raio, self.angulo)
+            desenhar_sombra_chapada(tela, pts, deslocamento=(5, 7))
+            poligono_com_contorno(tela, cor, pts, espessura_contorno=4)
+            pts_int = losango(centro, self.raio * 0.4, self.raio * 0.6,
+                             -self.angulo)
+            desenhar_poligono(tela, (0, 60, 130), pts_int, 2)
+            desenhar_poligono(tela, (0, 120, 200), pts_int, 1)
+            desenhar_highlight(tela, centro, self.raio * 0.4, intensidade=0.4)
         elif self.nome == "ESTRELA":
             desenhar_glow(tela, cor, centro, self.raio * 1.7, 0.7)
-            desenhar_poligono(tela, cor, estrela(centro, self.raio,
-                                                 angulo=self.angulo),
-                              glow_cor=cor, glow_raio=self.raio)
-            desenhar_poligono(tela, (120, 90, 0),
-                              estrela(centro, self.raio * 0.6,
-                                      angulo=-self.angulo), 2)
+            pts = estrela(centro, self.raio, angulo=self.angulo)
+            desenhar_sombra_chapada(tela, pts, deslocamento=(5, 7))
+            estrela_com_contorno(tela, cor, pts, espessura_contorno=4)
+            pts_int = estrela(centro, self.raio * 0.6, angulo=-self.angulo)
+            desenhar_poligono(tela, (120, 90, 0), pts_int, 2)
+            desenhar_highlight(tela, centro, self.raio * 0.4, intensidade=0.4)
         elif self.nome == "PENTAGONO":
             desenhar_glow(tela, cor, centro, self.raio * 1.6, 0.6)
-            desenhar_poligono(tela, cor, pent_pontos(centro, self.raio,
-                                                     self.angulo),
-                              glow_cor=cor, glow_raio=self.raio)
-            desenhar_poligono(tela, (70, 20, 100),
-                              pent_pontos(centro, self.raio, self.angulo), 3)
+            pts = pent_pontos(centro, self.raio, self.angulo)
+            desenhar_sombra_chapada(tela, pts, deslocamento=(5, 7))
+            poligono_com_contorno(tela, cor, pts, espessura_contorno=4)
+            desenhar_poligono(tela, (70, 20, 100), pts, 3)
+            desenhar_highlight(tela, centro, self.raio * 0.4, intensidade=0.4)
             if self.teleportando:
                 desenhar_glow(tela, ROSA, self.alvo, 20, 0.8)
-                desenhar_circulo(tela, ROSA, self.alvo, 12, 2, brilho=1.2)
+                circulo_com_contorno(tela, ROSA, self.alvo, 12,
+                                    espessura_contorno=2)
         elif self.nome == "ANEIS":
             self._desenhar_aneis(tela, centro, x, y, cor)
         elif self.nome == "ANEIS DOURADO":
@@ -251,18 +258,24 @@ class Boss:
                  (VERMELHO, self.raio * 0.44, 0.24)]
         if dourado:
             aneis = [(DOURADO, self.raio, 0.10), (BRANCO, self.raio * 0.72,
-                                                  0.16),
+                                                   0.16),
                      (cor, self.raio * 0.44, 0.24)]
         desenhar_glow(tela, cor, centro, self.raio * 1.4, 0.6)
         for cor_anel, raio, velocidade in aneis:
-            desenhar_circulo(tela, cor_anel, centro, raio, 2, brilho=1.1)
+            contorno_circulo(tela, centro, raio, 2, cor_contorno=(0, 0, 0))
+            circulo_com_contorno(tela, cor_anel, centro, raio,
+                                espessura_contorno=2,
+                                desenhar_borda_interna=False)
             ang = self.t * velocidade
             for i in range(3):
                 a = ang + i * math.tau / 3
                 px = x + math.cos(a) * raio
                 py = y + math.sin(a) * raio
-                desenhar_circulo(tela, cor_anel, (px, py), 4, brilho=1.4)
-        desenhar_circulo(tela, BRANCO, centro, 12, brilho=1.4)
+                circulo_com_contorno(tela, cor_anel, (px, py), 4,
+                                    espessura_contorno=2)
+                desenhar_highlight(tela, (px, py), 4, intensidade=0.6)
+        circulo_com_contorno(tela, BRANCO, centro, 12, espessura_contorno=2)
+        desenhar_highlight(tela, centro, 12, intensidade=0.7)
 
 
 BOSSES_POR_CENARIO = {

@@ -10,6 +10,7 @@ from .config import ALTURA, AMARELO, BRANCO, CIANO, DIMENSION_GOLD, \
     DOURADO, FPS, LARGURA, LARANJA, NEGRO, QUANTUM_CYAN, RIFT_MAGENTA, \
     TITULO, VERDE, VOID_BLACK
 from .bosses import Boss
+from .cel_shading import TextoAcao
 from .enemies import Inimigo, InimigoEspecial, composicao_onda, \
     sortear_inimigo_especial
 from .fonts import fonte_texto, fonte_titulo
@@ -222,6 +223,7 @@ class Jogo:
         self.hitstop = 0
         self.novo_recorde = False
         self.moedas_ganhas = 0
+        self.textos_acao = []
         self.cenario = Cenario(1)
         self._iniciar_nivel(1)
         self.mensagens.append(MensagemFlutuante(f"Bem-vindo, {nome}!",
@@ -430,6 +432,11 @@ class Jogo:
         self.mensagens.append(MensagemFlutuante(f"+{total}", inimigo.x,
                                                 inimigo.y, inimigo.cor))
         self.particulas.explosao(inimigo.x, inimigo.y, inimigo.cor, 18, 6)
+        if random.random() < 0.35:
+            texto_cor = random.choice([(255, 200, 50), (255, 100, 50),
+                                       (255, 50, 100), (100, 255, 100)])
+            self.textos_acao.append(TextoAcao(inimigo.x, inimigo.y - 20,
+                                              cor=texto_cor))
         self.sons.tocar("explosao")
         self._adicionar_trauma(0.2)
         self.inimigos_abates += 1
@@ -752,6 +759,10 @@ class Jogo:
             self.menu.atualizar()
         self.particulas.atualizar()
         self.cenario.atualizar()
+        for texto in self.textos_acao[:]:
+            texto.atualizar()
+            if not texto.ativo:
+                self.textos_acao.remove(texto)
         for mensagem in self.mensagens[:]:
             mensagem.atualizar()
             if not mensagem.viva:
@@ -820,6 +831,8 @@ class Jogo:
         self.jogador.desenhar(self.tela, self.particulas)
         for mensagem in self.mensagens:
             mensagem.desenhar(self.tela)
+        for texto in self.textos_acao:
+            texto.desenhar(self.tela)
         self.particulas.desenhar(self.tela)
         desenhar_vignette(self.tela, intensidade=0.45, raio_interno=0.5)
         if self.boss_intro > 0:
