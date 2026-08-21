@@ -30,6 +30,7 @@ def limpar_cache():
     _CACHE_GLOW.clear()
     _CACHE_PAINEL.clear()
     _CACHE_VIGNETTE.clear()
+    _CACHE_PAINEL_CARTOON.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -248,12 +249,13 @@ def linha_suave(tela, cor, inicio, fim, espessura=2, brilho=1.0):
 def texto_suave(fonte, texto, cor, glow_cor=None, glow_raio=4,
                 sombra=True):
     """Surface SRCALPHA de texto com glow e sombra suave (cacheada)."""
-    chave = (fonte.size(texto), texto, tuple(cor[:3]),
-             tuple(glow_cor[:3]) if glow_cor else None, glow_raio, sombra)
+    cor_rgb = tuple(max(0, min(255, int(c))) for c in cor[:3])
+    glow_rgb = tuple(max(0, min(255, int(c))) for c in glow_cor[:3]) if glow_cor else None
+    chave = (fonte.size(texto), texto, cor_rgb, glow_rgb, glow_raio, sombra)
     if chave in _CACHE_TEXTO:
         return _CACHE_TEXTO[chave]
 
-    base = fonte.render(texto, True, cor[:3])
+    base = fonte.render(texto, True, cor_rgb)
     larg = base.get_width() + glow_raio * 2 + 6
     alt = base.get_height() + glow_raio * 2 + 6
     surf = pygame.Surface((larg, alt), pygame.SRCALPHA)
@@ -267,7 +269,7 @@ def texto_suave(fonte, texto, cor, glow_cor=None, glow_raio=4,
 
     if glow_cor and glow_raio > 0:
         for i in range(glow_raio, 0, -2):
-            glow_surf = fonte.render(texto, True, glow_cor[:3])
+            glow_surf = fonte.render(texto, True, glow_rgb)
             glow_surf.set_alpha(int(110 * (1 - i / (glow_raio + 1))))
             surf.blit(glow_surf, (ox - i // 2, oy - i // 2))
 
@@ -433,3 +435,155 @@ def superficie_vignette(intensidade=0.85, raio_interno=0.55):
 def desenhar_vignette(tela, intensidade=0.85, raio_interno=0.55):
     """Desenha a vinheta na tela."""
     tela.blit(superficie_vignette(intensidade, raio_interno), (0, 0))
+
+
+# ---------------------------------------------------------------------------
+# Estilo Cartoon: bordas grossas, cantos arredondados, botoes bolha
+# ---------------------------------------------------------------------------
+
+_CACHE_PAINEL_CARTOON = {}
+
+
+def painel_cartoon(cor_borda, rect, cor_fundo=(18, 18, 35), raio_canto=22,
+                   espessura_borda=5, alpha=240, glow_raio=20):
+    """Painel com estilo cartoon: borda preta grossa + fundo arredondado."""
+    chave = ("cartoon", tuple(cor_borda[:3]), tuple(cor_fundo[:3]),
+             rect.size, raio_canto, espessura_borda, alpha, glow_raio)
+    if chave in _CACHE_PAINEL_CARTOON:
+        return _CACHE_PAINEL_CARTOON[chave]
+
+    pad = 20
+    w, h = rect.w, rect.h
+    surf = pygame.Surface((w + pad * 2, h + pad * 2), pygame.SRCALPHA)
+
+    # glow suave atras
+    if glow_raio > 0:
+        glow = luz_radial(cor_borda, max(w, h) // 2, 0.6)
+        surf.blit(glow, glow.get_rect(center=((w + pad * 2) // 2,
+                                               (h + pad * 2) // 2)))
+
+    # contorno preto grosso (sombra cartoon)
+    contorno = pygame.Surface((w + 8, h + 8), pygame.SRCALPHA)
+    pygame.draw.rect(contorno, (0, 0, 0, 160), (4, 4, w, h),
+                     border_radius=raio_canto + 4)
+    surf.blit(contorno, (pad - 4, pad - 4))
+
+    # fundo arredondado
+    fundo = pygame.Surface((w, h), pygame.SRCALPHA)
+    pygame.draw.rect(fundo, tuple(cor_fundo[:3]) + (alpha,),
+                     (0, 0, w, h), border_radius=raio_canto)
+    surf.blit(fundo, (pad, pad))
+
+    # borda colorida grossa
+    borda_surf = pygame.Surface((w, h), pygame.SRCALPHA)
+    pygame.draw.rect(borda_surf, tuple(cor_borda[:3]) + (255,),
+                     (0, 0, w, h), espessura_borda, border_radius=raio_canto)
+    surf.blit(borda_surf, (pad, pad))
+
+    # brilho interno sutil (highlight cartoon)
+    highlight = pygame.Surface((w - 20, h // 3), pygame.SRCALPHA)
+    for i in range(h // 6):
+        t = i / (h // 6)
+        alfa = int(45 * (1 - t))
+        pygame.draw.rect(highlight, (255, 255, 255, alfa),
+                         (0, i, w - 20, 1), border_radius=8)
+    surf.blit(highlight, (pad + 10, pad + 8))
+
+    _CACHE_PAINEL_CARTOON[chave] = surf
+    return surf
+
+
+def desenhar_painel_cartoon(tela, cor_borda, rect, cor_fundo=(18, 18, 35),
+                            raio_canto=22, espessura_borda=5, alpha=240,
+                            glow_raio=20):
+    """Desenha painel cartoon na tela."""
+    surf = painel_cartoon(cor_borda, rect, cor_fundo, raio_canto,
+                          espessura_borda, alpha, glow_raio)
+    tela.blit(surf, (rect.x - 20, rect.y - 20))
+
+
+def botao_cartoon(texto, rect, cor_fundo, cor_borda=None, fonte=None,
+                  hover=False, habilitado=True):
+    """Surface de botao cartoon: fundo arredondado, borda grossa, texto com sombra.
+
+    Retorna (surface, rect_absoluto) para blit.
+    """
+    if cor_borda is None:
+        cor_borda = tuple(min(255, c + 60) for c in cor_fundo[:3])
+
+    x, y, w, h = rect
+    pad = 4
+    surf = pygame.Surface((w + pad * 2, h + pad * 2 + 6), pygame.SRCALPHA)
+
+    # sombra cartoon (deslocada pra baixo)
+    sombra = pygame.Surface((w, h), pygame.SRCALPHA)
+    pygame.draw.rect(sombra, (0, 0, 0, 100), (0, 0, w, h),
+                     border_radius=h // 2)
+    surf.blit(sombra, (pad, pad + 6))
+
+    # fundo do botao
+    cor = cor_fundo
+    if hover and habilitado:
+        cor = tuple(min(255, c + 30) for c in cor_fundo[:3])
+    fundo = pygame.Surface((w, h), pygame.SRCALPHA)
+    pygame.draw.rect(fundo, tuple(cor[:3]) + (240,), (0, 0, w, h),
+                     border_radius=h // 2)
+    surf.blit(fundo, (pad, pad))
+
+    # borda grossa
+    borda = pygame.Surface((w, h), pygame.SRCALPHA)
+    pygame.draw.rect(borda, tuple(cor_borda[:3]) + (255,),
+                     (0, 0, w, h), 4, border_radius=h // 2)
+    surf.blit(borda, (pad, pad))
+
+    # highlight interno
+    hl = pygame.Surface((w - 16, h // 3), pygame.SRCALPHA)
+    for i in range(h // 5):
+        t = i / (h // 5)
+        a = int(50 * (1 - t))
+        pygame.draw.rect(hl, (255, 255, 255, a), (0, i, w - 16, 1),
+                         border_radius=4)
+    surf.blit(hl, (pad + 8, pad + 5))
+
+    # texto
+    if fonte:
+        txt_surf = fonte.render(texto, True, (255, 255, 255))
+        # sombra do texto
+        sombra_txt = fonte.render(texto, True, (0, 0, 0))
+        sombra_txt.set_alpha(120)
+        tx = (w - txt_surf.get_width()) // 2
+        ty = (h - txt_surf.get_height()) // 2
+        surf.blit(sombra_txt, (pad + tx + 2, pad + ty + 2))
+        surf.blit(txt_surf, (pad + tx, pad + ty))
+
+    return surf, (x - pad, y - pad)
+
+
+def desenhar_botao_cartoon(tela, texto, rect, cor_fundo, cor_borda=None,
+                           fonte=None, hover=False, habilitado=True):
+    """Desenha botao cartoon na tela e retorna o rect."""
+    surf, pos = botao_cartoon(texto, rect, cor_fundo, cor_borda, fonte,
+                              hover, habilitado)
+    tela.blit(surf, pos)
+    return pygame.Rect(pos[0], pos[1], surf.get_width(), surf.get_height())
+
+
+def desenhar_estrela(tela, centro, raio, cor, pontas=5, rotacao=0):
+    """Estrela cartoon com sombra e brilho."""
+    cx, cy = centro
+    pontos = []
+    for i in range(pontas * 2):
+        angulo = math.radians(rotacao + i * 360 / (pontas * 2) - 90)
+        r = raio if i % 2 == 0 else raio * 0.4
+        pontos.append((cx + r * math.cos(angulo), cy + r * math.sin(angulo)))
+    # sombra
+    sombra_pts = [(p[0] + 2, p[1] + 3) for p in pontos]
+    pygame.draw.polygon(tela, (0, 0, 0, 80), sombra_pts)
+    # preenchimento
+    pygame.draw.polygon(tela, tuple(cor[:3]), pontos)
+    # contorno
+    pygame.draw.polygon(tela, (0, 0, 0), pontos, 2)
+    # brilho
+    pygame.draw.circle(tela, (255, 255, 255, 180),
+                       (int(cx - raio * 0.2), int(cy - raio * 0.2)),
+                       max(2, raio // 4))
