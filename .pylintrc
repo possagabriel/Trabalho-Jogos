@@ -1,0 +1,34 @@
+[MASTER]
+jobs=0
+
+[FORMAT]
+max-line-length=100
+indent-string='    '
+
+[BASIC]
+good-names=i,j,k,x,y,z,f,t,n,e,w,h,cx,cy,dx,dy,vx,vy
+
+[DESIGN]
+max-args=8
+max-locals=20
+max-returns=8
+max-branches=15
+max-attributes=12
+
+[MESSAGES CONTROL]
+disable=
+    C0114,  # missing-module-docstring
+    C0115,  # missing-class-docstring
+    C0116,  # missing-function-docstring
+    R0903,  # too-few-public-methods
+    R0913,  # too-many-arguments
+    R0902,  # too-many-instance-attributes
+    R0801,  # duplicate-code
+    W0611,  # unused-import
+    E0401,  # import-error (for pygame)
+    C0301,  # line-too-long
+    R0912,  # too-many-branches
+    R0915,  # too-many-statements
+
+[TYPECHECK]
+ignored-modules=pygame,numpy
