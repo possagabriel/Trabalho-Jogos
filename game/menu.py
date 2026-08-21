@@ -30,7 +30,8 @@ from .settings import ACOES_CONTROLE, RESOLUCOES, TEMAS
 from .shop import LojaSkins
 from .smooth import desenhar_cantos, desenhar_circulo as \
     desenhar_circulo_suave, desenhar_glow, ease_out, ease_out_back, \
-    painel_glass, retangulo_suave, texto_suave
+    painel_glass, retangulo_suave, texto_suave, \
+    desenhar_painel_cartoon, desenhar_botao_cartoon, desenhar_estrela
 from .theme import tema_atual
 from .ui import BotaoNeon
 
@@ -152,12 +153,11 @@ class SistemaNotificacao:
 
 
 class Dialogo:
-    """Dialogo modal de confirmacao com visual cinematografico.
+    """Dialogo modal de confirmacao com visual cartoon.
 
-    Painel glass com borda neon, icone de alerta pulsante, titulo com acento,
-    mensagem com sombra, botoes com glow no hover e dicas de teclado. Possui
-    animacao de entrada (fade-in com "pop" de escala) e aceita mouse e teclado
-    (ENTER confirma, ESC cancela).
+    Painel com borda preta grossa, cantos arredondados, icone de alerta
+    animado, titulo com sombra cartoon, botoes 'bolha' com hover brilhante
+    e dicas de teclado. Animacao de entrada com bounce (ease_out_back).
     """
 
     def __init__(self, titulo, mensagem, funcao_confirmar, funcao_cancelar,
@@ -169,7 +169,7 @@ class Dialogo:
         self.funcao_cancelar = funcao_cancelar
         self.ativo = True
         self._t0 = pygame.time.get_ticks()
-        self._largura, self._altura = self._layout.px(520), self._layout.px(300)
+        self._largura, self._altura = self._layout.px(540), self._layout.px(320)
         self._x = self._layout.x(0.5) - self._largura // 2
         self._y = self._layout.y(0.5) - self._altura // 2
         self._rect = pygame.Rect(self._x, self._y, self._largura, self._altura)
@@ -177,12 +177,13 @@ class Dialogo:
     def _retangulos(self):
         l = self._layout
         rect = self._rect
-        confirmar = pygame.Rect(rect.x + l.px(90),
-                                rect.bottom - l.px(78),
-                                l.px(150), l.px(46))
-        cancelar = pygame.Rect(rect.x + l.px(280),
-                               rect.bottom - l.px(78),
-                               l.px(150), l.px(46))
+        btn_w, btn_h = l.px(170), l.px(50)
+        confirmar = pygame.Rect(rect.centerx - btn_w - l.px(12),
+                                rect.bottom - l.px(82),
+                                btn_w, btn_h)
+        cancelar = pygame.Rect(rect.centerx + l.px(12),
+                               rect.bottom - l.px(82),
+                               btn_w, btn_h)
         return confirmar, cancelar
 
     def tratar_evento(self, evento, mouse_pos=None):
@@ -212,7 +213,7 @@ class Dialogo:
 
     def _animacao(self):
         """Progresso da entrada (0..1) e fator de escala do painel."""
-        t = (pygame.time.get_ticks() - self._t0) / 220.0
+        t = (pygame.time.get_ticks() - self._t0) / 250.0
         p = max(0.0, min(1.0, t))
         return p, ease_out_back(p)
 
@@ -227,107 +228,175 @@ class Dialogo:
         p, escala = self._animacao()
         t = pygame.time.get_ticks() * 0.001
 
-        # overlay de foco (escurece o fundo)
+        # overlay de foco
         overlay = pygame.Surface((l.largura, l.altura), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, int(175 * p)))
+        overlay.fill((0, 0, 0, int(190 * p)))
         tela.blit(overlay, (0, 0))
 
-        # painel com entrada em escala (pop suave)
-        largura = int(self._largura * (0.94 + 0.06 * escala))
-        altura = int(self._altura * (0.94 + 0.06 * escala))
+        # painel com entrada em escala (bounce cartoon)
+        largura = int(self._largura * (0.92 + 0.08 * escala))
+        altura = int(self._altura * (0.92 + 0.08 * escala))
         x = self._x - (largura - self._largura) // 2
         y = self._y - (altura - self._altura) // 2
         rect = pygame.Rect(x, y, largura, altura)
         self._rect = rect
 
-        # glow pulsante atras do painel
-        pulso = 0.5 + 0.5 * math.sin(t * 2.6)
-        desenhar_glow(tela, tema["primaria"], rect.center,
-                      max(rect.w, rect.h) // 2, 0.35 + 0.25 * pulso)
-
-        # painel glass com borda neon
-        painel = painel_glass(tema["primaria"], rect,
-                              cor_fundo=tema["fundo_painel"], raio_canto=16,
-                              alpha=238, glow_raio=26)
-        tela.blit(painel, (rect.x - 12, rect.y - 12))
-        desenhar_cantos(tela, tema["borda_forte"], rect, tamanho=16)
-        # linha de acento superior
-        pygame.draw.line(tela, tema["primaria"], (rect.x + 44, rect.y + 10),
-                         (rect.right - 44, rect.y + 10), 2)
+        # painel cartoon (borda grossa preta + fundo arredondado)
+        desenhar_painel_cartoon(tela, tema["primaria"], rect,
+                                cor_fundo=(14, 14, 30), raio_canto=24,
+                                espessura_borda=6, alpha=245, glow_raio=22)
 
         alfa = int(255 * p)
+        pulso = 0.6 + 0.4 * math.sin(t * 3.0)
 
-        # icone de alerta (triangulo pulsante)
+        # estrelas decorativas animadas
+        for i, (sx, sy, sr) in enumerate([
+            (rect.x + l.px(28), rect.y + l.px(28), l.px(10)),
+            (rect.right - l.px(28), rect.y + l.px(28), l.px(8)),
+            (rect.x + l.px(22), rect.bottom - l.px(28), l.px(7)),
+            (rect.right - l.px(22), rect.bottom - l.px(28), l.px(9)),
+        ]):
+            rot = t * 60 + i * 72
+            cor_estrela = tema["secundaria"] if i % 2 == 0 else tema["terciaria"]
+            desenhar_estrela(tela, (sx, sy), sr, cor_estrela, pontas=4,
+                             rotacao=rot)
+
+        # icone de alerta cartoon (circulo com ! pulsante)
         icone_cor = tema["terciaria"]
-        ix, iy = rect.centerx, rect.y + l.px(48)
-        desenhar_glow(tela, icone_cor, (ix, iy), l.px(30),
-                      0.45 + 0.35 * pulso)
-        desenhar_circulo_suave(tela, icone_cor, (ix, iy), l.px(22), 2,
-                               brilho=1.1)
-        tri = [(ix, iy - l.px(9)), (ix + l.px(13), iy + l.px(12)),
-               (ix - l.px(13), iy + l.px(12))]
-        pygame.draw.polygon(tela, icone_cor, tri)
-        pygame.draw.line(tela, BRANCO, (ix, iy - l.px(2)), (ix, iy + l.px(5)),
-                         2)
-        pygame.draw.circle(tela, BRANCO, (ix, iy + l.px(9)), 2)
+        ix, iy = rect.centerx, rect.y + l.px(50)
+        raio_icone = l.px(24) + int(2 * pulso)
+        # sombra do circulo (em surface SRCALPHA para alpha funcionar)
+        sombra_size = raio_icone * 2 + 10
+        sombra_icone = pygame.Surface((sombra_size, sombra_size), pygame.SRCALPHA)
+        pygame.draw.circle(sombra_icone, (0, 0, 0, 100),
+                           (sombra_size // 2 + 3, sombra_size // 2 + 4),
+                           raio_icone)
+        tela.blit(sombra_icone, (ix - sombra_size // 2,
+                                 iy - sombra_size // 2))
+        # circulo de fundo
+        pygame.draw.circle(tela, icone_cor, (ix, iy), raio_icone)
+        # contorno preto
+        pygame.draw.circle(tela, (0, 0, 0), (ix, iy), raio_icone, 3)
+        # brilho interno (em surface SRCALPHA)
+        hl_size = raio_icone * 2 + 10
+        hl_icone = pygame.Surface((hl_size, hl_size), pygame.SRCALPHA)
+        pygame.draw.circle(hl_icone, (255, 255, 255, 80),
+                           (hl_size // 2 - raio_icone // 4,
+                            hl_size // 2 - raio_icone // 4),
+                           raio_icone // 3)
+        tela.blit(hl_icone, (ix - hl_size // 2, iy - hl_size // 2))
+        # exclamacao
+        pygame.draw.rect(tela, BRANCO,
+                         (ix - 2, iy - l.px(10), 5, l.px(12)))
+        pygame.draw.circle(tela, BRANCO, (ix, iy + l.px(7)), 3)
 
+        # titulo com sombra cartoon
+        titulo_fonte = fonte_titulo
+        # sombra
+        sombra_surf = titulo_fonte.render(self.titulo, True, (0, 0, 0))
+        sombra_surf.set_alpha(int(160 * p))
+        tela.blit(sombra_surf, sombra_surf.get_rect(
+            center=(rect.centerx + 3, rect.y + l.px(100) + 3)))
         # titulo
-        titulo_surf = texto_suave(fonte_titulo, self.titulo,
-                                  tema["primaria"],
-                                  glow_cor=tema["primaria"], glow_raio=5)
+        titulo_surf = titulo_fonte.render(self.titulo, True,
+                                          tema["primaria"])
         titulo_surf.set_alpha(alfa)
-        tela.blit(titulo_surf, titulo_surf.get_rect(center=(rect.centerx,
-                                                            rect.y + l.px(96))))
+        tela.blit(titulo_surf, titulo_surf.get_rect(
+            center=(rect.centerx, rect.y + l.px(100))))
 
-        # mensagem (quebrada em linhas, com sombra suave)
+        # mensagem (quebrada em linhas)
         palavras = self.mensagem.split()
         linhas, atual = [], []
         for palavra in palavras:
             teste = " ".join(atual + [palavra])
-            if fonte_texto.size(teste)[0] > self._largura - l.px(56):
+            if fonte_texto.size(teste)[0] > self._largura - l.px(70):
                 linhas.append(" ".join(atual))
                 atual = [palavra]
             else:
                 atual.append(palavra)
         if atual:
             linhas.append(" ".join(atual))
-        y_texto = rect.y + l.px(128)
+        y_texto = rect.y + l.px(136)
         for linha in linhas:
-            surface = texto_suave(fonte_texto, linha, (206, 210, 246),
-                                  glow_cor=(40, 40, 90), glow_raio=2)
+            # sombra
+            sombra = fonte_texto.render(linha, True, (0, 0, 0))
+            sombra.set_alpha(int(120 * p))
+            tela.blit(sombra, sombra.get_rect(
+                center=(rect.centerx + 2, y_texto + 2)))
+            # texto
+            surface = fonte_texto.render(linha, True, (220, 225, 250))
             surface.set_alpha(alfa)
-            tela.blit(surface, surface.get_rect(center=(rect.centerx, y_texto)))
+            tela.blit(surface, surface.get_rect(center=(rect.centerx,
+                                                        y_texto)))
             y_texto += l.px(32)
 
-        # botoes
+        # botoes cartoon (bolha)
         confirmar, cancelar = self._retangulos()
-        hover_confirmar = confirmar.collidepoint(mouse_pos)
-        hover_cancelar = cancelar.collidepoint(mouse_pos)
-        self._desenhar_botao(tela, confirmar, "CONFIRMAR", fonte_texto,
-                             (0, 180, 80) if hover_confirmar else (0, 100, 50),
-                             alfa, l, glow=hover_confirmar)
-        self._desenhar_botao(tela, cancelar, "CANCELAR", fonte_texto,
-                             (220, 45, 45) if hover_cancelar else (130, 28, 28),
-                             alfa, l, glow=hover_cancelar)
+        hover_conf = confirmar.collidepoint(mouse_pos)
+        hover_canc = cancelar.collidepoint(mouse_pos)
+        self._desenhar_botao_cartoon(tela, confirmar, "SIM, TENHO!",
+                                     fonte_texto, (30, 160, 80), (20, 120, 60),
+                                     hover_conf, alfa, l, p)
+        self._desenhar_botao_cartoon(tela, cancelar, "CANCELAR",
+                                     fonte_texto, (180, 40, 50), (130, 25, 30),
+                                     hover_canc, alfa, l, p)
 
-        # dica de teclado
+        # dica de teclado com visual cartoon
         dica = texto_suave(fonte_texto,
                            "ENTER confirmar   |   ESC cancelar",
-                           (150, 155, 190), glow_cor=(30, 30, 60), glow_raio=2)
-        dica.set_alpha(int(200 * p))
-        tela.blit(dica, dica.get_rect(center=(rect.centerx,
-                                              rect.bottom - l.px(26))))
-
-    def _desenhar_botao(self, tela, rect, texto, fonte, cor, alfa, l, glow):
-        if glow:
-            desenhar_glow(tela, cor, rect.center, max(rect.w, rect.h) // 2,
-                          0.5)
-        retangulo_suave(tela, cor, rect, 10)
-        retangulo_suave(tela, BRANCO, rect, 10, 1)
-        surf = texto_suave(fonte, texto, BRANCO, glow_cor=(20, 20, 40),
+                           (170, 175, 210), glow_cor=(40, 40, 80),
                            glow_raio=2)
-        surf.set_alpha(int(255 * alfa))
-        tela.blit(surf, surf.get_rect(center=rect.center))
+        dica.set_alpha(int(210 * p))
+        tela.blit(dica, dica.get_rect(center=(rect.centerx,
+                                              rect.bottom - l.px(22))))
+
+    def _desenhar_botao_cartoon(self, tela, rect, texto, fonte, cor_fundo,
+                                cor_borda, hover, alfa, l, p=1.0):
+        """Botoes 'bolha' cartoon com sombra, borda grossa e brilho no hover."""
+        # sombra deslocada
+        sombra_rect = pygame.Rect(rect.x + 3, rect.y + 4, rect.w, rect.h)
+        sombra = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+        pygame.draw.rect(sombra, (0, 0, 0, 100),
+                         (0, 0, rect.w, rect.h), border_radius=rect.h // 2)
+        tela.blit(sombra, sombra_rect.topleft)
+
+        # glow no hover
+        if hover:
+            desenhar_glow(tela, cor_fundo, rect.center,
+                          max(rect.w, rect.h) // 2, 0.5)
+
+        # fundo do botao
+        cor = tuple(min(255, c + 25) for c in cor_fundo) if hover else cor_fundo
+        fundo = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+        pygame.draw.rect(fundo, tuple(cor[:3]) + (int(240 * p),),
+                         (0, 0, rect.w, rect.h), border_radius=rect.h // 2)
+        tela.blit(fundo, rect.topleft)
+
+        # borda preta grossa
+        pygame.draw.rect(tela, (0, 0, 0), rect, 4,
+                         border_radius=rect.h // 2)
+        # borda colorida
+        pygame.draw.rect(tela, cor_borda, rect, 2,
+                         border_radius=rect.h // 2)
+
+        # highlight interno
+        hl = pygame.Surface((rect.w - 12, rect.h // 3), pygame.SRCALPHA)
+        for i in range(rect.h // 5):
+            t_hl = i / (rect.h // 5)
+            a = int(40 * (1 - t_hl))
+            pygame.draw.rect(hl, (255, 255, 255, a),
+                             (0, i, rect.w - 12, 1), border_radius=4)
+        tela.blit(hl, (rect.x + 6, rect.y + 4))
+
+        # texto com sombra
+        txt = fonte.render(texto, True, (255, 255, 255))
+        txt.set_alpha(int(255 * alfa))
+        sombra_txt = fonte.render(texto, True, (0, 0, 0))
+        sombra_txt.set_alpha(int(140 * alfa))
+        tx = rect.centerx - txt.get_width() // 2
+        ty = rect.centery - txt.get_height() // 2
+        tela.blit(sombra_txt, (tx + 2, ty + 2))
+        tela.blit(txt, (tx, ty))
 
 
 class TransicaoTela:

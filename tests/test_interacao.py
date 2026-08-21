@@ -287,6 +287,10 @@ def test_tecla_m_na_pausa_volta_ao_menu():
     jogo._tratar_eventos()
     tecla(pygame.K_m)
     jogo._tratar_eventos()
+    # abre dialogo de confirmacao
+    assert jogo._pausa_dialogo is not None and jogo._pausa_dialogo.ativo
+    tecla(pygame.K_RETURN)
+    jogo._tratar_eventos()
     assert jogo.estado == "MENU"
 
 

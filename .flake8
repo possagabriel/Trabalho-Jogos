@@ -1,0 +1,14 @@
+"""Configuracao Flake8 para o projeto VOID//SHIFT."""
+
+[flake8]
+max-line-length = 100
+max-complexity = 12
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    *.egg-info,
+    .eggs
+per-file-ignores =
+    __init__.py:F401
