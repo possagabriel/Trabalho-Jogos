@@ -490,6 +490,26 @@ class MenuPrincipal:
         self.sub_anim_total = 0.9
         self.preview_anim = 0.0
 
+    # ------------------------------------------------------------------ fontes
+
+    def _recriar_fontes(self):
+        """Recria todas as fontes com base no layout atual."""
+        self.fonte_titulo_grande = self.layout.fonte_titulo(96)
+        self.fonte_fury = self.layout.fonte_titulo(92)
+        self.fonte_sub = self.layout.fonte_texto(44)
+        self.fonte_legenda = self.layout.fonte_texto(20)
+        self.fonte_opcao = self.layout.fonte_titulo(27)
+        self.fonte_opcao_sel = self.layout.fonte_titulo(32)
+        self.fonte_media = self.layout.fonte_texto(26)
+        self.fonte_pequena = self.layout.fonte_texto(20)
+        self.fonte_cabecalho = self.layout.fonte_titulo(38)
+        self.x_opcoes = self.layout.x(0.61)
+        self._titulo_cache.clear()
+        self._bloco_fury_cache.clear()
+        self._cabecalho_cache.clear()
+        self._cache_espacado.clear()
+        self._logo_menu = None
+
     # ------------------------------------------------------------------ sons
 
     def _som(self, nome):

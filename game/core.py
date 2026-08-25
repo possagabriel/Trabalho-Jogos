@@ -27,6 +27,7 @@ from .smooth import desenhar_glow, desenhar_painel, desenhar_poligono, \
     desenhar_vignette, retangulo_suave, \
     desenhar_painel_cartoon, desenhar_botao_cartoon, desenhar_estrela
 from .theme import tema_atual
+from .layout import Layout
 from .ui import desenhar_barra, desenhar_cantos, desenhar_texto, \
     desenhar_titulo
 from .weapons import ARMARIA, Projetil
@@ -52,6 +53,7 @@ class Jogo:
         self.config = Configuracoes()
         self.janela = self._aplicar_modo_video()
         self.tela = pygame.Surface((LARGURA, ALTURA))
+        self._criar_layout_ui()
         pygame.display.set_caption(TITULO)
         pygame.display.set_icon(self._criar_icone())
         self.relogio = pygame.time.Clock()
@@ -95,8 +97,8 @@ class Jogo:
         self.trauma = 0.0
         self.hitstop = 0
         self.recordes = SistemaProgressao.carregar_recordes()
-        self.hud = HudJogo()
-        self.menu = MenuPrincipal(self)
+        self.hud = HudJogo(self.layout)
+        self.menu = MenuPrincipal(self, self.layout)
         # --- estado do menu de pausa ---
         self._pausa_selecao = 0
         self._pausa_config_selecao = 0
@@ -108,6 +110,15 @@ class Jogo:
         self.estado = "MENU"
 
     # ----- modo de video -----
+
+    def _criar_layout_ui(self):
+        """Cria Layout, tela_ui e superficies de efeito na resolucao da janela."""
+        w, h = self.janela.get_size()
+        self.layout = Layout(w, h)
+        self.tela_ui = pygame.Surface((w, h))
+        self._janela_sombra = pygame.Surface((w, h), pygame.SRCALPHA)
+        self._janela_flash = pygame.Surface((w, h), pygame.SRCALPHA)
+        self._janela_fade = pygame.Surface((w, h))
 
     def _escala_janela(self):
         """Fator de escala e offsets para encaixar a tela 900x700 na janela.
@@ -150,18 +161,28 @@ class Jogo:
         else:
             self.janela = pygame.display.set_mode(
                 parse_resolucao(self.config["resolucao"]))
+        if hasattr(self, "hud") and hasattr(self, "menu"):
+            self._criar_layout_ui()
+            self.hud.layout = self.layout
+            self.menu.layout = self.layout
+            self.menu.fundo._layout = self.layout
+            self.menu.hud._layout = self.layout
+            self.menu.destaque._layout = self.layout
+            self.menu.notificacoes._layout = self.layout
+            self.menu.transicao._layout = self.layout
+            self.menu.transicao_missao._layout = self.layout
+            self.menu._recriar_fontes()
         return self.janela
 
     def _apresentar(self):
-        """Redimensiona a superficie interna para a janela e atualiza a tela.
+        """Redimensiona a superficie interna (900x700) para a janela.
 
-        No modo AJUSTAR preserva as proporcoes com safe areas (letterbox) em
-        qualquer resolucao; no modo PREENCHE estica a cena para a janela.
+        No modo AJUSTAR preserva as proporcoes com safe areas (letterbox);
+        no modo PREENCHE estica a cena. flip() e chamado por _desenhar().
         """
         w, h = self.janela.get_size()
         if (w, h) == (LARGURA, ALTURA):
             self.janela.blit(self.tela, (0, 0))
-            pygame.display.flip()
             return
         if self.config["aspecto"] == "PREENCHE":
             escala = max(0.5, self.config["ajuste_escala"])
@@ -171,7 +192,6 @@ class Jogo:
             self.janela.fill(VOID_BLACK)
             self.janela.blit(superficie, (int(self.config["ajuste_off_x"]),
                                           int(self.config["ajuste_off_y"])))
-            pygame.display.flip()
             return
         escala, off_x, off_y = self._transformacao_janela()
         superficie = pygame.transform.smoothscale(
@@ -188,7 +208,6 @@ class Jogo:
             (int(off_x), int(off_y + ALTURA * escala)),
             (int(off_x + LARGURA * escala),
              int(off_y + ALTURA * escala)), 1)
-        pygame.display.flip()
 
     # ----- utilidades -----
 
@@ -1410,14 +1429,27 @@ class Jogo:
 
     def _desenhar(self):
         if self.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
-            self.menu.desenhar(self.tela)
-        elif self.estado == "PREPARANDO":
+            self.tela_ui.fill(VOID_BLACK)
+            self.menu.desenhar(self.tela_ui)
+            self.janela.blit(self.tela_ui, (0, 0))
+            if self.flash > 0:
+                self._janela_flash.fill((255, 0, 0, self.flash * 18))
+                self.janela.blit(self._janela_flash, (0, 0))
+            if self.fade > 0:
+                self._janela_fade.fill(NEGRO)
+                self._janela_fade.set_alpha(self.fade)
+                self.janela.blit(self._janela_fade, (0, 0))
+            pygame.display.flip()
+            return
+
+        if self.estado == "PREPARANDO":
             self._desenhar_carregando()
-        elif self.estado in ("JOGANDO", "PAUSA"):
+        elif self.estado == "JOGANDO":
+            self._desenhar_jogo()
+        elif self.estado == "PAUSA":
             self._desenhar_jogo()
             self._desenhar_hud()
-            if self.estado == "PAUSA":
-                self._desenhar_pausa()
+            self._desenhar_pausa()
         elif self.estado == "GAME_OVER":
             self._desenhar_jogo()
             self._desenhar_hud()
@@ -1433,6 +1465,12 @@ class Jogo:
 
         self._aplicar_shake()
         self._apresentar()
+
+        if self.estado == "JOGANDO":
+            self.hud.desenhar(self.janela, self)
+            pygame.display.flip()
+        else:
+            pygame.display.flip()
 
     def executar(self):
         rodando = True
