@@ -382,38 +382,64 @@ class Jogo:
             self._adicionar_trauma(0.3)
         return True
 
+    def _distancia(self, entidade, proj):
+        """Distancia euclidiana entre uma entidade e um projetil."""
+        return math.hypot(entidade.x - proj.x, entidade.y - proj.y)
+
+    def _explodir_em_area(self, proj, raio, y_limite, efeitos_fn,
+                          flash_inimigo=8):
+        """Explosao generica em area.
+
+        Detecta alvos no raio, aplica efeitos (sons, particulas, etc.)
+        via callback, e causa dano a todos no raio. Retorna True se
+        explodiu (consumindo o projetil).
+        """
+        tem_alvo = any(self._distancia(i, proj) < raio
+                       for i in self.inimigos)
+        if not tem_alvo and self.boss and \
+                self._distancia(self.boss, proj) < raio:
+            tem_alvo = True
+        if not tem_alvo and proj.y > y_limite:
+            return False
+        efeitos_fn(proj)
+        for inimigo in self.inimigos[:]:
+            if self._distancia(inimigo, proj) < raio:
+                if inimigo.sofrer_dano(proj.dano):
+                    self._explodir_inimigo(inimigo)
+                else:
+                    inimigo.flash = flash_inimigo
+        if self.boss and self._distancia(self.boss, proj) < raio:
+            if self.boss.sofrer_dano(proj.dano):
+                self._derrotar_boss()
+            else:
+                self._adicionar_trauma(0.15)
+        return True
+
+    def _efeitos_nova(self, proj):
+        self.sons.tocar("nova")
+        self.particulas.explosao(proj.x, proj.y, LARANJA, 26, 7)
+        self.particulas.explosao(proj.x, proj.y, (255, 220, 120), 14, 4)
+        self._adicionar_trauma(0.35)
+        self._congelar(2)
+
+    def _efeitos_bomba(self, proj):
+        self.sons.tocar("especial")
+        self.particulas.explosao(proj.x, proj.y, (255, 90, 30), 42, 9)
+        self.particulas.explosao(proj.x, proj.y, (255, 220, 120), 20, 5)
+        self.particulas.mega(proj.x, proj.y)
+        self.flash = 16
+        self._adicionar_trauma(0.7)
+        self._congelar(4)
+
     def _explodir_nova(self, proj):
         """Explosao de area da arma Nova: dano a todos os alvos proximos.
 
         So explode quando um alvo esta no raio ou a orbita chega ao topo da
         tela. Retorna True se explodiu (consumindo o projetil).
         """
-        raio = 90
-        tem_alvo = any(math.hypot(i.x - proj.x, i.y - proj.y) < raio
-                       for i in self.inimigos)
-        if not tem_alvo and self.boss and math.hypot(
-                self.boss.x - proj.x, self.boss.y - proj.y) < raio:
-            tem_alvo = True
-        if not tem_alvo and proj.y > 40:
-            return False
-        self.sons.tocar("nova")
-        self.particulas.explosao(proj.x, proj.y, LARANJA, 26, 7)
-        self.particulas.explosao(proj.x, proj.y, (255, 220, 120), 14, 4)
-        self._adicionar_trauma(0.35)
-        self._congelar(2)
-        for inimigo in self.inimigos[:]:
-            if math.hypot(inimigo.x - proj.x, inimigo.y - proj.y) < raio:
-                if inimigo.sofrer_dano(proj.dano):
-                    self._explodir_inimigo(inimigo)
-                else:
-                    inimigo.flash = 8
-        if self.boss and math.hypot(self.boss.x - proj.x,
-                                    self.boss.y - proj.y) < raio:
-            if self.boss.sofrer_dano(proj.dano):
-                self._derrotar_boss()
-            else:
-                self._adicionar_trauma(0.15)
-        return True
+        return self._explodir_em_area(proj, raio=90, y_limite=40,
+                                      efeitos_fn=self._efeitos_nova,
+                                      flash_inimigo=8)
 
     def _explodir_bomba(self, proj):
         """Explosao da Bomba Vortex: area enorme com dano massivo.
@@ -422,34 +448,9 @@ class Jogo:
         da tela, destruindo tudo proximo (incluindo o boss). Retorna True
         se explodiu (consumindo o projetil).
         """
-        raio = 150
-        tem_alvo = any(math.hypot(i.x - proj.x, i.y - proj.y) < raio
-                       for i in self.inimigos)
-        if not tem_alvo and self.boss and math.hypot(
-                self.boss.x - proj.x, self.boss.y - proj.y) < raio:
-            tem_alvo = True
-        if not tem_alvo and proj.y > 60:
-            return False
-        self.sons.tocar("especial")
-        self.particulas.explosao(proj.x, proj.y, (255, 90, 30), 42, 9)
-        self.particulas.explosao(proj.x, proj.y, (255, 220, 120), 20, 5)
-        self.particulas.mega(proj.x, proj.y)
-        self.flash = 16
-        self._adicionar_trauma(0.7)
-        self._congelar(4)
-        for inimigo in self.inimigos[:]:
-            if math.hypot(inimigo.x - proj.x, inimigo.y - proj.y) < raio:
-                if inimigo.sofrer_dano(proj.dano):
-                    self._explodir_inimigo(inimigo)
-                else:
-                    inimigo.flash = 10
-        if self.boss and math.hypot(self.boss.x - proj.x,
-                                    self.boss.y - proj.y) < raio:
-            if self.boss.sofrer_dano(proj.dano):
-                self._derrotar_boss()
-            else:
-                self._adicionar_trauma(0.2)
-        return True
+        return self._explodir_em_area(proj, raio=150, y_limite=60,
+                                      efeitos_fn=self._efeitos_bomba,
+                                      flash_inimigo=10)
 
     def _explodir_inimigo(self, inimigo):
         bonus = self.jogador.combo.combo_atual * 5
@@ -1469,7 +1470,7 @@ class Jogo:
             self._desenhar_game_over()
 
         if self.flash > 0:
-            self._tela_flash.fill((255, 0, 0, self.flash * 18))
+            self._tela_flash.fill((255, 0, 0, self.flash * 15))
             self.tela.blit(self._tela_flash, (0, 0))
         if self.fade > 0:
             self._tela_fade.fill(NEGRO)
