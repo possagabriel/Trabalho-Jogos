@@ -1438,7 +1438,7 @@ class Jogo:
             self._desenhar_game_over()
 
         if self.flash > 0:
-            self._tela_flash.fill((255, 0, 0, self.flash * 18))
+            self._tela_flash.fill((255, 0, 0, self.flash * 15))
             self.tela.blit(self._tela_flash, (0, 0))
         if self.fade > 0:
             self._tela_fade.fill(NEGRO)
