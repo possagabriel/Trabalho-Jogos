@@ -187,8 +187,8 @@ python preview_hud.py --save     # salva images/preview_hud.png
 ### Lint e formatação
 
 ```bash
-ruff check src/ game/ tests/     # lint rápido (recomendado)
-ruff format src/ game/ tests/    # formatação automática
+python -m ruff check src/ game/ tests/     # lint rápido (recomendado)
+python -m ruff format src/ game/ tests/    # formatação automática
 flake8 src/ game/ tests/         # lint alternativo
 pylint src/ game/                # análise estática detalhada
 ```
@@ -196,9 +196,9 @@ pylint src/ game/                # análise estática detalhada
 ### Testes
 
 ```bash
-pytest tests/                    # suite completa (recomendado)
-pytest tests/ --cov=src          # com cobertura de código
-python tests/run_all.py          # alternativa standalone, sem pytest
+python -m pytest tests/ # suite completa (recomendado)
+python -m pytest tests/ --cov=src # com cobertura de código
+python tests/run_all.py # alternativa standalone, sem pytes
 ```
 
 Os testes rodam **headless** (drivers dummy do SDL, definidos em
