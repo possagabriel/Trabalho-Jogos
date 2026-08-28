@@ -443,10 +443,7 @@ class HudMenu:
             by = cy + math.sin(fase + self.tempo * 0.4) * r1 * 0.5
             desenhar_circulo(tela, secundaria, (bx, by), l.px(2), brilho=1.2)
 
-        # banda inferior
-        tela.blit(self.banda, (0, l.altura - l.px(64)))
-        pygame.draw.line(tela, primaria, (0, l.altura - l.px(64)),
-                         (l.largura, l.altura - l.px(64)), 2)
+
 
         # missao
         self._desenhar_texto(tela, "mis_rotulo", l.fonte_texto(12), "MISSAO",
@@ -458,24 +455,6 @@ class HudMenu:
                              "TARGET // ENTER THE RIFT", (l.px(44),
                                                           l.altura - l.px(20)),
                              primaria, 2)
-
-        # combustivel
-        self._desenhar_texto(tela, "fuel_rotulo", l.fonte_texto(12),
-                             "COMBUSTIVEL", (l.px(300), l.altura - l.px(56)),
-                             dim, 3)
-        x0, x1 = l.px(300), l.px(540)
-        y_barra = l.altura - l.px(40)
-        retangulo_suave(tela, (26, 30, 52),
-                        pygame.Rect(x0, y_barra, x1 - x0, l.px(9)), 4)
-        larg = int((x1 - x0) * max(0.0, min(1.0, self._fuel)))
-        if larg > 0:
-            retangulo_suave(tela, primaria,
-                            pygame.Rect(x0, y_barra, larg, l.px(9)), 4,
-                            glow_cor=primaria, glow_raio=l.px(8))
-        pct = int(self._fuel * 100)
-        self._desenhar_texto(tela, "fuel_valor", l.fonte_texto(11), f"{pct}%",
-                             (l.px(556), y_barra + l.px(4)), texto_cor, 1,
-                             "direita")
 
         # velocidade + coordenadas
         self._desenhar_texto(tela, "vel_rotulo", l.fonte_texto(12),

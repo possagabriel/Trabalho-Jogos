@@ -33,7 +33,7 @@ DEFAULT_CONTROLES = {
 _DEFAULT = {
     "musica_volume": 0.8,
     "efeitos_volume": 0.8,
-    "resolucao": "900x700",
+    "resolucao": "1920x1080",
     "tela_cheia": False,
     "sensibilidade": 1.0,
     "controles": DEFAULT_CONTROLES,
