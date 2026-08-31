@@ -1,0 +1,25 @@
+{
+  "jogador": {
+    "nome": "Jogador",
+    "moedas": 0,
+    "skins_desbloqueadas": [
+      "padrao",
+      "sombra"
+    ],
+    "skin_atual": "sombra",
+    "total_pontos": 46662,
+    "bosses_derrotados": 2,
+    "nivel_maximo": 15,
+    "cenarios_desbloqueados": [
+      1,
+      2,
+      3
+    ]
+  },
+  "estatisticas": {
+    "inimigos_derrotados": 114,
+    "bosses_derrotados": 2,
+    "tiros_disparados": 0,
+    "tempo_total": 233
+  }
+}
