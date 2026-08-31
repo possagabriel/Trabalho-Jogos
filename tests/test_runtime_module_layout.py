@@ -6,7 +6,6 @@ import importlib
 
 import pytest
 
-
 FACHADAS_COMPATIVEIS = {
     "game.core": "src.runtime.application.core",
     "game.combat_controller": "src.runtime.controllers.combat",

@@ -79,7 +79,7 @@ class ControladorLoop:
                 elif evento.key == pygame.K_ESCAPE:
                     jogo.estado = EstadoJogo.MENU
                     jogo.fade = 255
-        return jogo.rodando
+        return bool(jogo.rodando)
 
     def executar(self) -> None:
         """Mantem o loop ate o encerramento solicitado pelo usuario."""

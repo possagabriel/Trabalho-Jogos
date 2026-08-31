@@ -11,7 +11,6 @@ from collections.abc import Callable
 
 from src.runtime.application.core import Jogo
 
-
 FabricaJogo = Callable[[], Jogo]
 
 
