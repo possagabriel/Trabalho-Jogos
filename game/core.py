@@ -7,8 +7,10 @@ import sys
 import pygame
 
 from .config import ALTURA, AMARELO, BRANCO, CIANO, DIMENSION_GOLD, \
-    DOURADO, FPS, LARGURA, LARANJA, NEGRO, QUANTUM_CYAN, RIFT_MAGENTA, \
-    TITULO, VERDE, VOID_BLACK
+    DIVISOR_NIVEL_INTERVALO_SPAWN, DOURADO, EstadoJogo, FPS, \
+    INCREMENTO_CARREGAMENTO, INTERVALO_SPAWN_BASE, \
+    INTERVALO_SPAWN_MINIMO, LARGURA, LARANJA, NEGRO, QUANTUM_CYAN, \
+    RIFT_MAGENTA, TITULO, VERDE, VOID_BLACK
 from .bosses import Boss
 from .cel_shading import TextoAcao
 from .enemies import Inimigo, InimigoEspecial, composicao_onda, \
@@ -49,16 +51,24 @@ DICAS_CARREGAMENTO = [
 class Jogo:
     """Controla o fluxo do jogo: menu, loja, partida, pausa e game over."""
 
-    def __init__(self):
+    def __init__(self, config=None, sons=None, progresso=None, loja=None):
+        """Inicializa o jogo com dependencias opcionais para testes e integracao.
+
+        Args:
+            config: Configuracoes de video, som e controles.
+            sons: Gerenciador de audio ja configurado, quando necessario.
+            progresso: Repositorio de progresso do jogador.
+            loja: Catalogo e estado de skins do jogador.
+        """
         pygame.init()
-        self.config = Configuracoes()
+        self.config = config or Configuracoes()
         self.janela = self._aplicar_modo_video()
         self.tela = pygame.Surface((LARGURA, ALTURA))
         self._criar_layout_ui()
         pygame.display.set_caption(TITULO)
         pygame.display.set_icon(self._criar_icone())
         self.relogio = pygame.time.Clock()
-        self.sons = Sons()
+        self.sons = sons or Sons()
         self.sons.set_volume_musica(self.config["musica_volume"])
         self.sons.set_volume_efeitos(self.config["efeitos_volume"])
         self.controles = self.config.controles
@@ -70,13 +80,13 @@ class Jogo:
         self.fontes = {22: self.fonte_pequena, 32: self.fonte_media,
                        64: self.fonte_grande, 84: self.fonte_titulo}
 
-        self.progresso = SistemaProgressao()
-        self.loja = LojaSkins(
+        self.progresso = progresso or SistemaProgressao()
+        self.loja = loja or LojaSkins(
             moedas=self.progresso.jogador["moedas"],
             desbloqueadas=self.progresso.jogador["skins_desbloqueadas"],
             skin_atual=self.progresso.jogador["skin_atual"])
 
-        self.estado = "MENU"
+        self.estado = EstadoJogo.MENU
         self.rodando = True
         self.nome_jogador = self.progresso.jogador["nome"]
         self.carregamento = 0
@@ -108,7 +118,17 @@ class Jogo:
         self._pausa_dialogo = None
         self._pausa_mouse = (0, 0)
         self._novo_jogo("Jogador", zerar_estado=False)
-        self.estado = "MENU"
+        self.estado = EstadoJogo.MENU
+
+    @property
+    def estado(self):
+        """Estado atual como :class:`EstadoJogo`."""
+        return self._estado
+
+    @estado.setter
+    def estado(self, valor):
+        """Converte nomes textuais legados para o enum de estado."""
+        self._estado = valor if isinstance(valor, EstadoJogo) else EstadoJogo(valor)
 
     # ----- modo de video -----
 
@@ -257,13 +277,13 @@ class Jogo:
                                                 LARGURA // 2, ALTURA // 2 + 20,
                                                 CIANO, 110))
         if zerar_estado:
-            self.estado = "JOGANDO"
+            self.estado = EstadoJogo.JOGANDO
 
     def _preparar_jogo(self):
         """Inicia a partida com a tela de carregamento."""
         self._novo_jogo(self.nome_jogador, zerar_estado=False)
         self.carregamento = 0
-        self.estado = "PREPARANDO"
+        self.estado = EstadoJogo.PREPARANDO
 
     def _salvar_tudo(self):
         self.progresso.sincronizar_loja(self.loja)
@@ -599,7 +619,10 @@ class Jogo:
 
         if self.fila_onda:
             self.timer_spawn += 1
-            intervalo = max(18, 35 - self.jogador.nivel // 3)
+            intervalo = max(
+                INTERVALO_SPAWN_MINIMO,
+                INTERVALO_SPAWN_BASE - self.jogador.nivel // DIVISOR_NIVEL_INTERVALO_SPAWN,
+            )
             if self.timer_spawn >= intervalo:
                 self.timer_spawn = 0
                 tipo = self.fila_onda.pop(0)
@@ -774,14 +797,14 @@ class Jogo:
                 self.sons.tocar("coleta")
 
     def _atualizar(self):
-        if self.estado == "JOGANDO":
+        if self.estado is EstadoJogo.JOGANDO:
             self.tempo_partida += 1 / FPS
             self._atualizar_jogando()
-        elif self.estado == "PREPARANDO":
-            self.carregamento += 2.6
+        elif self.estado is EstadoJogo.PREPARANDO:
+            self.carregamento += INCREMENTO_CARREGAMENTO
             if self.carregamento >= 100:
                 self.carregamento = 100
-                self.estado = "JOGANDO"
+                self.estado = EstadoJogo.JOGANDO
         elif self.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES",
                              "CONFIG"):
             self.menu.atualizar()
@@ -816,23 +839,23 @@ class Jogo:
                 continue
             if evento.type != pygame.KEYDOWN:
                 continue
-            if self.estado == "JOGANDO":
+            if self.estado is EstadoJogo.JOGANDO:
                 tecla_pausar = self.controles.get("pausar", 0)
                 if (evento.key == pygame.K_p or
                         evento.key == pygame.K_ESCAPE or
                         evento.key == tecla_pausar):
-                    self.estado = "PAUSA"
+                    self.estado = EstadoJogo.PAUSA
                 elif evento.key == pygame.K_e:
                     self._ativar_especial()
                 elif pygame.K_1 <= evento.key <= pygame.K_9:
                     self.jogador.selecionar_arma(evento.key - pygame.K_1)
-            elif self.estado == "PAUSA":
+            elif self.estado is EstadoJogo.PAUSA:
                 self._tratar_eventos_pausa(evento)
-            elif self.estado == "GAME_OVER":
+            elif self.estado is EstadoJogo.GAME_OVER:
                 if evento.key == pygame.K_RETURN:
                     self._preparar_jogo()
                 elif evento.key == pygame.K_ESCAPE:
-                    self.estado = "MENU"
+                    self.estado = EstadoJogo.MENU
                     self.fade = 255
         return self.rodando
 
@@ -1089,8 +1112,8 @@ class Jogo:
                 track_h = 16
                 track_rect = pygame.Rect(track_x, track_y, track_w, track_h)
                 retangulo_suave(self.tela, (35, 35, 65), track_rect, 8)
-                if fracao > 0:
-                    preenchido = max(16, int(track_w * fracao))
+                preenchido = int(track_w * fracao)
+                if preenchido > 0:
                     fill_rect = pygame.Rect(track_x, track_y,
                                             preenchido, track_h)
                     retangulo_suave(self.tela, CIANO, fill_rect, 8,
@@ -1456,15 +1479,15 @@ class Jogo:
             pygame.display.flip()
             return
 
-        if self.estado == "PREPARANDO":
+        if self.estado is EstadoJogo.PREPARANDO:
             self._desenhar_carregando()
-        elif self.estado == "JOGANDO":
+        elif self.estado is EstadoJogo.JOGANDO:
             self._desenhar_jogo()
-        elif self.estado == "PAUSA":
+        elif self.estado is EstadoJogo.PAUSA:
             self._desenhar_jogo()
             self._desenhar_hud()
             self._desenhar_pausa()
-        elif self.estado == "GAME_OVER":
+        elif self.estado is EstadoJogo.GAME_OVER:
             self._desenhar_jogo()
             self._desenhar_hud()
             self._desenhar_game_over()
@@ -1480,7 +1503,7 @@ class Jogo:
         self._aplicar_shake()
         self._apresentar()
 
-        if self.estado == "JOGANDO":
+        if self.estado is EstadoJogo.JOGANDO:
             self.hud.desenhar(self.janela, self)
             pygame.display.flip()
         else:

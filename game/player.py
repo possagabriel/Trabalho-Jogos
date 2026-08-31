@@ -7,7 +7,8 @@ import pygame
 
 from .assets import carregar_imagem_alpha
 from .config import ALTURA, AZUL, AZUL_CLARO, BRANCO, CIANO, DOURADO, INDIGO, \
-    LARGURA, LARANJA, ROXO, VERDE, VERMELHO
+    COMBO_MULTIPLICADOR_ALTO, COMBO_MULTIPLICADOR_MEDIO, LARGURA, LARANJA, \
+    ROXO, VERDE, VERMELHO
 from .geometry import losango
 from .cel_shading import (circulo_com_contorno, clarear_cor,
                           contorno_poligono, desenhar_highlight,
@@ -227,9 +228,9 @@ class SistemaCombo:
             self.combo_maximo = self.combo_atual
 
     def get_bonus(self):
-        if self.combo_atual > 20:
+        if self.combo_atual > COMBO_MULTIPLICADOR_ALTO:
             return 2.0
-        if self.combo_atual > 10:
+        if self.combo_atual > COMBO_MULTIPLICADOR_MEDIO:
             return 1.5
         return 1.0
 

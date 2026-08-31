@@ -14,6 +14,7 @@ em qualquer resolucao sem coordenadas rigidas.
 """
 
 import math
+import logging
 import os
 
 import pygame
@@ -36,6 +37,7 @@ from .theme import tema_atual
 from .ui import BotaoNeon
 
 NEGRO = (0, 0, 0)
+LOGGER = logging.getLogger(__name__)
 
 
 def formatar_pontos(n):
@@ -647,8 +649,8 @@ class MenuPrincipal:
         try:
             if os.path.exists(ARQUIVO_RECORDES):
                 os.remove(ARQUIVO_RECORDES)
-        except OSError:
-            pass
+        except OSError as erro:
+            LOGGER.warning("Nao foi possivel apagar os recordes: %s", erro)
         self.jogo.loja = LojaSkins()
         self.jogo.progresso.sincronizar_loja(self.jogo.loja)
         self.jogo.progresso.salvar_arquivo()

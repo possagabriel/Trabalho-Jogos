@@ -10,8 +10,10 @@ from .cel_shading import (barra_vida_cartoon, circulo_com_contorno,
                           desenhar_brilho_contorno, desenhar_highlight,
                           desenhar_sombra_chapada, escurecer_cor,
                           estrela_com_contorno, poligono_com_contorno)
-from .config import AMARELO, AZUL, BRANCO, CIANO, DOURADO, LARGURA, \
-    LARANJA, ROXO, VERDE, VERMELHO
+from .config import AMARELO, AZUL, BRANCO, CIANO, \
+    COOLDOWN_ATAQUE_INIMIGO_MAXIMO, COOLDOWN_ATAQUE_INIMIGO_MINIMO, \
+    DOURADO, INVISIBILIDADE_QUADROS, LARGURA, LARANJA, \
+    PISCAR_INVISIBILIDADE_QUADROS, ROXO, VERDE, VERMELHO
 from .geometry import estrela, losango, pentagono, poligono, quadrado, triangulo
 from .smooth import desenhar_circulo, desenhar_glow, desenhar_poligono
 from .weapons import Projetil
@@ -167,13 +169,14 @@ class Inimigo:
             self.x = self.base_x + math.sin(self.fase * 1.3) * 80
             self.angulo += 0.05
             if self.invisivel <= 0 and random.random() < 0.006:
-                self.invisivel = 40
+                self.invisivel = INVISIBILIDADE_QUADROS
 
         if self.invisivel > 0:
             self.invisivel -= 1
         self.timer_ataque -= 1
         if self.timer_ataque <= 0:
-            self.timer_ataque = random.randint(110, 170)
+            self.timer_ataque = random.randint(
+                COOLDOWN_ATAQUE_INIMIGO_MINIMO, COOLDOWN_ATAQUE_INIMIGO_MAXIMO)
             novos = self._atacar(jogador)
         return novos
 
@@ -244,7 +247,7 @@ class Inimigo:
 
     def desenhar(self, tela):
         if self.invisivel > 0:
-            if (self.invisivel // 4) % 2 == 0:
+            if (self.invisivel // PISCAR_INVISIBILIDADE_QUADROS) % 2 == 0:
                 return
         x, y = int(self.x), int(self.y)
         cor = BRANCO if self.flash > 0 else self.cor
@@ -393,7 +396,7 @@ class InimigoEspecial(Inimigo):
         self.x = random.randint(60, LARGURA - 60)
         self.y = random.randint(30, 400)
         self.base_x = self.x
-        self.invisivel = 40
+        self.invisivel = INVISIBILIDADE_QUADROS
 
     def acoes_carregado(self):
         """Retorna acoes geradas quando a carga chega a 100%.
@@ -477,8 +480,7 @@ class InimigoEspecial(Inimigo):
 
     def desenhar(self, tela):
         if self.invisivel > 0:
-            self.invisivel -= 1
-            if (self.invisivel // 4) % 2 == 0:
+            if (self.invisivel // PISCAR_INVISIBILIDADE_QUADROS) % 2 == 0:
                 return
         x, y = int(self.x), int(self.y)
         centro = (x, y)

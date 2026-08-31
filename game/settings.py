@@ -1,6 +1,7 @@
 """Configuracoes do jogo persistidas em JSON (volume, video, controles)."""
 
 import json
+import logging
 import os
 
 import pygame
@@ -13,6 +14,7 @@ PASTA_DADOS = (os.environ.get("SPACEFURY_DATA_DIR")
                or os.path.join(os.path.dirname(os.path.dirname(
                    os.path.abspath(__file__))), "data"))
 ARQUIVO_CONFIG = os.path.join(PASTA_DADOS, "settings.json")
+LOGGER = logging.getLogger(__name__)
 
 RESOLUCOES = ["900x700", "1024x768", "1280x720", "1280x800", "1366x768",
               "1440x900", "1600x900", "1680x1050", "1920x1080", "2560x1080",
@@ -33,7 +35,7 @@ DEFAULT_CONTROLES = {
 _DEFAULT = {
     "musica_volume": 0.8,
     "efeitos_volume": 0.8,
-    "resolucao": "1920x1080",
+    "resolucao": "900x700",
     "tela_cheia": False,
     "sensibilidade": 1.0,
     "controles": DEFAULT_CONTROLES,
@@ -75,12 +77,15 @@ class Configuracoes:
                     for k, v in _DEFAULT.items()}
 
     def salvar(self):
+        """Persiste as configuracoes e informa se a gravacao foi concluida."""
         os.makedirs(PASTA_DADOS, exist_ok=True)
         try:
             with open(ARQUIVO_CONFIG, "w", encoding="utf-8") as f:
                 json.dump(self._dados, f, ensure_ascii=False, indent=2)
-        except OSError:
-            pass
+        except OSError as erro:
+            LOGGER.warning("Nao foi possivel salvar configuracoes: %s", erro)
+            return False
+        return True
 
     def __getitem__(self, chave):
         return self._dados[chave]

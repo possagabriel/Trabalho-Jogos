@@ -14,11 +14,11 @@ from .smooth import desenhar_circulo, desenhar_glow
 def _superficie_alpha(raio, cor):
     """Superficie com brilho radial suave (cacheada).
 
-    Retorna a superficie compartilhada do cache; quem precisar alterar o
-    alpha individualmente deve chamar ``.copy()`` antes de ``set_alpha``.
+    Retorna sempre uma copia, para que ``set_alpha`` e outras transformacoes
+    locais nunca alterem uma superficie compartilhada do cache.
     """
     from .smooth import luz_radial
-    return luz_radial(cor, raio, 1.0)
+    return luz_radial(cor, raio, 1.0).copy()
 
 
 # ---------------------------------------------------------------------------
@@ -254,12 +254,11 @@ class Cenario:
                 pygame.draw.polygon(tela, ef["cor"],
                                     losango((x, y), r * 2, r, 0.0))
             elif self.efeito == "fogo":
-                # copia para nao mutar a superficie cacheada do glow
-                surf = _superficie_alpha(r * 4, ef["cor"]).copy()
+                surf = _superficie_alpha(r * 4, ef["cor"])
                 surf.set_alpha(int(255 * alfa))
                 tela.blit(surf, (x - r * 2, y - r * 2))
             else:
-                surf = _superficie_alpha(r * 4, ef["cor"]).copy()
+                surf = _superficie_alpha(r * 4, ef["cor"])
                 surf.set_alpha(int(255 * alfa))
                 tela.blit(surf, (x - r * 2, y - r * 2))
         if self.efeito == "distorcao":

@@ -7,6 +7,7 @@ Migrated from game/theme.py -- every function preserved with full logic.
 """
 
 import math
+import time
 from typing import Dict, Tuple
 
 # Brand palette constants (from game/config.py)
@@ -48,18 +49,17 @@ TEMAS_CORES: Dict[str, Dict[str, tuple]] = {
 
 DEFAULT_TEMA = "NEON"
 
-_ANIMACAO_GLOBAL: float = 0.0
-
-
 def atualizar_animacao(dt: float = 1.0) -> None:
-    """Advance the global clock used by animated gradients."""
-    global _ANIMACAO_GLOBAL
-    _ANIMACAO_GLOBAL += dt
+    """Compatibility API; animations use a monotonic clock instead.
+
+    The parameter is retained for existing callers without keeping mutable
+    module state.
+    """
 
 
 def tempo() -> float:
     """Global time in seconds for synchronised animations."""
-    return _ANIMACAO_GLOBAL
+    return time.monotonic()
 
 
 def tema_atual(nome: "str | None" = None) -> Dict[str, tuple]:
