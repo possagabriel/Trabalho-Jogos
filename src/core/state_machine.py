@@ -15,7 +15,7 @@ camada de core testavel.
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
     import pygame
@@ -151,90 +151,90 @@ class GameContext:
 # Estados concretos — placeholders com stubs basicos
 # ---------------------------------------------------------------------------
 
-class MenuState(GameState):
-    """Estado do menu principal."""
+class CallbackState(GameState):
+    """Estado concreto configurado por callbacks de uma tela ou controlador.
+
+    Evita que a maquina de estados conheca pygame, menu ou sistemas de
+    dominio. Os adaptadores de apresentacao fornecem apenas as operacoes de
+    ciclo de vida de que precisam.
+    """
+
+    def __init__(
+        self,
+        context: GameContext,
+        on_enter: Callable[[], None] | None = None,
+        on_exit: Callable[[], None] | None = None,
+        on_event: Callable[[pygame.event.Event], None] | None = None,
+        on_update: Callable[[float], None] | None = None,
+        on_render: Callable[[pygame.Surface], None] | None = None,
+    ) -> None:
+        super().__init__(context)
+        self._on_enter = on_enter
+        self._on_exit = on_exit
+        self._on_event = on_event
+        self._on_update = on_update
+        self._on_render = on_render
 
     def enter(self) -> None:
-        pass
+        if self._on_enter is not None:
+            self._on_enter()
 
     def exit(self) -> None:
-        pass
+        if self._on_exit is not None:
+            self._on_exit()
+
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if self._on_event is not None:
+            self._on_event(event)
 
     def update(self, dt: float) -> None:
-        pass
+        if self._on_update is not None:
+            self._on_update(dt)
 
     def render(self, surface: pygame.Surface) -> None:
-        pass
+        if self._on_render is not None:
+            self._on_render(surface)
 
 
-class PlayingState(GameState):
-    """Estado de gameplay ativo."""
-
-    def enter(self) -> None:
-        pass
-
-    def exit(self) -> None:
-        pass
-
-    def update(self, dt: float) -> None:
-        pass
-
-    def render(self, surface: pygame.Surface) -> None:
-        pass
+class MenuState(CallbackState):
+    """Estado do menu principal, conectado pela camada de apresentacao."""
 
 
-class PausedState(GameState):
-    """Estado de pausa (sobrepor ao PlayingState)."""
-
-    def enter(self) -> None:
-        pass
-
-    def exit(self) -> None:
-        pass
-
-    def update(self, dt: float) -> None:
-        pass
-
-    def render(self, surface: pygame.Surface) -> None:
-        pass
+class PlayingState(CallbackState):
+    """Estado de gameplay ativo, conectado pelo controlador de partida."""
 
 
-class GameOverState(GameState):
-    """Estado de fim de jogo."""
-
-    def enter(self) -> None:
-        pass
-
-    def exit(self) -> None:
-        pass
-
-    def update(self, dt: float) -> None:
-        pass
-
-    def render(self, surface: pygame.Surface) -> None:
-        pass
+class PausedState(CallbackState):
+    """Estado de pausa, conectado pelo controlador da sobreposicao."""
 
 
-class LoadingState(GameState):
+class GameOverState(CallbackState):
+    """Estado de fim de jogo, conectado pela tela de resultados."""
+
+
+class LoadingState(CallbackState):
     """Estado de carregamento entre cenarios."""
 
     def __init__(self, context: GameContext, next_state: GameState | None = None,
-                 duration: float = 1.5) -> None:
-        super().__init__(context)
+                 duration: float = 1.5,
+                 on_render: Callable[[pygame.Surface], None] | None = None) -> None:
+        super().__init__(context, on_render=on_render)
         self._next_state = next_state
         self._duration = duration
         self._elapsed: float = 0.0
 
     def enter(self) -> None:
+        super().enter()
         self._elapsed = 0.0
 
     def exit(self) -> None:
-        pass
+        super().exit()
 
     def update(self, dt: float) -> None:
+        super().update(dt)
         self._elapsed += dt
         if self._elapsed >= self._duration and self._next_state is not None:
             self.context.change_state(self._next_state)
 
     def render(self, surface: pygame.Surface) -> None:
-        pass
+        super().render(surface)

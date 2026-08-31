@@ -5,6 +5,7 @@ Todos os elementos da UI (menu, HUD, botoes, paineis) usam estas cores.
 """
 
 import math
+import time
 
 from .config import QUANTUM_CYAN, RIFT_MAGENTA, DIMENSION_GOLD, VOID_BLACK
 
@@ -41,18 +42,17 @@ TEMAS_CORES = {
 
 DEFAULT_TEMA = "NEON"
 
-_ANIMACAO_GLOBAL = 0.0
-
-
 def atualizar_animacao(dt=1.0):
-    """Avança o relogio global usado por gradientes animados."""
-    global _ANIMACAO_GLOBAL
-    _ANIMACAO_GLOBAL += dt
+    """Mantida por compatibilidade; animacoes usam relogio monotono.
+
+    O argumento continua aceito para chamadas legadas, mas nenhum estado de
+    modulo e mutado. Isso evita animacoes dependentes de efeitos colaterais.
+    """
 
 
 def tempo():
     """Tempo global em segundos para animacoes sincronizadas."""
-    return _ANIMACAO_GLOBAL
+    return time.monotonic()
 
 
 def tema_atual(nome=None):

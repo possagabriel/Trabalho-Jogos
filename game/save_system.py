@@ -1,6 +1,7 @@
 """Sistema de progressao e salvamento em JSON."""
 
 import json
+import logging
 import os
 
 PASTA_DADOS = (os.environ.get("SPACEFURY_DATA_DIR")
@@ -8,6 +9,7 @@ PASTA_DADOS = (os.environ.get("SPACEFURY_DATA_DIR")
                    os.path.abspath(__file__))), "data"))
 ARQUIVO_SAVE = os.path.join(PASTA_DADOS, "save.json")
 ARQUIVO_RECORDES = os.path.join(PASTA_DADOS, "records.json")
+LOGGER = logging.getLogger(__name__)
 
 
 class SistemaProgressao:
@@ -84,7 +86,7 @@ class SistemaProgressao:
 
     def salvar_arquivo(self):
         """Grava o save atual em disco."""
-        self._salvar(ARQUIVO_SAVE, self.dados)
+        return self._salvar(ARQUIVO_SAVE, self.dados)
 
     def _moedas_fim_jogo(self, cenario_atual, bosses_abates):
         """Bonus de moedas ao fim do jogo (cenario atual + bosses da partida)."""
@@ -101,8 +103,10 @@ class SistemaProgressao:
         try:
             with open(arquivo, "w", encoding="utf-8") as f:
                 json.dump(dados, f, ensure_ascii=False, indent=2)
-        except OSError:
-            pass
+        except OSError as erro:
+            LOGGER.warning("Nao foi possivel salvar progresso em %s: %s", arquivo, erro)
+            return False
+        return True
 
     def existe_save(self):
         """Verifica se existe um save valido em disco."""
@@ -140,8 +144,9 @@ class SistemaProgressao:
         try:
             with open(ARQUIVO_RECORDES, "w", encoding="utf-8") as f:
                 json.dump({"recordes": lista}, f, ensure_ascii=False, indent=2)
-        except OSError:
-            pass
+        except OSError as erro:
+            LOGGER.warning("Nao foi possivel salvar recordes: %s", erro)
+            return False
         return lista
 
     @staticmethod

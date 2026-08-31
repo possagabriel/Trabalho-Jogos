@@ -136,6 +136,17 @@ def test_inimigo_invisivel_nao_desenha():
     e.desenhar(tela)  # nao deve levantar erro
 
 
+def test_inimigo_especial_invisivel_avanca_apenas_na_atualizacao():
+    pygame.init()
+    tela = pygame.Surface((LARGURA, ALTURA))
+    e = InimigoEspecial("mutante", 3, cenario_id=1)
+    e.invisivel = 10
+    e.desenhar(tela)
+    assert e.invisivel == 10
+    e.atualizar(novo_jogador())
+    assert e.invisivel == 9
+
+
 # ---------------------------------------------------------------------------
 # InimigoEspecial
 # ---------------------------------------------------------------------------

@@ -29,7 +29,7 @@ from game.config import ALTURA, LARGURA  # noqa: E402
 from game.particles import (  # noqa: E402
     MensagemFlutuante, Particula, SistemaParticulas)
 from game.scenarios import CENARIOS, Cenario, Estrela, _ajustar_cover, \
-    cenario_do_nivel  # noqa: E402
+    _superficie_alpha, cenario_do_nivel  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +112,15 @@ def test_ajustar_cover():
     # proporcao preservada: 100x50 preenche a altura
     pequena = _ajustar_cover(img, 100, 100)
     assert pequena.get_size() == (100, 100)
+
+
+def test_superficie_alpha_nao_expoe_cache_mutavel():
+    pygame.init()
+    primeira = _superficie_alpha(20, (255, 0, 0))
+    segunda = _superficie_alpha(20, (255, 0, 0))
+    primeira.set_alpha(10)
+    assert primeira is not segunda
+    assert segunda.get_alpha() != 10
 
 
 # ---------------------------------------------------------------------------

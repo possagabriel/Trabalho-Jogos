@@ -26,7 +26,7 @@ from unittest import mock  # noqa: E402
 
 import pygame  # noqa: E402
 
-from game.config import ALTURA, LARGURA  # noqa: E402
+from game.config import ALTURA, EstadoJogo, LARGURA  # noqa: E402
 from game.core import Jogo  # noqa: E402
 from game.enemies import Inimigo, InimigoEspecial  # noqa: E402
 from game.powerups import PowerUp  # noqa: E402
@@ -96,6 +96,23 @@ def test_nome_vazio_vira_jogador():
     jogo = Jogo()
     jogo._novo_jogo("   ")
     assert jogo.jogador.nome == "Jogador"
+
+
+def test_estado_do_jogo_usa_enum_e_aceita_compatibilidade_textual():
+    jogo = Jogo()
+    assert jogo.estado is EstadoJogo.MENU
+    jogo.estado = "PREPARANDO"
+    assert jogo.estado is EstadoJogo.PREPARANDO
+
+
+def test_pausa_config_renderiza_volume_zero():
+    jogo = novo_jogo()
+    jogo.config["musica_volume"] = 0.0
+    jogo.config["efeitos_volume"] = 0.0
+    jogo._desenhar_pausa_config({
+        "primaria": (255, 0, 0), "secundaria": (0, 255, 255),
+        "borda_fraco": (100, 100, 100),
+    }, 0.0)
 
 
 # ---------------------------------------------------------------------------

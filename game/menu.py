@@ -14,6 +14,7 @@ em qualquer resolucao sem coordenadas rigidas.
 """
 
 import math
+import logging
 import os
 
 import pygame
@@ -22,6 +23,8 @@ from .assets import carregar_imagem_alpha
 from .config import BRANCO, CIANO, DOURADO, QUANTUM_CYAN, VERDE
 from .layout import ALTURA_BASE, CENTRO, LARGURA_BASE, TOPO_DIREITA, \
     TOPO_ESQUERDA, Layout
+from .menu_screens import (TelaConfiguracoes, TelaContinuar, TelaLoja,
+                           TelaPrincipal, TelaRecordes)
 from .menu_scene import DestaqueMenu, FundoCinematico, HudMenu, NaveMenu, \
     TransicaoMissao, texto_espacado
 from .player import Jogador
@@ -36,6 +39,7 @@ from .theme import tema_atual
 from .ui import BotaoNeon
 
 NEGRO = (0, 0, 0)
+LOGGER = logging.getLogger(__name__)
 
 
 def formatar_pontos(n):
@@ -489,6 +493,13 @@ class MenuPrincipal:
         self.sub_anim = 0.0
         self.sub_anim_total = 0.9
         self.preview_anim = 0.0
+        self.telas = {
+            "MENU": TelaPrincipal(self),
+            "CONTINUAR": TelaContinuar(self),
+            "LOJA": TelaLoja(self),
+            "RECORDES": TelaRecordes(self),
+            "CONFIG": TelaConfiguracoes(self),
+        }
 
     # ------------------------------------------------------------------ fontes
 
@@ -647,8 +658,8 @@ class MenuPrincipal:
         try:
             if os.path.exists(ARQUIVO_RECORDES):
                 os.remove(ARQUIVO_RECORDES)
-        except OSError:
-            pass
+        except OSError as erro:
+            LOGGER.warning("Nao foi possivel apagar os recordes: %s", erro)
         self.jogo.loja = LojaSkins()
         self.jogo.progresso.sincronizar_loja(self.jogo.loja)
         self.jogo.progresso.salvar_arquivo()
@@ -2024,16 +2035,7 @@ class MenuPrincipal:
         self.nave.desenhar(tela, skin, l.px(856), l.px(560),
                            2.2 * l.escala, tema)
         self.hud.desenhar(tela, tema)
-        if self.subestado == "MENU":
-            self._desenhar_menu(tela)
-        elif self.subestado == "CONTINUAR":
-            self._desenhar_continuar(tela)
-        elif self.subestado == "LOJA":
-            self._desenhar_loja(tela)
-        elif self.subestado == "RECORDES":
-            self._desenhar_recordes(tela)
-        elif self.subestado == "CONFIG":
-            self._desenhar_config(tela)
+        self.telas[self.subestado].desenhar(tela)
         self.notificacoes.desenhar(tela, self.fonte_media)
         if self.dialogo and self.dialogo.ativo:
             self.dialogo.desenhar(tela, self.fonte_sub, self.fonte_media,
@@ -2131,46 +2133,41 @@ class MenuPrincipal:
         return True
 
     def _tecla(self, evento):
-        if self.subestado == "MENU":
-            if evento.key in (pygame.K_UP, pygame.K_w):
-                novo = (self.opcao_selecionada - 1) % len(self.opcoes)
-                self._selecionar(novo)
-            elif evento.key in (pygame.K_DOWN, pygame.K_s):
-                novo = (self.opcao_selecionada + 1) % len(self.opcoes)
-                self._selecionar(novo)
-            elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                self.opcoes[self.opcao_selecionada].funcao()
-            elif evento.key == pygame.K_BACKSPACE:
-                self.jogo.nome_jogador = self.jogo.nome_jogador[:-1]
-            elif evento.key == pygame.K_ESCAPE:
-                self._sair()
-            else:
-                if (evento.unicode and evento.unicode.isprintable() and
-                        len(self.jogo.nome_jogador) < 12):
-                    self.jogo.nome_jogador += evento.unicode
-            return True
+        return self.telas[self.subestado].tratar_tecla(evento)
 
-        if self.subestado == "CONTINUAR":
-            if evento.key in (pygame.K_UP, pygame.K_DOWN):
-                self.continuar_selecao = 1 - self.continuar_selecao
-                self._som("navegar")
-            elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                self._acao_continuar(self.continuar_selecao)
-            elif evento.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
-                self._voltar_menu()
-            return True
+    def _tecla_menu_principal(self, evento):
+        """Entrada de teclado exclusiva da tela principal."""
+        if evento.key in (pygame.K_UP, pygame.K_w):
+            novo = (self.opcao_selecionada - 1) % len(self.opcoes)
+            self._selecionar(novo)
+        elif evento.key in (pygame.K_DOWN, pygame.K_s):
+            novo = (self.opcao_selecionada + 1) % len(self.opcoes)
+            self._selecionar(novo)
+        elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            self.opcoes[self.opcao_selecionada].funcao()
+        elif evento.key == pygame.K_BACKSPACE:
+            self.jogo.nome_jogador = self.jogo.nome_jogador[:-1]
+        elif evento.key == pygame.K_ESCAPE:
+            self._sair()
+        elif evento.unicode and evento.unicode.isprintable() and len(self.jogo.nome_jogador) < 12:
+            self.jogo.nome_jogador += evento.unicode
+        return True
 
-        if self.subestado == "LOJA":
-            return self._tecla_loja(evento)
+    def _tecla_continuar(self, evento):
+        """Entrada de teclado exclusiva da tela de continuar."""
+        if evento.key in (pygame.K_UP, pygame.K_DOWN):
+            self.continuar_selecao = 1 - self.continuar_selecao
+            self._som("navegar")
+        elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            self._acao_continuar(self.continuar_selecao)
+        elif evento.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+            self._voltar_menu()
+        return True
 
-        if self.subestado == "RECORDES":
-            if evento.key in (pygame.K_ESCAPE, pygame.K_RETURN,
-                              pygame.K_BACKSPACE):
-                self._voltar_menu()
-            return True
-
-        if self.subestado == "CONFIG":
-            return self._tecla_config(evento)
+    def _tecla_recordes(self, evento):
+        """Entrada de teclado exclusiva da tela de recordes."""
+        if evento.key in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_BACKSPACE):
+            self._voltar_menu()
         return True
 
     def _tecla_loja(self, evento):
@@ -2271,30 +2268,27 @@ class MenuPrincipal:
 
     def _clique(self, pos):
         self.mouse = pos
-        if self.subestado == "MENU":
-            for i, opcao in enumerate(self.opcoes):
-                if opcao.get_rect(self.x_opcoes, self.fonte_opcao,
-                                  self.layout).collidepoint(pos):
-                    self._selecionar(i)
-                    opcao.funcao()
-                    return
-            return
-        if self.subestado == "CONTINUAR":
-            for i, botao in enumerate(self._botoes_continuar()):
-                if botao.rect.collidepoint(pos):
-                    self._acao_continuar(i)
-                    return
-            return
-        if self.subestado == "LOJA":
-            self._clique_loja(pos)
-            return
-        if self.subestado == "RECORDES":
-            if self._botao_voltar().rect.collidepoint(pos):
-                self._voltar_menu()
-            return
-        if self.subestado == "CONFIG":
-            self._clique_config(pos)
-            return
+        self.telas[self.subestado].tratar_clique(pos)
+
+    def _clique_menu_principal(self, pos):
+        """Clique exclusivo da tela principal."""
+        for i, opcao in enumerate(self.opcoes):
+            if opcao.get_rect(self.x_opcoes, self.fonte_opcao, self.layout).collidepoint(pos):
+                self._selecionar(i)
+                opcao.funcao()
+                return
+
+    def _clique_continuar(self, pos):
+        """Clique exclusivo da tela de continuar."""
+        for i, botao in enumerate(self._botoes_continuar()):
+            if botao.rect.collidepoint(pos):
+                self._acao_continuar(i)
+                return
+
+    def _clique_recordes(self, pos):
+        """Clique exclusivo da tela de recordes."""
+        if self._botao_voltar().rect.collidepoint(pos):
+            self._voltar_menu()
 
     def _clique_loja(self, pos):
         l = self.layout
