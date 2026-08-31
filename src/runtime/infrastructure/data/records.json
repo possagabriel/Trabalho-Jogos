@@ -1,0 +1,16 @@
+{
+  "recordes": [
+    {
+      "nome": "Jogador",
+      "pontos": 30452,
+      "nivel": 15,
+      "skin": "Padrao"
+    },
+    {
+      "nome": "Jogador",
+      "pontos": 16210,
+      "nivel": 5,
+      "skin": "Padrao"
+    }
+  ]
+}

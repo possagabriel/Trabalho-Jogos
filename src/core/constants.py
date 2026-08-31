@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from enum import Enum
+
 # ---------------------------------------------------------------------------
 # Dimensoes e desempenho
 # ---------------------------------------------------------------------------
@@ -66,3 +68,30 @@ NIVEL_BOSS: int = 5
 
 MAXIMO_CENARIOS: int = 6
 """Numero total de cenarios/dimensoes jogaveis."""
+
+
+class EstadoJogo(str, Enum):
+    """Estados do fluxo principal mantidos pela aplicacao e pelas telas."""
+
+    MENU = "MENU"
+    CONTINUAR = "CONTINUAR"
+    LOJA = "LOJA"
+    RECORDES = "RECORDES"
+    CONFIG = "CONFIG"
+    PREPARANDO = "PREPARANDO"
+    JOGANDO = "JOGANDO"
+    PAUSA = "PAUSA"
+    GAME_OVER = "GAME_OVER"
+
+
+# Regras de gameplay compartilhadas por entidades e controladores.
+INTERVALO_SPAWN_BASE: int = 35
+INTERVALO_SPAWN_MINIMO: int = 18
+DIVISOR_NIVEL_INTERVALO_SPAWN: int = 3
+INCREMENTO_CARREGAMENTO: float = 2.6
+COMBO_MULTIPLICADOR_MEDIO: int = 10
+COMBO_MULTIPLICADOR_ALTO: int = 20
+INVISIBILIDADE_QUADROS: int = 40
+PISCAR_INVISIBILIDADE_QUADROS: int = 4
+COOLDOWN_ATAQUE_INIMIGO_MINIMO: int = 110
+COOLDOWN_ATAQUE_INIMIGO_MAXIMO: int = 170
