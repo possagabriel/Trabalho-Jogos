@@ -76,7 +76,7 @@ def gradiente_vertical(topo, base):
     chave = (tuple(topo[:3]), tuple(base[:3]))
     if chave in _CACHE_GRADIENTE:
         return _CACHE_GRADIENTE[chave]
-    from .config import ALTURA, LARGURA
+    from src.core.constants import ALTURA, LARGURA
     surf = pygame.Surface((LARGURA, ALTURA))
     for y in range(ALTURA):
         t = y / ALTURA
@@ -165,6 +165,9 @@ def circulo_suave(cor, raio, espessura=0, brilho=1.0):
 def desenhar_circulo(tela, cor, centro, raio, espessura=0, brilho=1.0):
     """Desenha circulo anti-aliased na tela."""
     surf = circulo_suave(cor, raio, espessura, brilho)
+    if len(cor) > 3 and cor[3] < 255:
+        surf = surf.copy()
+        surf.set_alpha(cor[3])
     tela.blit(surf, surf.get_rect(center=(int(centro[0]), int(centro[1]))))
 
 
@@ -215,6 +218,9 @@ def desenhar_poligono(tela, cor, pontos, espessura=0, brilho=1.0,
         cy = sum(p[1] for p in pontos) / len(pontos)
         desenhar_glow(tela, glow_cor, (cx, cy), glow_raio, brilho)
     surf, (ox, oy) = poligono_suave(cor, pontos, espessura, brilho)
+    if len(cor) > 3 and cor[3] < 255:
+        surf = surf.copy()
+        surf.set_alpha(cor[3])
     tela.blit(surf, (ox, oy))
 
 
@@ -225,8 +231,9 @@ def desenhar_poligono(tela, cor, pontos, espessura=0, brilho=1.0,
 def linha_suave(tela, cor, inicio, fim, espessura=2, brilho=1.0):
     """Linha anti-aliased com espessura suave (camadas paralelas)."""
     esp = max(1, int(espessura))
+    alfa_base = cor[3] if len(cor) > 3 else 255
     if esp <= 1:
-        pygame.draw.aaline(tela, tuple(cor[:3]) + (255,), inicio, fim)
+        pygame.draw.aaline(tela, tuple(cor[:3]) + (alfa_base,), inicio, fim)
         return
     dx = fim[0] - inicio[0]
     dy = fim[1] - inicio[1]
@@ -235,7 +242,7 @@ def linha_suave(tela, cor, inicio, fim, espessura=2, brilho=1.0):
     ny = dx / compr
     base = int(esp / 2)
     for i in range(-base, base + 1):
-        alfa = int(255 * (1 - abs(i) / (base + 1)) ** 1.5 * brilho)
+        alfa = int(alfa_base * (1 - abs(i) / (base + 1)) ** 1.5 * brilho)
         off = i * 0.6
         p1 = (inicio[0] + nx * off, inicio[1] + ny * off)
         p2 = (fim[0] + nx * off, fim[1] + ny * off)
@@ -319,6 +326,8 @@ def retangulo_suave(tela, cor, rect, raio_canto=8, espessura=0, brilho=1.0,
                          border_radius=int(raio_canto * escala))
     surf = pygame.transform.smoothscale(big, (rect.w + pad * 2,
                                               rect.h + pad * 2))
+    if len(cor) > 3 and cor[3] < 255:
+        surf.set_alpha(cor[3])
     tela.blit(surf, (rect.x - pad, rect.y - pad))
 
 
@@ -403,7 +412,7 @@ def desenhar_cantos(tela, cor, rect, tamanho=14, espessura=3):
 
 def superficie_vignette(intensidade=0.85, raio_interno=0.55):
     """Surface com vinheta escura nas bordas (efeito cinematografico)."""
-    from .config import ALTURA, LARGURA
+    from src.core.constants import ALTURA, LARGURA
     chave = ("vignette", round(intensidade, 2), round(raio_interno, 2))
     if chave in _CACHE_VIGNETTE:
         return _CACHE_VIGNETTE[chave]

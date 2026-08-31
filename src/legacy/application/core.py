@@ -6,36 +6,40 @@ import sys
 
 import pygame
 
-from .config import ALTURA, AMARELO, BRANCO, CIANO, DIMENSION_GOLD, \
+from src.core.constants import ALTURA, AMARELO, BRANCO, CIANO, DIMENSION_GOLD, \
     DIVISOR_NIVEL_INTERVALO_SPAWN, DOURADO, EstadoJogo, FPS, \
     INCREMENTO_CARREGAMENTO, INTERVALO_SPAWN_BASE, \
     INTERVALO_SPAWN_MINIMO, LARGURA, LARANJA, NEGRO, QUANTUM_CYAN, \
     RIFT_MAGENTA, TITULO, VERDE, VOID_BLACK
-from .bosses import Boss
-from .cel_shading import TextoAcao
-from .combat_controller import ControladorCombate
-from .enemies import Inimigo, InimigoEspecial, composicao_onda, \
+from src.legacy.domain.entities.bosses import Boss
+from src.legacy.infrastructure.graphics.cel_shading import TextoAcao
+from src.legacy.controllers.combat import ControladorCombate
+from src.legacy.controllers.game_over import ControladorGameOver
+from src.legacy.domain.entities.enemies import Inimigo, InimigoEspecial, composicao_onda, \
     sortear_inimigo_especial
-from .fonts import fonte_texto, fonte_titulo
-from .hud import HudJogo
-from .menu import Dialogo, MenuPrincipal
-from .particles import MensagemFlutuante, SistemaParticulas
-from .player import Jogador
-from .powerups import PowerUp, sortear_tipo
-from .progression_controller import ControladorProgressao
-from .save_system import SistemaProgressao
-from .scenarios import CENARIOS, Cenario, cenario_do_nivel
-from .settings import Configuracoes, TEMAS
-from .shop import LojaSkins
-from .sounds import Sons
-from .smooth import desenhar_glow, desenhar_painel, desenhar_poligono, \
+from src.legacy.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
+from src.legacy.presentation.hud import HudJogo
+from src.legacy.presentation.menu import Dialogo, MenuPrincipal
+from src.legacy.domain.world.particles import MensagemFlutuante, SistemaParticulas
+from src.legacy.domain.entities.player import Jogador
+from src.legacy.domain.entities.powerups import PowerUp, sortear_tipo
+from src.legacy.controllers.progression import ControladorProgressao
+from src.legacy.infrastructure.persistence.save_system import SistemaProgressao
+from src.legacy.domain.world.scenarios import CENARIOS, Cenario, cenario_do_nivel
+from src.core.settings import Configuracoes, TEMAS
+from src.legacy.infrastructure.persistence.shop import LojaSkins
+from src.legacy.infrastructure.audio.sounds import Sons
+from src.legacy.infrastructure.graphics.smooth import desenhar_glow, desenhar_painel, desenhar_poligono, \
     desenhar_vignette, retangulo_suave, \
     desenhar_painel_cartoon, desenhar_botao_cartoon, desenhar_estrela
-from .theme import tema_atual
-from .layout import Layout
-from .ui import desenhar_barra, desenhar_cantos, desenhar_texto, \
+from src.infrastructure.graphics.theme import tema_atual
+from src.infrastructure.ui.layout import Layout
+from src.legacy.controllers.loop import ControladorLoop
+from src.legacy.controllers.pause import ControladorPausa
+from src.legacy.controllers.render import ControladorRenderizacao
+from src.legacy.presentation.ui import desenhar_barra, desenhar_cantos, desenhar_texto, \
     desenhar_titulo
-from .weapons import ARMARIA, Projetil
+from src.legacy.domain.entities.weapons import ARMARIA, Projetil
 
 DICAS_CARREGAMENTO = [
     "Prepare-se para atravessar a fenda!",
@@ -121,6 +125,10 @@ class Jogo:
         self._pausa_mouse = (0, 0)
         self.progressao_controller = ControladorProgressao(self)
         self.combate_controller = ControladorCombate(self)
+        self.pausa_controller = ControladorPausa(self)
+        self.game_over_controller = ControladorGameOver(self)
+        self.render_controller = ControladorRenderizacao(self)
+        self.loop_controller = ControladorLoop(self)
         self._novo_jogo("Jogador", zerar_estado=False)
         self.estado = EstadoJogo.MENU
 
@@ -176,7 +184,7 @@ class Jogo:
 
     def _aplicar_modo_video(self):
         """Reconfigura a janela: tela cheia (resolucao nativa) ou escolhida."""
-        from .settings import parse_resolucao
+        from src.core.settings import parse_resolucao
         if self.config["tela_cheia"]:
             try:
                 w, h = pygame.display.get_desktop_sizes()[0]
@@ -272,24 +280,25 @@ class Jogo:
 
     # ----- combate -----
 
-    def _adicionar_trauma(self, qtd):
+    def adicionar_trauma(self, quantidade: float) -> None:
         """Adiciona intensidade ao screen shake (0..1, decai a cada frame)."""
-        self.trauma = min(1.0, self.trauma + qtd)
+        self.trauma = min(1.0, self.trauma + quantidade)
 
-    def _congelar(self, quadros):
+    def _adicionar_trauma(self, qtd):
+        """Compatibilidade para chamadas legadas de ``adicionar_trauma``."""
+        self.adicionar_trauma(qtd)
+
+    def congelar(self, quadros: int) -> None:
         """Pausa breve o mundo (hit-stop) para dar peso a acoes grandes."""
         self.hitstop = max(self.hitstop, quadros)
 
+    def _congelar(self, quadros):
+        """Compatibilidade para chamadas legadas de ``congelar``."""
+        self.congelar(quadros)
+
     def _aplicar_shake(self):
-        """Desloca a cena desenhada conforme o trauma restante."""
-        if self.trauma <= 0:
-            return
-        mag = self.trauma ** 2 * 16
-        off = (random.uniform(-mag, mag), random.uniform(-mag, mag))
-        self._tela_shake.fill(NEGRO)
-        self._tela_shake.blit(self.tela, (int(off[0]), int(off[1])))
-        self.tela.blit(self._tela_shake, (0, 0))
-        self.trauma = max(0.0, self.trauma - 0.035)
+        """Compatibilidade para o overlay de tremor da renderizacao."""
+        self.render_controller.aplicar_shake()
 
     def _aplicar_dano_jogador(self):
         """Centraliza o dano ao jogador, tratando escudo e feedback."""
@@ -349,25 +358,10 @@ class Jogo:
         self._adicionar_trauma(0.5)
 
     def _fim_de_jogo(self):
-        melhor_anterior = SistemaProgressao.melhor_pontuacao()
-        nome_skin = self.jogador.skin.nome
-        self.recordes = SistemaProgressao.salvar_recorde(
-            self.jogador.nome, self.jogador.pontuacao, self.jogador.nivel,
-            nome_skin)
-        self.novo_recorde = self.jogador.pontuacao > melhor_anterior
-        self.moedas_ganhas = (self.jogador.moedas_jogo +
-                              self.progresso._moedas_fim_jogo(
-                                  self.cenario.id, self.bosses_abates))
-        self.progresso.registrar_fim_jogo(self.jogador, self.tempo_partida,
-                                          self.inimigos_abates,
-                                          self.cenario.id, self.bosses_abates)
-        self.loja.moedas += self.moedas_ganhas
-        self._salvar_tudo()
-        self.sons.tocar("gameover")
-        self.particulas.explosao_dupla(self.jogador.x, self.jogador.y)
-        self.estado = "GAME_OVER"
+        """Compatibilidade para o fluxo de encerramento da partida."""
+        self.game_over_controller.encerrar_partida()
 
-    def _desbloquear_skin_jogo(self, skin_id):
+    def desbloquear_skin(self, skin_id: str) -> bool:
         """Desbloqueia uma skin (ex.: drop raro do cristalino)."""
         if self.progresso.desbloquear_skin(skin_id):
             for skin in self.loja.skins:
@@ -376,6 +370,10 @@ class Jogo:
             self._salvar_tudo()
             return True
         return False
+
+    def _desbloquear_skin_jogo(self, skin_id):
+        """Compatibilidade para chamadas legadas de ``desbloquear_skin``."""
+        return self.desbloquear_skin(skin_id)
 
     # ----- atualizacao da partida -----
 
@@ -497,72 +495,19 @@ class Jogo:
         self.combate_controller.atualizar_powerups()
 
     def _atualizar(self):
-        if self.estado is EstadoJogo.JOGANDO:
-            self.tempo_partida += 1 / FPS
-            self._atualizar_jogando()
-        elif self.estado is EstadoJogo.PREPARANDO:
-            self.carregamento += INCREMENTO_CARREGAMENTO
-            if self.carregamento >= 100:
-                self.carregamento = 100
-                self.estado = EstadoJogo.JOGANDO
-        elif self.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES",
-                             "CONFIG"):
-            self.menu.atualizar()
-        self.particulas.atualizar()
-        self.cenario.atualizar()
-        for texto in self.textos_acao[:]:
-            texto.atualizar()
-            if not texto.ativo:
-                self.textos_acao.remove(texto)
-        for mensagem in self.mensagens[:]:
-            mensagem.atualizar()
-            if not mensagem.viva:
-                self.mensagens.remove(mensagem)
-        if self.fade > 0:
-            self.fade = max(0, self.fade - 18)
-        if self.flash > 0:
-            self.flash -= 1
-        if self.boss_intro > 0:
-            self.boss_intro -= 1
+        """Compatibilidade para a atualizacao conduzida pelo loop."""
+        self.loop_controller.atualizar()
 
     # ----- eventos -----
 
     def _tratar_eventos(self):
-        for evento in pygame.event.get():
-            if evento.type == pygame.QUIT:
-                self._salvar_tudo()
-                return False
-            if self.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES",
-                               "CONFIG"):
-                if not self.menu.tratar_eventos(evento):
-                    return False
-                continue
-            if evento.type != pygame.KEYDOWN:
-                continue
-            if self.estado is EstadoJogo.JOGANDO:
-                tecla_pausar = self.controles.get("pausar", 0)
-                if (evento.key == pygame.K_p or
-                        evento.key == pygame.K_ESCAPE or
-                        evento.key == tecla_pausar):
-                    self.estado = EstadoJogo.PAUSA
-                elif evento.key == pygame.K_e:
-                    self._ativar_especial()
-                elif pygame.K_1 <= evento.key <= pygame.K_9:
-                    self.jogador.selecionar_arma(evento.key - pygame.K_1)
-            elif self.estado is EstadoJogo.PAUSA:
-                self._tratar_eventos_pausa(evento)
-            elif self.estado is EstadoJogo.GAME_OVER:
-                if evento.key == pygame.K_RETURN:
-                    self._preparar_jogo()
-                elif evento.key == pygame.K_ESCAPE:
-                    self.estado = EstadoJogo.MENU
-                    self.fade = 255
-        return self.rodando
+        """Compatibilidade para o processamento de eventos do loop."""
+        return self.loop_controller.tratar_eventos()
 
     # ----- desenho -----
 
     def _desenhar_hud(self):
-        self.hud.desenhar(self.tela, self)
+        self.render_controller.desenhar_hud()
 
     def _desenhar_jogo(self):
         self.cenario.desenhar(self.tela)
@@ -1166,64 +1111,12 @@ class Jogo:
                            "centro", self.fontes)
 
     def _desenhar(self):
-        if self.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
-            self.tela_ui.fill(VOID_BLACK)
-            self.menu.desenhar(self.tela_ui)
-            self.janela.blit(self.tela_ui, (0, 0))
-            if self.flash > 0:
-                self._janela_flash.fill((255, 0, 0, self.flash * 18))
-                self.janela.blit(self._janela_flash, (0, 0))
-            if self.fade > 0:
-                self._janela_fade.fill(NEGRO)
-                self._janela_fade.set_alpha(self.fade)
-                self.janela.blit(self._janela_fade, (0, 0))
-            pygame.display.flip()
-            return
-
-        if self.estado is EstadoJogo.PREPARANDO:
-            self._desenhar_carregando()
-        elif self.estado is EstadoJogo.JOGANDO:
-            self._desenhar_jogo()
-        elif self.estado is EstadoJogo.PAUSA:
-            self._desenhar_jogo()
-            self._desenhar_hud()
-            self._desenhar_pausa()
-        elif self.estado is EstadoJogo.GAME_OVER:
-            self._desenhar_jogo()
-            self._desenhar_hud()
-            self._desenhar_game_over()
-
-        if self.flash > 0:
-            self._tela_flash.fill((255, 0, 0, self.flash * 15))
-            self.tela.blit(self._tela_flash, (0, 0))
-        if self.fade > 0:
-            self._tela_fade.fill(NEGRO)
-            self._tela_fade.set_alpha(self.fade)
-            self.tela.blit(self._tela_fade, (0, 0))
-
-        self._aplicar_shake()
-        self._apresentar()
-
-        if self.estado is EstadoJogo.JOGANDO:
-            self.hud.desenhar(self.janela, self)
-            pygame.display.flip()
-        else:
-            pygame.display.flip()
+        """Compatibilidade para a composicao da cena e dos overlays."""
+        self.render_controller.desenhar()
 
     def executar(self):
-        rodando = True
-        while rodando:
-            rodando = self._tratar_eventos()
-            if not rodando:
-                break
-            if self.hitstop > 0:
-                self.hitstop -= 1
-            else:
-                self._atualizar()
-            self._desenhar()
-            self.relogio.tick(FPS)
-        pygame.quit()
-        sys.exit(0)
+        """Inicia o ciclo coordenado por :class:`ControladorLoop`."""
+        self.loop_controller.executar()
 
 
 if __name__ == "__main__":

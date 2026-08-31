@@ -5,10 +5,11 @@ import random
 
 import pygame
 
-from .assets import carregar_imagem
-from .config import ALTURA, LARGURA
-from .geometry import cruz, losango
-from .smooth import desenhar_circulo, desenhar_glow
+from src.legacy.infrastructure.assets import carregar_imagem
+from src.core.constants import ALTURA, LARGURA
+from src.legacy.infrastructure.graphics.geometry import cruz, losango
+from src.legacy.infrastructure.graphics.smooth import desenhar_circulo, desenhar_glow, desenhar_poligono, \
+    linha_suave
 
 
 def _superficie_alpha(raio, cor):
@@ -17,7 +18,7 @@ def _superficie_alpha(raio, cor):
     Retorna sempre uma copia, para que ``set_alpha`` e outras transformacoes
     locais nunca alterem uma superficie compartilhada do cache.
     """
-    from .smooth import luz_radial
+    from src.legacy.infrastructure.graphics.smooth import luz_radial
     return luz_radial(cor, raio, 1.0).copy()
 
 
@@ -115,15 +116,15 @@ class Estrela:
         t = self.tamanho
         if self.forma == "circulo":
             if t <= 1:
-                pygame.draw.circle(tela, self.cor, (x, y), t)
+                desenhar_circulo(tela, self.cor, (x, y), t)
             else:
                 desenhar_glow(tela, self.cor, (x, y), t * 2, 0.5)
                 desenhar_circulo(tela, self.cor, (x, y), t)
         elif self.forma == "chama":
             # formato de chama: triangulo fino apontando para baixo
             desenhar_glow(tela, self.cor, (x, y), t * 2.5, 0.4)
-            pygame.draw.polygon(tela, self.cor, [(x, y - t), (x + t, y + t),
-                                                 (x - t, y + t)])
+            desenhar_poligono(tela, self.cor, [(x, y - t), (x + t, y + t),
+                                                (x - t, y + t)])
         elif self.forma == "bolha":
             desenhar_glow(tela, self.cor, (x, y), t * 2.5, 0.5)
             desenhar_circulo(tela, self.cor, (x, y), t)
@@ -132,15 +133,14 @@ class Estrela:
                              brilho=1.4)
         elif self.forma == "diamante":
             desenhar_glow(tela, self.cor, (x, y), t * 2.5, 0.4)
-            pygame.draw.polygon(tela, self.cor,
-                                losango((x, y), t, t, 0.0))
+            desenhar_poligono(tela, self.cor, losango((x, y), t, t, 0.0))
         elif self.forma == "espiral":
             desenhar_glow(tela, self.cor, (x, y), t * 2.5, 0.5)
             desenhar_circulo(tela, self.cor, (x, y), t)
             desenhar_circulo(tela, (10, 0, 30), (x, y), t // 2)
         elif self.forma == "cruz":
             desenhar_glow(tela, self.cor, (x, y), t * 2, 0.4)
-            pygame.draw.polygon(tela, self.cor, cruz((x, y), t))
+            desenhar_poligono(tela, self.cor, cruz((x, y), t))
 
 
 class Cenario:
@@ -167,7 +167,7 @@ class Cenario:
     # ----- construcao -----
 
     def _criar_gradiente(self, topo, base):
-        from .smooth import gradiente_vertical
+        from src.legacy.infrastructure.graphics.smooth import gradiente_vertical
         return gradiente_vertical(topo, base)
 
     def _criar_nebulosas(self, cores):
@@ -178,8 +178,8 @@ class Cenario:
             y = random.randint(0, ALTURA)
             raio = random.randint(80, 180)
             cor = random.choice(cores)
-            pygame.draw.circle(surf, cor + (random.randint(14, 22),),
-                               (x, y), raio)
+            desenhar_circulo(surf, cor + (random.randint(14, 22),),
+                             (x, y), raio)
             nebulosas.append(surf)
         return nebulosas
 
@@ -251,8 +251,8 @@ class Cenario:
             alfa = min(1.0, 1 - ef["t"] / ef["max"]) * 0.8
             x, y, r = int(ef["x"]), int(ef["y"]), ef["r"]
             if self.efeito == "cristais":
-                pygame.draw.polygon(tela, ef["cor"],
-                                    losango((x, y), r * 2, r, 0.0))
+                desenhar_poligono(tela, ef["cor"],
+                                  losango((x, y), r * 2, r, 0.0))
             elif self.efeito == "fogo":
                 surf = _superficie_alpha(r * 4, ef["cor"])
                 surf.set_alpha(int(255 * alfa))
@@ -276,7 +276,7 @@ class Cenario:
                 y = y_base + desloc
                 alfa = max(0, 140 - int(abs(y_base - ALTURA // 2) * 0.3))
                 cor = (160, 100, 255, min(140, alfa))
-                pygame.draw.aaline(tela, cor, (i, y), (i + 8, y), 2)
+                linha_suave(tela, cor, (i, y), (i + 8, y), 2)
 
     def _desenhar_raios(self, tela):
         """Raios de luz descendo (Plano Divino)."""
@@ -290,8 +290,8 @@ class Cenario:
                 meio = larg / 2
                 for i in range(larg):
                     alfa = int(90 * (1 - abs(i - meio) / meio))
-                    pygame.draw.line(surf, (255, 240, 180, alfa), (i, 0),
-                                     (i, ALTURA))
+                    linha_suave(surf, (255, 240, 180, alfa), (i, 0),
+                                 (i, ALTURA), 1)
                 surf = pygame.transform.smoothscale(
                     surf, (max(1, int(larg * 0.7)), ALTURA))
                 _CACHE_RAIOS[larg] = (surf, int(larg * 0.15))

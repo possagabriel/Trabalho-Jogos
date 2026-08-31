@@ -19,24 +19,29 @@ import os
 
 import pygame
 
-from .assets import carregar_imagem_alpha
-from .config import BRANCO, CIANO, DOURADO, QUANTUM_CYAN, VERDE
-from .layout import ALTURA_BASE, CENTRO, LARGURA_BASE, TOPO_DIREITA, \
+from src.legacy.infrastructure.assets import carregar_imagem_alpha
+from src.legacy.presentation.screens.continue_screen import TelaContinuarJogo
+from src.core.constants import BRANCO, CIANO, DOURADO, QUANTUM_CYAN, VERDE
+from src.infrastructure.ui.layout import ALTURA_BASE, CENTRO, LARGURA_BASE, TOPO_DIREITA, \
     TOPO_ESQUERDA, Layout
-from .menu_screens import (TelaConfiguracoes, TelaContinuar, TelaLoja,
+from src.legacy.presentation.screens.main_menu_screen import TelaPrincipalJogo
+from src.legacy.presentation.screens.menu_screens import (TelaConfiguracoes, TelaContinuar, TelaLoja,
                            TelaPrincipal, TelaRecordes)
-from .menu_scene import DestaqueMenu, FundoCinematico, HudMenu, NaveMenu, \
+from src.legacy.presentation.screens.records_screen import TelaRecordesJogo
+from src.legacy.presentation.screens.store_screen import TelaLojaJogo
+from src.legacy.presentation.screens.settings_screen import TelaConfiguracoesJogo
+from src.legacy.presentation.menu_scene import DestaqueMenu, FundoCinematico, HudMenu, NaveMenu, \
     TransicaoMissao, texto_espacado
-from .player import Jogador
-from .save_system import ARQUIVO_RECORDES, SistemaProgressao
-from .settings import ACOES_CONTROLE, RESOLUCOES, TEMAS
-from .shop import LojaSkins
-from .smooth import desenhar_cantos, desenhar_circulo as \
+from src.legacy.domain.entities.player import Jogador
+from src.legacy.infrastructure.persistence.save_system import ARQUIVO_RECORDES, SistemaProgressao
+from src.core.settings import ACOES_CONTROLE, RESOLUCOES, TEMAS
+from src.legacy.infrastructure.persistence.shop import LojaSkins
+from src.legacy.infrastructure.graphics.smooth import desenhar_cantos, desenhar_circulo as \
     desenhar_circulo_suave, desenhar_glow, ease_out, ease_out_back, \
-    painel_glass, retangulo_suave, texto_suave, \
+    desenhar_poligono, linha_suave, painel_glass, retangulo_suave, texto_suave, \
     desenhar_painel_cartoon, desenhar_botao_cartoon, desenhar_estrela
-from .theme import tema_atual
-from .ui import BotaoNeon
+from src.infrastructure.graphics.theme import tema_atual
+from src.legacy.presentation.ui import BotaoNeon
 
 NEGRO = (0, 0, 0)
 LOGGER = logging.getLogger(__name__)
@@ -103,12 +108,10 @@ class OpcaoMenu:
         self._blit(tela, surf, xf, y, alfa)
         if selecionado and alfa >= 255:
             larg = fonte_ativa.size(self.texto)[0]
-            pygame.draw.line(tela, primaria,
-                             (xf, y + fonte_ativa.get_height() // 2 +
-                              layout.px(4)),
-                             (xf + larg,
-                              y + fonte_ativa.get_height() // 2 + layout.px(4)),
-                             3)
+            linha_suave(tela, primaria,
+                         (xf, y + fonte_ativa.get_height() // 2 + layout.px(4)),
+                         (xf + larg,
+                          y + fonte_ativa.get_height() // 2 + layout.px(4)), 3)
 
 
 class SistemaNotificacao:
@@ -145,10 +148,8 @@ class SistemaNotificacao:
             fundo = pygame.Surface((largura, altura_toast), pygame.SRCALPHA)
             cor = self.CORES[notif["tipo"]]
             rect = pygame.Rect(0, 0, largura, altura_toast)
-            pygame.draw.rect(fundo, cor + (int(notif["alpha"] * 0.85),),
-                             rect, border_radius=8)
-            pygame.draw.rect(fundo, BRANCO + (int(notif["alpha"]),),
-                             rect, 1, border_radius=8)
+            retangulo_suave(fundo, cor + (int(notif["alpha"] * 0.85),), rect, 8)
+            retangulo_suave(fundo, BRANCO + (int(notif["alpha"]),), rect, 8, 1)
             x = l.largura - largura - l.px(20)
             tela.blit(fundo, (x, y))
             texto.set_alpha(notif["alpha"])
@@ -272,27 +273,27 @@ class Dialogo:
         # sombra do circulo (em surface SRCALPHA para alpha funcionar)
         sombra_size = raio_icone * 2 + 10
         sombra_icone = pygame.Surface((sombra_size, sombra_size), pygame.SRCALPHA)
-        pygame.draw.circle(sombra_icone, (0, 0, 0, 100),
-                           (sombra_size // 2 + 3, sombra_size // 2 + 4),
-                           raio_icone)
+        desenhar_circulo_suave(sombra_icone, (0, 0, 0, 100),
+                               (sombra_size // 2 + 3, sombra_size // 2 + 4),
+                               raio_icone)
         tela.blit(sombra_icone, (ix - sombra_size // 2,
                                  iy - sombra_size // 2))
         # circulo de fundo
-        pygame.draw.circle(tela, icone_cor, (ix, iy), raio_icone)
+        desenhar_circulo_suave(tela, icone_cor, (ix, iy), raio_icone)
         # contorno preto
-        pygame.draw.circle(tela, (0, 0, 0), (ix, iy), raio_icone, 3)
+        desenhar_circulo_suave(tela, (0, 0, 0), (ix, iy), raio_icone, 3)
         # brilho interno (em surface SRCALPHA)
         hl_size = raio_icone * 2 + 10
         hl_icone = pygame.Surface((hl_size, hl_size), pygame.SRCALPHA)
-        pygame.draw.circle(hl_icone, (255, 255, 255, 80),
-                           (hl_size // 2 - raio_icone // 4,
-                            hl_size // 2 - raio_icone // 4),
-                           raio_icone // 3)
+        desenhar_circulo_suave(hl_icone, (255, 255, 255, 80),
+                               (hl_size // 2 - raio_icone // 4,
+                                hl_size // 2 - raio_icone // 4),
+                               raio_icone // 3)
         tela.blit(hl_icone, (ix - hl_size // 2, iy - hl_size // 2))
         # exclamacao
-        pygame.draw.rect(tela, BRANCO,
-                         (ix - 2, iy - l.px(10), 5, l.px(12)))
-        pygame.draw.circle(tela, BRANCO, (ix, iy + l.px(7)), 3)
+        retangulo_suave(tela, BRANCO,
+                         pygame.Rect(ix - 2, iy - l.px(10), 5, l.px(12)), 2)
+        desenhar_circulo_suave(tela, BRANCO, (ix, iy + l.px(7)), 3)
 
         # titulo com sombra cartoon
         titulo_fonte = fonte_titulo
@@ -360,8 +361,8 @@ class Dialogo:
         # sombra deslocada
         sombra_rect = pygame.Rect(rect.x + 3, rect.y + 4, rect.w, rect.h)
         sombra = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
-        pygame.draw.rect(sombra, (0, 0, 0, 100),
-                         (0, 0, rect.w, rect.h), border_radius=rect.h // 2)
+        retangulo_suave(sombra, (0, 0, 0, 100),
+                         pygame.Rect(0, 0, rect.w, rect.h), rect.h // 2)
         tela.blit(sombra, sombra_rect.topleft)
 
         # glow no hover
@@ -372,24 +373,22 @@ class Dialogo:
         # fundo do botao
         cor = tuple(min(255, c + 25) for c in cor_fundo) if hover else cor_fundo
         fundo = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
-        pygame.draw.rect(fundo, tuple(cor[:3]) + (int(240 * p),),
-                         (0, 0, rect.w, rect.h), border_radius=rect.h // 2)
+        retangulo_suave(fundo, tuple(cor[:3]) + (int(240 * p),),
+                         pygame.Rect(0, 0, rect.w, rect.h), rect.h // 2)
         tela.blit(fundo, rect.topleft)
 
         # borda preta grossa
-        pygame.draw.rect(tela, (0, 0, 0), rect, 4,
-                         border_radius=rect.h // 2)
+        retangulo_suave(tela, (0, 0, 0), rect, rect.h // 2, 4)
         # borda colorida
-        pygame.draw.rect(tela, cor_borda, rect, 2,
-                         border_radius=rect.h // 2)
+        retangulo_suave(tela, cor_borda, rect, rect.h // 2, 2)
 
         # highlight interno
         hl = pygame.Surface((rect.w - 12, rect.h // 3), pygame.SRCALPHA)
         for i in range(rect.h // 5):
             t_hl = i / (rect.h // 5)
             a = int(40 * (1 - t_hl))
-            pygame.draw.rect(hl, (255, 255, 255, a),
-                             (0, i, rect.w - 12, 1), border_radius=4)
+            retangulo_suave(hl, (255, 255, 255, a),
+                             pygame.Rect(0, i, rect.w - 12, 1), 1)
         tela.blit(hl, (rect.x + 6, rect.y + 4))
 
         # texto com sombra
@@ -493,6 +492,11 @@ class MenuPrincipal:
         self.sub_anim = 0.0
         self.sub_anim_total = 0.9
         self.preview_anim = 0.0
+        self.tela_principal = TelaPrincipalJogo(self)
+        self.tela_continuar = TelaContinuarJogo(self)
+        self.tela_recordes = TelaRecordesJogo(self)
+        self.tela_loja = TelaLojaJogo(self)
+        self.tela_configuracoes = TelaConfiguracoesJogo(self)
         self.telas = {
             "MENU": TelaPrincipal(self),
             "CONTINUAR": TelaContinuar(self),
@@ -747,9 +751,8 @@ class MenuPrincipal:
                 tela, botao, self.fonte_media,
                 self._frac_sub(0.55 + i * 0.06, 0.3))
         if self.continuar_selecao < 2:
-            pygame.draw.rect(tela, (255, 200, 100),
-                             botoes[self.continuar_selecao].rect, 3,
-                             border_radius=10)
+            retangulo_suave(tela, (255, 200, 100),
+                             botoes[self.continuar_selecao].rect, 10, 3)
 
     # --------------------------------------------------------------- loja
 
@@ -867,12 +870,12 @@ class MenuPrincipal:
         if tem_alpha:
             desenhar_glow(tela, borda, rect.center, max(rect.w, rect.h) // 2,
                           0.4)
-            pygame.draw.rect(tela, fundo + (255,), rect, border_radius=10)
-            pygame.draw.rect(tela, borda + (255,), rect, 2, border_radius=10)
+            retangulo_suave(tela, fundo + (255,), rect, 10)
+            retangulo_suave(tela, borda + (255,), rect, 10, 2)
         else:
             retangulo_suave(tela, fundo, rect, 10,
                             glow_cor=borda, glow_raio=10)
-            pygame.draw.rect(tela, borda, rect, 2, border_radius=10)
+            retangulo_suave(tela, borda, rect, 10, 2)
         if skin.id == self.jogo.loja.skin_atual:
             desenhar_cantos(tela, borda, rect, tamanho=l.px(8),
                             espessura=l.px(2))
@@ -1266,9 +1269,8 @@ class MenuPrincipal:
                                painel.width - l.px(60), l.px(40))
             selecionado = (i == self.controle_selecao)
             if selecionado:
-                pygame.draw.rect(tela, (50, 46, 90), rect, border_radius=8)
-                pygame.draw.rect(tela, (255, 200, 100), rect, 2,
-                                 border_radius=8)
+                retangulo_suave(tela, (50, 46, 90), rect, 8)
+                retangulo_suave(tela, (255, 200, 100), rect, 8, 2)
             surface = self.fonte_media.render(acao.upper(), True, BRANCO)
             self._blit_alfa(tela, surface, (rect.x + l.px(14),
                                             rect.y + l.px(10)),
@@ -1361,9 +1363,8 @@ class MenuPrincipal:
                                painel.width - l.px(60), l.px(36))
             selecionada = (i == self.resolucao_selecao)
             if selecionada:
-                pygame.draw.rect(tela, (50, 46, 90), rect, border_radius=8)
-                pygame.draw.rect(tela, (255, 200, 100), rect, 2,
-                                 border_radius=8)
+                retangulo_suave(tela, (50, 46, 90), rect, 8)
+                retangulo_suave(tela, (255, 200, 100), rect, 8, 2)
             cor = BRANCO if selecionada else (185, 190, 230)
             surface = self.fonte_media.render(resolucao, True, cor)
             self._blit_alfa(tela, surface, surface.get_rect(
@@ -1389,9 +1390,8 @@ class MenuPrincipal:
         total = len(RESOLUCOES)
         y0 = painel.y + l.px(58)
         y1 = painel.y + l.px(58) + 9 * l.px(42)
-        pygame.draw.line(tela, (70, 70, 110),
-                         (painel.right - l.px(18), y0),
-                         (painel.right - l.px(18), y1), 3)
+        linha_suave(tela, (70, 70, 110), (painel.right - l.px(18), y0),
+                    (painel.right - l.px(18), y1), 3)
         barra_h = max(l.px(24), int((y1 - y0) * 9 / total))
         frac = inicio / (total - 9)
         by = y0 + int((y1 - y0 - barra_h) * frac)
@@ -1510,15 +1510,15 @@ class MenuPrincipal:
                                     p=self._frac_sub(0.0, 0.35))
         frame = self._frame_janela()
         cor = tema["secundaria"]
-        pygame.draw.rect(tela, cor, frame, 1)
+        retangulo_suave(tela, cor, frame, 1, 1)
         desenhar_cantos(tela, cor, frame, tamanho=l.px(24), espessura=l.px(3))
         desenhar_circulo_suave(tela, cor, frame.center, l.px(5), brilho=1.3)
-        pygame.draw.line(tela, (90, 95, 130),
-                         (frame.centerx - l.px(70), frame.centery),
-                         (frame.centerx + l.px(70), frame.centery), 1)
-        pygame.draw.line(tela, (90, 95, 130),
-                         (frame.centerx, frame.centery - l.px(70)),
-                         (frame.centerx, frame.centery + l.px(70)), 1)
+        linha_suave(tela, (90, 95, 130),
+                    (frame.centerx - l.px(70), frame.centery),
+                    (frame.centerx + l.px(70), frame.centery), 1)
+        linha_suave(tela, (90, 95, 130),
+                    (frame.centerx, frame.centery - l.px(70)),
+                    (frame.centerx, frame.centery + l.px(70)), 1)
 
         cfg = self.jogo.config
         escala_pct = cfg["ajuste_escala"] * 100
@@ -1542,9 +1542,8 @@ class MenuPrincipal:
         total = len(linhas)
         y0 = painel.y + l.px(172)
         y1 = y0 + self._CONFIG_VISIVEIS * l.px(54)
-        pygame.draw.line(tela, (70, 70, 110),
-                         (painel.right - l.px(18), y0),
-                         (painel.right - l.px(18), y1), 3)
+        linha_suave(tela, (70, 70, 110), (painel.right - l.px(18), y0),
+                    (painel.right - l.px(18), y1), 3)
         barra_h = max(l.px(20), int((y1 - y0) * self._CONFIG_VISIVEIS / total))
         frac = inicio / (total - self._CONFIG_VISIVEIS)
         by = y0 + int((y1 - y0 - barra_h) * frac)
@@ -1588,9 +1587,9 @@ class MenuPrincipal:
             self._blit_alfa(tela, surface, (l.px(190) + dx, y - l.px(12)),
                             int(255 * alfa))
             if selecionada:
-                pygame.draw.rect(tela, (255, 200, 100),
-                                 (l.px(175) + dx, y - l.px(24), l.px(6),
-                                  l.px(30)), border_radius=3)
+                retangulo_suave(tela, (255, 200, 100),
+                                 pygame.Rect(l.px(175) + dx, y - l.px(24),
+                                             l.px(6), l.px(30)), 3)
             if tipo == "slider":
                 if i == 4:
                     fracao = max(0.0, min(1.0,
@@ -1727,7 +1726,7 @@ class MenuPrincipal:
         y = rect.y + l.px(4)
         x0 = rect.x + l.px(24)
         compr = rect.w - l.px(48)
-        pygame.draw.line(tela, cor, (x0, y), (x0 + compr, y), 2)
+        linha_suave(tela, cor, (x0, y), (x0 + compr, y), 2)
         fase = (math.sin(t * 2.2) + 1) / 2
         xv = x0 + int(fase * compr)
         desenhar_glow(tela, cor, (xv, y), l.px(10), 0.6)
@@ -1848,28 +1847,28 @@ class MenuPrincipal:
         w, h, inc = l.px(430), l.px(130), l.px(26)
         surf = pygame.Surface((w, h + inc), pygame.SRCALPHA)
         pts = [(0, inc), (w, 0), (w, h), (0, h + inc)]
-        pygame.draw.polygon(surf, tema["primaria"] + (70,), pts)
-        pygame.draw.polygon(surf, tema["primaria"] + (170,), pts, 2)
-        pygame.draw.line(surf, (255, 255, 255, 70), (0, inc + 6), (w, 6), 5)
-        pygame.draw.polygon(surf, tema["secundaria"] + (90,),
-                            [(0, h + inc - 10), (70, h + inc - 34),
-                             (0, h + inc - 34)])
+        desenhar_poligono(surf, tema["primaria"] + (70,), pts)
+        desenhar_poligono(surf, tema["primaria"] + (170,), pts, 2)
+        linha_suave(surf, (255, 255, 255, 70), (0, inc + 6), (w, 6), 5)
+        desenhar_poligono(surf, tema["secundaria"] + (90,),
+                          [(0, h + inc - 10), (70, h + inc - 34),
+                           (0, h + inc - 34)])
         # moldura interna em paralelogramo (tom secundario)
-        pygame.draw.polygon(surf, tema["secundaria"] + (110,),
-                            [(l.px(10), inc + l.px(10)),
-                             (w - l.px(10), l.px(10)),
-                             (w - l.px(10), h - l.px(10)),
-                             (l.px(10), h + inc - l.px(10))], 1)
+        desenhar_poligono(surf, tema["secundaria"] + (110,),
+                          [(l.px(10), inc + l.px(10)),
+                           (w - l.px(10), l.px(10)),
+                           (w - l.px(10), h - l.px(10)),
+                           (l.px(10), h + inc - l.px(10))], 1)
         # linha de energia vertical na direita
-        pygame.draw.line(surf, tema["secundaria"] + (140,),
-                         (w - l.px(16), l.px(8)), (w - l.px(16), h), 2)
+        linha_suave(surf, tema["secundaria"] + (140,),
+                    (w - l.px(16), l.px(8)), (w - l.px(16), h), 2)
         # bracket HUD no canto superior esquerdo
         cx, cy = l.px(16), inc + l.px(14)
         comp = l.px(14)
-        pygame.draw.line(surf, tema["secundaria"] + (220,),
-                         (cx, cy), (cx + comp, cy), 2)
-        pygame.draw.line(surf, tema["secundaria"] + (220,),
-                         (cx, cy), (cx, cy + comp), 2)
+        linha_suave(surf, tema["secundaria"] + (220,), (cx, cy),
+                    (cx + comp, cy), 2)
+        linha_suave(surf, tema["secundaria"] + (220,), (cx, cy),
+                    (cx, cy + comp), 2)
         self._bloco_fury_cache[nome] = surf
         return surf
 
@@ -1881,8 +1880,8 @@ class MenuPrincipal:
         h, inc = l.px(56), l.px(12)
         surf = pygame.Surface((int(largura), h + inc), pygame.SRCALPHA)
         pts = [(0, inc), (int(largura), 0), (int(largura), h), (0, h + inc)]
-        pygame.draw.polygon(surf, cor + (50,), pts)
-        pygame.draw.polygon(surf, cor + (200,), pts, 2)
+        desenhar_poligono(surf, cor + (50,), pts)
+        desenhar_poligono(surf, cor + (200,), pts, 2)
         self._cabecalho_cache[chave] = surf
         return surf
 
@@ -1894,13 +1893,13 @@ class MenuPrincipal:
         l = self.layout
         prim = tema["primaria"]
         cor1 = tuple(int(c * 0.85) for c in prim)
-        pygame.draw.aaline(tela, cor1, l.ponto(TOPO_ESQUERDA, 30, 470),
-                           l.ponto(TOPO_ESQUERDA, 470, 180), 2)
-        pygame.draw.aaline(tela, tema["borda_fraco"],
-                           l.ponto(TOPO_ESQUERDA, 66, 470),
-                           l.ponto(TOPO_ESQUERDA, 506, 180), 1)
-        pygame.draw.aaline(tela, cor1, l.ponto(TOPO_DIREITA, 0, 330),
-                           l.ponto(TOPO_ESQUERDA, 640, 486), 1)
+        linha_suave(tela, cor1, l.ponto(TOPO_ESQUERDA, 30, 470),
+                    l.ponto(TOPO_ESQUERDA, 470, 180), 2)
+        linha_suave(tela, tema["borda_fraco"],
+                    l.ponto(TOPO_ESQUERDA, 66, 470),
+                    l.ponto(TOPO_ESQUERDA, 506, 180), 1)
+        linha_suave(tela, cor1, l.ponto(TOPO_DIREITA, 0, 330),
+                    l.ponto(TOPO_ESQUERDA, 640, 486), 1)
 
     def _logo_menu_surface(self):
         """Logo 'logo-menu.png' redimensionada para a largura do titulo."""
@@ -1926,12 +1925,12 @@ class MenuPrincipal:
             t = i / max(1, larg - 1)
             c = tuple(int(prim[j] * (0.25 + 0.75 * (1 - t)))
                       for j in range(3))
-            pygame.draw.line(surf, c + (int(150 * alfa / 255),),
-                             (i, l.px(6)), (i, l.px(8)))
+            linha_suave(surf, c + (int(150 * alfa / 255),),
+                        (i, l.px(6)), (i, l.px(8)), 1)
         cx, cy = larg // 2, l.px(7)
-        pygame.draw.polygon(surf, tema["secundaria"] + (int(230 * alfa / 255),),
-                            [(cx, cy - l.px(4)), (cx + l.px(4), cy),
-                             (cx, cy + l.px(4)), (cx - l.px(4), cy)])
+        desenhar_poligono(surf, tema["secundaria"] + (int(230 * alfa / 255),),
+                          [(cx, cy - l.px(4)), (cx + l.px(4), cy),
+                           (cx, cy + l.px(4)), (cx - l.px(4), cy)])
         surf.set_alpha(alfa)
         tela.blit(surf, (x, y))
 
@@ -1974,8 +1973,8 @@ class MenuPrincipal:
         op = self.opcoes[self.opcao_selecionada]
         x = self.x_opcoes - self.layout.px(26)
         y = op.y
-        pygame.draw.polygon(tela, tema["secundaria"],
-                            [(x, y), (x - 14, y - 9), (x - 14, y + 9)])
+        desenhar_poligono(tela, tema["secundaria"],
+                          [(x, y), (x - 14, y - 9), (x - 14, y + 9)])
 
     def _desenhar_rodape(self, tela, tema):
         l = self.layout

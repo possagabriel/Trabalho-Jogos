@@ -5,16 +5,16 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING
 
-from .config import CIANO, DIMENSION_GOLD, EstadoJogo, FPS, LARGURA, ALTURA
-from .bosses import Boss
-from .enemies import composicao_onda
-from .particles import MensagemFlutuante
-from .player import Jogador
-from .scenarios import CENARIOS, Cenario, cenario_do_nivel
-from .weapons import ARMARIA
+from src.core.constants import CIANO, DIMENSION_GOLD, EstadoJogo, FPS, LARGURA, ALTURA
+from src.legacy.domain.entities.bosses import Boss
+from src.legacy.domain.entities.enemies import composicao_onda
+from src.legacy.domain.world.particles import MensagemFlutuante
+from src.legacy.domain.entities.player import Jogador
+from src.legacy.domain.world.scenarios import CENARIOS, Cenario, cenario_do_nivel
+from src.legacy.domain.entities.weapons import ARMARIA
 
 if TYPE_CHECKING:
-    from .core import Jogo
+    from src.legacy.application.core import Jogo
 
 
 class ControladorProgressao:

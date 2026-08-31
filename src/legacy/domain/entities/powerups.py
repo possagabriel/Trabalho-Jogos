@@ -1,15 +1,25 @@
 """Power-ups que caem durante o jogo."""
 
+from __future__ import annotations
+
 import math
 import random
+from typing import TYPE_CHECKING, Callable, Literal, TypeAlias
 
 import pygame
 
-from .cel_shading import circulo_com_contorno, desenhar_highlight
-from .config import AZUL, BRANCO, CIANO, DOURADO, LARANJA, VERDE, \
+from src.legacy.infrastructure.graphics.cel_shading import circulo_com_contorno, desenhar_highlight
+from src.core.constants import AZUL, BRANCO, CIANO, DOURADO, LARANJA, VERDE, \
     VERDE_CLARO
-from .smooth import desenhar_circulo, desenhar_glow
-from .weapons import ARMARIA
+from src.legacy.infrastructure.graphics.smooth import desenhar_circulo, desenhar_glow
+from src.legacy.domain.entities.weapons import ARMARIA
+
+if TYPE_CHECKING:
+    from src.legacy.domain.entities.player import Jogador
+
+TipoPowerUp: TypeAlias = Literal[
+    "escudo", "vida", "arma", "velocidade", "moedas", "skin",
+]
 
 
 class PowerUp:
@@ -18,7 +28,7 @@ class PowerUp:
     SIMBOLOS = {"escudo": "E", "vida": "+", "arma": "A", "velocidade": "V",
                 "moedas": "C", "skin": "S"}
 
-    def __init__(self, tipo, x, y):
+    def __init__(self, tipo: TipoPowerUp, x: float, y: float) -> None:
         self.tipo = tipo
         self.x = x
         self.y = y
@@ -27,16 +37,17 @@ class PowerUp:
         self.vel_y = 2
 
     @property
-    def rect(self):
+    def rect(self) -> pygame.Rect:
         return pygame.Rect(int(self.x - self.raio), int(self.y - self.raio),
                            self.raio * 2, self.raio * 2)
 
-    def atualizar(self):
+    def atualizar(self) -> None:
         self.y += self.vel_y
         self.tempo += 1
         self.x += math.sin(self.tempo * 0.05) * 0.5
 
-    def aplicar(self, jogador, desbloquear_skin=None):
+    def aplicar(self, jogador: Jogador,
+                desbloquear_skin: Callable[[str], bool] | None = None) -> str:
         """Aplica o efeito. Retorna a mensagem para exibir."""
         if self.tipo == "vida":
             if jogador.vida >= jogador.max_vida:
@@ -66,7 +77,7 @@ class PowerUp:
             return f"Arma nova: {ARMARIA[jogador.arma_atual]['nome']}!"
         return ""
 
-    def desenhar(self, tela):
+    def desenhar(self, tela: pygame.Surface) -> None:
         pulso = 1 + 0.2 * math.sin(self.tempo * 0.2)
         raio = self.raio * pulso
         x, y = self.x, self.y
@@ -80,6 +91,6 @@ class PowerUp:
         tela.blit(texto, texto.get_rect(center=(int(x), int(y))))
 
 
-def sortear_tipo():
+def sortear_tipo() -> TipoPowerUp:
     return random.choices(["escudo", "vida", "arma", "velocidade", "moedas"],
                           [12, 28, 22, 14, 24])[0]

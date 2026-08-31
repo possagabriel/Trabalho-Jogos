@@ -4,7 +4,7 @@ import json
 import logging
 import os
 
-from .player import SKINS, Skin
+from src.legacy.domain.entities.player import SKINS, Skin
 
 PASTA_DADOS = (os.environ.get("SPACEFURY_DATA_DIR")
                or os.path.join(os.path.dirname(os.path.dirname(

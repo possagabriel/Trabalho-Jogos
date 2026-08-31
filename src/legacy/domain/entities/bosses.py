@@ -1,26 +1,33 @@
 """Bosses: um para cada cenario, com ataques e efeitos de morte proprios."""
 
+from __future__ import annotations
+
 import math
 import random
+from typing import TYPE_CHECKING
 
 import pygame
 
-from .cel_shading import (circulo_com_contorno, contorno_circulo,
+from src.legacy.infrastructure.graphics.cel_shading import (circulo_com_contorno, contorno_circulo,
                           contorno_poligono, desenhar_brilho_contorno,
                           desenhar_highlight, desenhar_sombra_chapada,
                           escurecer_cor, estrela_com_contorno,
                           poligono_com_contorno)
-from .config import ALTURA, AZUL, BRANCO, CIANO, DOURADO, LARGURA, ROSA, ROXO, \
+from src.core.constants import ALTURA, AZUL, BRANCO, CIANO, DOURADO, LARGURA, ROSA, ROXO, \
     VERMELHO
-from .geometry import estrela, losango, pentagono as pent_pontos, poligono
-from .smooth import desenhar_circulo, desenhar_glow, desenhar_poligono
-from .weapons import Projetil
+from src.legacy.infrastructure.graphics.geometry import estrela, losango, pentagono as pent_pontos, poligono
+from src.legacy.infrastructure.graphics.smooth import desenhar_circulo, desenhar_glow, desenhar_poligono
+from src.legacy.domain.entities.weapons import Projetil
+
+if TYPE_CHECKING:
+    from src.legacy.domain.entities.player import Jogador
+    from src.legacy.domain.world.scenarios import Cenario
 
 
 class Boss:
     """Boss de um cenario. Aparece a cada 5 niveis."""
 
-    def __init__(self, nivel, cenario):
+    def __init__(self, nivel: int, cenario: Cenario) -> None:
         self.nivel = nivel
         self.cenario_id = cenario.id
         cfg = BOSSES_POR_CENARIO[cenario.id]
@@ -48,14 +55,14 @@ class Boss:
         self.alvo = None
 
     @property
-    def rect(self):
+    def rect(self) -> pygame.Rect:
         return pygame.Rect(int(self.x - self.raio), int(self.y - self.raio),
                            self.raio * 2, self.raio * 2)
 
     def _fracao_vida(self):
         return max(0.0, self.vida / self.vida_max)
 
-    def atualizar(self, jogador):
+    def atualizar(self, jogador: Jogador) -> list[Projetil]:
         novos = []
         self.t += 1
         if self.flash > 0:
@@ -189,12 +196,12 @@ class Boss:
             return projs
         return []
 
-    def sofrer_dano(self, dano):
+    def sofrer_dano(self, dano: int) -> bool:
         self.vida -= dano
         self.flash = 6
         return self.vida <= 0
 
-    def desenhar(self, tela):
+    def desenhar(self, tela: pygame.Surface) -> None:
         x, y = int(self.x), int(self.y)
         cor = BRANCO if self.flash > 0 else self.cor
         centro = (x, y)

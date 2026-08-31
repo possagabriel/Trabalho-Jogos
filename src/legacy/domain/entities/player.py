@@ -1,21 +1,28 @@
 """Jogador, sistema de combos e catalogo de skins."""
 
+from __future__ import annotations
+
 import math
 import random
+from collections.abc import Mapping, Sequence
+from typing import TYPE_CHECKING, Any
 
 import pygame
 
-from .assets import carregar_imagem_alpha
-from .config import ALTURA, AZUL, AZUL_CLARO, BRANCO, CIANO, DOURADO, INDIGO, \
+from src.legacy.infrastructure.assets import carregar_imagem_alpha
+from src.core.constants import ALTURA, AZUL, AZUL_CLARO, BRANCO, CIANO, DOURADO, INDIGO, \
     COMBO_MULTIPLICADOR_ALTO, COMBO_MULTIPLICADOR_MEDIO, LARGURA, LARANJA, \
     ROXO, VERDE, VERMELHO
-from .geometry import losango
-from .cel_shading import (circulo_com_contorno, clarear_cor,
+from src.legacy.infrastructure.graphics.geometry import losango
+from src.legacy.infrastructure.graphics.cel_shading import (circulo_com_contorno, clarear_cor,
                           contorno_poligono, desenhar_highlight,
                           desenhar_sombra_chapada, escurecer_cor,
                           poligono_com_contorno, sprite_com_contorno)
-from .smooth import desenhar_circulo, desenhar_glow, desenhar_poligono
-from .weapons import ARMARIA, Projetil
+from src.legacy.infrastructure.graphics.smooth import desenhar_circulo, desenhar_glow, desenhar_poligono
+from src.legacy.domain.entities.weapons import ARMARIA, Projetil
+
+if TYPE_CHECKING:
+    from src.legacy.domain.world.particles import SistemaParticulas
 
 
 # ---------------------------------------------------------------------------
@@ -101,7 +108,7 @@ SKINS = [
 class Skin:
     """Representa uma skin de nave com efeito visual proprio."""
 
-    def __init__(self, config):
+    def __init__(self, config: Mapping[str, Any]) -> None:
         self.id = config["id"]
         self.nome = config["nome"]
         self.preco = config["preco"]
@@ -111,7 +118,8 @@ class Skin:
         self.descricao = config["descricao"]
         self.desbloqueada = config["preco"] == 0
 
-    def desenhar(self, tela, jogador, particulas=None):
+    def desenhar(self, tela: pygame.Surface, jogador: Jogador,
+                 particulas: SistemaParticulas | None = None) -> None:
         """Desenha a nave do jogador com a skin aplicada."""
         x, y = int(jogador.x), int(jogador.y)
         t = pygame.time.get_ticks() * 0.001
@@ -164,8 +172,8 @@ class Skin:
         alfa = int(120 + 60 * math.sin(t * 3))
         surf = pygame.Surface((44, 44), pygame.SRCALPHA)
         pts = [(22, 2), (7, 38), (22, 29), (37, 38)]
-        pygame.draw.polygon(surf, self.cor + (alfa,), pts)
-        pygame.draw.polygon(surf, (150, 60, 200, alfa), pts, 2)
+        desenhar_poligono(surf, self.cor + (alfa,), pts)
+        desenhar_poligono(surf, (150, 60, 200, alfa), pts, 2)
         tela.blit(surf, (x - 22, y - 22))
 
     def _desenhar_diamante(self, tela, x, y, tilt, t):
@@ -187,8 +195,8 @@ class Skin:
                    (x + sinal * 8, base_y + 6)]
             contorno_poligono(tela, pts, 3)
             desenhar_poligono(tela, (255, 250, 220), pts)
-            pygame.draw.polygon(tela, escurecer_cor((255, 250, 220), 0.7),
-                                pts, 2)
+            desenhar_poligono(tela, escurecer_cor((255, 250, 220), 0.7),
+                              pts, 2)
 
     def _desenhar_relampago(self, tela, x, y, t):
         if int(t * 4) % 2 == 0:
@@ -211,13 +219,13 @@ class Skin:
 class SistemaCombo:
     """Controla o multiplicador de pontos baseado em tiros consecutivos."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.combo_atual = 0
         self.combo_maximo = 0
         self.ultimo_tiro = -99999
         self.tempo_maximo_entre_tiros = 500
 
-    def adicionar_tiro(self):
+    def adicionar_tiro(self) -> None:
         agora = pygame.time.get_ticks()
         if agora - self.ultimo_tiro < self.tempo_maximo_entre_tiros:
             self.combo_atual += 1
@@ -227,14 +235,14 @@ class SistemaCombo:
         if self.combo_atual > self.combo_maximo:
             self.combo_maximo = self.combo_atual
 
-    def get_bonus(self):
+    def get_bonus(self) -> float:
         if self.combo_atual > COMBO_MULTIPLICADOR_ALTO:
             return 2.0
         if self.combo_atual > COMBO_MULTIPLICADOR_MEDIO:
             return 1.5
         return 1.0
 
-    def zerar(self):
+    def zerar(self) -> None:
         self.combo_atual = 0
 
 
@@ -243,7 +251,7 @@ class SistemaCombo:
 # ---------------------------------------------------------------------------
 
 class Jogador:
-    def __init__(self, nome="Jogador", skin=None):
+    def __init__(self, nome: str = "Jogador", skin: Skin | None = None) -> None:
         self.nome = nome
         self.x = LARGURA // 2
         self.y = ALTURA - 100
@@ -267,14 +275,15 @@ class Jogador:
         self.combo = SistemaCombo()
 
     @property
-    def rect(self):
+    def rect(self) -> pygame.Rect:
         return pygame.Rect(int(self.x - self.raio), int(self.y - self.raio),
                            self.raio * 2, self.raio * 2)
 
-    def equipar_skin(self, skin):
+    def equipar_skin(self, skin: Skin) -> None:
         self.skin = skin
 
-    def atualizar(self, teclas, controles=None):
+    def atualizar(self, teclas: Sequence[bool],
+                  controles: Mapping[str, int] | None = None) -> None:
         controles = controles or {}
         dx = dy = 0
         esquerda = controles.get("esquerda")
@@ -306,7 +315,7 @@ class Jogador:
         if self.invencivel > 0:
             self.invencivel -= 1
 
-    def atirar(self):
+    def atirar(self) -> list[Projetil]:
         arma = ARMARIA[self.arma_atual]
         if self.cooldown_tiro > 0 or not self.vivo:
             return []
@@ -353,11 +362,11 @@ class Jogador:
         return [Projetil(x, y, 0, -arma["vel"], arma["dano"], arma["cor"],
                          arma["raio"], tipo=tipo)]
 
-    def selecionar_arma(self, indice):
+    def selecionar_arma(self, indice: int) -> None:
         if indice in self.armas_desbloqueadas:
             self.arma_atual = indice
 
-    def sofrer_dano(self):
+    def sofrer_dano(self) -> bool:
         if self.invencivel > 0 or not self.vivo:
             return False
         self.combo.zerar()
@@ -372,7 +381,8 @@ class Jogador:
             self.vivo = False
         return True
 
-    def desenhar(self, tela, particulas=None):
+    def desenhar(self, tela: pygame.Surface,
+                 particulas: SistemaParticulas | None = None) -> None:
         if self.invencivel > 0 and (self.invencivel // 4) % 2 == 0:
             return
         self.skin.desenhar(tela, self, particulas)

@@ -20,11 +20,11 @@ import random
 
 import pygame
 
-from .assets import carregar_imagem
-from .config import NEGRO
-from .layout import Layout
-from .player import Jogador
-from .smooth import desenhar_cantos, desenhar_circulo, desenhar_glow, \
+from src.legacy.infrastructure.assets import carregar_imagem
+from src.core.constants import NEGRO
+from src.infrastructure.ui.layout import Layout
+from src.legacy.domain.entities.player import Jogador
+from src.legacy.infrastructure.graphics.smooth import desenhar_cantos, desenhar_circulo, desenhar_glow, \
     gradiente_vertical, luz_radial, retangulo_suave
 
 

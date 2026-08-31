@@ -29,14 +29,15 @@ import math
 
 import pygame
 
-from .config import ALTURA, DIMENSION_GOLD, LARGURA, QUANTUM_CYAN, RIFT_MAGENTA, \
+from src.core.constants import ALTURA, DIMENSION_GOLD, LARGURA, QUANTUM_CYAN, RIFT_MAGENTA, \
     SHIFT_WHITE, VOID_BLACK
-from .fonts import fonte_texto, fonte_titulo
-from .geometry import losango
-from .layout import Layout
-from .smooth import barra_suave, desenhar_cantos, desenhar_circulo, \
-    desenhar_glow, desenhar_painel, desenhar_poligono, linha_suave
-from .weapons import ARMARIA
+from src.legacy.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
+from src.legacy.infrastructure.graphics.geometry import losango
+from src.infrastructure.ui.layout import Layout
+from src.legacy.infrastructure.graphics.smooth import barra_suave, desenhar_cantos, desenhar_circulo, \
+    desenhar_glow, desenhar_painel, desenhar_poligono, linha_suave, \
+    retangulo_suave
+from src.legacy.domain.entities.weapons import ARMARIA
 
 # ---------------------------------------------------------------------------
 # Paleta do HUD (derivada da marca VOID//SHIFT, nunca saturada em excesso)
@@ -243,14 +244,14 @@ def _icone_arma(tela, tipo, centro, cor, escala=1.0):
     c = escala
     if tipo == "laser":
         desenhar_glow(tela, cor, (x, y), 8 * c, 0.6)
-        pygame.draw.line(tela, cor, (x, y - 8 * c), (x, y + 8 * c), int(2 * c))
-        pygame.draw.line(tela, BRANCO_HUD, (x, y - 8 * c), (x, y - 2 * c),
-                         int(1 * c))
+        linha_suave(tela, cor, (x, y - 8 * c), (x, y + 8 * c), int(2 * c))
+        linha_suave(tela, BRANCO_HUD, (x, y - 8 * c), (x, y - 2 * c),
+                    int(1 * c))
     elif tipo == "duplo":
         for s in (-1, 1):
             desenhar_glow(tela, cor, (x + s * 4 * c, y), 5 * c, 0.5)
-            pygame.draw.line(tela, cor, (x + s * 6 * c, y - 8 * c),
-                             (x + s * 6 * c, y + 8 * c), int(2 * c))
+            linha_suave(tela, cor, (x + s * 6 * c, y - 8 * c),
+                        (x + s * 6 * c, y + 8 * c), int(2 * c))
     elif tipo == "plasma":
         desenhar_glow(tela, cor, (x, y), 8 * c, 0.9)
         desenhar_circulo(tela, cor, (x, y), int(5 * c))
@@ -258,8 +259,8 @@ def _icone_arma(tela, tipo, centro, cor, escala=1.0):
     elif tipo == "metralhadora":
         for i in range(3):
             dx = (i - 1) * 3 * c
-            pygame.draw.line(tela, cor, (x + dx, y - 8 * c),
-                             (x + dx, y + 8 * c), int(2 * c))
+            linha_suave(tela, cor, (x + dx, y - 8 * c),
+                        (x + dx, y + 8 * c), int(2 * c))
     elif tipo == "espiral":
         for i in range(3):
             a = i * math.tau / 3
@@ -267,23 +268,23 @@ def _icone_arma(tela, tipo, centro, cor, escala=1.0):
             desenhar_circulo(tela, cor, p0, int(2 * c))
     elif tipo == "ion":
         desenhar_glow(tela, cor, (x, y), 8 * c, 0.7)
-        pygame.draw.rect(tela, cor, (int(x - 3 * c), int(y - 8 * c),
-                                     int(6 * c), int(16 * c)),
-                         border_radius=int(3 * c))
-        pygame.draw.line(tela, BRANCO_HUD, (x, y - 8 * c), (x, y + 8 * c),
-                         int(1 * c))
+        retangulo_suave(tela, cor, pygame.Rect(
+            int(x - 3 * c), int(y - 8 * c), int(6 * c), int(16 * c)),
+            int(3 * c))
+        linha_suave(tela, BRANCO_HUD, (x, y - 8 * c), (x, y + 8 * c),
+                    int(1 * c))
     elif tipo == "gauss":
         for s in (-1, 1):
-            pygame.draw.line(tela, cor, (x, y - 8 * c), (x + s * 7 * c, y),
-                             int(2 * c))
-            pygame.draw.line(tela, cor, (x, y + 8 * c), (x + s * 7 * c, y),
-                             int(2 * c))
+            linha_suave(tela, cor, (x, y - 8 * c), (x + s * 7 * c, y),
+                        int(2 * c))
+            linha_suave(tela, cor, (x, y + 8 * c), (x + s * 7 * c, y),
+                        int(2 * c))
     elif tipo == "nova":
         for i in range(6):
             a = i * math.tau / 6
             p0 = (x + math.cos(a) * 3 * c, y + math.sin(a) * 3 * c)
             p1 = (x + math.cos(a) * 8 * c, y + math.sin(a) * 8 * c)
-            pygame.draw.line(tela, cor, p0, p1, int(1 * c))
+            linha_suave(tela, cor, p0, p1, int(1 * c))
         desenhar_circulo(tela, cor, (x, y), int(2 * c))
     else:  # padrao
         desenhar_glow(tela, cor, (x, y), 6 * c, 0.6)
@@ -297,9 +298,9 @@ def _icone_abates(tela, centro, cor=CINZA_HUD, escala=1.0):
     c = escala
     desenhar_glow(tela, cor, (x, y), 6 * c, 0.4)
     for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
-        pygame.draw.line(tela, cor, (x + dx * 6 * c, y + dy * 6 * c),
-                         (x + dx * 8 * c, y + dy * 8 * c), int(2 * c))
-    pygame.draw.circle(tela, cor, (int(x), int(y)), int(4 * c), 1)
+        linha_suave(tela, cor, (x + dx * 6 * c, y + dy * 6 * c),
+                    (x + dx * 8 * c, y + dy * 8 * c), int(2 * c))
+    desenhar_circulo(tela, cor, (x, y), int(4 * c), 1)
 
 
 def _numero(tela, layout, fonte, valor, pos, cor, alinhar="centro", alfa=255):
@@ -523,12 +524,12 @@ class HudJogo:
         _blit_alfa(tela, setor, rect_setor, 240)
         # acentos laterais discretos
         for s in (-1, 1):
-            pygame.draw.line(tela, (90, 100, 150), (rect_setor.left - l.px(22),
-                                                    rect_setor.centery),
-                             (rect_setor.left - l.px(6), rect_setor.centery), 1)
-            pygame.draw.line(tela, (90, 100, 150), (rect_setor.right + l.px(6),
-                                                    rect_setor.centery),
-                             (rect_setor.right + l.px(22), rect_setor.centery), 1)
+            linha_suave(tela, (90, 100, 150),
+                        (rect_setor.left - l.px(22), rect_setor.centery),
+                        (rect_setor.left - l.px(6), rect_setor.centery), 1)
+            linha_suave(tela, (90, 100, 150),
+                        (rect_setor.right + l.px(6), rect_setor.centery),
+                        (rect_setor.right + l.px(22), rect_setor.centery), 1)
 
         regiao = _render(self._f_titulo_xs, d["regiao"], self._paleta["primaria"])
         _blit_alfa(tela, regiao, regiao.get_rect(center=(cx, y + l.px(38))),
@@ -647,11 +648,11 @@ class HudJogo:
         _blit_alfa(tela, nome, rect_nome, 245)
         # linhas de ancoragem do nome
         for s in (-1, 1):
-            pygame.draw.line(tela, OURO_HUD,
-                             (rect_nome.right if s < 0 else rect_nome.left,
-                              rect_nome.centery),
-                             (barra.right if s < 0 else barra.left,
-                              rect_nome.centery), 1)
+            linha_suave(tela, OURO_HUD,
+                        (rect_nome.right if s < 0 else rect_nome.left,
+                         rect_nome.centery),
+                        (barra.right if s < 0 else barra.left,
+                         rect_nome.centery), 1)
 
         _painel(tela, l, barra.inflate(l.px(16), l.px(14)),
                 OURO_HUD, alpha=120, raio=14, glow=16)

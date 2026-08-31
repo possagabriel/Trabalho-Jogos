@@ -9,11 +9,11 @@ import math
 
 import pygame
 
-from .config import BRANCO, LARGURA
-from .fonts import fonte_texto, fonte_titulo
-from .smooth import barra_suave, desenhar_cantos, desenhar_circulo, \
+from src.core.constants import BRANCO, LARGURA
+from src.legacy.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
+from src.legacy.infrastructure.graphics.smooth import barra_suave, desenhar_cantos, desenhar_circulo, \
     desenhar_glow, desenhar_painel, desenhar_texto_suave, retangulo_suave
-from .theme import cor_tema
+from src.infrastructure.graphics.theme import cor_tema
 
 
 def cor_primaria():

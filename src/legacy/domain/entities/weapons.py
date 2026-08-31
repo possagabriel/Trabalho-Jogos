@@ -1,18 +1,28 @@
 """Armas do jogador e classe de projeteis."""
 
+from __future__ import annotations
+
 import math
+from typing import Literal, TypeAlias
 
 import pygame
 
-from .cel_shading import (circulo_com_contorno, contorno_circulo,
+from src.legacy.infrastructure.graphics.cel_shading import (circulo_com_contorno, contorno_circulo,
                           contorno_retangulo, escurecer_cor)
-from .config import ALTURA, AZUL_CLARO, BRANCO, CIANO, LARANJA, LARGURA, ROXO, \
+from src.core.constants import ALTURA, AZUL_CLARO, BRANCO, CIANO, LARANJA, LARGURA, ROXO, \
     VERDE
-from .smooth import desenhar_circulo, desenhar_glow, desenhar_poligono, \
-    retangulo_suave
+from src.legacy.infrastructure.graphics.smooth import desenhar_circulo, desenhar_glow, desenhar_poligono, \
+    linha_suave, retangulo_suave
 
 CORES_ARCO_IRIS = [(255, 60, 60), (255, 220, 60), (90, 255, 90),
                    (60, 220, 255), (90, 120, 255), (230, 90, 255)]
+
+Cor: TypeAlias = tuple[int, int, int]
+TipoProjetil: TypeAlias = Literal[
+    "padrao", "laser", "duplo", "plasma", "metralhadora", "espiral",
+    "ion", "feixe", "gauss", "nova", "bomba",
+]
+OrigemProjetil: TypeAlias = Literal["jogador", "inimigo"]
 
 ARMARIA = [
     {"nome": "Tiro Padrao", "nivel": 1, "cor": BRANCO, "raio": 4, "vel": 8,
@@ -39,8 +49,11 @@ ARMARIA = [
 class Projetil:
     """Projetil disparado pelo jogador ou por inimigos."""
 
-    def __init__(self, x, y, vel_x, vel_y, dano, cor, raio, tipo="padrao",
-                 origem="jogador", teleguiado=False, refletor=False):
+    def __init__(self, x: float, y: float, vel_x: float, vel_y: float,
+                 dano: int, cor: Cor, raio: float,
+                 tipo: TipoProjetil = "padrao",
+                 origem: OrigemProjetil = "jogador", teleguiado: bool = False,
+                 refletor: bool = False) -> None:
         self.x, self.y = x, y
         self.vel_x, self.vel_y = vel_x, vel_y
         self.dano = dano
@@ -54,13 +67,13 @@ class Projetil:
         self.speed = math.hypot(vel_x, vel_y) or 1
 
     @property
-    def rect(self):
+    def rect(self) -> pygame.Rect:
         if self.tipo == "ion":
             return pygame.Rect(int(self.x - 7), 0, 14, ALTURA)
         return pygame.Rect(int(self.x - self.raio), int(self.y - self.raio),
                            self.raio * 2, self.raio * 2)
 
-    def atualizar(self):
+    def atualizar(self) -> None:
         if self.tipo == "ion":
             self.tempo += 1
             return
@@ -68,7 +81,7 @@ class Projetil:
         self.y += self.vel_y
         self.tempo += 1
 
-    def atualizar_teleguiado(self, alvo_x, alvo_y):
+    def atualizar_teleguiado(self, alvo_x: float, alvo_y: float) -> None:
         dx, dy = alvo_x - self.x, alvo_y - self.y
         norma = math.hypot(dx, dy) or 1
         self.vel_x += (dx / norma * self.speed - self.vel_x) * 0.1
@@ -77,25 +90,25 @@ class Projetil:
         self.y += self.vel_y
         self.tempo += 1
 
-    def refletir(self):
+    def refletir(self) -> None:
         """Inverte a direcao do projetil (usado pelo campo de forca)."""
         self.vel_x *= -1
         self.vel_y *= -1
         self.origem = "inimigo"
         self.refletor = True
 
-    def saiu_da_tela(self):
+    def saiu_da_tela(self) -> bool:
         if self.tipo == "ion":
             return self.tempo > 14
         return not (-30 <= self.x <= LARGURA + 30 and
                     -30 <= self.y <= ALTURA + 30)
 
-    def _cor_atual(self):
+    def _cor_atual(self) -> Cor:
         if self.tipo == "espiral":
             return CORES_ARCO_IRIS[(self.tempo // 6) % len(CORES_ARCO_IRIS)]
         return self.cor
 
-    def desenhar(self, tela):
+    def desenhar(self, tela: pygame.Surface) -> None:
         x, y = int(self.x), int(self.y)
         cor = self._cor_atual()
         if self.tipo == "plasma":
@@ -111,7 +124,7 @@ class Projetil:
             rect_laser = pygame.Rect(x - 2, y - 12, 4, 24)
             contorno_retangulo(tela, rect_laser, 2)
             retangulo_suave(tela, cor, rect_laser, 2)
-            pygame.draw.line(tela, BRANCO, (x, y - 12), (x, y + 12), 2)
+            linha_suave(tela, BRANCO, (x, y - 12), (x, y + 12), 2)
             desenhar_circulo(tela, BRANCO, (x, y - 12), 2, brilho=1.8)
         elif self.tipo == "ion":
             desenhar_glow(tela, (80, 110, 180), (x, ALTURA // 2),
@@ -121,17 +134,17 @@ class Projetil:
             retangulo_suave(tela, (80, 110, 180), rect_ion, 6)
             retangulo_suave(tela, cor, pygame.Rect(x - 3, 0, 6, ALTURA), 3,
                             glow_cor=cor, glow_raio=20)
-            pygame.draw.line(tela, BRANCO, (x - 1, 0), (x - 1, ALTURA), 2)
+            linha_suave(tela, BRANCO, (x - 1, 0), (x - 1, ALTURA), 2)
         elif self.tipo == "feixe":
             desenhar_glow(tela, cor, (x, y + 30), 20, 0.6)
-            pygame.draw.line(tela, cor, (x, y), (x, y + 60), 3)
-            pygame.draw.line(tela, BRANCO, (x, y), (x, y + 60), 1)
+            linha_suave(tela, cor, (x, y), (x, y + 60), 3)
+            linha_suave(tela, BRANCO, (x, y), (x, y + 60), 1)
         elif self.tipo == "gauss":
             desenhar_glow(tela, (90, 130, 200), (x, y), 14, 0.4)
             rect_gauss = pygame.Rect(x - 2, y - 14, 4, 28)
             contorno_retangulo(tela, rect_gauss, 2)
             retangulo_suave(tela, cor, rect_gauss, 2)
-            pygame.draw.line(tela, BRANCO, (x, y - 14), (x, y + 14), 2)
+            linha_suave(tela, BRANCO, (x, y - 14), (x, y + 14), 2)
             desenhar_circulo(tela, BRANCO, (x, y - 14), 2, brilho=1.8)
         elif self.tipo == "nova":
             pulso = 1 + 0.25 * math.sin(self.tempo * 0.5)
@@ -157,7 +170,7 @@ class Projetil:
             desenhar_circulo(tela, BRANCO, (x, y),
                              max(2, int(self.raio * 0.3)), brilho=1.8)
             for sinal in (-1, 1):
-                from .cel_shading import contorno_poligono
+                from src.legacy.infrastructure.graphics.cel_shading import contorno_poligono
                 pts = [(x + sinal * self.raio * 0.85,
                         y + self.raio * 0.1),
                        (x + sinal * self.raio * 1.15,
@@ -166,9 +179,9 @@ class Projetil:
                         y + self.raio * 0.55)]
                 contorno_poligono(tela, pts, 2)
                 desenhar_poligono(tela, (90, 70, 40), pts)
-            pygame.draw.line(tela, (255, 240, 180),
-                             (x, y - self.raio * 0.9),
-                             (x, y - self.raio * 1.25), 3)
+            linha_suave(tela, (255, 240, 180),
+                         (x, y - self.raio * 0.9),
+                         (x, y - self.raio * 1.25), 3)
             desenhar_glow(tela, (255, 240, 120), (x, y - self.raio * 1.3),
                           6, 0.9)
         else:
@@ -178,11 +191,10 @@ class Projetil:
             dy = math.sin(ang) * comp
             larg = max(3, self.raio * 2)
             desenhar_glow(tela, cor, (x, y), max(10, self.raio * 3), 0.45)
-            pygame.draw.line(tela, cor, (x - dx, y - dy), (x + dx, y + dy),
-                             larg)
-            pygame.draw.line(tela, BRANCO,
-                             (x - dx * 0.5, y - dy * 0.5),
-                             (x + dx * 0.85, y + dy * 0.85),
-                             max(1, larg // 2 - 1))
+            linha_suave(tela, cor, (x - dx, y - dy), (x + dx, y + dy), larg)
+            linha_suave(tela, BRANCO,
+                         (x - dx * 0.5, y - dy * 0.5),
+                         (x + dx * 0.85, y + dy * 0.85),
+                         max(1, larg // 2 - 1))
             desenhar_circulo(tela, BRANCO, (x, y), max(1, larg // 2 - 1),
                              brilho=1.6)

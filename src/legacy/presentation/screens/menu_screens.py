@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    import pygame
+import pygame
 
-    from .menu import MenuPrincipal
+if TYPE_CHECKING:
+    from src.legacy.presentation.menu import MenuPrincipal
 
 
 class TelaMenuBase:
@@ -41,13 +41,13 @@ class TelaPrincipal(TelaMenuBase):
     nome = "MENU"
 
     def desenhar(self, tela: pygame.Surface) -> None:
-        self.menu._desenhar_menu(tela)
+        self.menu.tela_principal.desenhar(tela)
 
     def tratar_tecla(self, evento: pygame.event.Event) -> bool:
-        return self.menu._tecla_menu_principal(evento)
+        return self.menu.tela_principal.tratar_tecla(evento)
 
     def tratar_clique(self, pos: tuple[int, int]) -> None:
-        self.menu._clique_menu_principal(pos)
+        self.menu.tela_principal.tratar_clique(pos)
 
 
 class TelaContinuar(TelaMenuBase):
@@ -56,13 +56,23 @@ class TelaContinuar(TelaMenuBase):
     nome = "CONTINUAR"
 
     def desenhar(self, tela: pygame.Surface) -> None:
-        self.menu._desenhar_continuar(tela)
+        self.menu.tela_continuar.desenhar(tela)
 
     def tratar_tecla(self, evento: pygame.event.Event) -> bool:
-        return self.menu._tecla_continuar(evento)
+        if evento.key in (pygame.K_UP, pygame.K_DOWN):
+            self.menu.continuar_selecao = 1 - self.menu.continuar_selecao
+            self.menu._som("navegar")
+        elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            self.menu.tela_continuar.acao(self.menu.continuar_selecao)
+        elif evento.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+            self.menu._voltar_menu()
+        return True
 
     def tratar_clique(self, pos: tuple[int, int]) -> None:
-        self.menu._clique_continuar(pos)
+        for indice, botao in enumerate(self.menu.tela_continuar.botoes()):
+            if botao.rect.collidepoint(pos):
+                self.menu.tela_continuar.acao(indice)
+                return
 
 
 class TelaLoja(TelaMenuBase):
@@ -71,13 +81,13 @@ class TelaLoja(TelaMenuBase):
     nome = "LOJA"
 
     def desenhar(self, tela: pygame.Surface) -> None:
-        self.menu._desenhar_loja(tela)
+        self.menu.tela_loja.desenhar(tela)
 
     def tratar_tecla(self, evento: pygame.event.Event) -> bool:
-        return self.menu._tecla_loja(evento)
+        return self.menu.tela_loja.tratar_tecla(evento)
 
     def tratar_clique(self, pos: tuple[int, int]) -> None:
-        self.menu._clique_loja(pos)
+        self.menu.tela_loja.tratar_clique(pos)
 
 
 class TelaRecordes(TelaMenuBase):
@@ -86,13 +96,14 @@ class TelaRecordes(TelaMenuBase):
     nome = "RECORDES"
 
     def desenhar(self, tela: pygame.Surface) -> None:
-        self.menu._desenhar_recordes(tela)
+        self.menu.tela_recordes.desenhar(tela)
 
     def tratar_tecla(self, evento: pygame.event.Event) -> bool:
         return self.menu._tecla_recordes(evento)
 
     def tratar_clique(self, pos: tuple[int, int]) -> None:
-        self.menu._clique_recordes(pos)
+        if self.menu.tela_recordes.botao_voltar().rect.collidepoint(pos):
+            self.menu._voltar_menu()
 
 
 class TelaConfiguracoes(TelaMenuBase):
@@ -101,10 +112,10 @@ class TelaConfiguracoes(TelaMenuBase):
     nome = "CONFIG"
 
     def desenhar(self, tela: pygame.Surface) -> None:
-        self.menu._desenhar_config(tela)
+        self.menu.tela_configuracoes.desenhar(tela)
 
     def tratar_tecla(self, evento: pygame.event.Event) -> bool:
-        return self.menu._tecla_config(evento)
+        return self.menu.tela_configuracoes.tratar_tecla(evento)
 
     def tratar_clique(self, pos: tuple[int, int]) -> None:
-        self.menu._clique_config(pos)
+        self.menu.tela_configuracoes.tratar_clique(pos)
