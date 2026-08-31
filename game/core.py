@@ -812,8 +812,9 @@ class Jogo:
                 track_h = 16
                 track_rect = pygame.Rect(track_x, track_y, track_w, track_h)
                 retangulo_suave(self.tela, (35, 35, 65), track_rect, 8)
-                preenchido = int(track_w * fracao)
-                if preenchido > 0:
+                preenchido = 0
+                if fracao > 0:
+                    preenchido = max(16, int(track_w * fracao))
                     fill_rect = pygame.Rect(track_x, track_y,
                                             preenchido, track_h)
                     retangulo_suave(self.tela, CIANO, fill_rect, 8,
