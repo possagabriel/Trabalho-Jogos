@@ -129,6 +129,18 @@ def test_menu_recomposto_em_resolucao_1280x720():
     _conferir_dentro(menu, tela)
 
 
+def test_grade_de_configuracoes_fica_centralizada_no_painel():
+    """A area visual das configuracoes acompanha o centro do painel."""
+    menu = novo_jogo().menu
+    painel = menu._painel_config()
+    rotulo_x, indicador_x, inicio_slider, fim_slider, percentual_x = menu._grade_config()
+
+    assert painel.left < indicador_x < rotulo_x < inicio_slider < fim_slider < percentual_x < painel.right
+    # A margem do indicador e a cauda reservada para a porcentagem se espelham.
+    fim_conteudo = percentual_x + menu.layout.px(40)
+    assert abs((indicador_x - painel.centerx) + (fim_conteudo - painel.centerx)) <= menu.layout.px(10)
+
+
 def test_layout_em_todas_as_resolucoes_alvo():
     """A aritmetica de posicionamento atende as 5 resolucoes-alvo."""
     for largura, altura in RESOLUCOES_ALVO:

@@ -27,7 +27,12 @@ from unittest import mock  # noqa: E402
 import pygame  # noqa: E402
 
 from game.config import ALTURA, EstadoJogo, LARGURA  # noqa: E402
+from game.combat_session import SessaoCombate  # noqa: E402
 from game.core import Jogo  # noqa: E402
+from game.game_over_controller import ControladorGameOver  # noqa: E402
+from game.loop_controller import ControladorLoop  # noqa: E402
+from game.pause_controller import ControladorPausa  # noqa: E402
+from game.render_controller import ControladorRenderizacao  # noqa: E402
 from game.enemies import Inimigo, InimigoEspecial  # noqa: E402
 from game.powerups import PowerUp  # noqa: E402
 from game.weapons import ARMARIA, Projetil  # noqa: E402
@@ -103,6 +108,20 @@ def test_estado_do_jogo_usa_enum_e_aceita_compatibilidade_textual():
     assert jogo.estado is EstadoJogo.MENU
     jogo.estado = "PREPARANDO"
     assert jogo.estado is EstadoJogo.PREPARANDO
+
+
+def test_jogo_expoe_contrato_da_sessao_de_combate():
+    jogo = Jogo()
+    assert isinstance(jogo, SessaoCombate)
+    assert jogo.combate_controller.sessao is jogo
+
+
+def test_jogo_delega_fluxos_aos_controladores_extraidos():
+    jogo = Jogo()
+    assert isinstance(jogo.loop_controller, ControladorLoop)
+    assert isinstance(jogo.pausa_controller, ControladorPausa)
+    assert isinstance(jogo.game_over_controller, ControladorGameOver)
+    assert isinstance(jogo.render_controller, ControladorRenderizacao)
 
 
 def test_pausa_config_renderiza_volume_zero():

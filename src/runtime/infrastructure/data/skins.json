@@ -1,0 +1,172 @@
+[
+  {
+    "id": "padrao",
+    "nome": "Padrao",
+    "preco": 0,
+    "cor": [
+      25,
+      217,
+      255
+    ],
+    "cor2": [
+      30,
+      90,
+      110
+    ],
+    "efeito": "nenhum",
+    "descricao": "Nave classica"
+  },
+  {
+    "id": "fenix",
+    "nome": "Fenix",
+    "preco": 500,
+    "cor": [
+      255,
+      150,
+      0
+    ],
+    "cor2": [
+      255,
+      50,
+      50
+    ],
+    "efeito": "chamas",
+    "descricao": "Nave com chamas laranjas"
+  },
+  {
+    "id": "tempestade",
+    "nome": "Tempestade",
+    "preco": 800,
+    "cor": [
+      25,
+      217,
+      255
+    ],
+    "cor2": [
+      255,
+      240,
+      60
+    ],
+    "efeito": "relampago",
+    "descricao": "Nave eletrica"
+  },
+  {
+    "id": "sombra",
+    "nome": "Sombra",
+    "preco": 1000,
+    "cor": [
+      60,
+      40,
+      90
+    ],
+    "cor2": [
+      150,
+      50,
+      200
+    ],
+    "efeito": "transparencia",
+    "descricao": "Nave stealth"
+  },
+  {
+    "id": "cristal",
+    "nome": "Cristal",
+    "preco": 1500,
+    "cor": [
+      0,
+      255,
+      100
+    ],
+    "cor2": [
+      200,
+      255,
+      220
+    ],
+    "efeito": "diamante",
+    "descricao": "Nave de cristal"
+  },
+  {
+    "id": "dourada",
+    "nome": "Dourada",
+    "preco": 2000,
+    "cor": [
+      255,
+      200,
+      87
+    ],
+    "cor2": [
+      244,
+      244,
+      247
+    ],
+    "efeito": "brilho",
+    "descricao": "Nave de ouro"
+  },
+  {
+    "id": "galactica",
+    "nome": "Galactica",
+    "preco": 3000,
+    "cor": [
+      120,
+      90,
+      255
+    ],
+    "cor2": [
+      25,
+      217,
+      255
+    ],
+    "efeito": "estrelas",
+    "descricao": "Nave cosmica"
+  },
+  {
+    "id": "demoniaca",
+    "nome": "Demoniaca",
+    "preco": 4000,
+    "cor": [
+      255,
+      50,
+      50
+    ],
+    "cor2": [
+      20,
+      0,
+      0
+    ],
+    "efeito": "chamas_escuras",
+    "descricao": "Nave infernal"
+  },
+  {
+    "id": "anjo",
+    "nome": "Anjo",
+    "preco": 5000,
+    "cor": [
+      244,
+      244,
+      247
+    ],
+    "cor2": [
+      255,
+      200,
+      87
+    ],
+    "efeito": "asas",
+    "descricao": "Nave celestial"
+  },
+  {
+    "id": "void",
+    "nome": "Void",
+    "preco": 10000,
+    "cor": [
+      20,
+      0,
+      40
+    ],
+    "cor2": [
+      75,
+      0,
+      130
+    ],
+    "efeito": "buraco_negro",
+    "descricao": "Nave do vazio"
+  }
+]
