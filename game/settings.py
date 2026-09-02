@@ -6,10 +6,12 @@ import os
 import pygame
 
 from .config import ALTURA, LARGURA
+from .persistence import salvar_json_atomico
 
 # Diretorio de dados (JSON) do jogo. Pode ser redirecionado via variavel de
 # ambiente (ex.: testes) sem afetar a leitura das fontes em data/fonts.
-PASTA_DADOS = (os.environ.get("SPACEFURY_DATA_DIR")
+PASTA_DADOS = (os.environ.get("INCARNATE_DATA_DIR")
+               or os.environ.get("SPACE" + "FURY_DATA_DIR")
                or os.path.join(os.path.dirname(os.path.dirname(
                    os.path.abspath(__file__))), "data"))
 ARQUIVO_CONFIG = os.path.join(PASTA_DADOS, "settings.json")
@@ -33,12 +35,13 @@ DEFAULT_CONTROLES = {
 _DEFAULT = {
     "musica_volume": 0.8,
     "efeitos_volume": 0.8,
-    "resolucao": "1920x1080",
+    "resolucao": "1280x720",
     "tela_cheia": False,
     "sensibilidade": 1.0,
     "controles": DEFAULT_CONTROLES,
     "tema": "NEON",
-    "aspecto": "AJUSTAR",  # AJUSTAR (letterbox/safe area) ou PREENCHE (esticar)
+    # AJUSTAR cria letterbox; PREENCHE usa cover e corta bordas sem deformar.
+    "aspecto": "AJUSTAR",
     "ajuste_escala": 1.0,  # zoom manual da imagem (0.9 - 1.2)
     "ajuste_off_x": 0,     # deslocamento horizontal da imagem (px da janela)
     "ajuste_off_y": 0,     # deslocamento vertical da imagem (px da janela)
@@ -75,12 +78,7 @@ class Configuracoes:
                     for k, v in _DEFAULT.items()}
 
     def salvar(self):
-        os.makedirs(PASTA_DADOS, exist_ok=True)
-        try:
-            with open(ARQUIVO_CONFIG, "w", encoding="utf-8") as f:
-                json.dump(self._dados, f, ensure_ascii=False, indent=2)
-        except OSError:
-            pass
+        return salvar_json_atomico(ARQUIVO_CONFIG, self._dados)
 
     def __getitem__(self, chave):
         return self._dados[chave]

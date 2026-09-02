@@ -30,7 +30,7 @@ class MainRenderer:
     Screen-shake is applied by offsetting the blit origin each frame.
     """
 
-    def __init__(self, titulo: str = "VOID//SHIFT - Enter the Rift",
+    def __init__(self, titulo: str = "INCARNATE - Enter the Rift",
                  icone: "pygame.Surface | None" = None,
                  resolucao: str = "900x700",
                  tela_cheia: bool = False):

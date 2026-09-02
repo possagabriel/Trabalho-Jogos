@@ -16,7 +16,7 @@ import tempfile
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
-os.environ["SPACEFURY_DATA_DIR"] = tempfile.mkdtemp(prefix="spacefury_test_")
+os.environ["INCARNATE_DATA_DIR"] = tempfile.mkdtemp(prefix="incarnate_test_")
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
@@ -58,7 +58,7 @@ def mouse(tipo, pos, button=1):
 
 
 def janela(jogo, x, y):
-    """Converte ponto logico (900x700) para coordenadas da janela."""
+    """Converte ponto logico (1280x720) para coordenadas da janela."""
     escala, off_x, off_y = jogo._transformacao_janela()
     return int(x * escala + off_x), int(y * escala + off_y)
 

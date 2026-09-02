@@ -8,7 +8,7 @@ import math
 
 from .config import QUANTUM_CYAN, RIFT_MAGENTA, DIMENSION_GOLD, VOID_BLACK
 
-# Paleta de acentos por tema (todos derivados da marca VOID//SHIFT)
+# Paleta de acentos por tema (todos derivados da marca INCARNATE)
 TEMAS_CORES = {
     "NEON": {
         "primaria": RIFT_MAGENTA,        # assinatura da marca

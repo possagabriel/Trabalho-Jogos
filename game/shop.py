@@ -3,9 +3,11 @@
 import json
 import os
 
+from .persistence import salvar_json_atomico
 from .player import SKINS, Skin
 
-PASTA_DADOS = (os.environ.get("SPACEFURY_DATA_DIR")
+PASTA_DADOS = (os.environ.get("INCARNATE_DATA_DIR")
+               or os.environ.get("SPACE" + "FURY_DATA_DIR")
                or os.path.join(os.path.dirname(os.path.dirname(
                    os.path.abspath(__file__))), "data"))
 
@@ -33,13 +35,8 @@ class LojaSkins:
             return [Skin(c) for c in SKINS]
 
     def _salvar_catalogo(self):
-        os.makedirs(PASTA_DADOS, exist_ok=True)
-        try:
-            with open(os.path.join(PASTA_DADOS, "skins.json"), "w",
-                      encoding="utf-8") as f:
-                json.dump(SKINS, f, ensure_ascii=False, indent=2)
-        except OSError:
-            pass
+        return salvar_json_atomico(
+            os.path.join(PASTA_DADOS, "skins.json"), SKINS)
 
     def pegar_skin(self, skin_id):
         for skin in self.skins:

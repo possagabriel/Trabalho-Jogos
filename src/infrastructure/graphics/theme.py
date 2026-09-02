@@ -15,7 +15,7 @@ RIFT_MAGENTA = (255, 23, 107)
 DIMENSION_GOLD = (255, 200, 87)
 VOID_BLACK = (8, 8, 13)
 
-# Accent palettes by theme (all derived from the VOID//SHIFT brand)
+# Accent palettes by theme (all derived from the INCARNATE brand)
 TEMAS_CORES: Dict[str, Dict[str, tuple]] = {
     "NEON": {
         "primaria": RIFT_MAGENTA,

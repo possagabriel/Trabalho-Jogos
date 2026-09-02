@@ -409,7 +409,7 @@ class HudMenu:
                         tamanho=l.px(8), espessura=l.px(2))
 
         # canto superior esquerdo: logo + missao
-        self._desenhar_texto(tela, "logo", l.fonte_titulo(16), "VOID//SHIFT",
+        self._desenhar_texto(tela, "logo", l.fonte_titulo(16), "INCARNATE",
                              (l.px(32), l.px(20)), primaria, 4)
         self._desenhar_texto(tela, "sistema", l.fonte_texto(12),
                              "// SISTEMA DIMENSIONAL", (l.px(34), l.px(42)),

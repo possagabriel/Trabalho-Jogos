@@ -85,6 +85,11 @@ class Projetil:
     def saiu_da_tela(self):
         if self.tipo == "ion":
             return self.tempo > 14
+        # Teleguiados não podem orbitar o jogador indefinidamente. Além de
+        # poluir a tela, isso fazia alguns ataques de boss parecerem dano por
+        # tempo, vários segundos depois de terem sido disparados.
+        if self.origem == "inimigo" and self.tempo > 8 * 60:
+            return True
         return not (-30 <= self.x <= LARGURA + 30 and
                     -30 <= self.y <= ALTURA + 30)
 

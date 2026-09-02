@@ -203,7 +203,7 @@ class GameScreen:
         self._tela_sombra.fill((0, 0, 0, 175))
         surface.blit(self._tela_sombra, (0, 0))
         f = self._font
-        self._draw(surface, "VOID//SHIFT",
+        self._draw(surface, "INCARNATE",
                    (LARGURA // 2, ALTURA // 2 - 130), RIFT_MAGENTA,
                    f(44, True))
         self._draw(surface, "DIMENSIONAL TRANSIT",

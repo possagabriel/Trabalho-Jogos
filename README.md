@@ -1,9 +1,9 @@
-# VOID//SHIFT - Enter the Rift
+# INCARNATE - Enter the Rift
 
 Shoot 'em up vertical em **Pygame** com progressão, personalização de nave,
-6 dimensões, inimigos especiais e entidades RIFT (bosses). O código é 100%
-procedural (visual, sons e música são gerados em runtime, sem assets
-externos).
+6 dimensões, inimigos especiais e entidades RIFT (bosses). O jogo combina
+efeitos e áudio gerados em runtime com imagens e fontes locais versionadas no
+repositório.
 
 > Este README é orientado a **desenvolvedores e IAs**: explica a arquitetura,
 > o fluxo de dados e as convenções para que qualquer pessoa (ou modelo) possa
@@ -27,8 +27,19 @@ externos).
 ## Como executar
 
 ```bash
-python -m pip install -r requirements.txt   # pygame-ce
+python -m pip install -r requirements.txt   # pygame-ce + PyOpenGL
 python main.py
+```
+
+Quando o sistema oferece OpenGL, a apresentação e a escala do frame são feitas
+pela GPU através do PyOpenGL. O jogo volta automaticamente ao modo por
+software em máquinas sem suporte ou em ambientes headless. Para forçar esse
+fallback durante diagnóstico, use `INCARNATE_SOFTWARE_RENDERER=1`.
+
+Para desenvolvimento (testes, cobertura e lint):
+
+```bash
+python -m pip install -e ".[dev]"
 ```
 
 Sem áudio/vídeo (CI, servidores, debugging):
@@ -39,9 +50,10 @@ SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python main.py
 
 ### Resolução e responsividade
 
-O jogo renderiza numa superfície interna de **900×700** e a ajusta à janela
-preservando a proporção (scale-to-fit). O posicionamento de **toda** a UI passa
-pelo módulo `game/layout.py` — um sistema responsivo com **ancoras** (grade
+O jogo renderiza numa superfície interna widescreen de **1280×720** e a
+ajusta à janela preservando a proporção (scale-to-fit). O posicionamento de
+**toda** a UI passa pelo módulo `game/layout.py` — um sistema responsivo com
+**ancoras** (grade
 3x3), **containers** ancorados, **proporções** da superfície, **escala** de uma
 base de design (900×700) e **safe areas** (margem interna). Nenhum elemento usa
 coordenada rígida em pixels: se a superfície lógica mudar de tamanho, o menu se
@@ -54,7 +66,8 @@ recompõe automaticamente.
 - **Modo de aspecto** (configuração `aspecto`, disponível em Settings):
   - `AJUSTAR` (padrão): *scale-to-fit* com **safe areas** (letterbox) em
     `VOID_BLACK`, mantendo proporções iguais em qualquer formato de tela.
-  - `PREENCHE`: estica a cena para preencher a janela inteira.
+  - `PREENCHE`: preenche a janela com escala uniforme e corta apenas as bordas
+    excedentes, sem deformar a imagem.
 - **Tela cheia:** usa a resolução nativa do monitor (sem `SCALED`, sem esticar).
 - **Ajustar Tela** (Config → Ajustar Tela): calibra a imagem para o monitor
   (TVs com overscan, telas com bordas cortadas etc.). Com setas move a imagem
@@ -81,8 +94,11 @@ estado do gameplay vive em **um único objeto `Jogo`** (`game/core.py`),
 que é referenciado pelos módulos de UI quando precisam acessar config,
 progresso, loja e sons.
 
+O pacote canônico e distribuído é `game/`. A árvore `src/` permanece apenas
+como protótipo da migração arquitetural e não integra o executável publicado.
+
 ```
-space_fury/
+incarnate/
 ├── main.py               # bootstrap: ajusta sys.path e chama Jogo().executar()
 ├── preview_hud.py        # demonstração do HUD em 1920x1080 (janela animada ou --save)
 ├── requirements.txt      # dependências
@@ -312,7 +328,7 @@ python tests/run_all.py        # alternativa standalone, sem pytest
 
 Os testes rodam **headless** (drivers dummy do SDL). O `tests/conftest.py`
 define o ambiente antes de qualquer importação do jogo e cria um
-`SPACEFURY_DATA_DIR` temporário para a sessão do pytest; cada arquivo também
+`INCARNATE_DATA_DIR` temporário para a sessão do pytest; cada arquivo também
 funciona isolado. Cobertura por módulo:
 
 | Arquivo | Módulos | O que cobre |
@@ -329,6 +345,9 @@ funciona isolado. Cobertura por módulo:
 | `test_core.py` | core | estados, níveis/boss a cada 5, desbloqueio de armas, combate e fim de jogo |
 | `test_hud.py` | hud | HUD: renderização de todos os módulos, segmentos, barra de boss, medidores e duck typing |
 | `test_layout.py` | layout | layout responsivo nas resoluções-alvo |
+
+Os testes de menu também cobrem a seleção de fases, cancelamento seguro de
+nova campanha, cache de miniaturas e coordenadas de mouse responsivas.
 
 O `smoke_test.py` faz um smoke test geral: inicialização, loop de combate
 avançando níveis, desenho dos 6 cenários e mapeamento nível→cenário.

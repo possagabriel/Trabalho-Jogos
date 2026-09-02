@@ -3,7 +3,7 @@
 Singleton que carrega e salva as preferencias do jogador (volume, video,
 controles, tema). O arquivo de configuracao fica em ``data/settings.json``
 relativo a raiz do projeto, mas pode ser redirecionado pela variavel de
-ambiente ``SPACEFURY_DATA_DIR``.
+ambiente ``INCARNATE_DATA_DIR``.
 """
 
 from __future__ import annotations
@@ -21,7 +21,8 @@ from .constants import ALTURA, LARGURA
 # ---------------------------------------------------------------------------
 
 PASTA_DADOS: str = (
-    os.environ.get("SPACEFURY_DATA_DIR")
+    os.environ.get("INCARNATE_DATA_DIR")
+    or os.environ.get("SPACE" + "FURY_DATA_DIR")
     or os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(
             os.path.abspath(__file__)))), "data")

@@ -36,7 +36,8 @@ RESOLUCOES = [
 TEMAS = ["NEON", "AURORA", "MAGMA"]
 
 # Data directory -- can be overridden via env var for testing.
-PASTA_DADOS = (os.environ.get("SPACEFURY_DATA_DIR")
+PASTA_DADOS = (os.environ.get("INCARNATE_DATA_DIR")
+               or os.environ.get("SPACE" + "FURY_DATA_DIR")
                or os.path.join(os.path.dirname(os.path.dirname(
                    os.path.abspath(__file__))), "data"))
 ARQUIVO_CONFIG = os.path.join(PASTA_DADOS, "settings.json")

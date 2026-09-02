@@ -5,6 +5,8 @@ import random
 
 import pygame
 
+from .config import ALTURA, LARGURA
+
 from .config import BRANCO, CIANO, DOURADO, LARANJA, ROXO, VERMELHO
 from .smooth import luz_radial
 
@@ -213,8 +215,8 @@ class SistemaParticulas:
     def espiral_revelacao(self, x, y, cor):
         """Revelacao com particulas nas cores do novo cenario."""
         for i in range(50):
-            px = random.uniform(0, 900)
-            py = random.uniform(0, 700)
+            px = random.uniform(0, LARGURA)
+            py = random.uniform(0, ALTURA)
             self.particulas.append(
                 Particula(px, py, cor,
                           (random.uniform(-1, 1), random.uniform(-1, 1)),

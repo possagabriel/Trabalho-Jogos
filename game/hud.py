@@ -1,4 +1,4 @@
-"""HUD de combate profissional do VOID//SHIFT.
+"""HUD de combate profissional do INCARNATE.
 
 Interface de nave espacial militar de alta tecnologia, em identidade visual
 sci-fi cinematografica: roxo escuro + azul profundo + ciano + magenta, com
@@ -18,7 +18,7 @@ Componentes:
 Uso:
 
     hud = HudJogo()
-    hud.desenhar(tela, jogo)   # tela = superficie logica 900x700
+    hud.desenhar(tela, jogo)   # tela = superficie logica 1280x720
 
 O ``HudJogo`` le apenas os atributos de que precisa de ``jogo`` (duck typing),
 entao funciona com o ``core.Jogo`` real ou com um objeto de demonstracao.
@@ -39,10 +39,10 @@ from .smooth import barra_suave, desenhar_cantos, desenhar_circulo, \
 from .weapons import ARMARIA
 
 # ---------------------------------------------------------------------------
-# Paleta do HUD (derivada da marca VOID//SHIFT, nunca saturada em excesso)
+# Paleta do HUD (derivada da marca INCARNATE, nunca saturada em excesso)
 # ---------------------------------------------------------------------------
 
-AZUL_PROFUNDO = (9, 11, 26)       # fundo dos paineis holograficos
+AZUL_PROFUNDO = (34, 28, 58)      # fundo cartunesco, menos metalico
 CIANO_HUD = QUANTUM_CYAN
 MAGENTA_HUD = RIFT_MAGENTA
 BRANCO_HUD = SHIFT_WHITE
@@ -374,6 +374,10 @@ class HudJogo:
             "municao": municao,
             "boost": max(0.0, min(1.0, getattr(jogo, "boost", 1.0))),
             "especial": max(0.0, min(1.0, getattr(jogo, "especial", 0.0))),
+            "especial_nome": {"bomba": "BOMBA VORTEX", "cura": "REPARO +3",
+                              "imortal": "IMORTALIDADE"}.get(
+                                  getattr(jogo, "especial_atual", "bomba"),
+                                  "ESPECIAL"),
             "energia": max(0.0, min(100.0, getattr(jogo, "energia", 100.0))),
             "vel": getattr(jog, "velocidade", 5.0),
             "boss": jogo.boss,
@@ -444,7 +448,7 @@ class HudJogo:
         barra_escudo = pygame.Rect(x0, sy, l.px(128), l.px(5))
         _barra_fina(tela, l, barra_escudo, escudo_frac, cor_escudo,
                     brilho=d["escudo"])
-        rot_esc = _render(self._f_padrao_xxs, "SHIELD", (120, 150, 210))
+        rot_esc = _render(self._f_padrao_xxs, "ESCUDO", (150, 180, 225))
         _blit_alfa(tela, rot_esc, (x0, sy - l.px(2)), 180)
 
         # energia de sistemas (mini barra + valor)
@@ -453,7 +457,7 @@ class HudJogo:
         barra_energia = pygame.Rect(x0, ey, l.px(128), l.px(5))
         _barra_fina(tela, l, barra_energia, frac_energia,
                     self._paleta["energia"])
-        rot_ener = _render(self._f_padrao_xxs, "ENERGY", (150, 132, 240))
+        rot_ener = _render(self._f_padrao_xxs, "ENERGIA", (180, 160, 245))
         _blit_alfa(tela, rot_ener, (x0, ey - l.px(2)), 180)
         _numero(tela, l, self._f_padrao_xxs, f"{int(d['energia'])}",
                 (painel.right - l.px(10), ey + l.px(1)),
@@ -518,7 +522,7 @@ class HudJogo:
         y = l.margem(16)
 
         setor = _render(self._f_titulo_m,
-                        f"SECTOR {d['cenario']:02d}", BRANCO_HUD)
+                        f"FASE {d['cenario']:02d}", BRANCO_HUD)
         rect_setor = setor.get_rect(center=(cx, y + l.px(16)))
         _blit_alfa(tela, setor, rect_setor, 240)
         # acentos laterais discretos
@@ -557,7 +561,7 @@ class HudJogo:
         # velocidade
         vx = centro[0]
         vy = centro[1] + raio + l.px(20)
-        vel = _render(self._f_padrao_s, f"VEL {d['vel']:.1f}",
+        vel = _render(self._f_padrao_s, f"VELOCIDADE {d['vel']:.1f}",
                       (170, 178, 220))
         _blit_alfa(tela, vel, vel.get_rect(center=(vx, vy)), 220)
         barra_vel = pygame.Rect(vx - l.px(30), vy + l.px(10), l.px(60), l.px(3))
@@ -614,7 +618,7 @@ class HudJogo:
         _barra_segmentada(tela, l, barra, d["especial"], cor, 10,
                           raio_canto=2)
 
-        rotulo = _render(self._f_titulo_xs, "BOMBA", CINZA_HUD)
+        rotulo = _render(self._f_titulo_xs, d["especial_nome"], CINZA_HUD)
         _blit_alfa(tela, rotulo,
                    (barra.x + l.px(6), barra.y + l.px(12)), 200)
 
@@ -622,7 +626,7 @@ class HudJogo:
             pulso = 0.7 + 0.3 * math.sin(t * 4)
             desenhar_glow(tela, self._paleta["secundaria"], barra.center,
                           max(barra.w, barra.h), 0.5 * pulso)
-            surf = _render(self._f_titulo_xs, "BOMBA READY",
+            surf = _render(self._f_titulo_xs, f"{d['especial_nome']} PRONTO",
                            tuple(int(c * pulso)
                                  for c in self._paleta["secundaria"]))
             _blit_alfa(tela, surf,

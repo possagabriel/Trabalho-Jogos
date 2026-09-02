@@ -1,4 +1,4 @@
-"""Configuracao Flake8 para o projeto VOID//SHIFT."""
+"""Configuracao Flake8 para o projeto INCARNATE."""
 
 [flake8]
 max-line-length = 100

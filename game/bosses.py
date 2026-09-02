@@ -10,6 +10,7 @@ from .config import ALTURA, AZUL, BRANCO, CIANO, DOURADO, LARGURA, ROSA, ROXO, \
 from .geometry import estrela, losango, pentagono as pent_pontos, poligono
 from .smooth import desenhar_circulo, desenhar_glow, desenhar_poligono
 from .weapons import Projetil
+from .progression import FALAS_DERROTA, MaquinaBoss
 
 
 class Boss:
@@ -41,6 +42,9 @@ class Boss:
         self.teleportando = False
         self.teleport_timer = 130
         self.alvo = None
+        self.maquina = MaquinaBoss(self.vida, self.vida_max)
+        self.fala_derrota = FALAS_DERROTA.get(self.nome, "O protocolo foi encerrado.")
+        self.transicao_fase = 0
 
     @property
     def rect(self):
@@ -186,10 +190,18 @@ class Boss:
 
     def sofrer_dano(self, dano):
         self.vida -= dano
+        estado_anterior = self.maquina.estado
+        derrotado = self.maquina.sofrer_dano(dano)
+        if self.maquina.estado != estado_anterior and self.maquina.estado.value == "fase_2":
+            self.transicao_fase = 30
         self.flash = 6
-        return self.vida <= 0
+        return derrotado or self.vida <= 0
 
     def desenhar(self, tela):
+        if self.transicao_fase > 0:
+            self.transicao_fase -= 1
+            desenhar_glow(tela, CIANO, (int(self.x), int(self.y)),
+                          self.raio + 20, 0.8)
         x, y = int(self.x), int(self.y)
         cor = BRANCO if self.flash > 0 else self.cor
         centro = (x, y)

@@ -31,11 +31,12 @@ import pygame  # noqa: E402
 from game import save_system  # noqa: E402
 from game import settings  # noqa: E402
 from game import shop  # noqa: E402
+from game import persistence  # noqa: E402
 from game.config import ALTURA, LARGURA  # noqa: E402
 from game.player import Jogador, SKINS, Skin  # noqa: E402
 
 
-def _tmp_dados(prefix="spacefury_persist_"):
+def _tmp_dados(prefix="incarnate_persist_"):
     return tempfile.mkdtemp(prefix=prefix)
 
 
@@ -79,7 +80,7 @@ def test_configuracoes_carregar_defaults():
     with _patch_config(dados):
         cfg = settings.Configuracoes()
         assert cfg["musica_volume"] == 0.8
-        assert cfg["resolucao"] == "900x700"
+        assert cfg["resolucao"] == "1280x720"
         assert cfg["tela_cheia"] is False
         assert cfg["sensibilidade"] == 1.0
         assert cfg["tema"] == "NEON"
@@ -103,6 +104,18 @@ def test_configuracoes_salvar_e_recarregar():
         assert cfg2["musica_volume"] == 0.25
         assert cfg2["sensibilidade"] == 1.5
         assert cfg2["tema"] == "AURORA"
+
+
+def test_gravacao_atomica_preserva_arquivo_se_replace_falhar():
+    dados = _tmp_dados()
+    caminho = os.path.join(dados, "save.json")
+    with open(caminho, "w", encoding="utf-8") as arquivo:
+        json.dump({"versao": "anterior"}, arquivo)
+    with mock.patch.object(persistence.os, "replace", side_effect=OSError):
+        assert persistence.salvar_json_atomico(
+            caminho, {"versao": "nova"}) is False
+    with open(caminho, "r", encoding="utf-8") as arquivo:
+        assert json.load(arquivo) == {"versao": "anterior"}
 
 
 def test_configuracoes_arquivo_corrompido_usa_defaults():
@@ -192,6 +205,22 @@ def test_save_persistencia_em_disco():
         assert os.path.exists(os.path.join(dados, "save.json"))
         prog2 = save_system.SistemaProgressao()
         assert prog2.jogador["moedas"] == 500
+
+
+def test_save_antigo_e_migrado_sem_perder_campos():
+    dados = _tmp_dados()
+    caminho = os.path.join(dados, "save.json")
+    with open(caminho, "w", encoding="utf-8") as arquivo:
+        json.dump({"jogador": {"nome": "Piloto", "moedas": 42},
+                   "campo_futuro": True}, arquivo)
+    with _patches(dados):
+        prog = save_system.SistemaProgressao()
+    assert prog.jogador["nome"] == "Piloto"
+    assert prog.jogador["moedas"] == 42
+    assert prog.jogador["skins_desbloqueadas"] == ["padrao"]
+    assert prog.dados["estatisticas"]["tempo_total"] == 0
+    assert prog.dados["campo_futuro"] is True
+    assert prog.dados["versao"] == save_system.VERSAO_SAVE
 
 
 def test_save_existe_e_resetar():

@@ -422,7 +422,7 @@ class HudMenu:
         fonte_t = pygame.font.SysFont("monospace", 16, bold=True)
 
         # canto superior esquerdo
-        self._desenhar_texto(tela, "logo", fonte_t, "VOID//SHIFT",
+        self._desenhar_texto(tela, "logo", fonte_t, "INCARNATE",
                              (32, 20), primaria, 4)
         self._desenhar_texto(tela, "sistema", fonte_p,
                              "// SISTEMA DIMENSIONAL", (34, 42), dim, 3)

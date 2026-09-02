@@ -1,11 +1,11 @@
-"""Constantes globais do jogo VOID//SHIFT: tela, FPS, cores e titulo."""
+"""Constantes globais do jogo INCARNATE: tela, FPS, cores e titulo."""
 
-LARGURA = 900
-ALTURA = 700
+LARGURA = 1280
+ALTURA = 720
 FPS = 60
-TITULO = "VOID//SHIFT - Enter the Rift"
+TITULO = "INCARNATE - Enter the Rift"
 
-# Paleta oficial da marca VOID//SHIFT
+# Paleta oficial da marca INCARNATE
 VOID_BLACK = (8, 8, 13)        # fundo predominante
 SHIFT_WHITE = (244, 244, 247)  # textos e elementos importantes
 RIFT_MAGENTA = (255, 23, 107)  # assinatura visual

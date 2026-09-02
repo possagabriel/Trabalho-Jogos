@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Demonstracao do HUD profissional do VOID//SHIFT.
+"""Demonstracao do HUD profissional do INCARNATE.
 
 Renderiza o ``HudJogo`` em 1920x1080 sobre um fundo neutro escuro, com todos
 os componentes visiveis e animados (vida, escudo, energia, boost, especial,
@@ -91,7 +91,7 @@ class Demonstracao:
 def _rodar(salvar=False):
     pygame.init()
     tela = pygame.display.set_mode(TAMANHO, pygame.SCALED)
-    pygame.display.set_caption("VOID//SHIFT - HUD")
+    pygame.display.set_caption("INCARNATE - HUD")
     fundo = _fundo_neutro()
     layout = Layout(TAMANHO[0], TAMANHO[1])
     hud = HudJogo(layout)

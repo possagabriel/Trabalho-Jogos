@@ -486,7 +486,7 @@ class InimigoEspecial(Inimigo):
                                                   t * 2),
                               glow_cor=cor, glow_raio=self.raio)
             desenhar_circulo(tela, (255, 0, 255), centro, 8, brilho=1.5)
-            self.desenhar_barra_carga(tela)
+            self.desenhar_barra_vida(tela)
             return
 
         if self.tipo_especial == "acumulador":
@@ -571,6 +571,17 @@ class InimigoEspecial(Inimigo):
                              brilho=1.2)
 
         self.desenhar_barra_carga(tela)
+
+    def desenhar_barra_vida(self, tela):
+        """Barra compacta do miniboss, independente da carga já completa."""
+        largura = max(72, int(self.raio * 2.4))
+        altura = 7
+        x = int(self.x) - largura // 2
+        y = int(self.y) - self.raio - 18
+        progresso = max(0.0, min(1.0, self.vida / max(1, self.vida_max)))
+        from .smooth import barra_suave
+        barra_suave(tela, x, y, largura, altura, progresso,
+                    (235, 55, 220), fundo=(35, 12, 45), glow=False)
 
 
 # ---------------------------------------------------------------------------

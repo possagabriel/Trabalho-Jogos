@@ -1,17 +1,18 @@
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
-name = "void-shift"
+name = "incarnate"
 version = "1.0.0"
-description = "VOID//SHIFT — Enter the Rift"
+description = "INCARNATE — Enter the Rift"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 
 dependencies = [
-    "pygame>=2.5.0",
+    "pygame-ce>=2.5.0",
+    "PyOpenGL>=3.1.10",
 ]
 
 [project.optional-dependencies]
@@ -22,10 +23,10 @@ dev = [
 ]
 
 [project.scripts]
-void-shift = "src.core.application:Application.run"
+incarnate = "game.core:main"
 
 [tool.setuptools.packages.find]
-include = ["src*"]
+include = ["game*"]
 
 [tool.ruff]
 line-length = 99

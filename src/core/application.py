@@ -14,7 +14,7 @@ implementados.
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING
+from typing import Any
 
 import pygame
 
@@ -23,12 +23,8 @@ from .event_bus import EventBus, GameEvent, GameEventType
 from .settings import Configuracoes, parse_resolucao
 from .state_machine import GameContext
 
-if TYPE_CHECKING:
-    pass
-
-
 class Application:
-    """Ponto de entrada principal do VOID//SHIFT.
+    """Ponto de entrada principal do INCARNATE.
 
     Responsabilidades:
     - Inicializar pygame e criar a janela.

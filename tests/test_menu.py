@@ -16,7 +16,7 @@ from unittest import mock
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
-os.environ["SPACEFURY_DATA_DIR"] = tempfile.mkdtemp(prefix="spacefury_test_")
+os.environ["INCARNATE_DATA_DIR"] = tempfile.mkdtemp(prefix="incarnate_test_")
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
@@ -25,7 +25,9 @@ import pygame  # noqa: E402
 
 from game.config import ALTURA, LARGURA  # noqa: E402
 from game.core import Jogo  # noqa: E402
+from game.layout import Layout  # noqa: E402
 from game.menu import MenuPrincipal  # noqa: E402
+from game.phase_select import PhaseStatus  # noqa: E402
 
 ROTULOS_ESPERADOS = [
     "01 // CONTINUAR",
@@ -59,6 +61,16 @@ def test_construcao_subestado_e_opcoes():
 def test_construcao_carregou_fundo_do_menu():
     _, menu = novo_menu()
     assert menu.fundo.fundo_imagem is not None or menu.fundo.gradiente
+
+
+def test_logo_principal_e_gerado_por_tipografia():
+    _, menu = novo_menu()
+    tema = menu.jogo.config["tema"]
+    from game.theme import tema_atual
+    surfaces = menu._titulo_surfaces(tema_atual(tema))
+    assert surfaces["incarnate"].get_width() > 0
+    assert surfaces["incarnate_eco"].get_width() > 0
+    assert not hasattr(menu, "_logo_menu")
 
 
 def test_selecionar_muda_destaque():
@@ -125,10 +137,34 @@ def test_voltar_menu():
 # Missao nova
 # ---------------------------------------------------------------------------
 
-def test_novo_jogo_direto_inicia_transicao():
+def test_novo_jogo_direto_abre_selecao_de_fases():
     jogo, menu = novo_menu()
     menu._novo_jogo_direto()
-    assert menu.transicao_missao.em_andamento() is True
+    assert menu.subestado == "FASES"
+    assert menu.phase_screen.nova_campanha_pendente is True
+    assert menu.phase_screen.statuses["lealdade"] == PhaseStatus.AVAILABLE
+    assert menu.phase_screen.statuses["funcao"] == PhaseStatus.LOCKED
+
+
+def test_cancelar_novo_jogo_preserva_campanha():
+    jogo, menu = novo_menu()
+    campanha = jogo.progresso.jogador["progresso_campanha"]
+    campanha["fases_concluidas"] = [1, 2]
+    menu._novo_jogo_direto()
+    menu._voltar_menu()
+    assert campanha["fases_concluidas"] == [1, 2]
+    assert menu.phase_screen.nova_campanha_pendente is False
+
+
+def test_confirmar_novo_jogo_reseta_campanha():
+    jogo, menu = novo_menu()
+    jogo.progresso.jogador["progresso_campanha"]["fases_concluidas"] = [1, 2]
+    menu._novo_jogo_direto()
+    with mock.patch.object(jogo, "_preparar_jogo"):
+        assert menu.phase_screen.confirm() is True
+    campanha = jogo.progresso.jogador["progresso_campanha"]
+    assert campanha["fases_concluidas"] == []
+    assert menu.phase_screen.nova_campanha_pendente is False
 
 
 def test_acao_continuar_sem_save_avisa():
@@ -221,6 +257,34 @@ def test_pos_logica_mantem_dentro_da_tela():
     x, y = menu._pos_logica((450, 350))
     assert 0 <= x <= LARGURA
     assert 0 <= y <= ALTURA
+
+
+def test_pos_mouse_usa_a_mesma_transformacao_do_gameplay():
+    jogo, menu = novo_menu()
+    rect = menu.opcoes[0].get_rect(menu.x_opcoes, menu.fonte_opcao,
+                                  menu.layout)
+    escala, off_x, off_y = jogo._transformacao_janela()
+    pos_janela = (rect.centerx * escala + off_x,
+                  rect.centery * escala + off_y)
+    pos_logica = menu._pos_logica(pos_janela)
+    assert abs(pos_logica[0] - rect.centerx) <= 1
+    assert abs(pos_logica[1] - rect.centery) <= 1
+    assert rect.collidepoint(pos_logica)
+
+
+def test_selecao_fases_responsiva_e_cacheada():
+    jogo, _ = novo_menu()
+    layout = Layout(1920, 1080)
+    menu = MenuPrincipal(jogo, layout=layout)
+    tela = pygame.Surface((layout.largura, layout.altura))
+    menu.phase_screen.draw(tela)
+    limite = tela.get_rect()
+    assert all(limite.contains(menu.phase_screen.card_rect(i))
+               for i in range(len(menu.phase_screen.phases)))
+    assert limite.collidepoint(menu.phase_screen.ship_position())
+    thumbs = dict(menu.phase_screen._thumbs_escaladas)
+    menu.phase_screen.draw(tela)
+    assert menu.phase_screen._thumbs_escaladas == thumbs
 
 
 # ---------------------------------------------------------------------------

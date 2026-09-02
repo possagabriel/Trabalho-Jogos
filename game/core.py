@@ -1,6 +1,7 @@
 """Classe principal do jogo: estados, loop, transicoes e gerenciamento."""
 
 import math
+import os
 import random
 import sys
 
@@ -13,6 +14,7 @@ from .bosses import Boss
 from .enemies import Inimigo, InimigoEspecial, composicao_onda, \
     sortear_inimigo_especial
 from .fonts import fonte_texto, fonte_titulo
+from .gpu_renderer import ApresentadorGPU, GPU_DISPONIVEL
 from .hud import HudJogo
 from .menu import Dialogo, MenuPrincipal
 from .particles import MensagemFlutuante, SistemaParticulas
@@ -31,12 +33,13 @@ from .layout import Layout
 from .ui import desenhar_barra, desenhar_cantos, desenhar_texto, \
     desenhar_titulo
 from .weapons import ARMARIA, Projetil
+from .progression import Codex, ProgressaoFases
 
 DICAS_CARREGAMENTO = [
     "Prepare-se para atravessar a fenda!",
     "Use combos para ganhar mais pontos!",
-    "Troque de arma com as teclas 1 a 9.",
-    "Abates carregam a Bomba Vortex (tecla E).",
+    "Abra o arsenal com TAB para escolher arma e especial.",
+    "Abates carregam o especial equipado (tecla E).",
     "Derrote entidades RIFT para abrir novas dimensoes.",
     "Skins raras caem dos inimigos cristalinos.",
     "Junte moedas para expandir o hangar.",
@@ -44,16 +47,35 @@ DICAS_CARREGAMENTO = [
     "Cada dimensao tem inimigos e armadilhas proprios.",
 ]
 
+ESPECIAIS = {
+    "bomba": {"nome": "BOMBA VORTEX", "descricao": "Dano em uma grande area"},
+    "cura": {"nome": "REPARO +3", "descricao": "Recupera 3 pontos de vida"},
+    "imortal": {"nome": "IMORTALIDADE", "descricao": "10 segundos sem receber dano"},
+}
+
+FASE_IDS = ["lealdade", "funcao", "identidade", "silencio", "descarte"]
+# Somente três armas podem ser encontradas em cada fase. Repetições entre
+# fases são intencionais; armas exclusivas da loja não entram neste catálogo.
+ARMAS_POR_FASE = {
+    "lealdade": [1, 2, 3],
+    "funcao": [2, 4, 5],
+    "identidade": [3, 6, 7],
+    "silencio": [5, 7, 8],
+    "descarte": [2, 6, 8],
+}
+
 
 class Jogo:
     """Controla o fluxo do jogo: menu, loja, partida, pausa e game over."""
 
     def __init__(self):
         pygame.init()
+        self.apresentador_gpu = None
+        self.gpu_ativo = False
         self.config = Configuracoes()
         self.janela = self._aplicar_modo_video()
         self.tela = pygame.Surface((LARGURA, ALTURA))
-        self._criar_layout_ui()
+        self.layout = Layout(LARGURA, ALTURA)
         pygame.display.set_caption(TITULO)
         pygame.display.set_icon(self._criar_icone())
         self.relogio = pygame.time.Clock()
@@ -98,7 +120,9 @@ class Jogo:
         self.hitstop = 0
         self.recordes = SistemaProgressao.carregar_recordes()
         self.hud = HudJogo(self.layout)
-        self.menu = MenuPrincipal(self, self.layout)
+        # O menu compartilha a mesma resolucao logica do mundo do jogo.
+        # A janela pode mudar de tamanho, mas ambos usam a mesma escala final.
+        self.menu = MenuPrincipal(self, Layout(LARGURA, ALTURA))
         # --- estado do menu de pausa ---
         self._pausa_selecao = 0
         self._pausa_config_selecao = 0
@@ -106,22 +130,16 @@ class Jogo:
         self._pausa_mostrando_config = False
         self._pausa_dialogo = None
         self._pausa_mouse = (0, 0)
+        self.menu_equipamento = False
+        self.linha_equipamento = 0
+        self.indice_equipamento = 0
         self._novo_jogo("Jogador", zerar_estado=False)
         self.estado = "MENU"
 
     # ----- modo de video -----
 
-    def _criar_layout_ui(self):
-        """Cria Layout, tela_ui e superficies de efeito na resolucao da janela."""
-        w, h = self.janela.get_size()
-        self.layout = Layout(w, h)
-        self.tela_ui = pygame.Surface((w, h))
-        self._janela_sombra = pygame.Surface((w, h), pygame.SRCALPHA)
-        self._janela_flash = pygame.Surface((w, h), pygame.SRCALPHA)
-        self._janela_fade = pygame.Surface((w, h))
-
     def _escala_janela(self):
-        """Fator de escala e offsets para encaixar a tela 900x700 na janela.
+        """Fator de escala e offsets para encaixar a tela 1280x720 na janela.
 
         Usa scale-to-fit (proporcao preservada) e centraliza a cena, criando
         as "safe areas" (letterbox) nos lados. Com isso o menu e o jogo ficam
@@ -140,74 +158,92 @@ class Jogo:
         calibrar a imagem para o monitor (overscan, TVs, etc.). Usada tanto
         no ``_apresentar`` quanto na conversao de mouse (``_pos_logica``).
         """
+        w, h = self.janela.get_size()
         if self.config["aspecto"] == "PREENCHE":
-            return (self.config["ajuste_escala"],
-                    self.config["ajuste_off_x"], self.config["ajuste_off_y"])
-        escala, off_x, off_y = self._escala_janela()
+            escala = max(w / LARGURA, h / ALTURA)
+            off_x = (w - LARGURA * escala) / 2
+            off_y = (h - ALTURA * escala) / 2
+        else:
+            escala, off_x, off_y = self._escala_janela()
         escala *= max(0.5, self.config["ajuste_escala"])
         off_x += self.config["ajuste_off_x"]
         off_y += self.config["ajuste_off_y"]
         return escala, off_x, off_y
 
     def _aplicar_modo_video(self):
-        """Reconfigura a janela: tela cheia (resolucao nativa) ou escolhida."""
+        """Reconfigura a janela, preferindo OpenGL com fallback por software."""
         from .settings import parse_resolucao
+        anterior = getattr(self, "apresentador_gpu", None)
+        if anterior is not None:
+            anterior.liberar()
+        self.apresentador_gpu = None
+        self.gpu_ativo = False
+
         if self.config["tela_cheia"]:
             try:
                 w, h = pygame.display.get_desktop_sizes()[0]
             except (IndexError, pygame.error):
                 w, h = parse_resolucao(self.config["resolucao"])
-            self.janela = pygame.display.set_mode((w, h), pygame.FULLSCREEN)
         else:
-            self.janela = pygame.display.set_mode(
-                parse_resolucao(self.config["resolucao"]))
-        if hasattr(self, "hud") and hasattr(self, "menu"):
-            self._criar_layout_ui()
-            self.hud.layout = self.layout
-            self.menu.layout = self.layout
-            self.menu.fundo._layout = self.layout
-            self.menu.hud._layout = self.layout
-            self.menu.destaque._layout = self.layout
-            self.menu.notificacoes._layout = self.layout
-            self.menu.transicao._layout = self.layout
-            self.menu.transicao_missao._layout = self.layout
-            self.menu._recriar_fontes()
+            w, h = parse_resolucao(self.config["resolucao"])
+
+        flags = pygame.FULLSCREEN if self.config["tela_cheia"] else 0
+        usar_gpu = (GPU_DISPONIVEL and
+                    os.environ.get("INCARNATE_SOFTWARE_RENDERER") != "1" and
+                    pygame.display.get_driver() not in ("dummy", "offscreen"))
+        if usar_gpu:
+            try:
+                flags_gpu = flags | pygame.OPENGL | pygame.DOUBLEBUF
+                self.janela = pygame.display.set_mode(
+                    (w, h), flags_gpu, vsync=1)
+                self.apresentador_gpu = ApresentadorGPU((LARGURA, ALTURA))
+                self.gpu_ativo = True
+                return self.janela
+            except Exception:  # fallback inclui erros do driver OpenGL
+                self.apresentador_gpu = None
+                self.gpu_ativo = False
+
+        self.janela = pygame.display.set_mode((w, h), flags)
         return self.janela
 
+    def _pos_logica(self, pos):
+        """Converte coordenadas da janela para a superficie logica 1280x720."""
+        x, y = pos
+        escala, off_x, off_y = self._transformacao_janela()
+        return int((x - off_x) / escala), int((y - off_y) / escala)
+
     def _apresentar(self):
-        """Redimensiona a superficie interna (900x700) para a janela.
+        """Redimensiona a superficie interna (1280x720) para a janela.
 
         No modo AJUSTAR preserva as proporcoes com safe areas (letterbox);
-        no modo PREENCHE estica a cena. flip() e chamado por _desenhar().
+        no PREENCHE usa cover, sem deformacao. flip() e chamado por _desenhar().
         """
         w, h = self.janela.get_size()
-        if (w, h) == (LARGURA, ALTURA):
+        escala, off_x, off_y = self._transformacao_janela()
+        destino = (int(off_x), int(off_y),
+                   max(1, int(LARGURA * escala)),
+                   max(1, int(ALTURA * escala)))
+        if self.apresentador_gpu is not None:
+            self.apresentador_gpu.apresentar(
+                self.tela, destino, (w, h), VOID_BLACK)
+            return
+        if destino == (0, 0, LARGURA, ALTURA):
             self.janela.blit(self.tela, (0, 0))
             return
-        if self.config["aspecto"] == "PREENCHE":
-            escala = max(0.5, self.config["ajuste_escala"])
-            superficie = pygame.transform.smoothscale(
-                self.tela,
-                (max(1, int(w * escala)), max(1, int(h * escala))))
-            self.janela.fill(VOID_BLACK)
-            self.janela.blit(superficie, (int(self.config["ajuste_off_x"]),
-                                          int(self.config["ajuste_off_y"])))
-            return
-        escala, off_x, off_y = self._transformacao_janela()
         superficie = pygame.transform.smoothscale(
-            self.tela,
-            (max(1, int(LARGURA * escala)), max(1, int(ALTURA * escala))))
+            self.tela, destino[2:])
         self.janela.fill(VOID_BLACK)
         self.janela.blit(superficie, (int(off_x), int(off_y)))
-        cor_safe = (32, 28, 48)
-        pygame.draw.aaline(self.janela, cor_safe,
-                           (int(off_x), int(off_y)),
-                           (int(off_x + LARGURA * escala), int(off_y)), 1)
-        pygame.draw.aaline(
-            self.janela, cor_safe,
-            (int(off_x), int(off_y + ALTURA * escala)),
-            (int(off_x + LARGURA * escala),
-             int(off_y + ALTURA * escala)), 1)
+        if self.config["aspecto"] == "AJUSTAR":
+            cor_safe = (32, 28, 48)
+            pygame.draw.aaline(self.janela, cor_safe,
+                               (int(off_x), int(off_y)),
+                               (int(off_x + LARGURA * escala), int(off_y)), 1)
+            pygame.draw.aaline(
+                self.janela, cor_safe,
+                (int(off_x), int(off_y + ALTURA * escala)),
+                (int(off_x + LARGURA * escala),
+                 int(off_y + ALTURA * escala)), 1)
 
     # ----- utilidades -----
 
@@ -225,7 +261,13 @@ class Jogo:
         nome = nome.strip() or "Jogador"
         skin = self.loja.pegar_skin(self.loja.skin_atual)
         self.jogador = Jogador(nome, skin=skin)
-        self.jogador.velocidade = 5.0 * self.sensibilidade
+        melhorias = self.progresso.jogador.get("melhorias", {})
+        blindagem = max(0, int(melhorias.get("blindagem", 0)))
+        self.jogador.max_vida += blindagem
+        self.jogador.vida = min(self.jogador.max_vida,
+                                self.jogador.vida + blindagem)
+        self.velocidade_base = (5.0 + melhorias.get("motor", 0) * 0.5)
+        self.jogador.velocidade = self.velocidade_base * self.sensibilidade
         self.inimigos = []
         self.boss = None
         self.projeteis = []
@@ -241,6 +283,12 @@ class Jogo:
         self.tempo_partida = 0
         self.boost = 1.0            # medidor de boost (0..1)
         self.especial = 0.0         # carga do especial (0..1)
+        self.especial_atual = "bomba"
+        self.especiais_desbloqueados = ["bomba"]
+        campanha = self.progresso.jogador.get("progresso_campanha", {})
+        self.progressao_fases = ProgressaoFases(campanha.get("fases_concluidas", []))
+        self.codex = Codex(campanha.get("fragmentos", []))
+        self.menu_equipamento = False
         self.energia = 100.0        # energia de sistemas (0..100)
         self.particulas.limpar()
         self.flash = 0
@@ -296,15 +344,32 @@ class Jogo:
             self.xs_onda = list(xs)
 
     def _verificar_desbloqueio_arma(self):
-        for indice, arma in enumerate(ARMARIA):
-            if (arma["nivel"] <= self.jogador.nivel and
-                    indice not in self.jogador.armas_desbloqueadas):
-                self.jogador.armas_desbloqueadas.append(indice)
-                self.jogador.arma_atual = indice
-                self.mensagens.append(MensagemFlutuante(
-                    f"ARMA NOVA: {arma['nome']}!", LARGURA // 2,
-                    ALTURA // 2 + 80, arma["cor"], 130))
-                self.sons.tocar("arma")
+        """Armas não são mais concedidas automaticamente por nível."""
+        if 0 not in self.jogador.armas_desbloqueadas:
+            self.jogador.armas_desbloqueadas.insert(0, 0)
+
+    def _fase_atual_id(self):
+        return FASE_IDS[min(max(0, (self.jogador.nivel - 1) // 5), 4)]
+
+    def _coletar_arma_fase(self):
+        """Desbloqueia somente uma das três armas permitidas nesta fase."""
+        fase_id = self._fase_atual_id()
+        permitidas = ARMAS_POR_FASE[fase_id]
+        campanha = self.progresso.jogador.setdefault("progresso_campanha", {})
+        indice = campanha.setdefault("indice_fases", {}).setdefault(fase_id, {})
+        coletadas = indice.setdefault("armas", [])
+        candidatas = [i for i in permitidas
+                      if ARMARIA[i]["nome"] not in coletadas]
+        if not candidatas:
+            self.jogador.moedas_jogo += 200
+            return "Armas desta fase completas! +200 moedas"
+        nova = candidatas[0]
+        nome = ARMARIA[nova]["nome"]
+        coletadas.append(nome)
+        if nova not in self.jogador.armas_desbloqueadas:
+            self.jogador.armas_desbloqueadas.append(nova)
+        self.progresso.salvar_arquivo()
+        return f"Arma da fase: {nome}! Selecione com TAB"
 
     def _transicao_cenario(self, novo_id):
         """Transicao de salto dimensional entre cenarios."""
@@ -399,12 +464,19 @@ class Jogo:
         self.particulas.explosao(proj.x, proj.y, (255, 220, 120), 14, 4)
         self._adicionar_trauma(0.35)
         self._congelar(2)
-        for inimigo in self.inimigos[:]:
-            if math.hypot(inimigo.x - proj.x, inimigo.y - proj.y) < raio:
-                if inimigo.sofrer_dano(proj.dano):
+        alvos = [i for i in self.inimigos
+                 if math.hypot(i.x - proj.x, i.y - proj.y) < raio]
+        for inimigo in alvos:
+            if inimigo not in self.inimigos:
+                continue
+            if isinstance(inimigo, InimigoEspecial):
+                morreu = inimigo.receber_tiro(proj.dano)
+            else:
+                morreu = inimigo.sofrer_dano(proj.dano)
+            if morreu:
                     self._explodir_inimigo(inimigo)
-                else:
-                    inimigo.flash = 8
+            else:
+                inimigo.flash = 8
         if self.boss and math.hypot(self.boss.x - proj.x,
                                     self.boss.y - proj.y) < raio:
             if self.boss.sofrer_dano(proj.dano):
@@ -460,8 +532,23 @@ class Jogo:
         self.sons.tocar("explosao")
         self._adicionar_trauma(0.2)
         self.inimigos_abates += 1
-        # carga do especial: mais lenta agora (bomba pesada demora mais)
-        self.especial = min(1.0, self.especial + 0.02)
+        campanha = self.progresso.jogador.setdefault("progresso_campanha", {})
+        fase_id = self._fase_atual_id()
+        indice = campanha.setdefault("indice_fases", {}).setdefault(fase_id, {
+            "inimigos": 0, "total_inimigos": 0, "boss": False,
+            "armas": [], "itens": []})
+        indice["inimigos"] = indice.get("inimigos", 0) + 1
+        tipos = indice.setdefault("tipos_inimigos", [])
+        tipo_descoberto = getattr(inimigo, "tipo_especial", inimigo.tipo)
+        if tipo_descoberto not in tipos:
+            tipos.append(tipo_descoberto)
+        if isinstance(inimigo, InimigoEspecial) and inimigo.mini_boss:
+            minibosses = indice.setdefault("minibosses", [])
+            if tipo_descoberto not in minibosses:
+                minibosses.append(tipo_descoberto)
+            self.progresso.registrar_subboss(f"{fase_id}:{tipo_descoberto}")
+        # 34 abates enchem o medidor, em vez dos 50 anteriores.
+        self.especial = min(1.0, self.especial + 0.03)
         if inimigo.tipo == "bomba":
             self.particulas.explosao(inimigo.x, inimigo.y, (255, 120, 40),
                                      24, 6.5)
@@ -488,11 +575,11 @@ class Jogo:
         if tipo == "acumulador":
             drop = "arma"
         elif tipo == "esponja":
-            drop = "vida"
+            drop = "especial_cura"
         elif tipo == "condutor":
             drop = "escudo"
         elif tipo == "mutante":
-            drop = "moedas"
+            drop = "especial_imortal"
         elif tipo == "evocador":
             drop = "arma"
         else:
@@ -509,6 +596,19 @@ class Jogo:
         self.bosses_abates += 1
         self.mensagens.append(MensagemFlutuante(
             f"BOSS DERROTADO! +{total}", boss.x, boss.y, boss.cor, 110))
+        self.mensagens.append(MensagemFlutuante(boss.fala_derrota,
+                                                LARGURA // 2, ALTURA // 2 - 80,
+                                                boss.cor, 150))
+        campanha = self.progresso.jogador.setdefault("progresso_campanha", {})
+        bosses = campanha.setdefault("bosses_derrotados", [])
+        if boss.nome not in bosses:
+            bosses.append(boss.nome)
+        ids_fase = ["lealdade", "funcao", "identidade", "silencio", "descarte"]
+        fase_id = ids_fase[min(max(0, (boss.nivel - 1) // 5), 4)]
+        indice = campanha.setdefault("indice_fases", {}).setdefault(fase_id, {})
+        indice["boss"] = True
+        self.progressao_fases.concluir(boss.nivel // 5)
+        campanha["fases_concluidas"] = sorted(self.progressao_fases.concluidas)
         if boss.efeito == "explosao":
             self.particulas.explosao(boss.x, boss.y, boss.cor,
                                      qtd=boss.part_qtd, forca=8)
@@ -565,15 +665,17 @@ class Jogo:
     # ----- atualizacao da partida -----
 
     def _atualizar_jogando(self):
+        if self.menu_equipamento:
+            return
         teclas = pygame.key.get_pressed()
         usando_boost = (teclas[pygame.K_LSHIFT] or teclas[pygame.K_RSHIFT]
                         or teclas[pygame.K_LCTRL] or teclas[pygame.K_RCTRL])
         if usando_boost and self.boost > 0 and self.jogador.vivo:
             self.boost = max(0.0, self.boost - 0.008)
-            self.jogador.velocidade = 5.0 * self.sensibilidade * 2.1
+            self.jogador.velocidade = self.velocidade_base * self.sensibilidade * 2.1
         else:
             self.boost = min(1.0, self.boost + 0.006)
-            self.jogador.velocidade = 5.0 * self.sensibilidade
+            self.jogador.velocidade = self.velocidade_base * self.sensibilidade
         # energia: esgota ao turbinar, regenera aos poucos
         if usando_boost and self.boost > 0:
             self.energia = max(0.0, self.energia - 1.6)
@@ -582,7 +684,9 @@ class Jogo:
 
         self.jogador.atualizar(teclas, self.controles)
         tecla_atirar = self.controles.get("atirar", 0)
-        if teclas[pygame.K_SPACE] or teclas[pygame.K_z] or teclas[tecla_atirar]:
+        if self.boss_intro <= 0 and (teclas[pygame.K_SPACE] or
+                                     teclas[pygame.K_z] or
+                                     teclas[tecla_atirar]):
             novos = self.jogador.atirar()
             if novos:
                 self.projeteis.extend(novos)
@@ -615,6 +719,15 @@ class Jogo:
                         self.mensagens.append(MensagemFlutuante(
                             acoes["mensagem"], inimigo.x, inimigo.y,
                             inimigo.cor, 90))
+                    if inimigo.mini_boss:
+                        # A transformação encerra a onda atual e deixa a arena
+                        # limpa para o confronto com o miniboss.
+                        self.inimigos = [inimigo]
+                        self.fila_onda.clear()
+                        self.xs_onda.clear()
+                        self.projeteis = [p for p in self.projeteis
+                                          if p.origem == "jogador"]
+                        break
                     if acoes["morrer"]:
                         self._explodir_inimigo(inimigo)
                         continue
@@ -623,7 +736,7 @@ class Jogo:
             if inimigo.y > ALTURA + 60:
                 self.inimigos.remove(inimigo)
 
-        if self.boss:
+        if self.boss and self.boss_intro <= 0:
             novos = self.boss.atualizar(self.jogador)
             self.projeteis.extend(novos)
 
@@ -636,7 +749,9 @@ class Jogo:
                 if not isinstance(inimigo, InimigoEspecial):
                     self._explodir_inimigo(inimigo)
 
-        if self.boss and self.boss.rect.colliderect(self.jogador.rect):
+        if self.boss and math.hypot(self.boss.x - self.jogador.x,
+                                    self.boss.y - self.jogador.y) < \
+                self.boss.raio + self.jogador.raio:
             self._aplicar_dano_jogador()
 
         if random.random() < 0.5:
@@ -650,13 +765,28 @@ class Jogo:
             self.mensagens.append(MensagemFlutuante(
                 f"NIVEL {self.jogador.nivel} CONCLUIDO! +{bonus}",
                 LARGURA // 2, ALTURA // 2 + 30, VERDE, 90))
-            self._iniciar_nivel(self.jogador.nivel + 1)
+            if self.jogador.nivel % 5:
+                # Os quatro trechos internos avançam dentro do protocolo.
+                self._iniciar_nivel(self.jogador.nivel + 1)
+            else:
+                # Após o boss principal, retorna ao lobby e nunca entra
+                # automaticamente no protocolo seguinte.
+                campanha = self.progresso.jogador.setdefault(
+                    "progresso_campanha", {})
+                ordem_fase = ((self.jogador.nivel - 1) // 5) + 1
+                ids_fase = ["lealdade", "funcao", "identidade", "silencio",
+                            "descarte"]
+                campanha["fase_atual"] = ids_fase[min(
+                    ordem_fase - 1, len(ids_fase) - 1)]
+                self.progresso.salvar_arquivo()
+                self.estado = "MENU"
+                self.menu._abrir_fases()
 
         if not self.jogador.vivo:
             self._fim_de_jogo()
 
     def _ativar_especial(self):
-        """Dispara o especial (tecla E): lança a Bomba Vortex.
+        """Ativa o especial equipado no menu de TAB.
 
         Consome a carga do medidor (SPECIAL READY). A bomba é grande, viaja
         devagar e explode em área enorme causando dano massivo. Não afeta o
@@ -665,6 +795,20 @@ class Jogo:
         if self.especial < 1.0 or self.estado != "JOGANDO":
             return False
         self.especial = 0.0
+        if self.especial_atual == "cura":
+            self.jogador.vida = min(self.jogador.max_vida,
+                                    self.jogador.vida + 3)
+            self.mensagens.append(MensagemFlutuante(
+                "REPARO +3", self.jogador.x, self.jogador.y - 35, VERDE, 80))
+            self.sons.tocar("especial")
+            return True
+        if self.especial_atual == "imortal":
+            self.jogador.invencivel = max(self.jogador.invencivel, 10 * FPS)
+            self.mensagens.append(MensagemFlutuante(
+                "IMORTALIDADE: 10s", self.jogador.x,
+                self.jogador.y - 35, CIANO, 80))
+            self.sons.tocar("especial")
+            return True
         x, y = self.jogador.x, self.jogador.y - 24
         self.projeteis.append(Projetil(x, y, 0, -3.5, 25, LARANJA, 20,
                                        tipo="bomba"))
@@ -700,7 +844,9 @@ class Jogo:
                 if acertou and proj.tipo not in ("ion", "gauss") and \
                         proj.origem == "jogador":
                     self.projeteis.remove(proj)
-            elif proj.rect.colliderect(self.jogador.rect):
+            elif math.hypot(proj.x - self.jogador.x,
+                            proj.y - self.jogador.y) < \
+                    proj.raio + self.jogador.raio:
                 self.projeteis.remove(proj)
                 self._aplicar_dano_jogador()
 
@@ -741,7 +887,8 @@ class Jogo:
             acertou = True
             if not penetrante:
                 return True
-        if self.boss and proj.rect.colliderect(self.boss.rect):
+        if (self.boss and self.boss_intro <= 0 and
+                proj.rect.colliderect(self.boss.rect)):
             if self.boss.sofrer_dano(proj.dano):
                 self._derrotar_boss()
             else:
@@ -758,8 +905,25 @@ class Jogo:
                 self.powerups.remove(powerup)
             elif powerup.rect.colliderect(self.jogador.rect):
                 self.powerups.remove(powerup)
-                mensagem = powerup.aplicar(self.jogador,
-                                           self._desbloquear_skin_jogo)
+                if powerup.tipo.startswith("especial_"):
+                    especial = powerup.tipo.removeprefix("especial_")
+                    if especial not in self.especiais_desbloqueados:
+                        self.especiais_desbloqueados.append(especial)
+                        mensagem = (f"ESPECIAL: {ESPECIAIS[especial]['nome']}! "
+                                    "SELECIONE COM TAB")
+                    else:
+                        self.especial = min(1.0, self.especial + 0.35)
+                        mensagem = "Carga especial +35%"
+                    self.mensagens.append(MensagemFlutuante(
+                        mensagem, powerup.x, powerup.y,
+                        PowerUp.CORES[powerup.tipo]))
+                    self.sons.tocar("coleta")
+                    continue
+                if powerup.tipo == "arma":
+                    mensagem = self._coletar_arma_fase()
+                else:
+                    mensagem = powerup.aplicar(
+                        self.jogador, self._desbloquear_skin_jogo)
                 self.mensagens.append(MensagemFlutuante(
                     mensagem, powerup.x, powerup.y,
                     PowerUp.CORES[powerup.tipo]))
@@ -806,7 +970,11 @@ class Jogo:
                 continue
             if self.estado == "JOGANDO":
                 tecla_pausar = self.controles.get("pausar", 0)
-                if (evento.key == pygame.K_p or
+                if evento.key == pygame.K_TAB:
+                    self.menu_equipamento = not self.menu_equipamento
+                elif self.menu_equipamento:
+                    self._tratar_menu_equipamento(evento)
+                elif (evento.key == pygame.K_p or
                         evento.key == pygame.K_ESCAPE or
                         evento.key == tecla_pausar):
                     self.estado = "PAUSA"
@@ -823,6 +991,25 @@ class Jogo:
                     self.estado = "MENU"
                     self.fade = 255
         return self.rodando
+
+    def _tratar_menu_equipamento(self, evento):
+        if evento.key in (pygame.K_UP, pygame.K_w, pygame.K_DOWN, pygame.K_s):
+            self.linha_equipamento = 1 - self.linha_equipamento
+            self.indice_equipamento = 0
+        elif evento.key in (pygame.K_LEFT, pygame.K_a):
+            self.indice_equipamento -= 1
+        elif evento.key in (pygame.K_RIGHT, pygame.K_d):
+            self.indice_equipamento += 1
+        elif evento.key in (pygame.K_RETURN, pygame.K_SPACE):
+            if self.linha_equipamento == 0:
+                itens = self.jogador.armas_desbloqueadas
+                if itens:
+                    self.jogador.selecionar_arma(
+                        itens[self.indice_equipamento % len(itens)])
+            else:
+                itens = self.especiais_desbloqueados
+                if itens:
+                    self.especial_atual = itens[self.indice_equipamento % len(itens)]
 
     # ----- desenho -----
 
@@ -846,6 +1033,43 @@ class Jogo:
         desenhar_vignette(self.tela, intensidade=0.45, raio_interno=0.5)
         if self.boss_intro > 0:
             self._desenhar_boss_intro()
+        if self.menu_equipamento:
+            self._desenhar_menu_equipamento()
+
+    def _desenhar_menu_equipamento(self):
+        sombra = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+        sombra.fill((2, 4, 14, 205))
+        self.tela.blit(sombra, (0, 0))
+        painel = pygame.Rect(90, 115, LARGURA - 180, ALTURA - 230)
+        desenhar_painel(self.tela, CIANO, painel, cor_fundo=(10, 16, 30),
+                        raio_canto=12, alpha=245, glow_raio=20)
+        desenhar_texto(self.tela, "ARSENAL // TAB PARA FECHAR",
+                       (LARGURA // 2, 145), BRANCO, 32, "centro", self.fontes)
+        linhas = [("ARMAS", [ARMARIA[i]["nome"]
+                             for i in self.jogador.armas_desbloqueadas],
+                   ARMARIA[self.jogador.arma_atual]["nome"]),
+                  ("ESPECIAIS", [ESPECIAIS[i]["nome"]
+                                 for i in self.especiais_desbloqueados],
+                   ESPECIAIS[self.especial_atual]["nome"])]
+        for linha, (titulo, itens, equipado) in enumerate(linhas):
+            y = 215 + linha * 180
+            cor = CIANO if linha == self.linha_equipamento else (130, 145, 175)
+            desenhar_texto(self.tela, titulo, (130, y), cor, 24, "esquerda",
+                           self.fontes)
+            for idx, nome in enumerate(itens):
+                x = 135 + (idx % 4) * 160
+                iy = y + 48 + (idx // 4) * 48
+                selecionado = (linha == self.linha_equipamento and
+                               idx == self.indice_equipamento % max(1, len(itens)))
+                texto = ("> " if selecionado else "  ") + nome
+                if nome == equipado:
+                    texto += " [E]"
+                desenhar_texto(self.tela, texto, (x, iy),
+                               DIMENSION_GOLD if selecionado else BRANCO,
+                               17, "esquerda", self.fontes)
+        desenhar_texto(self.tela, "SETAS/WASD: navegar   ENTER: equipar",
+                       (LARGURA // 2, ALTURA - 145), (160, 175, 205), 18,
+                       "centro", self.fontes)
 
     def _desenhar_boss_intro(self):
         """Overlay de apresentacao da entidade RIFT ao entrar num boss."""
@@ -1379,7 +1603,7 @@ class Jogo:
         desenhar_vignette(self.tela, intensidade=0.7, raio_interno=0.45)
         tema = tema_atual(self.config["tema"])
 
-        desenhar_titulo(self.tela, "VOID//SHIFT",
+        desenhar_titulo(self.tela, "INCARNATE",
                         (LARGURA // 2, ALTURA // 2 - 130), RIFT_MAGENTA, 44)
         desenhar_texto(self.tela, "DIMENSIONAL TRANSIT",
                        (LARGURA // 2, ALTURA // 2 - 92), QUANTUM_CYAN, 22,
@@ -1429,16 +1653,16 @@ class Jogo:
 
     def _desenhar(self):
         if self.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
-            self.tela_ui.fill(VOID_BLACK)
-            self.menu.desenhar(self.tela_ui)
-            self.janela.blit(self.tela_ui, (0, 0))
+            self.tela.fill(VOID_BLACK)
+            self.menu.desenhar(self.tela)
             if self.flash > 0:
-                self._janela_flash.fill((255, 0, 0, self.flash * 18))
-                self.janela.blit(self._janela_flash, (0, 0))
+                self._tela_flash.fill((255, 0, 0, self.flash * 18))
+                self.tela.blit(self._tela_flash, (0, 0))
             if self.fade > 0:
-                self._janela_fade.fill(NEGRO)
-                self._janela_fade.set_alpha(self.fade)
-                self.janela.blit(self._janela_fade, (0, 0))
+                self._tela_fade.fill(NEGRO)
+                self._tela_fade.set_alpha(self.fade)
+                self.tela.blit(self._tela_fade, (0, 0))
+            self._apresentar()
             pygame.display.flip()
             return
 
@@ -1464,29 +1688,36 @@ class Jogo:
             self.tela.blit(self._tela_fade, (0, 0))
 
         self._aplicar_shake()
-        self._apresentar()
-
         if self.estado == "JOGANDO":
-            self.hud.desenhar(self.janela, self)
-            pygame.display.flip()
-        else:
-            pygame.display.flip()
+            self._desenhar_hud()
+        self._apresentar()
+        pygame.display.flip()
 
     def executar(self):
         rodando = True
+        passo_fixo = 1.0 / FPS
+        acumulado = 0.0
         while rodando:
+            decorrido = min(0.25, self.relogio.tick(FPS) / 1000.0)
+            acumulado += decorrido
             rodando = self._tratar_eventos()
             if not rodando:
                 break
-            if self.hitstop > 0:
-                self.hitstop -= 1
-            else:
-                self._atualizar()
+            while acumulado >= passo_fixo:
+                if self.hitstop > 0:
+                    self.hitstop -= 1
+                else:
+                    self._atualizar()
+                acumulado -= passo_fixo
             self._desenhar()
-            self.relogio.tick(FPS)
         pygame.quit()
         sys.exit(0)
 
 
-if __name__ == "__main__":
+def main():
+    """Entry point instalavel do jogo."""
     Jogo().executar()
+
+
+if __name__ == "__main__":
+    main()
