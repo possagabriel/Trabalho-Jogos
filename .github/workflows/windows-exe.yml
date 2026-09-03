@@ -1,0 +1,47 @@
+name: Executável Windows
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - test/windows-exe
+
+jobs:
+  empacotar:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependências de empacotamento
+        run: python -m pip install --upgrade pip pyinstaller .
+      - name: Criar executável
+        run: >-
+          pyinstaller --noconfirm --clean --onefile --windowed
+          --name VOID-SHIFT --icon assets/windows/void-shift.ico
+          --add-data "images;images" --add-data "data/fonts;data/fonts"
+          --collect-submodules src --collect-submodules game
+          --hidden-import game.phase_select main.py
+      - name: Assinar executável quando houver certificado
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          if (-not $env:WINDOWS_CERTIFICATE_BASE64) {
+            Write-Host "Certificado não configurado; artefato será publicado sem assinatura."
+            exit 0
+          }
+          $certificate = Join-Path $env:RUNNER_TEMP "void-shift.pfx"
+          [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64))
+          signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f $certificate /p $env:WINDOWS_CERTIFICATE_PASSWORD dist/VOID-SHIFT.exe
+      - name: Publicar executável baixável
+        uses: actions/upload-artifact@v4
+        with:
+          name: VOID-SHIFT-Windows
+          path: dist/VOID-SHIFT.exe
+          if-no-files-found: error

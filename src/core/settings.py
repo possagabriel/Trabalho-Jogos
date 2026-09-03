@@ -9,12 +9,11 @@ from typing import Any
 
 import pygame
 
+from src.shared.user_data import diretorio_dados
+
 from .constants import ALTURA, LARGURA
 
-PASTA_DADOS = (os.environ.get("INCARNATE_DATA_DIR")
-               or os.environ.get("SPACEFURY_DATA_DIR") or os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "data"))
+PASTA_DADOS = diretorio_dados()
 ARQUIVO_CONFIG = os.path.join(PASTA_DADOS, "settings.json")
 LOGGER = logging.getLogger(__name__)
 
