@@ -459,8 +459,36 @@ def test_adicionar_trauma_limita_a_1():
 
 
 # ---------------------------------------------------------------------------
-# Desenho
+# Desenho e apresentacao
 # ---------------------------------------------------------------------------
+
+def test_interface_usa_o_canvas_logico_em_vez_da_resolucao_da_janela():
+    jogo = Jogo()
+    assert jogo.tela_ui is jogo.tela
+    assert (jogo.layout.largura, jogo.layout.altura) == (LARGURA, ALTURA)
+
+
+def test_hud_e_composto_no_canvas_logico_antes_da_apresentacao():
+    jogo = novo_jogo()
+    jogo._desenhar_jogo = mock.Mock()
+    jogo._apresentar = mock.Mock()
+    jogo.hud.desenhar = mock.Mock()
+
+    jogo.render_controller.desenhar()
+
+    jogo.hud.desenhar.assert_called_once_with(jogo.tela, jogo)
+    jogo._apresentar.assert_called_once()
+
+
+def test_apresentador_gpu_recebe_um_unico_frame_logico_e_destino_fisico():
+    jogo = Jogo()
+    jogo.janela = pygame.Surface((1800, 1400))
+    jogo._apresentador_gpu = mock.Mock()
+
+    jogo._apresentar()
+
+    jogo._apresentador_gpu.apresentar.assert_called_once_with(
+        jogo.tela, (0, 0, 1800, 1400), (1800, 1400), (8, 8, 13))
 
 def test_desenha_estados():
     jogo = novo_jogo()

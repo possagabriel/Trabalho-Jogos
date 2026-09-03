@@ -41,6 +41,13 @@ from src.runtime.presentation.ui import desenhar_barra, desenhar_cantos, desenha
     desenhar_titulo
 from src.runtime.domain.entities.weapons import ARMARIA, Projetil
 
+try:
+    from src.runtime.infrastructure.graphics.gpu_renderer import ApresentadorGPU, \
+        GPU_DISPONIVEL
+except ImportError:  # pragma: no cover - PyOpenGL e opcional
+    ApresentadorGPU = None
+    GPU_DISPONIVEL = False
+
 DICAS_CARREGAMENTO = [
     "Prepare-se para atravessar a fenda!",
     "Use combos para ganhar mais pontos!",
@@ -154,13 +161,39 @@ class Jogo:
     # ----- modo de video -----
 
     def _criar_layout_ui(self):
-        """Cria Layout, tela_ui e superficies de efeito na resolucao da janela."""
-        w, h = self.janela.get_size()
-        self.layout = Layout(w, h)
-        self.tela_ui = pygame.Surface((w, h))
-        self._janela_sombra = pygame.Surface((w, h), pygame.SRCALPHA)
-        self._janela_flash = pygame.Surface((w, h), pygame.SRCALPHA)
-        self._janela_fade = pygame.Surface((w, h))
+        """Mantem toda a interface na superficie logica do jogo.
+
+        Desenhar menu, HUD e gameplay no mesmo canvas de 900x700 evita que
+        cada camada seja rasterizada novamente na resolucao do monitor. A
+        janela fisica recebe apenas o quadro final em ``_apresentar``.
+        """
+        self.layout = Layout(LARGURA, ALTURA)
+        self.tela_ui = self.tela
+
+    def _liberar_apresentador_gpu(self):
+        """Libera a textura antes de recriar o contexto de video."""
+        apresentador = getattr(self, "_apresentador_gpu", None)
+        if apresentador is not None:
+            apresentador.liberar()
+        self._apresentador_gpu = None
+
+    def _criar_janela_video(self, tamanho, flags):
+        """Cria uma janela OpenGL quando houver suporte, com fallback seguro.
+
+        O Pygame continua sendo responsavel pelo desenho do jogo. Quando
+        PyOpenGL e o driver estiverem disponiveis, somente o ultimo upscale
+        da superficie logica e feito pela GPU.
+        """
+        self._apresentador_gpu = None
+        if GPU_DISPONIVEL and ApresentadorGPU is not None:
+            try:
+                janela = pygame.display.set_mode(
+                    tamanho, flags | pygame.OPENGL | pygame.DOUBLEBUF)
+                self._apresentador_gpu = ApresentadorGPU((LARGURA, ALTURA))
+                return janela
+            except Exception:  # driver, contexto ou PyOpenGL indisponivel
+                self._apresentador_gpu = None
+        return pygame.display.set_mode(tamanho, flags)
 
     def _escala_janela(self):
         """Fator de escala e offsets para encaixar a tela 900x700 na janela.
@@ -194,15 +227,16 @@ class Jogo:
     def _aplicar_modo_video(self):
         """Reconfigura a janela: tela cheia (resolucao nativa) ou escolhida."""
         from src.core.settings import parse_resolucao
+        self._liberar_apresentador_gpu()
         if self.config["tela_cheia"]:
             try:
                 w, h = pygame.display.get_desktop_sizes()[0]
             except (IndexError, pygame.error):
                 w, h = parse_resolucao(self.config["resolucao"])
-            self.janela = pygame.display.set_mode((w, h), pygame.FULLSCREEN)
+            self.janela = self._criar_janela_video((w, h), pygame.FULLSCREEN)
         else:
-            self.janela = pygame.display.set_mode(
-                parse_resolucao(self.config["resolucao"]))
+            self.janela = self._criar_janela_video(
+                parse_resolucao(self.config["resolucao"]), 0)
         if hasattr(self, "hud") and hasattr(self, "menu"):
             self._criar_layout_ui()
             self.hud.layout = self.layout
@@ -223,24 +257,34 @@ class Jogo:
         no modo PREENCHE estica a cena. flip() e chamado por _desenhar().
         """
         w, h = self.janela.get_size()
-        if (w, h) == (LARGURA, ALTURA):
+        if (w, h) == (LARGURA, ALTURA) and self._apresentador_gpu is None:
             self.janela.blit(self.tela, (0, 0))
             return
         if self.config["aspecto"] == "PREENCHE":
             escala = max(0.5, self.config["ajuste_escala"])
-            superficie = pygame.transform.smoothscale(
-                self.tela,
-                (max(1, int(w * escala)), max(1, int(h * escala))))
+            destino = (int(self.config["ajuste_off_x"]),
+                        int(self.config["ajuste_off_y"]),
+                        max(1, int(w * escala)), max(1, int(h * escala)))
+            if self._apresentador_gpu is not None:
+                self._apresentador_gpu.apresentar(self.tela, destino, (w, h),
+                                                  VOID_BLACK)
+                return
+            superficie = pygame.transform.smoothscale(self.tela,
+                                                       destino[2:])
             self.janela.fill(VOID_BLACK)
-            self.janela.blit(superficie, (int(self.config["ajuste_off_x"]),
-                                          int(self.config["ajuste_off_y"])))
+            self.janela.blit(superficie, destino[:2])
             return
         escala, off_x, off_y = self._transformacao_janela()
+        destino = (int(off_x), int(off_y), max(1, int(LARGURA * escala)),
+                    max(1, int(ALTURA * escala)))
+        if self._apresentador_gpu is not None:
+            self._apresentador_gpu.apresentar(self.tela, destino, (w, h),
+                                              VOID_BLACK)
+            return
         superficie = pygame.transform.smoothscale(
-            self.tela,
-            (max(1, int(LARGURA * escala)), max(1, int(ALTURA * escala))))
+            self.tela, destino[2:])
         self.janela.fill(VOID_BLACK)
-        self.janela.blit(superficie, (int(off_x), int(off_y)))
+        self.janela.blit(superficie, destino[:2])
         cor_safe = (32, 28, 48)
         pygame.draw.aaline(self.janela, cor_safe,
                            (int(off_x), int(off_y)),
