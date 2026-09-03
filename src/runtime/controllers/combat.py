@@ -168,6 +168,8 @@ class ControladorCombate:
         total = int(boss.pontos * sessao.jogador.combo.get_bonus())
         sessao.jogador.pontuacao += total
         sessao.progresso.registrar_boss()
+        sessao.progresso.registrar_fase_concluida(boss.nivel)
+        sessao.progresso.salvar_arquivo()
         sessao.bosses_abates += 1
         sessao.mensagens.append(MensagemFlutuante(
             f"BOSS DERROTADO! +{total}", boss.x, boss.y, boss.cor, 110))

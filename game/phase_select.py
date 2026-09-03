@@ -258,13 +258,18 @@ class PhaseSelectScreen:
         phase = self.phases[self.selected]
         if self.statuses[phase.id] == PhaseStatus.LOCKED:
             return False
+        campanha = self.jogo.progresso.jogador.setdefault("progresso_campanha", {})
+        retomando = not self.nova_campanha_pendente and \
+            campanha.get("fase_atual") == phase.id
+        nivel_salvo = campanha.get("nivel_atual")
         if self.nova_campanha_pendente:
             self.jogo.progresso.resetar_fases()
             self.nova_campanha_pendente = False
+            campanha = self.jogo.progresso.jogador.setdefault(
+                "progresso_campanha", {})
         self.jogo._preparar_jogo()
         # Ao repetir uma fase, somente as armas já encontradas naquela fase
         # são restauradas; o inventário de outras fases não vaza para ela.
-        campanha = self.jogo.progresso.jogador.setdefault("progresso_campanha", {})
         nomes = campanha.get("indice_fases", {}).get(phase.id, {}).get("armas", [])
         from .weapons import ARMARIA
         self.jogo.jogador.armas_desbloqueadas = [0]
@@ -274,9 +279,19 @@ class PhaseSelectScreen:
         # Cada protocolo ocupa um bloco de cinco níveis: entrada, três
         # sub-bosses e o boss principal no último nível do bloco.
         nivel_inicial = (phase.ordem - 1) * 5 + 1
+        if retomando:
+            try:
+                nivel_inicial = int(nivel_salvo)
+            except (TypeError, ValueError):
+                nivel_inicial = (phase.ordem - 1) * 5 + 1
+            # Um checkpoint de outra fase nao pode iniciar esta fase em um
+            # nivel invalido, mesmo que o arquivo tenha sido editado.
+            inicio, fim = (phase.ordem - 1) * 5 + 1, phase.ordem * 5
+            nivel_inicial = max(inicio, min(fim, nivel_inicial))
         if nivel_inicial != 1:
             self.jogo._iniciar_nivel(nivel_inicial)
         campanha["fase_atual"] = phase.id
+        campanha["nivel_atual"] = nivel_inicial
         self.jogo.progresso.salvar_arquivo()
         return True
 

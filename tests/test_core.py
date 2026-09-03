@@ -156,6 +156,18 @@ def test_iniciar_nivel_troca_cenario():
     assert jogo.cenario.id == 2
 
 
+def test_voltar_ao_menu_salva_checkpoint_da_fase_atual():
+    jogo = novo_jogo()
+    jogo._iniciar_nivel(13)
+    with mock.patch.object(jogo.progresso, "salvar_arquivo") as salvar:
+        jogo.pausa_controller.confirmar_saida()
+    campanha = jogo.progresso.campanha
+    assert jogo.estado is EstadoJogo.MENU
+    assert campanha["fase_atual"] == "identidade"
+    assert campanha["nivel_atual"] == 13
+    salvar.assert_called_once()
+
+
 def test_verificar_desbloqueio_arma():
     jogo = novo_jogo()
     jogo.jogador.armas_desbloqueadas = [0]

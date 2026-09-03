@@ -31,7 +31,7 @@ from game.phase_select import PhaseStatus  # noqa: E402
 
 ROTULOS_ESPERADOS = [
     "01 // CONTINUAR",
-    "02 // NOVA MISSAO",
+    "02 // LOBBY",
     "03 // HANGAR",
     "04 // RECORDS",
     "05 // SETTINGS",
@@ -137,34 +137,25 @@ def test_voltar_menu():
 # Missao nova
 # ---------------------------------------------------------------------------
 
-def test_novo_jogo_direto_abre_selecao_de_fases():
+def test_lobby_abre_selecao_de_fases_sem_reiniciar_campanha():
     jogo, menu = novo_menu()
-    menu._novo_jogo_direto()
+    menu._abrir_lobby()
     assert menu.subestado == "FASES"
-    assert menu.phase_screen.nova_campanha_pendente is True
+    assert menu.phase_screen.nova_campanha_pendente is False
     assert menu.phase_screen.statuses["lealdade"] == PhaseStatus.AVAILABLE
     assert menu.phase_screen.statuses["funcao"] == PhaseStatus.LOCKED
 
 
-def test_cancelar_novo_jogo_preserva_campanha():
+def test_lobby_retomar_fase_e_nivel_salvos():
     jogo, menu = novo_menu()
     campanha = jogo.progresso.jogador["progresso_campanha"]
-    campanha["fases_concluidas"] = [1, 2]
-    menu._novo_jogo_direto()
-    menu._voltar_menu()
-    assert campanha["fases_concluidas"] == [1, 2]
-    assert menu.phase_screen.nova_campanha_pendente is False
-
-
-def test_confirmar_novo_jogo_reseta_campanha():
-    jogo, menu = novo_menu()
-    jogo.progresso.jogador["progresso_campanha"]["fases_concluidas"] = [1, 2]
-    menu._novo_jogo_direto()
-    with mock.patch.object(jogo, "_preparar_jogo"):
-        assert menu.phase_screen.confirm() is True
-    campanha = jogo.progresso.jogador["progresso_campanha"]
-    assert campanha["fases_concluidas"] == []
-    assert menu.phase_screen.nova_campanha_pendente is False
+    campanha.update({"fases_concluidas": [1, 2], "fase_atual": "identidade",
+                     "nivel_atual": 13})
+    menu._abrir_lobby()
+    assert menu.phase_screen.selected == 2
+    assert menu.phase_screen.confirm() is True
+    assert jogo.jogador.nivel == 13
+    assert campanha["fase_atual"] == "identidade"
 
 
 def test_acao_continuar_sem_save_avisa():

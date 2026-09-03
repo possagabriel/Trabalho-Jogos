@@ -63,6 +63,7 @@ class ControladorProgressao:
     def salvar_tudo(self) -> None:
         """Sincroniza a loja e persiste o progresso atual."""
         jogo = self.jogo
+        jogo.progresso.registrar_checkpoint(jogo.jogador.nivel)
         jogo.progresso.sincronizar_loja(jogo.loja)
         jogo.progresso.salvar_arquivo()
 

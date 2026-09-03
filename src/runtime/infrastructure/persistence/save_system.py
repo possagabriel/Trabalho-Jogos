@@ -49,6 +49,7 @@ class SistemaProgressao:
                     "bosses_derrotados": [], "fragmentos": [],
                     "indice_fases": {}, "decisao_final": None,
                     "ending": None, "fase_atual": "lealdade",
+                    "nivel_atual": 1,
                 },
             },
             "estatisticas": {
@@ -112,10 +113,27 @@ class SistemaProgressao:
             "fases_concluidas": [], "subbosses_derrotados": [],
             "bosses_derrotados": [], "fragmentos": [], "indice_fases": {},
             "decisao_final": None, "ending": None, "fase_atual": "lealdade",
+            "nivel_atual": 1,
         }
         self.jogador["nivel_maximo"] = 1
         self.jogador["cenarios_desbloqueados"] = [1]
         self.salvar_arquivo()
+
+    def registrar_checkpoint(self, nivel: int) -> None:
+        """Guarda a fase e o nivel que devem ser retomados no Lobby."""
+        nivel = max(1, int(nivel))
+        fases = ["lealdade", "funcao", "identidade", "silencio", "descarte"]
+        indice = min((nivel - 1) // 5, len(fases) - 1)
+        self.campanha["fase_atual"] = fases[indice]
+        self.campanha["nivel_atual"] = nivel
+
+    def registrar_fase_concluida(self, nivel_boss: int) -> None:
+        """Marca a fase do boss como concluida e libera a proxima no Lobby."""
+        ordem = max(1, (int(nivel_boss) - 1) // 5 + 1)
+        concluidas = self.campanha.setdefault("fases_concluidas", [])
+        if ordem not in concluidas:
+            concluidas.append(ordem)
+        self.registrar_checkpoint(int(nivel_boss) + 1)
 
     def desbloquear_cenario(self, cenario_id):
         if cenario_id not in self.jogador["cenarios_desbloqueados"]:

@@ -533,7 +533,7 @@ class MenuPrincipal:
     def _construir_opcoes_menu(self):
         itens = [
             ("01 // CONTINUAR", self._abrir_continuar),
-            ("02 // NOVA MISSAO", self._novo_jogo_direto),
+            ("02 // LOBBY", self._abrir_lobby),
             ("03 // HANGAR", self._abrir_loja),
             ("04 // RECORDS", self._abrir_recordes),
             ("05 // SETTINGS", self._abrir_config),
@@ -575,8 +575,9 @@ class MenuPrincipal:
         self.subestado = "CONTINUAR"
         self.transicao.iniciar()
 
-    def _novo_jogo_direto(self):
-        self._abrir_fases(nova_campanha=True)
+    def _abrir_lobby(self):
+        """Abre o Lobby na fase salva, sem reiniciar a campanha."""
+        self._abrir_fases()
 
     def _abrir_fases(self, nova_campanha=False):
         """Abre o lobby de fases sem alterar o save antes da confirmacao."""
