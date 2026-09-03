@@ -491,15 +491,17 @@ def test_apresentador_gpu_recebe_um_unico_frame_logico_e_destino_fisico():
         jogo.tela, (0, 0, 1800, 1400), (1800, 1400), (8, 8, 13))
 
 
-def test_modo_video_respeita_resolucao_escolhida_em_tela_cheia():
+def test_modo_video_usa_resolucao_nativa_em_tela_cheia():
     jogo = Jogo()
     jogo.config["resolucao"] = "1024x768"
     jogo.config["tela_cheia"] = True
-    jogo._criar_janela_video = mock.Mock(return_value=pygame.Surface((1024, 768)))
+    jogo._criar_janela_video = mock.Mock(return_value=pygame.Surface((1920, 1080)))
 
-    jogo._aplicar_modo_video()
+    with mock.patch("src.runtime.application.core.pygame.display.get_desktop_sizes",
+                    return_value=[(1920, 1080)]):
+        jogo._aplicar_modo_video()
 
-    jogo._criar_janela_video.assert_called_once_with((1024, 768), pygame.FULLSCREEN)
+    jogo._criar_janela_video.assert_called_once_with((1920, 1080), pygame.FULLSCREEN)
 
 def test_desenha_estados():
     jogo = novo_jogo()

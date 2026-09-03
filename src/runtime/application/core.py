@@ -241,9 +241,13 @@ class Jogo:
         self._liberar_apresentador_gpu()
         tamanho = parse_resolucao(self.config["resolucao"])
         if self.config["tela_cheia"]:
-            # A resolucao selecionada tambem vale em tela cheia. O codigo
-            # anterior sempre usava o desktop aqui, tornando o seletor
-            # inoperante para quem jogava fullscreen.
+            # Tela cheia em modo nativo evita troca de modo de vídeo,
+            # imagem esticada e áreas mortas em monitores Windows. A escolha
+            # de resolução é aplicada em modo janela pelo menu.
+            try:
+                tamanho = pygame.display.get_desktop_sizes()[0]
+            except (IndexError, pygame.error):
+                pass
             self.janela = self._criar_janela_video(tamanho, pygame.FULLSCREEN)
         else:
             self.janela = self._criar_janela_video(tamanho, 0)

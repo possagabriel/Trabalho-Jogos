@@ -63,6 +63,18 @@ def test_construcao_carregou_fundo_do_menu():
     assert menu.fundo.fundo_imagem is not None or menu.fundo.gradiente
 
 
+def test_escolher_resolucao_abre_em_modo_janela_estavel():
+    jogo, menu = novo_menu()
+    jogo.config["tela_cheia"] = True
+    jogo._aplicar_modo_video = mock.Mock()
+
+    menu._aplicar_resolucao(1)
+
+    assert jogo.config["resolucao"] == "1024x768"
+    assert jogo.config["tela_cheia"] is False
+    jogo._aplicar_modo_video.assert_called_once()
+
+
 def test_logo_principal_e_gerado_por_tipografia():
     _, menu = novo_menu()
     tema = menu.jogo.config["tema"]
