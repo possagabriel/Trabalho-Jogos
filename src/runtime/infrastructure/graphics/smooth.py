@@ -184,15 +184,20 @@ def poligono_suave(cor, pontos, espessura=0, brilho=1.0):
     cor3 = tuple(cor[:3])
     esp = int(espessura)
     pts = [(float(p[0]), float(p[1])) for p in pontos]
-    chave = (cor3, tuple((int(p[0] * 4), int(p[1] * 4)) for p in pts),
-             esp, round(brilho, 2))
-    if chave in _CACHE_POLIGONO:
-        return _CACHE_POLIGONO[chave]
-
     min_x = min(p[0] for p in pts) - 4
     max_x = max(p[0] for p in pts) + 4
     min_y = min(p[1] for p in pts) - 4
     max_y = max(p[1] for p in pts) + 4
+    # A forma e independente de sua posicao. Antes, coordenadas absolutas
+    # faziam estrelas e inimigos animados gerar uma nova Surface/cache por
+    # frame; normalizar os pontos permite reutilizar o mesmo sprite suave.
+    chave = (cor3,
+             tuple((int((p[0] - min_x) * 4), int((p[1] - min_y) * 4))
+                   for p in pts),
+             esp, round(brilho, 2))
+    if chave in _CACHE_POLIGONO:
+        return _CACHE_POLIGONO[chave], (int(min_x), int(min_y))
+
     larg = max(1, int(max_x - min_x))
     alt = max(1, int(max_y - min_y))
 
@@ -206,7 +211,7 @@ def poligono_suave(cor, pontos, espessura=0, brilho=1.0):
         pygame.draw.polygon(big, cor3 + (255,), pts_big, esp * _SCALA_AA)
 
     surf = pygame.transform.smoothscale(big, (larg, alt))
-    _CACHE_POLIGONO[chave] = (surf, (int(min_x), int(min_y)))
+    _CACHE_POLIGONO[chave] = surf
     return surf, (int(min_x), int(min_y))
 
 

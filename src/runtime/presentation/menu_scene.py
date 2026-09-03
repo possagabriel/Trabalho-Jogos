@@ -481,6 +481,7 @@ class NaveMenu:
     def __init__(self):
         self._jogador = None
         self._skin_id = None
+        self._sprites = {}
         self.tempo = 0.0
 
     def atualizar(self):
@@ -495,11 +496,16 @@ class NaveMenu:
         jog.tilt = 0.35
         jog.invencivel = 0
 
-        surf = pygame.Surface((96, 96), pygame.SRCALPHA)
-        jog.skin.desenhar(surf, jog)
-        if abs(escala - 1.0) > 0.01:
-            surf = pygame.transform.smoothscale(
-                surf, (int(96 * escala), int(96 * escala)))
+        chave = (skin.id, round(escala, 2))
+        surf = self._sprites.get(chave)
+        if surf is None:
+            base = pygame.Surface((96, 96), pygame.SRCALPHA)
+            jog.skin.desenhar(base, jog)
+            if abs(escala - 1.0) > 0.01:
+                base = pygame.transform.smoothscale(
+                    base, (int(96 * escala), int(96 * escala)))
+            self._sprites[chave] = base
+            surf = base
 
         bob = math.sin(self.tempo * 2.4) * 4
         cx = int(x + math.sin(self.tempo * 1.7) * 5)
@@ -580,13 +586,6 @@ class DestaqueMenu:
 
     def desenhar(self, tela, x, tema):
         forma = self._forma(tema)
-        h = forma.get_height()
-        escala = 1.0 + 0.06 * self._pulso_escala + \
-            0.02 * math.sin(self.tempo * 5)
-        if abs(escala - 1.0) > 0.01:
-            forma = pygame.transform.smoothscale(
-                forma, (max(1, int(forma.get_width() * escala)),
-                        max(1, int(h * escala))))
         rect = forma.get_rect(midleft=(x, int(self.y)))
         tela.blit(forma, rect)
 

@@ -139,6 +139,10 @@ def test_voltar_menu():
 
 def test_lobby_abre_selecao_de_fases_sem_reiniciar_campanha():
     jogo, menu = novo_menu()
+    # A suite compartilha o diretorio temporario de dados: declare o estado
+    # inicial que este caso cobre, em vez de depender da ordem dos testes.
+    jogo.progresso.jogador["progresso_campanha"].update(
+        {"fases_concluidas": [], "fase_atual": "lealdade", "nivel_atual": 1})
     menu._abrir_lobby()
     assert menu.subestado == "FASES"
     assert menu.phase_screen.nova_campanha_pendente is False

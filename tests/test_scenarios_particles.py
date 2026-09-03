@@ -192,6 +192,22 @@ def test_particulas_desenham():
     assert not sp.particulas
 
 
+def test_particulas_limitam_o_orcamento_visual_em_explosoes_grandes():
+    class ParticulaContada:
+        def __init__(self):
+            self.desenhos = 0
+
+        def desenhar(self, tela):
+            self.desenhos += 1
+
+    pygame.init()
+    particula = ParticulaContada()
+    sp = SistemaParticulas()
+    sp.particulas = [particula] * 800
+    sp.desenhar(pygame.Surface((LARGURA, ALTURA)))
+    assert 0 < particula.desenhos <= 320
+
+
 # ---------------------------------------------------------------------------
 # MensagemFlutuante
 # ---------------------------------------------------------------------------

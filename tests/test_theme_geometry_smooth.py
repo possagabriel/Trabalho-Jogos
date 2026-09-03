@@ -184,6 +184,16 @@ def test_poligono_suave_retorna_surface_e_offset():
     assert surf.get_width() > 0 and surf.get_height() > 0
 
 
+def test_poligono_suave_reutiliza_forma_quando_apenas_a_posicao_muda():
+    pygame.init()
+    smooth.limpar_cache()
+    primeiro, _ = smooth.poligono_suave((255, 255, 255),
+                                        [(0, 0), (30, 0), (15, 26)])
+    segundo, _ = smooth.poligono_suave((255, 255, 255),
+                                        [(200, 300), (230, 300), (215, 326)])
+    assert primeiro is segundo
+
+
 def test_painel_glass_e_vignette_cacheados():
     pygame.init()
     rect = pygame.Rect(10, 10, 200, 80)
