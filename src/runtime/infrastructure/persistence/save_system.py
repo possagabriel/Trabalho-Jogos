@@ -4,10 +4,9 @@ import json
 import logging
 import os
 
-PASTA_DADOS = (os.environ.get("INCARNATE_DATA_DIR")
-               or os.environ.get("SPACEFURY_DATA_DIR")
-               or os.path.join(os.path.dirname(os.path.dirname(
-                   os.path.abspath(__file__))), "data"))
+from src.shared.user_data import diretorio_dados
+
+PASTA_DADOS = diretorio_dados()
 ARQUIVO_SAVE = os.path.join(PASTA_DADOS, "save.json")
 ARQUIVO_RECORDES = os.path.join(PASTA_DADOS, "records.json")
 LOGGER = logging.getLogger(__name__)

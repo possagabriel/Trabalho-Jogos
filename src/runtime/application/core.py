@@ -12,6 +12,7 @@ from src.core.constants import ALTURA, AMARELO, BRANCO, CIANO, DIMENSION_GOLD, \
     INTERVALO_SPAWN_MINIMO, LARGURA, LARANJA, NEGRO, QUANTUM_CYAN, \
     RIFT_MAGENTA, TITULO, VERDE, VOID_BLACK
 from src.runtime.domain.entities.bosses import Boss
+from src.runtime.infrastructure.assets import carregar_imagem_alpha
 from src.runtime.infrastructure.graphics.cel_shading import TextoAcao
 from src.runtime.controllers.combat import ControladorCombate
 from src.runtime.controllers.game_over import ControladorGameOver
@@ -312,6 +313,12 @@ class Jogo:
     # ----- utilidades -----
 
     def _criar_icone(self):
+        icone_arquivo = carregar_imagem_alpha("icone-void-shift.png")
+        if icone_arquivo is not None:
+            try:
+                return pygame.transform.smoothscale(icone_arquivo, (64, 64))
+            except pygame.error:
+                return icone_arquivo
         surf = pygame.Surface((32, 32), pygame.SRCALPHA)
         desenhar_glow(surf, RIFT_MAGENTA, (16, 16), 16, 0.7)
         desenhar_poligono(surf, RIFT_MAGENTA,

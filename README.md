@@ -1,9 +1,15 @@
-# VOID//SHIFT - Enter the Rift
+# VOID//SHIFT - Entre na Fenda
 
 Shoot 'em up vertical em **Pygame** com progressão, personalização de nave,
 6 dimensões, inimigos especiais e entidades RIFT (bosses). O código é 100%
 procedural (visual, sons e música são gerados em runtime, sem assets
 externos).
+
+## Windows
+
+O executável para Windows é gerado pelo workflow **Executável Windows** e fica
+disponível como artefato baixável no GitHub Actions. Veja as instruções de
+[distribuição para Windows](docs/distribuicao-windows.md).
 
 > Este README é orientado a **desenvolvedores e IAs**: explica a arquitetura,
 > o fluxo de dados e as convenções para que qualquer pessoa (ou modelo) possa
