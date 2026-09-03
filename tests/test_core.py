@@ -470,6 +470,14 @@ def test_desenha_estados():
     jogo.estado = "JOGANDO"
     jogo._desenhar_jogo()
     jogo._desenhar_hud()
+
+
+def test_arsenal_desenha_catalogo_completo():
+    jogo = novo_jogo()
+    jogo.menu_equipamento = True
+    jogo.jogador.armas_desbloqueadas = list(range(len(ARMARIA)))
+    jogo.especiais_desbloqueados = ["bomba", "cura", "imortal"]
+    jogo._desenhar_jogo()
     jogo._desenhar_carregando()
     jogo._desenhar_game_over()
 
