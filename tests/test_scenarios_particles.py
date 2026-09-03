@@ -182,6 +182,14 @@ def test_atualizar_remove_mortas():
     assert all(p.vida > 0 for p in sp.particulas)
 
 
+def test_atualizar_limita_particulas_ativas_em_picos():
+    sp = SistemaParticulas()
+    sp.particulas = [Particula(0, 0, (255, 0, 0), (0, 0), 1, 10)
+                     for _ in range(700)]
+    sp.atualizar()
+    assert len(sp.particulas) == 480
+
+
 def test_particulas_desenham():
     pygame.init()
     tela = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
