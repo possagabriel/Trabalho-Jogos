@@ -1,7 +1,7 @@
 """Testes do HUD profissional de combate.
 
 Cobre ``game.hud``: renderizacao de todos os modulos (jogador, score, setor,
-boost, arma, especial e barra de boss) sobre a superficie logica 900x700,
+boost, arma, especial e barra de boss) sobre a superficie logica 1280x720,
 a dinamica dos segmentos de vida e do boss, e a leitura de dados por duck
 typing (sem depender do ``core.Jogo`` real).
 
@@ -18,7 +18,7 @@ from types import SimpleNamespace
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
-os.environ["SPACEFURY_DATA_DIR"] = tempfile.mkdtemp(prefix="spacefury_test_")
+os.environ["INCARNATE_DATA_DIR"] = tempfile.mkdtemp(prefix="incarnate_test_")
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)

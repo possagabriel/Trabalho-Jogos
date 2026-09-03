@@ -4,12 +4,14 @@ import json
 import logging
 import os
 
-PASTA_DADOS = (os.environ.get("SPACEFURY_DATA_DIR")
+PASTA_DADOS = (os.environ.get("INCARNATE_DATA_DIR")
+               or os.environ.get("SPACEFURY_DATA_DIR")
                or os.path.join(os.path.dirname(os.path.dirname(
                    os.path.abspath(__file__))), "data"))
 ARQUIVO_SAVE = os.path.join(PASTA_DADOS, "save.json")
 ARQUIVO_RECORDES = os.path.join(PASTA_DADOS, "records.json")
 LOGGER = logging.getLogger(__name__)
+VERSAO_SAVE = 2
 
 
 class SistemaProgressao:
@@ -22,14 +24,17 @@ class SistemaProgressao:
         try:
             with open(ARQUIVO_SAVE, "r", encoding="utf-8") as f:
                 dados = json.load(f)
-            if "jogador" not in dados:
+            if not isinstance(dados, dict) or not isinstance(dados.get("jogador"), dict):
                 raise ValueError
-            return dados
+            migrado = self._mesclar_padrao(self._novo_dados(), dados)
+            migrado["versao"] = VERSAO_SAVE
+            return migrado
         except (FileNotFoundError, json.JSONDecodeError, ValueError, OSError):
             return self._novo_dados()
 
     def _novo_dados(self):
         return {
+            "versao": VERSAO_SAVE,
             "jogador": {
                 "nome": "Jogador",
                 "moedas": 0,
@@ -39,6 +44,12 @@ class SistemaProgressao:
                 "bosses_derrotados": 0,
                 "nivel_maximo": 1,
                 "cenarios_desbloqueados": [1],
+                "progresso_campanha": {
+                    "fases_concluidas": [], "subbosses_derrotados": [],
+                    "bosses_derrotados": [], "fragmentos": [],
+                    "indice_fases": {}, "decisao_final": None,
+                    "ending": None, "fase_atual": "lealdade",
+                },
             },
             "estatisticas": {
                 "inimigos_derrotados": 0,
@@ -51,6 +62,27 @@ class SistemaProgressao:
     @property
     def jogador(self):
         return self.dados["jogador"]
+
+    @property
+    def campanha(self):
+        """Estado persistente da campanha, incluindo fases e codex."""
+        return self.jogador.setdefault("progresso_campanha", {})
+
+    @staticmethod
+    def _mesclar_padrao(padrao, salvo):
+        """Completa saves antigos sem descartar campos desconhecidos."""
+        if isinstance(padrao, dict) and not isinstance(salvo, dict):
+            return padrao
+        if not isinstance(padrao, dict):
+            return salvo
+        resultado = {
+            chave: SistemaProgressao._mesclar_padrao(valor, salvo[chave])
+            if chave in salvo else valor
+            for chave, valor in padrao.items()
+        }
+        resultado.update({chave: valor for chave, valor in salvo.items()
+                          if chave not in resultado})
+        return resultado
 
     def adicionar_moedas(self, quantidade):
         self.jogador["moedas"] += quantidade
@@ -73,6 +105,17 @@ class SistemaProgressao:
     def registrar_boss(self):
         self.jogador["bosses_derrotados"] += 1
         self.dados["estatisticas"]["bosses_derrotados"] += 1
+
+    def resetar_fases(self):
+        """Inicia uma campanha sem apagar moedas, skins ou melhorias."""
+        self.jogador["progresso_campanha"] = {
+            "fases_concluidas": [], "subbosses_derrotados": [],
+            "bosses_derrotados": [], "fragmentos": [], "indice_fases": {},
+            "decisao_final": None, "ending": None, "fase_atual": "lealdade",
+        }
+        self.jogador["nivel_maximo"] = 1
+        self.jogador["cenarios_desbloqueados"] = [1]
+        self.salvar_arquivo()
 
     def desbloquear_cenario(self, cenario_id):
         if cenario_id not in self.jogador["cenarios_desbloqueados"]:

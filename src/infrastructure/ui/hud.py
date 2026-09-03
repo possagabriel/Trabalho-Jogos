@@ -1,4 +1,4 @@
-"""Full HUD (Heads-Up Display) system for VOID//SHIFT.
+"""Full HUD (Heads-Up Display) system for INCARNATE.
 
 High-tech sci-fi military spaceship interface with cinematic visual identity:
 deep purple + deep blue + cyan + magenta, with white details. All elements sit
@@ -343,6 +343,10 @@ class HudJogo:
             "municao": municao,
             "boost": max(0.0, min(1.0, getattr(jogo, "boost", 1.0))),
             "especial": max(0.0, min(1.0, getattr(jogo, "especial", 0.0))),
+            "especial_nome": {
+                "bomba": "BOMBA", "cura": "REPARO +3",
+                "imortal": "IMORTALIDADE",
+            }.get(getattr(jogo, "especial_atual", "bomba"), "ESPECIAL"),
             "energia": max(0.0, min(100.0, getattr(jogo, "energia", 100.0))),
             "vel": getattr(jog, "velocidade", 5.0),
             "boss": getattr(jogo, "boss", None),
@@ -527,13 +531,13 @@ class HudJogo:
         cor = (self._paleta["secundaria"] if pronto
                else tuple(int(c * 0.42) for c in self._paleta["secundaria"]))
         _barra_segmentada(tela, l, barra, d["especial"], cor, 10, raio_canto=2)
-        rotulo = _render(self._f_titulo_xs, "BOMBA", CINZA_HUD)
+        rotulo = _render(self._f_titulo_xs, d["especial_nome"], CINZA_HUD)
         _blit_alfa(tela, rotulo, (barra.x + l.px(6), barra.y + l.px(12)), 200)
         if pronto:
             pulso = 0.7 + 0.3 * math.sin(t * 4)
             desenhar_glow(tela, self._paleta["secundaria"], barra.center,
                           max(barra.w, barra.h), 0.5 * pulso)
-            surf = _render(self._f_titulo_xs, "BOMBA READY",
+            surf = _render(self._f_titulo_xs, f"{d['especial_nome']} READY",
                            tuple(int(c * pulso) for c in self._paleta["secundaria"]))
             _blit_alfa(tela, surf,
                        surf.get_rect(midright=(barra.right - l.px(6),

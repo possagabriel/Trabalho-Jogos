@@ -6,7 +6,8 @@ import os
 
 from src.runtime.domain.entities.player import SKINS, Skin
 
-PASTA_DADOS = (os.environ.get("SPACEFURY_DATA_DIR")
+PASTA_DADOS = (os.environ.get("INCARNATE_DATA_DIR")
+               or os.environ.get("SPACEFURY_DATA_DIR")
                or os.path.join(os.path.dirname(os.path.dirname(
                    os.path.abspath(__file__))), "data"))
 LOGGER = logging.getLogger(__name__)

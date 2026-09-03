@@ -1,7 +1,7 @@
 """Roda toda a suite de testes standalone, arquivo por arquivo.
 
 Cada arquivo de teste funciona de forma independente (headless, com
-SPACEFURY_DATA_DIR temporario), entao basta executa-los em subprocessos:
+INCARNATE_DATA_DIR temporario), entao basta executa-los em subprocessos:
 
     python tests/run_all.py
 """

@@ -1,4 +1,4 @@
-"""Constantes globais do jogo VOID//SHIFT: tela, FPS, cores e limites."""
+"""Constantes globais do jogo INCARNATE: tela, FPS, cores e limites."""
 
 from __future__ import annotations
 
@@ -17,11 +17,11 @@ ALTURA: int = 700
 FPS: int = 60
 """Taxa de quadros por segundo alvo."""
 
-TITULO: str = "VOID//SHIFT - Enter the Rift"
+TITULO: str = "INCARNATE - Enter the Rift"
 """Titulo exibido na barra da janela."""
 
 # ---------------------------------------------------------------------------
-# Paleta oficial VOID//SHIFT
+# Paleta oficial INCARNATE
 # ---------------------------------------------------------------------------
 
 VOID_BLACK: tuple[int, int, int] = (8, 8, 13)

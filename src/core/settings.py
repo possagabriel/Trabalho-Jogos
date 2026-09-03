@@ -11,7 +11,8 @@ import pygame
 
 from .constants import ALTURA, LARGURA
 
-PASTA_DADOS = (os.environ.get("SPACEFURY_DATA_DIR") or os.path.join(
+PASTA_DADOS = (os.environ.get("INCARNATE_DATA_DIR")
+               or os.environ.get("SPACEFURY_DATA_DIR") or os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "data"))
 ARQUIVO_CONFIG = os.path.join(PASTA_DADOS, "settings.json")
@@ -27,7 +28,7 @@ DEFAULT_CONTROLES = {
     "direita": pygame.K_RIGHT, "atirar": pygame.K_SPACE, "pausar": pygame.K_p,
 }
 _DEFAULT: dict[str, Any] = {
-    "musica_volume": 0.8, "efeitos_volume": 0.8, "resolucao": "900x700",
+    "musica_volume": 0.8, "efeitos_volume": 0.8, "resolucao": "1280x720",
     "tela_cheia": False, "sensibilidade": 1.0, "controles": DEFAULT_CONTROLES,
     "tema": "NEON", "aspecto": "AJUSTAR", "ajuste_escala": 1.0,
     "ajuste_off_x": 0, "ajuste_off_y": 0,

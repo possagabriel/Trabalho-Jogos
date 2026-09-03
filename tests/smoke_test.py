@@ -1,4 +1,4 @@
-"""Smoke tests headless do VOID//SHIFT.
+"""Smoke tests headless do INCARNATE.
 
 Roda sem janela (drivers dummy do SDL) para verificar que o jogo inicia,
 executa o loop de combate e desenha cenas sem excecoes. Uso:
@@ -9,7 +9,7 @@ Para rodar via pytest:
 
     pytest tests/smoke_test.py -v
 
-Nota: as variaveis SDL_* e SPACEFURY_DATA_DIR sao definidas ANTES de
+Nota: as variaveis SDL_* e INCARNATE_DATA_DIR sao definidas ANTES de
 importar pygame para que video/mixer usem drivers dummy e os JSON de
 progresso sejam gravados num diretorio temporario (nao no data/ real).
 """
@@ -20,13 +20,14 @@ import tempfile
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-os.environ.setdefault("SPACEFURY_DATA_DIR", tempfile.mkdtemp(prefix="spacefury_test_"))
+os.environ.setdefault("INCARNATE_DATA_DIR", tempfile.mkdtemp(prefix="incarnate_test_"))
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
 
 import random  # noqa: E402
 
+from game.config import ALTURA, LARGURA  # noqa: E402
 from game.core import Jogo  # noqa: E402
 from game.enemies import Inimigo  # noqa: E402
 from game.scenarios import Cenario, cenario_do_nivel  # noqa: E402
@@ -44,7 +45,7 @@ def novo_jogo():
 def test_jogo_inicia():
     jogo = novo_jogo()
     assert jogo.estado == "PREPARANDO"
-    assert jogo.tela.get_size() == (900, 700)
+    assert jogo.tela.get_size() == (LARGURA, ALTURA)
     jogo._desenhar()
 
 
@@ -55,6 +56,10 @@ def test_loop_combate_avanca_niveis():
     while jogo.estado in ("PREPARANDO", "JOGANDO") and frames < MAX_FRAMES:
         jogo._atualizar()
         if jogo.estado == "JOGANDO":
+            # Simula o jogador acompanhando horizontalmente o primeiro alvo;
+            # a arena widescreen nao garante mais um inimigo no centro.
+            if jogo.inimigos:
+                jogo.jogador.x = jogo.inimigos[0].x
             projs = jogo.jogador.atirar()
             if projs:
                 jogo.projeteis.extend(projs)

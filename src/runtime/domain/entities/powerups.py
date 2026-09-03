@@ -19,14 +19,17 @@ if TYPE_CHECKING:
 
 TipoPowerUp: TypeAlias = Literal[
     "escudo", "vida", "arma", "velocidade", "moedas", "skin",
+    "especial_cura", "especial_imortal",
 ]
 
 
 class PowerUp:
     CORES = {"escudo": AZUL, "vida": VERDE, "arma": CIANO, "velocidade": LARANJA,
-             "moedas": DOURADO, "skin": VERDE_CLARO}
+             "moedas": DOURADO, "skin": VERDE_CLARO,
+             "especial_cura": VERDE, "especial_imortal": (220, 220, 255)}
     SIMBOLOS = {"escudo": "E", "vida": "+", "arma": "A", "velocidade": "V",
-                "moedas": "C", "skin": "S"}
+                "moedas": "C", "skin": "S", "especial_cura": "+3",
+                "especial_imortal": "I"}
 
     def __init__(self, tipo: TipoPowerUp, x: float, y: float) -> None:
         self.tipo = tipo
@@ -72,9 +75,14 @@ class PowerUp:
             if jogador.arma_atual >= len(ARMARIA) - 1:
                 jogador.moedas_jogo += 200
                 return "Arma maxima! +200 moedas"
-            jogador.arma_atual += 1
-            jogador.armas_desbloqueadas.append(jogador.arma_atual)
-            return f"Arma nova: {ARMARIA[jogador.arma_atual]['nome']}!"
+            bloqueadas = [i for i in range(len(ARMARIA))
+                          if i not in jogador.armas_desbloqueadas]
+            if not bloqueadas:
+                jogador.moedas_jogo += 200
+                return "Arma maxima! +200 moedas"
+            nova = bloqueadas[0]
+            jogador.armas_desbloqueadas.append(nova)
+            return f"Arma nova: {ARMARIA[nova]['nome']}! Selecione com TAB"
         return ""
 
     def desenhar(self, tela: pygame.Surface) -> None:

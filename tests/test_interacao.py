@@ -16,7 +16,7 @@ import tempfile
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
-os.environ["SPACEFURY_DATA_DIR"] = tempfile.mkdtemp(prefix="spacefury_test_")
+os.environ["INCARNATE_DATA_DIR"] = tempfile.mkdtemp(prefix="incarnate_test_")
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
@@ -58,7 +58,7 @@ def mouse(tipo, pos, button=1):
 
 
 def janela(jogo, x, y):
-    """Converte ponto logico (900x700) para coordenadas da janela."""
+    """Converte ponto logico (1280x720) para coordenadas da janela."""
     escala, off_x, off_y = jogo._transformacao_janela()
     return int(x * escala + off_x), int(y * escala + off_y)
 
@@ -279,6 +279,22 @@ def test_tecla_numero_seleciona_arma_desbloqueada():
     tecla(pygame.K_2)
     jogo._tratar_eventos()
     assert jogo.jogador.arma_atual == 1
+
+
+def test_tab_abre_arsenal_e_equipa_arma_desbloqueada():
+    jogo = novo_jogo_partida()
+    jogo.jogador.armas_desbloqueadas = [0, 2]
+    tecla(pygame.K_TAB)
+    jogo._tratar_eventos()
+    assert jogo.menu_equipamento is True
+    tecla(pygame.K_RIGHT)
+    jogo._tratar_eventos()
+    tecla(pygame.K_RETURN)
+    jogo._tratar_eventos()
+    assert jogo.jogador.arma_atual == 2
+    tecla(pygame.K_TAB)
+    jogo._tratar_eventos()
+    assert jogo.menu_equipamento is False
 
 
 def test_tecla_m_na_pausa_volta_ao_menu():

@@ -21,7 +21,7 @@ import tempfile
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-os.environ.setdefault("SPACEFURY_DATA_DIR", tempfile.mkdtemp(prefix="spacefury_test_"))
+os.environ.setdefault("INCARNATE_DATA_DIR", tempfile.mkdtemp(prefix="incarnate_test_"))
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)

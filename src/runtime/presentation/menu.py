@@ -19,7 +19,6 @@ import os
 
 import pygame
 
-from src.runtime.infrastructure.assets import carregar_imagem_alpha
 from src.runtime.presentation.screens.continue_screen import TelaContinuarJogo
 from src.core.constants import BRANCO, CIANO, DOURADO, QUANTUM_CYAN, VERDE
 from src.infrastructure.ui.layout import ALTURA_BASE, CENTRO, LARGURA_BASE, TOPO_DIREITA, \
@@ -30,6 +29,7 @@ from src.runtime.presentation.screens.menu_screens import (TelaConfiguracoes, Te
 from src.runtime.presentation.screens.records_screen import TelaRecordesJogo
 from src.runtime.presentation.screens.store_screen import TelaLojaJogo
 from src.runtime.presentation.screens.settings_screen import TelaConfiguracoesJogo
+from game.phase_select import PhaseSelectScreen
 from src.runtime.presentation.menu_scene import DestaqueMenu, FundoCinematico, HudMenu, NaveMenu, \
     TransicaoMissao, texto_espacado
 from src.runtime.domain.entities.player import Jogador
@@ -453,8 +453,7 @@ class MenuPrincipal:
         self.alpha_entrada = 0
         self.mouse = (0, 0)
 
-        self.fonte_titulo_grande = self.layout.fonte_titulo(96)
-        self.fonte_fury = self.layout.fonte_titulo(92)
+        self.fonte_logo = self.layout.fonte_titulo(64)
         self.fonte_sub = self.layout.fonte_texto(44)
         self.fonte_legenda = self.layout.fonte_texto(20)
         self.fonte_opcao = self.layout.fonte_titulo(27)
@@ -473,10 +472,9 @@ class MenuPrincipal:
         self.entrada_t = 0.0
         self.entrada_total = 1.3
         self._titulo_cache = {}
-        self._bloco_fury_cache = {}
+        self._bloco_logo_cache = {}
         self._cabecalho_cache = {}
         self._cache_espacado = {}
-        self._logo_menu = None
 
         self.continuar_selecao = 0
         self.loja_selecao = 0
@@ -504,13 +502,13 @@ class MenuPrincipal:
             "RECORDES": TelaRecordes(self),
             "CONFIG": TelaConfiguracoes(self),
         }
+        self.phase_screen = PhaseSelectScreen(jogo, layout=self.layout)
 
     # ------------------------------------------------------------------ fontes
 
     def _recriar_fontes(self):
         """Recria todas as fontes com base no layout atual."""
-        self.fonte_titulo_grande = self.layout.fonte_titulo(96)
-        self.fonte_fury = self.layout.fonte_titulo(92)
+        self.fonte_logo = self.layout.fonte_titulo(64)
         self.fonte_sub = self.layout.fonte_texto(44)
         self.fonte_legenda = self.layout.fonte_texto(20)
         self.fonte_opcao = self.layout.fonte_titulo(27)
@@ -520,10 +518,10 @@ class MenuPrincipal:
         self.fonte_cabecalho = self.layout.fonte_titulo(38)
         self.x_opcoes = self.layout.x(0.61)
         self._titulo_cache.clear()
-        self._bloco_fury_cache.clear()
+        self._bloco_logo_cache.clear()
         self._cabecalho_cache.clear()
         self._cache_espacado.clear()
-        self._logo_menu = None
+        self.phase_screen.set_layout(self.layout)
 
     # ------------------------------------------------------------------ sons
 
@@ -578,7 +576,18 @@ class MenuPrincipal:
         self.transicao.iniciar()
 
     def _novo_jogo_direto(self):
-        self._iniciar_missao(self.jogo._preparar_jogo)
+        self._abrir_fases(nova_campanha=True)
+
+    def _abrir_fases(self, nova_campanha=False):
+        """Abre o lobby de fases sem alterar o save antes da confirmacao."""
+        self._som("navegar")
+        if nova_campanha:
+            self.phase_screen.iniciar_nova_campanha()
+        else:
+            self.phase_screen.refresh()
+        self.subestado = "FASES"
+        self.sub_anim = 0.0
+        self.transicao.iniciar()
 
     def _abrir_loja(self):
         self._som("navegar")
@@ -619,6 +628,7 @@ class MenuPrincipal:
         self.jogo.rodando = False
 
     def _voltar_menu(self):
+        self.phase_screen.cancelar_nova_campanha()
         self._som("navegar")
         self.preview_skin = None
         self.preview_anim = 0.0
@@ -1843,28 +1853,25 @@ class MenuPrincipal:
     def _titulo_surfaces(self, tema):
         nome = self.jogo.config["tema"]
         if nome not in self._titulo_cache:
-            void = texto_suave(self.fonte_titulo_grande, "VOID", BRANCO,
-                               tema["primaria"], 18, True)
-            void_eco = texto_suave(self.fonte_titulo_grande, "VOID",
-                                   tema["primaria"], None, 0, False)
-            shift = texto_suave(self.fonte_fury, "//SHIFT", tema["primaria"],
-                                tema["terciaria"], 10, True)
-            shift = pygame.transform.rotate(shift, -2)
+            titulo = texto_suave(self.fonte_logo, "INCARNATE", BRANCO,
+                                 tema["primaria"], 16, True)
+            titulo_eco = texto_suave(self.fonte_logo, "INCARNATE",
+                                     tema["primaria"], None, 0, False)
             sub = self._espacado(self.fonte_legenda, "ENTER THE RIFT.", 4,
                                  tema["primaria"])
             tag = self._espacado(self.fonte_legenda, "// DIMENSIONAL COMBAT",
                                  2, tema["secundaria"])
             self._titulo_cache[nome] = {
-                "void": void, "void_eco": void_eco, "shift": shift,
+                "incarnate": titulo, "incarnate_eco": titulo_eco,
                 "sub": sub, "tag": tag}
         return self._titulo_cache[nome]
 
-    def _bloco_fury(self, tema):
+    def _bloco_logo(self, tema):
         nome = self.jogo.config["tema"]
-        if nome in self._bloco_fury_cache:
-            return self._bloco_fury_cache[nome]
+        if nome in self._bloco_logo_cache:
+            return self._bloco_logo_cache[nome]
         l = self.layout
-        w, h, inc = l.px(430), l.px(130), l.px(26)
+        w, h, inc = l.px(460), l.px(130), l.px(26)
         surf = pygame.Surface((w, h + inc), pygame.SRCALPHA)
         pts = [(0, inc), (w, 0), (w, h), (0, h + inc)]
         desenhar_poligono(surf, tema["primaria"] + (70,), pts)
@@ -1889,7 +1896,7 @@ class MenuPrincipal:
                     (cx + comp, cy), 2)
         linha_suave(surf, tema["secundaria"] + (220,), (cx, cy),
                     (cx, cy + comp), 2)
-        self._bloco_fury_cache[nome] = surf
+        self._bloco_logo_cache[nome] = surf
         return surf
 
     def _cabecalho_bloco(self, cor, largura):
@@ -1921,22 +1928,8 @@ class MenuPrincipal:
         linha_suave(tela, cor1, l.ponto(TOPO_DIREITA, 0, 330),
                     l.ponto(TOPO_ESQUERDA, 640, 486), 1)
 
-    def _logo_menu_surface(self):
-        """Logo 'logo-menu.png' redimensionada para a largura do titulo."""
-        if self._logo_menu is None:
-            img = carregar_imagem_alpha("logo-menu.png")
-            if img is None:
-                self._logo_menu = False
-            else:
-                l = self.layout
-                larg = l.px(430)
-                alt = max(1, int(img.get_height() * larg
-                                 / max(1, img.get_width())))
-                self._logo_menu = pygame.transform.smoothscale(img, (larg, alt))
-        return self._logo_menu
-
     def _desenhar_linha_titulo(self, tela, tema, x, y, alfa):
-        """Linha de acento com gradiente e losango entre logo e subtitulo."""
+        """Linha de acento entre o titulo tipografico e o subtitulo."""
         l = self.layout
         larg = l.px(300)
         surf = pygame.Surface((larg, l.px(14)), pygame.SRCALPHA)
@@ -1957,35 +1950,27 @@ class MenuPrincipal:
     def _desenhar_bloco_titulo(self, tela, tema):
         l = self.layout
         ts = self._titulo_surfaces(tema)
-        logo = self._logo_menu_surface()
         p_titulo = self._frac(0.10, 0.5)
         p_bloco = self._frac(0.06, 0.28)
         p_sub = self._frac(0.55, 0.4)
         off = int((1 - ease_out_back(p_titulo)) * -l.px(300))
         alfa = int(255 * ease_out(p_titulo))
-        if logo:
-            self._blit_alfa(tela, logo,
-                            (l.px(36) + off, l.px(148)),
-                            int(255 * ease_out(p_bloco)))
-        else:
-            if p_bloco > 0:
-                bloco = self._bloco_fury(tema)
-                self._blit_alfa(tela, bloco, l.ponto(TOPO_ESQUERDA, 36, 166),
-                                255 * ease_out(p_bloco))
-            alfa_eco = int(220 * ease_out(p_bloco))
-            self._blit_alfa(tela, ts["void_eco"],
-                            (l.px(62) + off, l.px(124)), alfa_eco)
-            self._blit_alfa(tela, ts["void"],
-                            (l.px(56) + off, l.px(118)), alfa)
-            self._blit_alfa(tela, ts["shift"],
-                            (l.px(48) + off, l.px(208)), alfa)
+        if p_bloco > 0:
+            bloco = self._bloco_logo(tema)
+            self._blit_alfa(tela, bloco, l.ponto(TOPO_ESQUERDA, 36, 166),
+                            255 * ease_out(p_bloco))
+        alfa_eco = int(220 * ease_out(p_bloco))
+        self._blit_alfa(tela, ts["incarnate_eco"],
+                        (l.px(62) + off, l.px(171)), alfa_eco)
+        self._blit_alfa(tela, ts["incarnate"],
+                        (l.px(56) + off, l.px(165)), alfa)
         alfa_sub = int(255 * ease_out(p_sub))
-        self._desenhar_linha_titulo(tela, tema, l.px(60) + off, l.px(318),
+        self._desenhar_linha_titulo(tela, tema, l.px(60) + off, l.px(280),
                                     alfa_sub)
         self._blit_alfa(tela, ts["sub"],
-                        (l.px(60) + off, l.px(340)), alfa_sub)
+                        (l.px(60) + off, l.px(302)), alfa_sub)
         self._blit_alfa(tela, ts["tag"],
-                        (l.px(60) + off, l.px(372)), alfa_sub)
+                        (l.px(60) + off, l.px(334)), alfa_sub)
 
     def _desenhar_seta(self, tela, tema):
         if self.entrada_t < 0.7:
@@ -2054,7 +2039,13 @@ class MenuPrincipal:
         self.nave.desenhar(tela, skin, l.px(856), l.px(560),
                            2.2 * l.escala, tema)
         self.hud.desenhar(tela, tema)
-        self.telas[self.subestado].desenhar(tela)
+        if self.subestado == "FASES":
+            self.phase_screen.draw(tela)
+            ship_x, ship_y = self.phase_screen.ship_position()
+            self.nave.desenhar(tela, skin, ship_x, ship_y,
+                               1.8 * l.escala, tema)
+        else:
+            self.telas[self.subestado].desenhar(tela)
         self.notificacoes.desenhar(tela, self.fonte_media)
         if self.dialogo and self.dialogo.ativo:
             self.dialogo.desenhar(tela, self.fonte_sub, self.fonte_media,
@@ -2080,6 +2071,8 @@ class MenuPrincipal:
             self.preview_anim += 1 / 60.0
         if self.subestado != "MENU" and self.sub_anim < self.sub_anim_total:
             self.sub_anim += 1 / 60.0
+        if self.subestado == "FASES":
+            self.phase_screen.update(pygame.key.get_pressed())
         if self.subestado == "MENU":
             if self.entrada_t < self.entrada_total:
                 self.entrada_t += 1 / 60.0
@@ -2103,6 +2096,9 @@ class MenuPrincipal:
             return self._tratar_remap(evento)
         if evento.type == pygame.MOUSEMOTION:
             self.mouse = self._pos_logica(evento.pos)
+            if self.subestado == "FASES":
+                self.phase_screen.handle_event(pygame.event.Event(
+                    pygame.MOUSEMOTION, {"pos": self.mouse}))
         elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
             self._clique(self._pos_logica(evento.pos))
         elif evento.type == pygame.KEYDOWN:
@@ -2152,6 +2148,9 @@ class MenuPrincipal:
         return True
 
     def _tecla(self, evento):
+        if self.subestado == "FASES":
+            self.phase_screen.handle_event(evento)
+            return True
         return self.telas[self.subestado].tratar_tecla(evento)
 
     def _tecla_menu_principal(self, evento):
@@ -2287,6 +2286,10 @@ class MenuPrincipal:
 
     def _clique(self, pos):
         self.mouse = pos
+        if self.subestado == "FASES":
+            self.phase_screen.handle_event(pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN, {"button": 1, "pos": pos}))
+            return
         self.telas[self.subestado].tratar_clique(pos)
 
     def _clique_menu_principal(self, pos):

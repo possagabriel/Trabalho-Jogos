@@ -316,6 +316,17 @@ def test_bomba_explode_no_topo_sem_alvo():
     assert jogo._explodir_bomba(proj) is True
 
 
+def test_bomba_detona_antes_de_ser_descartada_no_topo():
+    """Um frame lento nao pode fazer a Bomba Vortex desaparecer sem explodir."""
+    jogo = novo_jogo()
+    _limpar_campo(jogo)
+    jogo.projeteis = [Projetil(450, -29, 0, -3.5, 25,
+                               (255, 120, 40), 20, tipo="bomba")]
+    jogo._atualizar_projeteis()
+    assert jogo.projeteis == []
+    assert jogo.flash == 16
+
+
 def test_carga_especial_mais_lenta():
     jogo = novo_jogo()
     _limpar_campo(jogo)

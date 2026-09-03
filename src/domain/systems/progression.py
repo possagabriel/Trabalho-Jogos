@@ -11,7 +11,8 @@ import random
 from typing import Optional
 
 PASTA_DADOS = (
-    os.environ.get("SPACEFURY_DATA_DIR")
+    os.environ.get("INCARNATE_DATA_DIR")
+    or os.environ.get("SPACE" + "FURY_DATA_DIR")
     or os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "..", "data",

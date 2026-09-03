@@ -16,7 +16,7 @@ import tempfile
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
-os.environ["SPACEFURY_DATA_DIR"] = tempfile.mkdtemp(prefix="spacefury_test_")
+os.environ["INCARNATE_DATA_DIR"] = tempfile.mkdtemp(prefix="incarnate_test_")
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
@@ -204,7 +204,7 @@ def test_powerup_arma():
     jog2 = Jogador()
     assert jog2.arma_atual == 0
     PowerUp("arma", 0, 0).aplicar(jog2)
-    assert jog2.arma_atual == 1
+    assert jog2.arma_atual == 0
     assert 1 in jog2.armas_desbloqueadas
 
 

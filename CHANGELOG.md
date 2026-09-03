@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-08-21
 
 ### Added
-- Initial release of VOID//SHIFT
+- Initial release of INCARNATE
 - Complete game with 6 dimensions, 15 enemies, 6 bosses
 - 9 weapons, 10 skins, particle system
 - Cel shading visual style

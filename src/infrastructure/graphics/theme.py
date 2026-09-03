@@ -13,7 +13,7 @@ from typing import Dict, Tuple
 from src.core.constants import (DIMENSION_GOLD, QUANTUM_CYAN, RIFT_MAGENTA,
                                 VOID_BLACK)
 
-# Accent palettes by theme (all derived from the VOID//SHIFT brand)
+# Accent palettes by theme (all derived from the INCARNATE brand)
 TEMAS_CORES: Dict[str, Dict[str, tuple]] = {
     "NEON": {
         "primaria": RIFT_MAGENTA,
