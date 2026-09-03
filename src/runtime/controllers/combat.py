@@ -198,6 +198,14 @@ class ControladorCombate:
                 proj.atualizar_teleguiado(sessao.jogador.x, sessao.jogador.y)
             else:
                 proj.atualizar()
+            # Projeteis explosivos precisam avaliar a detonacao antes do
+            # descarte por limite da tela. Em um frame lento, a bomba pode
+            # cruzar o topo entre duas atualizacoes e antes desaparecia sem
+            # aplicar dano nem efeitos visuais.
+            if proj.origem == "jogador" and proj.tipo in ("nova", "bomba"):
+                if self.projetil_jogador_atinge(proj):
+                    sessao.projeteis.remove(proj)
+                    continue
             if proj.saiu_da_tela():
                 sessao.projeteis.remove(proj)
                 continue
