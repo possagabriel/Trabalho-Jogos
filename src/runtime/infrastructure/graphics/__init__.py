@@ -1,1 +1,0 @@
-"""Adaptadores de graficos."""

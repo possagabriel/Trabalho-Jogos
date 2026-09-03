@@ -10,8 +10,11 @@ import math
 import time
 from typing import Dict, Tuple
 
-from src.core.constants import (DIMENSION_GOLD, QUANTUM_CYAN, RIFT_MAGENTA,
-                                VOID_BLACK)
+# Brand palette constants (from game/config.py)
+QUANTUM_CYAN = (25, 217, 255)
+RIFT_MAGENTA = (255, 23, 107)
+DIMENSION_GOLD = (255, 200, 87)
+VOID_BLACK = (8, 8, 13)
 
 # Accent palettes by theme (all derived from the VOID//SHIFT brand)
 TEMAS_CORES: Dict[str, Dict[str, tuple]] = {
