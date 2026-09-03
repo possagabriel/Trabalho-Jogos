@@ -17,6 +17,10 @@ try:
         glVertex2f, glViewport
 except (ImportError, AttributeError):  # pragma: no cover - depende do sistema
     glGenTextures = None
+    # Os testes do conversor de pixels nao exigem um contexto OpenGL. Mantenha
+    # os enums disponiveis quando PyOpenGL for opcionalmente indisponivel.
+    GL_RGBA = 0x1908
+    GL_BGRA = 0x80E1
 
 
 GPU_DISPONIVEL = glGenTextures is not None
