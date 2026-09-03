@@ -29,6 +29,11 @@ jobs:
           --collect-submodules src --collect-submodules game
           --collect-submodules OpenGL
           --hidden-import game.phase_select main.py
+      - name: Criar instalador Windows
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress --yes
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\void-shift.iss
       - name: Assinar executável quando houver certificado
         shell: pwsh
         env:
@@ -42,15 +47,20 @@ jobs:
           $certificate = Join-Path $env:RUNNER_TEMP "void-shift.pfx"
           [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64))
           signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f $certificate /p $env:WINDOWS_CERTIFICATE_PASSWORD dist/VOID-SHIFT.exe
+          signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f $certificate /p $env:WINDOWS_CERTIFICATE_PASSWORD dist/VOID-SHIFT-Setup.exe
       - name: Publicar executável baixável
         uses: actions/upload-artifact@v4
         with:
           name: VOID-SHIFT-Windows
-          path: dist/VOID-SHIFT.exe
+          path: |
+            dist/VOID-SHIFT.exe
+            dist/VOID-SHIFT-Setup.exe
           if-no-files-found: error
       - name: Publicar executável na Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: dist/VOID-SHIFT.exe
+          files: |
+            dist/VOID-SHIFT.exe
+            dist/VOID-SHIFT-Setup.exe

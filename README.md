@@ -7,9 +7,9 @@ externos).
 
 ## Windows
 
-Baixe a versão para Windows em [Releases](../../releases). Em cada versão, o
-arquivo `VOID-SHIFT.exe` fica anexado diretamente à página de download; não é
-necessário abrir o GitHub Actions. Builds de teste continuam disponíveis como
+Baixe a versão para Windows em [Releases](../../releases). Em cada versão,
+`VOID-SHIFT-Setup.exe` instala o jogo com atalho e desinstalador; `VOID-SHIFT.exe`
+é a opção portátil. Não é necessário abrir o GitHub Actions. Builds de teste continuam disponíveis como
 artefatos do workflow **Executável Windows**. Veja as instruções de
 [distribuição para Windows](docs/distribuicao-windows.md).
 
