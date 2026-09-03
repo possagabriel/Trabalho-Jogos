@@ -215,14 +215,14 @@ def test_powerup_skin():
     def desbloquear(skin_id):
         return True
     msg = PowerUp("skin", 0, 0).aplicar(jog, desbloquear)
-    assert msg == "SKIN CRISTAL DESBLOQUEADA!"
+    assert msg == "VISUAL CRISTAL DESBLOQUEADO!"
 
     def ja_tem(skin_id):
         return False
     jog2 = Jogador()
     msg2 = PowerUp("skin", 0, 0).aplicar(jog2, ja_tem)
     assert jog2.moedas_jogo == 500
-    assert "repetida" in msg2
+    assert "repetido" in msg2
 
 
 def test_powerup_tipo_invalido():

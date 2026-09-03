@@ -579,6 +579,10 @@ class MenuPrincipal:
         """Abre o Lobby na fase salva, sem reiniciar a campanha."""
         self._abrir_fases()
 
+    def _novo_jogo_direto(self):
+        """Abre a seleção com uma nova campanha pendente de confirmação."""
+        self._abrir_fases(nova_campanha=True)
+
     def _abrir_fases(self, nova_campanha=False):
         """Abre o lobby de fases sem alterar o save antes da confirmacao."""
         self._som("navegar")

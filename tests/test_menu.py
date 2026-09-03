@@ -162,6 +162,13 @@ def test_lobby_abre_selecao_de_fases_sem_reiniciar_campanha():
     assert menu.phase_screen.statuses["funcao"] == PhaseStatus.LOCKED
 
 
+def test_novo_jogo_direto_abre_selecao_de_fases():
+    _, menu = novo_menu()
+    menu._novo_jogo_direto()
+    assert menu.subestado == "FASES"
+    assert menu.phase_screen.nova_campanha_pendente is True
+
+
 def test_lobby_retomar_fase_e_nivel_salvos():
     jogo, menu = novo_menu()
     campanha = jogo.progresso.jogador["progresso_campanha"]
@@ -172,6 +179,27 @@ def test_lobby_retomar_fase_e_nivel_salvos():
     assert menu.phase_screen.confirm() is True
     assert jogo.jogador.nivel == 13
     assert campanha["fase_atual"] == "identidade"
+
+
+def test_cancelar_novo_jogo_preserva_campanha():
+    jogo, menu = novo_menu()
+    campanha = jogo.progresso.jogador["progresso_campanha"]
+    campanha["fases_concluidas"] = [1, 2]
+    menu._novo_jogo_direto()
+    menu._voltar_menu()
+    assert campanha["fases_concluidas"] == [1, 2]
+    assert menu.phase_screen.nova_campanha_pendente is False
+
+
+def test_confirmar_novo_jogo_reseta_campanha():
+    jogo, menu = novo_menu()
+    jogo.progresso.jogador["progresso_campanha"]["fases_concluidas"] = [1, 2]
+    menu._novo_jogo_direto()
+    with mock.patch.object(jogo, "_preparar_jogo"):
+        assert menu.phase_screen.confirm() is True
+    campanha = jogo.progresso.jogador["progresso_campanha"]
+    assert campanha["fases_concluidas"] == []
+    assert menu.phase_screen.nova_campanha_pendente is False
 
 
 def test_acao_continuar_sem_save_avisa():
