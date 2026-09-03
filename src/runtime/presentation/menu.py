@@ -535,9 +535,9 @@ class MenuPrincipal:
             ("01 // CONTINUAR", self._abrir_continuar),
             ("02 // LOBBY", self._abrir_lobby),
             ("03 // HANGAR", self._abrir_loja),
-            ("04 // RECORDS", self._abrir_recordes),
-            ("05 // SETTINGS", self._abrir_config),
-            ("06 // EXIT", self._sair),
+            ("04 // RECORDES", self._abrir_recordes),
+            ("05 // CONFIGURAÇÕES", self._abrir_config),
+            ("06 // SAIR", self._sair),
         ]
         # ancora a coluna alinhada a esquerda: nunca deixa o texto mais longo
         # estourar a borda direita da tela (usa a fonte da opcao selecionada)
@@ -714,7 +714,7 @@ class MenuPrincipal:
         self._painel_sub(tela, painel, tema)
         self._detalhe_painel(tela, painel, tema, tema["secundaria"])
         jog = self.jogo.progresso.jogador
-        titulo = ("SAVE ENCONTRADO" if tem else "NENHUM SAVE")
+        titulo = ("PROGRESSO ENCONTRADO" if tem else "SEM PROGRESSO")
         cor = (150, 230, 120) if tem else (230, 120, 120)
         dx, dy, alfa = self._entrada_anim(self._frac_sub(0.14, 0.3),
                                           dy_design=-14)
@@ -785,7 +785,7 @@ class MenuPrincipal:
 
     def _botoes_loja(self):
         l = self.layout
-        nomes = ["COMPRAR", "EQUIPAR", "PREVIEW", "VOLTAR"]
+        nomes = ["COMPRAR", "EQUIPAR", "PRÉVIA", "VOLTAR"]
         largura, espaco = l.px(140), l.px(18)
         total = largura * 4 + espaco * 3
         x = (l.largura - total) // 2
@@ -804,7 +804,7 @@ class MenuPrincipal:
     def _desenhar_loja(self, tela):
         l = self.layout
         tema = tema_atual(self.jogo.config["tema"])
-        self._cabecalho_sub_animado(tela, "LOJA DE SKINS", tema["primaria"])
+        self._cabecalho_sub_animado(tela, "LOJA DE VISUAIS", tema["primaria"])
         dx, dy, alfa = self._entrada_anim(self._frac_sub(0.06, 0.3),
                                           dx_design=-16)
         surface = self.fonte_media.render(
@@ -1010,7 +1010,7 @@ class MenuPrincipal:
         self._detalhe_painel(tela, painel, tema, DOURADO)
         dx, dy, alfa = self._entrada_anim(self._frac_sub(0.12, 0.3),
                                           dy_design=-10)
-        surface = self.fonte_media.render("TOP 5", True, tema["secundaria"])
+        surface = self.fonte_media.render("5 MELHORES", True, tema["secundaria"])
         self._blit_alfa(tela, surface, surface.get_rect(
             center=(painel.centerx + dx, painel.y + l.px(28) + dy)),
             int(255 * alfa))
@@ -1029,7 +1029,7 @@ class MenuPrincipal:
                 dx, dy, alfa = self._entrada_anim(p, dx_design=-40)
                 cor = DOURADO if i == 0 else (205, 210, 235) if i < 3 \
                     else (150, 155, 190)
-                texto = (f"TOP {i + 1}. {reg['nome']}  "
+                texto = (f"MELHOR {i + 1}. {reg['nome']}  "
                          f"{formatar_pontos(reg['pontos'])} pts  "
                          f"(Nivel {reg['nivel']})")
                 surface = self.fonte_media.render(texto, True, cor)
@@ -1673,8 +1673,8 @@ class MenuPrincipal:
                     self.jogo.config["aspecto"], True, QUANTUM_CYAN)
                 self._blit_alfa(tela, surface, surface.get_rect(
                     midleft=(l.px(420) + dx, y)), int(255 * alfa))
-                dica = ("SAFE AREAS" if self.jogo.config["aspecto"] ==
-                        "AJUSTAR" else "ESTICA TELA")
+                dica = ("ÁREAS SEGURAS" if self.jogo.config["aspecto"] ==
+                        "AJUSTAR" else "ESTICA A TELA")
                 surface = self.fonte_pequena.render(dica, True,
                                                     (150, 155, 200))
                 self._blit_alfa(tela, surface, surface.get_rect(
@@ -1858,9 +1858,9 @@ class MenuPrincipal:
                                  tema["primaria"], 16, True)
             titulo_eco = texto_suave(self.fonte_logo, "INCARNATE",
                                      tema["primaria"], None, 0, False)
-            sub = self._espacado(self.fonte_legenda, "ENTER THE RIFT.", 4,
+            sub = self._espacado(self.fonte_legenda, "ENTRE NA FENDA.", 4,
                                  tema["primaria"])
-            tag = self._espacado(self.fonte_legenda, "// DIMENSIONAL COMBAT",
+            tag = self._espacado(self.fonte_legenda, "// COMBATE DIMENSIONAL",
                                  2, tema["secundaria"])
             self._titulo_cache[nome] = {
                 "incarnate": titulo, "incarnate_eco": titulo_eco,
@@ -1999,7 +1999,7 @@ class MenuPrincipal:
         self._blit_alfa(tela, surf2,
                         (l.largura // 2 - surf2.get_width() // 2, l.y(0.78)),
                         int(alfa * 0.75))
-        versao = self._espacado(f, "v3.0 // ENTER THE RIFT", 1,
+        versao = self._espacado(f, "v3.0 // ENTRE NA FENDA", 1,
                                 (110, 122, 160))
         self._blit_alfa(tela, versao,
                         (l.largura - l.px(46) - versao.get_width(),

@@ -97,7 +97,7 @@ class TelaContinuarJogo:
         jogador = menu.jogo.progresso.jogador
         cor_titulo = (150, 230, 120) if tem else (230, 120, 120)
         dx, dy, alfa = menu._entrada_anim(menu._frac_sub(0.14, 0.3), dy_design=-14)
-        titulo = "SAVE ENCONTRADO" if tem else "NENHUM SAVE"
+        titulo = "PROGRESSO ENCONTRADO" if tem else "SEM PROGRESSO"
         superficie = menu.fonte_media.render(titulo, True, cor_titulo)
         menu._blit_alfa(tela, superficie, superficie.get_rect(
             center=(painel.centerx + dx, painel.y + layout.px(28) + dy)), int(255 * alfa))
@@ -106,9 +106,9 @@ class TelaContinuarJogo:
             linhas = [
                 ("Jogador", jogador["nome"]), ("Nivel", str(jogador["nivel_maximo"])),
                 ("Pontos totais", f"{jogador['total_pontos']:,}".replace(",", ".")),
-                ("Bosses", str(jogador["bosses_derrotados"])),
+                ("Chefes", str(jogador["bosses_derrotados"])),
                 ("Moedas", f"{jogador['moedas']:,}".replace(",", ".")),
-                ("Skin", skin.nome), ("Cenarios", f"{len(jogador['cenarios_desbloqueados'])}/6"),
+                ("Visual", skin.nome), ("Cenários", f"{len(jogador['cenarios_desbloqueados'])}/6"),
             ]
             y = painel.y + layout.px(62)
             for indice, (rotulo, valor) in enumerate(linhas):

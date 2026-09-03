@@ -68,9 +68,9 @@ class PowerUp:
             return "Moedas +100"
         if self.tipo == "skin":
             if desbloquear_skin and desbloquear_skin("cristal"):
-                return "SKIN CRISTAL DESBLOQUEADA!"
+                return "VISUAL CRISTAL DESBLOQUEADO!"
             jogador.moedas_jogo += 500
-            return "Skin repetida! +500 moedas"
+            return "Visual repetido! +500 moedas"
         if self.tipo == "arma":
             if jogador.arma_atual >= len(ARMARIA) - 1:
                 jogador.moedas_jogo += 200

@@ -420,9 +420,9 @@ class PhaseSelectScreen:
         armas = stats.get("armas", [])
         minibosses = stats.get("minibosses", [])
         rows = [("INIMIGOS ABATIDOS", str(stats.get("inimigos", 0))),
-                ("MINIBOSSES",
+                ("MINICHEFES",
                  ", ".join(minibosses) if minibosses else "NENHUM"),
-                ("BOSS PRINCIPAL",
+                ("CHEFE PRINCIPAL",
                  "DERROTADO" if stats.get("boss") else "NÃO DERROTADO"),
                 ("ARMAS DA FASE",
                  (", ".join(armas) if armas else "NENHUMA")

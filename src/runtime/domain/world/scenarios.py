@@ -303,7 +303,7 @@ class Cenario:
 
 CENARIOS = [
     {
-        "id": 1, "nome": "DEEP SPACE",
+        "id": 1, "nome": "ESPAÇO PROFUNDO",
         "topo": (10, 16, 60), "base": (4, 4, 26),
         "cor_estrela": (120, 160, 255), "forma_estrela": "circulo",
         "cores_nebulosa": [(60, 40, 130), (20, 80, 150), (90, 30, 110)],
@@ -314,7 +314,7 @@ CENARIOS = [
         "especiais": ["acumulador", "esponja", "condutor"],
     },
     {
-        "id": 2, "nome": "FLAME NEBULA",
+        "id": 2, "nome": "NEBULOSA EM CHAMAS",
         "topo": (70, 16, 34), "base": (28, 6, 14),
         "cor_estrela": (255, 210, 120), "forma_estrela": "chama",
         "cores_nebulosa": [(200, 70, 20), (180, 20, 90), (220, 120, 30)],
@@ -326,7 +326,7 @@ CENARIOS = [
                       "evocador"],
     },
     {
-        "id": 3, "nome": "COSMIC OCEAN",
+        "id": 3, "nome": "OCEANO CÓSMICO",
         "topo": (8, 50, 90), "base": (4, 16, 50),
         "cor_estrela": (200, 220, 235), "forma_estrela": "bolha",
         "cores_nebulosa": [(20, 90, 120), (10, 120, 110), (50, 70, 130)],
@@ -337,7 +337,7 @@ CENARIOS = [
         "especiais": ["acumulador", "condutor", "mutante"],
     },
     {
-        "id": 4, "nome": "CRYSTAL FOREST",
+        "id": 4, "nome": "FLORESTA DE CRISTAIS",
         "topo": (12, 60, 30), "base": (8, 22, 12),
         "cor_estrela": (150, 255, 180), "forma_estrela": "diamante",
         "cores_nebulosa": [(30, 110, 60), (80, 40, 130), (40, 90, 70)],
@@ -348,7 +348,7 @@ CENARIOS = [
         "especiais": ["cristalino", "acumulador", "esponja"],
     },
     {
-        "id": 5, "nome": "NULL SPACE",
+        "id": 5, "nome": "ESPAÇO NULO",
         "topo": (16, 8, 30), "base": (4, 2, 12),
         "cor_estrela": (200, 190, 255), "forma_estrela": "espiral",
         "cores_nebulosa": [(90, 40, 130), (120, 30, 110), (60, 20, 90)],
@@ -359,7 +359,7 @@ CENARIOS = [
         "especiais": ["mutante", "condutor", "esponja", "evocador"],
     },
     {
-        "id": 6, "nome": "DIVINE PLANE",
+        "id": 6, "nome": "PLANO DIVINO",
         "topo": (120, 90, 40), "base": (40, 30, 12),
         "cor_estrela": (255, 235, 160), "forma_estrela": "cruz",
         "cores_nebulosa": [(180, 140, 60), (160, 160, 200), (200, 170, 90)],

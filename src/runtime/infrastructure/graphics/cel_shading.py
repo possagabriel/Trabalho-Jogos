@@ -227,8 +227,8 @@ def barra_vida_cartoon(tela, x, y, largura, vida, vida_max,
 # Textos de acao estilo quadrinhos (BANG! POW! KABOOM!)
 # ---------------------------------------------------------------------------
 
-TEXTOS_ACAO = ["BANG!", "POW!", "KABOOM!", "BOOM!", "WHAM!", "ZAP!",
-               "CRASH!", "SMASH!", "BONK!", "SLAM!"]
+TEXTOS_ACAO = ["PÁ!", "POW!", "CABUM!", "BUM!", "ZAP!", "TUM!",
+               "CRASH!", "ESMAGOU!", "TOC!", "PUM!"]
 
 
 class TextoAcao:

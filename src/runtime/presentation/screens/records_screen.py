@@ -52,9 +52,9 @@ class TelaRecordesJogo:
         pygame.draw.circle(tela, tema["secundaria"],
                            (cabecalho.x + layout.px(34), cabecalho.centery),
                            layout.px(7))
-        menu._blit_alfa(tela, menu.fonte_cabecalho.render("RECORDS", True, BRANCO),
+        menu._blit_alfa(tela, menu.fonte_cabecalho.render("RECORDES", True, BRANCO),
                         (cabecalho.x + layout.px(58), cabecalho.y + layout.px(11)), 255)
-        rotulo = menu.fonte_pequena.render("// RIFT HALL OF FAME", True,
+        rotulo = menu.fonte_pequena.render("// GALERIA DA FENDA", True,
                                            tema["secundaria"])
         menu._blit_alfa(tela, rotulo,
                         (cabecalho.right - rotulo.get_width() - layout.px(18),
@@ -117,9 +117,9 @@ class TelaRecordesJogo:
         titulo_telemetria = menu.fonte_pequena.render("TELEMETRIA", True, tema["primaria"])
         tela.blit(titulo_telemetria, (telemetria.x + layout.px(15),
                                       telemetria.y + layout.px(14)))
-        dados = [("MELHOR", melhor), ("SKINS", f"{len(menu.jogo.loja.lista_desbloqueadas())}/10"),
+        dados = [("MELHOR", melhor), ("VISUAIS", f"{len(menu.jogo.loja.lista_desbloqueadas())}/10"),
                  ("ABATES", str(estatisticas["inimigos_derrotados"])),
-                 ("RIFTS", str(jogador["bosses_derrotados"]))]
+                 ("FENDAS", str(jogador["bosses_derrotados"]))]
         for indice, (rotulo, valor) in enumerate(dados):
             y = telemetria.y + layout.px(52 + indice * 52)
             caixa = pygame.Rect(telemetria.x + layout.px(12), y,

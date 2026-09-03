@@ -172,7 +172,7 @@ class ControladorCombate:
         sessao.progresso.salvar_arquivo()
         sessao.bosses_abates += 1
         sessao.mensagens.append(MensagemFlutuante(
-            f"BOSS DERROTADO! +{total}", boss.x, boss.y, boss.cor, 110))
+            f"CHEFE DERROTADO! +{total}", boss.x, boss.y, boss.cor, 110))
         efeitos = {
             "explosao": lambda: sessao.particulas.explosao(
                 boss.x, boss.y, boss.cor, qtd=boss.part_qtd, forca=8),

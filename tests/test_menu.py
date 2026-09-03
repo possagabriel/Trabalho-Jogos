@@ -33,9 +33,9 @@ ROTULOS_ESPERADOS = [
     "01 // CONTINUAR",
     "02 // LOBBY",
     "03 // HANGAR",
-    "04 // RECORDS",
-    "05 // SETTINGS",
-    "06 // EXIT",
+    "04 // RECORDES",
+    "05 // CONFIGURAÇÕES",
+    "06 // SAIR",
 ]
 
 

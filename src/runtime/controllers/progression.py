@@ -83,7 +83,7 @@ class ControladorProgressao:
             jogo.boss = Boss(nivel, jogo.cenario)
             jogo.boss_intro = 130
             jogo.mensagens.append(MensagemFlutuante(
-                f"RIFT ENTITY // {jogo.boss.nome}", LARGURA // 2,
+                f"ENTIDADE DA FENDA // {jogo.boss.nome}", LARGURA // 2,
                 ALTURA // 2 + 40, DIMENSION_GOLD, 130))
             jogo.sons.tocar("boss")
             return
@@ -111,7 +111,7 @@ class ControladorProgressao:
         cfg = CENARIOS[novo_id - 1]
         cor = cfg["cor_transicao"]
         jogo.mensagens.append(MensagemFlutuante(
-            f"DIMENSION 0{novo_id} // {cfg['nome']}", LARGURA // 2,
+            f"DIMENSÃO 0{novo_id} // {cfg['nome']}", LARGURA // 2,
             ALTURA // 2, cor, 140))
         jogo.particulas.salto_dimensional(LARGURA // 2, ALTURA // 2, cor)
         for _ in range(24):

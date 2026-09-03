@@ -420,7 +420,7 @@ class HudMenu:
         cor_sys = (0, 255, 150) if pisca > 0.1 else (80, 255, 170)
         self._desenhar_texto(tela, "sys_rotulo", l.fonte_texto(12), "SYS",
                              (l.largura - l.px(36), l.px(20)), dim, 2, "direita")
-        self._desenhar_texto(tela, "sys_valor", l.fonte_texto(12), "ONLINE",
+        self._desenhar_texto(tela, "sys_valor", l.fonte_texto(12), "ATIVO",
                              (l.largura - l.px(34), l.px(40)), cor_sys, 2,
                              "direita")
         coord_txt = "GRID %.0f.%.0f" % (self._coord % 1000,
@@ -452,7 +452,7 @@ class HudMenu:
                              "SALTO DIMENSIONAL", (l.px(40), l.altura - l.px(34)),
                              texto_cor, 3)
         self._desenhar_texto(tela, "mis_sub", l.fonte_texto(11),
-                             "TARGET // ENTER THE RIFT", (l.px(44),
+                             "ALVO // ENTRE NA FENDA", (l.px(44),
                                                           l.altura - l.px(20)),
                              primaria, 2)
 
@@ -466,7 +466,7 @@ class HudMenu:
                                                      l.altura - l.px(36)),
                              (255, 200, 120), 3, "direita")
         self._desenhar_texto(tela, "vel_sub", l.fonte_texto(11),
-                             "NAV MODE", (l.largura - l.px(44),
+                             "MODO NAVEGAÇÃO", (l.largura - l.px(44),
                                           l.altura - l.px(22)),
                              borda, 2, "direita")
 

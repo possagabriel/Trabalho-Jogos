@@ -53,10 +53,10 @@ DICAS_CARREGAMENTO = [
     "Use combos para ganhar mais pontos!",
     "Troque de arma com as teclas 1 a 9.",
     "Abates carregam a Bomba Vortex (tecla E).",
-    "Derrote entidades RIFT para abrir novas dimensoes.",
+    "Derrote entidades da Fenda para abrir novas dimensões.",
     "Skins raras caem dos inimigos cristalinos.",
     "Junte moedas para expandir o hangar.",
-    "A cada 5 niveis surge uma entidade RIFT.",
+    "A cada 5 níveis surge uma entidade da Fenda.",
     "Cada dimensao tem inimigos e armadilhas proprios.",
 ]
 
@@ -560,7 +560,7 @@ class Jogo:
     def _ativar_especial(self):
         """Dispara o especial (tecla E): lança a Bomba Vortex.
 
-        Consome a carga do medidor (SPECIAL READY). A bomba é grande, viaja
+        Consome a carga do medidor de especial pronto. A bomba é grande, viaja
         devagar e explode em área enorme causando dano massivo. Não afeta o
         boss diretamente por colisão, mas a explosão em área sim.
         """
@@ -668,7 +668,7 @@ class Jogo:
                                indice == self.indice_equipamento % max(1, len(itens)))
                 if linha == 0:
                     arma = ARMARIA[item]
-                    nome, detalhe = arma["nome"], f"DANO {arma['dano']}  //  CD {arma['cooldown']}"
+                    nome, detalhe = arma["nome"], f"DANO {arma['dano']}  //  RECARGA {arma['cooldown']}"
                     equipado_agora = item == equipado
                     numero = f"{item + 1:02d}"
                 else:
@@ -691,7 +691,7 @@ class Jogo:
                 if equipado_agora:
                     badge = pygame.Rect(card.right - 52, card.y + 8, 42, 16)
                     retangulo_suave(self.tela, tema["primaria"], badge, 5)
-                    desenhar_texto(self.tela, "EQUIP", badge.center, VOID_BLACK,
+                    desenhar_texto(self.tela, "USO", badge.center, VOID_BLACK,
                                    10, "centro", self.fontes)
         rodape = pygame.Rect(painel.x + 20, painel.bottom - 44, painel.w - 40, 25)
         retangulo_suave(self.tela, (14, 24, 47), rodape, 6)
@@ -713,19 +713,19 @@ class Jogo:
                         alpha=int(215 * alfa), glow_raio=24)
         desenhar_cantos(self.tela, DIMENSION_GOLD, painel, tamanho=16)
 
-        desenhar_texto(self.tela, "RIFT ENTITY DETECTED",
+        desenhar_texto(self.tela, "ENTIDADE DA FENDA DETECTADA",
                        (LARGURA // 2, y + 30), DIMENSION_GOLD, 24, "centro",
                        self.fontes)
-        desenhar_texto(self.tela, f"ENTITY // {boss.nivel // 5:02d}",
+        desenhar_texto(self.tela, f"ENTIDADE // {boss.nivel // 5:02d}",
                        (LARGURA // 2, y + 64), QUANTUM_CYAN, 20, "centro",
                        self.fontes)
         desenhar_texto(self.tela, boss.nome, (LARGURA // 2, y + 102), BRANCO,
                        34, "centro", self.fontes)
-        desenhar_texto(self.tela, "THREAT LEVEL", (LARGURA // 2, y + 150),
+        desenhar_texto(self.tela, "NÍVEL DE AMEAÇA", (LARGURA // 2, y + 150),
                        (220, 190, 130), 16, "centro", self.fontes)
         desenhar_barra(self.tela, x + 120, y + 172, largura - 240, 12, 0.8,
                        DIMENSION_GOLD)
-        desenhar_texto(self.tela, f"DIMENSION 0{boss.cenario_id}",
+        desenhar_texto(self.tela, f"DIMENSÃO 0{boss.cenario_id}",
                        (LARGURA // 2, y + 206), boss.cor, 18, "centro",
                        self.fontes)
 
@@ -842,7 +842,7 @@ class Jogo:
 
         info_texto = (f"NIVEL {self.jogador.nivel}   |   "
                       f"{self.jogador.pontuacao} PTS   |   "
-                      f"SKIN {self.jogador.skin}")
+                      f"VISUAL {self.jogador.skin}")
         desenhar_texto(self.tela, info_texto,
                        (LARGURA // 2, info_y + 24), DOURADO, 18, "centro",
                        self.fontes)
@@ -851,7 +851,7 @@ class Jogo:
         pulso = 0.4 + 0.6 * math.sin(t * 2.5)
         cor_dica = tuple(int(c * pulso) for c in (160, 165, 200))
         desenhar_texto(self.tela,
-                       "UP/DOWN navegar   |   ENTER selecionar   "
+                       "CIMA/BAIXO navegar   |   ENTER selecionar   "
                        "|   ESC retomar",
                        (LARGURA // 2, painel.bottom - 18), cor_dica, 14,
                        "centro", self.fontes)
@@ -983,7 +983,7 @@ class Jogo:
                                    (knob_cx, by + 20), 11)
                 pygame.draw.circle(self.tela, BRANCO,
                                    (knob_cx, by + 20), 10)
-                estado = "ON" if ligado else "OFF"
+                estado = "LIGADO" if ligado else "DESLIGADO"
                 cor_estado = VERDE if ligado else (160, 90, 90)
                 est_surf = fonte_item.render(estado, True, cor_estado)
                 self.tela.blit(est_surf, (tx + tw + 14, by + 8))
@@ -1180,7 +1180,7 @@ class Jogo:
 
         t = pygame.time.get_ticks() * 0.001
         desenhar_glow(self.tela, RIFT_MAGENTA, (LARGURA // 2, 76), 120, 0.5)
-        desenhar_titulo(self.tela, "RIFT COLLAPSED", (LARGURA // 2, 84),
+        desenhar_titulo(self.tela, "FENDA COLAPSADA", (LARGURA // 2, 84),
                         RIFT_MAGENTA, 48)
 
         painel = pygame.Rect(LARGURA // 2 - 250, 140, 500, 300)
@@ -1215,12 +1215,12 @@ class Jogo:
             desenhar_texto(self.tela, "NOVO RECORDE!", (LARGURA // 2, 452),
                            cor_recorde, 34, "centro", self.fontes)
 
-        desenhar_texto(self.tela, "TOP 5", (LARGURA // 2, 504),
+        desenhar_texto(self.tela, "5 MELHORES", (LARGURA // 2, 504),
                        tema["terciaria"], 24, "centro", self.fontes)
         self._desenhar_recordes(self.recordes[:5], 534)
 
         desenhar_glow(self.tela, VERDE, (LARGURA // 2, ALTURA - 50), 40, 0.4)
-        desenhar_texto(self.tela, "ENTER: jogar de novo   ESC: menu",
+        desenhar_texto(self.tela, "ENTER: jogar novamente   ESC: menu",
                        (LARGURA // 2, ALTURA - 50), VERDE, 22, "centro",
                        self.fontes)
 
@@ -1233,7 +1233,7 @@ class Jogo:
 
         desenhar_titulo(self.tela, "VOID//SHIFT",
                         (LARGURA // 2, ALTURA // 2 - 130), RIFT_MAGENTA, 44)
-        desenhar_texto(self.tela, "DIMENSIONAL TRANSIT",
+        desenhar_texto(self.tela, "TRÂNSITO DIMENSIONAL",
                        (LARGURA // 2, ALTURA // 2 - 92), QUANTUM_CYAN, 22,
                        "centro", self.fontes)
 
@@ -1243,7 +1243,7 @@ class Jogo:
                         alpha=200, glow_raio=16)
         desenhar_cantos(self.tela, tema["borda_forte"], painel, tamanho=12)
 
-        desenhar_texto(self.tela, "CALIBRATING RIFT...",
+        desenhar_texto(self.tela, "CALIBRANDO A FENDA...",
                        (LARGURA // 2, ALTURA // 2 - 44), (200, 205, 235), 18,
                        "centro", self.fontes)
 
@@ -1258,7 +1258,7 @@ class Jogo:
                        (LARGURA // 2, ALTURA // 2 + 12), BRANCO, 22, "centro",
                        self.fontes)
         desenhar_texto(self.tela,
-                       f"RIFT STABILITY  {self.carregamento * 0.8742:.2f}%",
+                       f"ESTABILIDADE DA FENDA  {self.carregamento * 0.8742:.2f}%",
                        (LARGURA // 2, ALTURA // 2 + 46), QUANTUM_CYAN, 18,
                        "centro", self.fontes)
         dica = random.choice(DICAS_CARREGAMENTO)
