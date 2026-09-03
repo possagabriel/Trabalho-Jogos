@@ -7,8 +7,10 @@ externos).
 
 ## Windows
 
-O executável para Windows é gerado pelo workflow **Executável Windows** e fica
-disponível como artefato baixável no GitHub Actions. Veja as instruções de
+Baixe a versão para Windows em [Releases](../../releases). Em cada versão, o
+arquivo `VOID-SHIFT.exe` fica anexado diretamente à página de download; não é
+necessário abrir o GitHub Actions. Builds de teste continuam disponíveis como
+artefatos do workflow **Executável Windows**. Veja as instruções de
 [distribuição para Windows](docs/distribuicao-windows.md).
 
 > Este README é orientado a **desenvolvedores e IAs**: explica a arquitetura,

@@ -6,6 +6,14 @@ Windows e o publica como artefato baixável da execução no GitHub Actions.
 O executável inclui imagens, fontes e o ícone de Windows. Progresso e
 configurações ficam em `%LOCALAPPDATA%\VoidShift`, fora da pasta do aplicativo.
 
+## Download público por Release
+
+Para uma compilação de teste, baixe o artefato `VOID-SHIFT-Windows` ao final
+da execução. Para jogadores, publique uma tag de versão, por exemplo `v1.0.0`:
+o workflow cria uma GitHub Release e anexa `VOID-SHIFT.exe` diretamente nela.
+O link de distribuição passa a ficar em **Releases** → versão mais recente →
+`VOID-SHIFT.exe`.
+
 ## Assinatura e aviso do SmartScreen
 
 O aviso de arquivo potencialmente perigoso não pode ser removido por código.

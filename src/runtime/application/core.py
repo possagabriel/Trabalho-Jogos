@@ -88,6 +88,9 @@ class Jogo:
         pygame.display.set_caption(TITULO)
         pygame.display.set_icon(self._criar_icone())
         self.relogio = pygame.time.Clock()
+        self._escala_rapida = False
+        self._quadros_lentos = 0
+        self._quadros_estaveis = 0
         self.sons = sons or Sons()
         self.sons.set_volume_musica(self.config["musica_volume"])
         self.sons.set_volume_efeitos(self.config["efeitos_volume"])
@@ -272,6 +275,8 @@ class Jogo:
         no modo PREENCHE estica a cena. flip() e chamado por _desenhar().
         """
         w, h = self.janela.get_size()
+        escalar = (pygame.transform.scale if self._escala_rapida
+                   else pygame.transform.smoothscale)
         if (w, h) == (LARGURA, ALTURA) and self._apresentador_gpu is None:
             self.janela.blit(self.tela, (0, 0))
             return
@@ -284,8 +289,7 @@ class Jogo:
                 self._apresentador_gpu.apresentar(self.tela, destino, (w, h),
                                                   VOID_BLACK)
                 return
-            superficie = pygame.transform.smoothscale(self.tela,
-                                                       destino[2:])
+            superficie = escalar(self.tela, destino[2:])
             self.janela.fill(VOID_BLACK)
             self.janela.blit(superficie, destino[:2])
             return
@@ -296,8 +300,7 @@ class Jogo:
             self._apresentador_gpu.apresentar(self.tela, destino, (w, h),
                                               VOID_BLACK)
             return
-        superficie = pygame.transform.smoothscale(
-            self.tela, destino[2:])
+        superficie = escalar(self.tela, destino[2:])
         self.janela.fill(VOID_BLACK)
         self.janela.blit(superficie, destino[:2])
         cor_safe = (32, 28, 48)
@@ -309,6 +312,30 @@ class Jogo:
             (int(off_x), int(off_y + ALTURA * escala)),
             (int(off_x + LARGURA * escala),
              int(off_y + ALTURA * escala)), 1)
+
+    def _atualizar_modo_desempenho(self, tempo_quadro_ms: float) -> None:
+        """Alterna o upscale de CPU sem travar o jogo em máquinas modestas.
+
+        A renderização normal usa ``smoothscale``. Se vários quadros passam
+        do orçamento de 60 FPS, o próximo trecho usa ``scale``, que é bem mais
+        leve. A qualidade suave retorna somente após estabilidade sustentada,
+        evitando uma alternância visual a cada quadro.
+        """
+        orcamento = 1000 / FPS
+        if tempo_quadro_ms > orcamento * 1.15:
+            self._quadros_lentos = min(8, self._quadros_lentos + 1)
+            self._quadros_estaveis = 0
+        elif tempo_quadro_ms < orcamento * 0.75:
+            self._quadros_estaveis = min(90, self._quadros_estaveis + 1)
+            self._quadros_lentos = max(0, self._quadros_lentos - 1)
+        else:
+            self._quadros_lentos = max(0, self._quadros_lentos - 1)
+            self._quadros_estaveis = 0
+
+        if self._quadros_lentos >= 8:
+            self._escala_rapida = True
+        elif self._quadros_estaveis >= 90:
+            self._escala_rapida = False
 
     # ----- utilidades -----
 

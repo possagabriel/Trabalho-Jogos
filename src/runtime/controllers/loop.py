@@ -32,8 +32,13 @@ class ControladorLoop:
                 jogo.estado = EstadoJogo.JOGANDO
         elif jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
             jogo.menu.atualizar()
-        jogo.particulas.atualizar()
-        jogo.cenario.atualizar()
+        # O fundo de combate e suas partículas não são visíveis no menu.
+        # Evitar esse trabalho fora da partida reduz uso de CPU em idle.
+        mundo_visivel = jogo.estado in (
+            EstadoJogo.JOGANDO, EstadoJogo.PAUSA, EstadoJogo.GAME_OVER)
+        if mundo_visivel and not jogo.menu_equipamento:
+            jogo.particulas.atualizar()
+            jogo.cenario.atualizar()
         self._atualizar_textos_e_mensagens()
         jogo.fade = max(0, jogo.fade - 18) if jogo.fade > 0 else jogo.fade
         jogo.flash = max(0, jogo.flash - 1) if jogo.flash > 0 else jogo.flash
@@ -99,5 +104,6 @@ class ControladorLoop:
                 self.atualizar()
             jogo.render_controller.desenhar()
             jogo.relogio.tick(FPS)
+            jogo._atualizar_modo_desempenho(jogo.relogio.get_rawtime())
         pygame.quit()
         sys.exit(0)

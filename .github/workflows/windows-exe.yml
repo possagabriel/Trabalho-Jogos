@@ -6,25 +6,28 @@ on:
   push:
     branches:
       - test/windows-exe
+    tags:
+      - "v*"
 
 jobs:
   empacotar:
     runs-on: windows-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Instalar dependências de empacotamento
-        run: python -m pip install --upgrade pip pyinstaller .
+        run: python -m pip install --upgrade pip pyinstaller ".[gpu]"
       - name: Criar executável
         run: >-
           pyinstaller --noconfirm --clean --onefile --windowed
           --name VOID-SHIFT --icon assets/windows/void-shift.ico
           --add-data "images;images" --add-data "data/fonts;data/fonts"
           --collect-submodules src --collect-submodules game
+          --collect-submodules OpenGL
           --hidden-import game.phase_select main.py
       - name: Assinar executável quando houver certificado
         shell: pwsh
@@ -45,3 +48,9 @@ jobs:
           name: VOID-SHIFT-Windows
           path: dist/VOID-SHIFT.exe
           if-no-files-found: error
+      - name: Publicar executável na Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/VOID-SHIFT.exe
