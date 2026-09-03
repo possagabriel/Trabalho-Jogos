@@ -369,7 +369,7 @@ class HudJogo:
             "bonus": combo.get_bonus(),
             "nivel": jog.nivel,
             "cenario": getattr(jogo.cenario, "id", 1),
-            "regiao": getattr(jogo.cenario, "nome", "DEEP SPACE"),
+            "regiao": getattr(jogo.cenario, "nome", "ESPAÇO PROFUNDO"),
             "progresso": progresso,
             "arma": arma,
             "municao": municao,
@@ -416,11 +416,11 @@ class HudJogo:
 
         # identificacao
         x0 = painel.x + l.px(62)
-        rotulo = _render(self._f_titulo_xs, "PLAYER 01", CINZA_HUD)
+        rotulo = _render(self._f_titulo_xs, "PILOTO 01", CINZA_HUD)
         _blit_alfa(tela, rotulo, (x0, painel.y + l.px(14)), 210)
         pulsar = 0.72 + 0.28 * math.sin(t * 2.4)
         status = _render(self._f_padrao_xxs,
-                         "SISTEMAS ONLINE" if d["vida"] > 0 else "DANO CRITICO",
+                         "SISTEMAS ATIVOS" if d["vida"] > 0 else "DANO CRÍTICO",
                          tuple(int(c * pulsar) for c in VIDA_COR))
         _blit_alfa(tela, status, (x0, painel.y + l.px(30)), 200)
 
@@ -445,7 +445,7 @@ class HudJogo:
         barra_escudo = pygame.Rect(x0, sy, l.px(128), l.px(5))
         _barra_fina(tela, l, barra_escudo, escudo_frac, cor_escudo,
                     brilho=d["escudo"])
-        rot_esc = _render(self._f_padrao_xxs, "SHIELD", (120, 150, 210))
+        rot_esc = _render(self._f_padrao_xxs, "ESCUDO", (120, 150, 210))
         _blit_alfa(tela, rot_esc, (x0, sy - l.px(2)), 180)
 
         # energia de sistemas (mini barra + valor)
@@ -454,7 +454,7 @@ class HudJogo:
         barra_energia = pygame.Rect(x0, ey, l.px(128), l.px(5))
         _barra_fina(tela, l, barra_energia, frac_energia,
                     self._paleta["energia"])
-        rot_ener = _render(self._f_padrao_xxs, "ENERGY", (150, 132, 240))
+        rot_ener = _render(self._f_padrao_xxs, "ENERGIA", (150, 132, 240))
         _blit_alfa(tela, rot_ener, (x0, ey - l.px(2)), 180)
         _numero(tela, l, self._f_padrao_xxs, f"{int(d['energia'])}",
                 (painel.right - l.px(10), ey + l.px(1)),
@@ -471,14 +471,14 @@ class HudJogo:
 
         x = painel.right - l.px(12)
 
-        rotulo = _render(self._f_titulo_xs, "SCORE", CINZA_HUD)
+        rotulo = _render(self._f_titulo_xs, "PONTOS", CINZA_HUD)
         _blit_alfa(tela, rotulo, (x - rotulo.get_width(), painel.y + l.px(10)),
                    210)
         _numero(tela, l, self._f_numero, d["pontos"],
                 (x, painel.y + l.px(28)), BRANCO_HUD, "direita", 245)
 
         # high score
-        surf_hi = _render(self._f_padrao_xxs, "HIGH SCORE", (120, 130, 170))
+        surf_hi = _render(self._f_padrao_xxs, "RECORDE", (120, 130, 170))
         _blit_alfa(tela, surf_hi, (painel.x + l.px(12), painel.y + l.px(14)),
                    190)
         _numero(tela, l, self._f_padrao_s, d["recorde"],
@@ -519,7 +519,7 @@ class HudJogo:
         y = l.margem(16)
 
         setor = _render(self._f_titulo_m,
-                        f"SECTOR {d['cenario']:02d}", BRANCO_HUD)
+                        f"SETOR {d['cenario']:02d}", BRANCO_HUD)
         rect_setor = setor.get_rect(center=(cx, y + l.px(16)))
         _blit_alfa(tela, setor, rect_setor, 240)
         # acentos laterais discretos
@@ -553,7 +553,7 @@ class HudJogo:
         else:
             cor = self._paleta["primaria"]
         _medidor_circular(tela, l, centro, raio, fracao, cor,
-                          rotulo="BOOST", valor=f"{int(fracao * 100)}%")
+                          rotulo="IMPULSO", valor=f"{int(fracao * 100)}%")
 
         # velocidade
         vx = centro[0]
@@ -585,7 +585,7 @@ class HudJogo:
         x0 = painel.x + l.px(58)
         nome = _render(self._f_titulo_s, arma["nome"].upper(), BRANCO_HUD)
         _blit_alfa(tela, nome, (x0, painel.y + l.px(12)), 240)
-        nivel = _render(self._f_padrao_xxs, f"LVL {arma['nivel']:02d}",
+        nivel = _render(self._f_padrao_xxs, f"NV {arma['nivel']:02d}",
                         CINZA_HUD)
         _blit_alfa(tela, nivel, (x0, painel.y + l.px(30)), 200)
 
@@ -595,7 +595,7 @@ class HudJogo:
         _barra_segmentada(tela, l, barra, d["municao"], arma["cor"], 8,
                           raio_canto=2)
         rot_carga = _render(self._f_padrao_xxs,
-                            "CARREGANDO" if d["municao"] < 1.0 else "LISTO",
+                            "CARREGANDO" if d["municao"] < 1.0 else "PRONTA",
                             (150, 158, 200) if d["municao"] < 1.0 else arma["cor"])
         _blit_alfa(tela, rot_carga, (x0, cy + l.px(8)), 200)
 
@@ -623,7 +623,7 @@ class HudJogo:
             pulso = 0.7 + 0.3 * math.sin(t * 4)
             desenhar_glow(tela, self._paleta["secundaria"], barra.center,
                           max(barra.w, barra.h), 0.5 * pulso)
-            surf = _render(self._f_titulo_xs, "BOMBA READY",
+            surf = _render(self._f_titulo_xs, "BOMBA PRONTA",
                            tuple(int(c * pulso)
                                  for c in self._paleta["secundaria"]))
             _blit_alfa(tela, surf,

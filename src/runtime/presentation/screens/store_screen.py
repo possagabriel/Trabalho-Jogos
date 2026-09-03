@@ -55,17 +55,17 @@ class TelaLojaJogo:
         menu = self.menu
         layout = menu.layout
         tema = tema_atual(menu.jogo.config["tema"])
-        menu._cabecalho_sub_animado(tela, "LOJA DE SKINS", tema["primaria"])
+        menu._cabecalho_sub_animado(tela, "LOJA DE VISUAIS", tema["primaria"])
         dx, dy, alfa = menu._entrada_anim(menu._frac_sub(0.06, 0.3), dx_design=-16)
         moeda = menu.fonte_media.render(f"Moedas: {menu.jogo.loja.moedas:,}".replace(",", "."), True, DOURADO)
         menu._blit_alfa(tela, moeda, (layout.px(20) + dx, layout.px(30) + dy), int(255 * alfa))
         atual = menu.jogo.loja.pegar_skin(menu.jogo.loja.skin_atual)
-        skin_atual = menu.fonte_media.render(f"Skin atual: {atual.nome}", True, tema["secundaria"])
+        skin_atual = menu.fonte_media.render(f"Visual atual: {atual.nome}", True, tema["secundaria"])
         menu._blit_alfa(tela, skin_atual, skin_atual.get_rect(
             topright=(layout.largura - layout.px(20) - dx, layout.px(30) + dy)), int(255 * alfa))
         total = len(menu.jogo.loja.skins)
         desbloqueadas = len(menu.jogo.loja.lista_desbloqueadas())
-        resumo = menu.fonte_pequena.render(f"{desbloqueadas}/{total} skins desbloqueadas", True, (150, 155, 200))
+        resumo = menu.fonte_pequena.render(f"{desbloqueadas}/{total} visuais desbloqueados", True, (150, 155, 200))
         menu._blit_alfa(tela, resumo, resumo.get_rect(
             topright=(layout.largura - layout.px(20), layout.px(56))), int(255 * alfa))
         cards = menu._rects_loja()
@@ -100,14 +100,14 @@ class TelaLojaJogo:
         if nome == "comprar":
             sucesso, _ = loja.comprar_skin(menu.loja_selecao)
             menu.notificacoes.adicionar(
-                f"Skin {skin.nome} comprada!" if sucesso else "Moedas insuficientes!",
+                f"Visual {skin.nome} comprado!" if sucesso else "Moedas insuficientes!",
                 "sucesso" if sucesso else "erro")
             menu._som("comprar" if sucesso else "erro")
             if sucesso:
                 menu.jogo._salvar_tudo()
         elif nome == "equipar" and skin.desbloqueada:
             loja.equipar_skin(menu.loja_selecao)
-            menu.notificacoes.adicionar(f"Skin {skin.nome} equipada!", "sucesso")
+            menu.notificacoes.adicionar(f"Visual {skin.nome} equipado!", "sucesso")
             menu._som("equipar")
             menu.jogo._salvar_tudo()
         elif nome == "preview":

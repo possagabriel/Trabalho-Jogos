@@ -17,7 +17,7 @@ ALTURA: int = 700
 FPS: int = 60
 """Taxa de quadros por segundo alvo."""
 
-TITULO: str = "INCARNATE - Enter the Rift"
+TITULO: str = "INCARNATE - Entre na Fenda"
 """Titulo exibido na barra da janela."""
 
 # ---------------------------------------------------------------------------

@@ -31,11 +31,11 @@ from game.phase_select import PhaseStatus  # noqa: E402
 
 ROTULOS_ESPERADOS = [
     "01 // CONTINUAR",
-    "02 // NOVA MISSAO",
+    "02 // LOBBY",
     "03 // HANGAR",
-    "04 // RECORDS",
-    "05 // SETTINGS",
-    "06 // EXIT",
+    "04 // RECORDES",
+    "05 // CONFIGURAÇÕES",
+    "06 // SAIR",
 ]
 
 
@@ -61,6 +61,18 @@ def test_construcao_subestado_e_opcoes():
 def test_construcao_carregou_fundo_do_menu():
     _, menu = novo_menu()
     assert menu.fundo.fundo_imagem is not None or menu.fundo.gradiente
+
+
+def test_escolher_resolucao_abre_em_modo_janela_estavel():
+    jogo, menu = novo_menu()
+    jogo.config["tela_cheia"] = True
+    jogo._aplicar_modo_video = mock.Mock()
+
+    menu._aplicar_resolucao(1)
+
+    assert jogo.config["resolucao"] == "1024x768"
+    assert jogo.config["tela_cheia"] is False
+    jogo._aplicar_modo_video.assert_called_once()
 
 
 def test_logo_principal_e_gerado_por_tipografia():
@@ -137,13 +149,36 @@ def test_voltar_menu():
 # Missao nova
 # ---------------------------------------------------------------------------
 
-def test_novo_jogo_direto_abre_selecao_de_fases():
+def test_lobby_abre_selecao_de_fases_sem_reiniciar_campanha():
     jogo, menu = novo_menu()
+    # A suite compartilha o diretorio temporario de dados: declare o estado
+    # inicial que este caso cobre, em vez de depender da ordem dos testes.
+    jogo.progresso.jogador["progresso_campanha"].update(
+        {"fases_concluidas": [], "fase_atual": "lealdade", "nivel_atual": 1})
+    menu._abrir_lobby()
+    assert menu.subestado == "FASES"
+    assert menu.phase_screen.nova_campanha_pendente is False
+    assert menu.phase_screen.statuses["lealdade"] == PhaseStatus.AVAILABLE
+    assert menu.phase_screen.statuses["funcao"] == PhaseStatus.LOCKED
+
+
+def test_novo_jogo_direto_abre_selecao_de_fases():
+    _, menu = novo_menu()
     menu._novo_jogo_direto()
     assert menu.subestado == "FASES"
     assert menu.phase_screen.nova_campanha_pendente is True
-    assert menu.phase_screen.statuses["lealdade"] == PhaseStatus.AVAILABLE
-    assert menu.phase_screen.statuses["funcao"] == PhaseStatus.LOCKED
+
+
+def test_lobby_retomar_fase_e_nivel_salvos():
+    jogo, menu = novo_menu()
+    campanha = jogo.progresso.jogador["progresso_campanha"]
+    campanha.update({"fases_concluidas": [1, 2], "fase_atual": "identidade",
+                     "nivel_atual": 13})
+    menu._abrir_lobby()
+    assert menu.phase_screen.selected == 2
+    assert menu.phase_screen.confirm() is True
+    assert jogo.jogador.nivel == 13
+    assert campanha["fase_atual"] == "identidade"
 
 
 def test_cancelar_novo_jogo_preserva_campanha():

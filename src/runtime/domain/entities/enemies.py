@@ -448,7 +448,7 @@ class InimigoEspecial(Inimigo):
             self.vida_max = self.vida
             self.ataque = "leque"
             self.timer_ataque = 60
-            acoes["mensagem"] = "MINI-BOSS!"
+            acoes["mensagem"] = "MINICHEFE!"
         elif self.tipo_especial == "cristalino":
             self.campo_forca = True
             acoes["mensagem"] = "CAMPO DE FORCA!"

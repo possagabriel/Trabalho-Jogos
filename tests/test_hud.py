@@ -171,7 +171,7 @@ def test_sem_cenario_usado_padrao():
     jogo.cenario = None
     _, _, dados = _desenha(jogo)
     assert dados["cenario"] == 1
-    assert dados["regiao"] == "DEEP SPACE"
+    assert dados["regiao"] == "ESPAÇO PROFUNDO"
 
 
 def test_velocidade_reduzida_nao_quebra_hud():

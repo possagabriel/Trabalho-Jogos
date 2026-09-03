@@ -13,6 +13,8 @@ from src.core.constants import BRANCO, CIANO, DOURADO, LARANJA, ROXO, VERMELHO
 from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, luz_radial
 
 _CACHE = {}
+_CACHE_ALPHA = {}
+_LIMITE_DESENHO = 320
 
 Cor: TypeAlias = tuple[int, int, int]
 Velocidade: TypeAlias = tuple[float, float]
@@ -26,6 +28,21 @@ def _superficie_cor(cor, raio):
         desenhar_circulo(surf, cor + (255,), (raio, raio), raio)
         _CACHE[chave] = surf
     return _CACHE[chave]
+
+
+def _superficie_alfa(chave, superficie, alfa):
+    """Retorna uma variante opaca cacheada sem copiar a cada particula.
+
+    A opacidade e quantizada em 16 niveis. Isso preserva o fade visual e
+    elimina ate tres ``Surface.copy`` por particula em cada quadro.
+    """
+    nivel = max(0, min(15, int(alfa) * 15 // 255))
+    chave_cache = (chave, nivel)
+    if chave_cache not in _CACHE_ALPHA:
+        variante = superficie.copy()
+        variante.set_alpha(nivel * 17)
+        _CACHE_ALPHA[chave_cache] = variante
+    return _CACHE_ALPHA[chave_cache]
 
 
 class Particula:
@@ -54,17 +71,20 @@ class Particula:
             return
         alfa = int(255 * self.vida / self.vida_max)
         tam = max(1, int(self.tamanho))
-        glow = luz_radial(self.cor, max(2, tam * 2), 0.6).copy()
-        glow.set_alpha(int(alfa * 0.7))
+        raio_glow = max(2, tam * 2)
+        glow = _superficie_alfa(
+            ("glow", self.cor, raio_glow),
+            luz_radial(self.cor, raio_glow, 0.6), int(alfa * 0.7))
         gx = int(self.x) - glow.get_width() // 2
         gy = int(self.y) - glow.get_height() // 2
         tela.blit(glow, (gx, gy))
         if tam >= 3:
-            contorno = _superficie_cor((0, 0, 0), tam + 1).copy()
-            contorno.set_alpha(int(alfa * 0.8))
+            contorno = _superficie_alfa(
+                ("contorno", tam + 1), _superficie_cor((0, 0, 0), tam + 1),
+                int(alfa * 0.8))
             tela.blit(contorno, (int(self.x - tam - 1), int(self.y - tam - 1)))
-        surf = _superficie_cor(self.cor, tam).copy()
-        surf.set_alpha(alfa)
+        surf = _superficie_alfa(("cor", self.cor, tam),
+                                _superficie_cor(self.cor, tam), alfa)
         tela.blit(surf, (int(self.x - tam), int(self.y - tam)))
 
 
@@ -238,7 +258,9 @@ class SistemaParticulas:
         self.particulas = [p for p in self.particulas if p.vida > 0]
 
     def desenhar(self, tela: pygame.Surface) -> None:
-        for p in self.particulas:
+        total = len(self.particulas)
+        passo = max(1, math.ceil(total / _LIMITE_DESENHO))
+        for p in self.particulas[::passo]:
             p.desenhar(tela)
 
     def limpar(self) -> None:

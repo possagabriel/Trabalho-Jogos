@@ -420,7 +420,7 @@ class HudMenu:
         cor_sys = (0, 255, 150) if pisca > 0.1 else (80, 255, 170)
         self._desenhar_texto(tela, "sys_rotulo", l.fonte_texto(12), "SYS",
                              (l.largura - l.px(36), l.px(20)), dim, 2, "direita")
-        self._desenhar_texto(tela, "sys_valor", l.fonte_texto(12), "ONLINE",
+        self._desenhar_texto(tela, "sys_valor", l.fonte_texto(12), "ATIVO",
                              (l.largura - l.px(34), l.px(40)), cor_sys, 2,
                              "direita")
         coord_txt = "GRID %.0f.%.0f" % (self._coord % 1000,
@@ -452,7 +452,7 @@ class HudMenu:
                              "SALTO DIMENSIONAL", (l.px(40), l.altura - l.px(34)),
                              texto_cor, 3)
         self._desenhar_texto(tela, "mis_sub", l.fonte_texto(11),
-                             "TARGET // ENTER THE RIFT", (l.px(44),
+                             "ALVO // ENTRE NA FENDA", (l.px(44),
                                                           l.altura - l.px(20)),
                              primaria, 2)
 
@@ -466,7 +466,7 @@ class HudMenu:
                                                      l.altura - l.px(36)),
                              (255, 200, 120), 3, "direita")
         self._desenhar_texto(tela, "vel_sub", l.fonte_texto(11),
-                             "NAV MODE", (l.largura - l.px(44),
+                             "MODO NAVEGAÇÃO", (l.largura - l.px(44),
                                           l.altura - l.px(22)),
                              borda, 2, "direita")
 
@@ -481,6 +481,7 @@ class NaveMenu:
     def __init__(self):
         self._jogador = None
         self._skin_id = None
+        self._sprites = {}
         self.tempo = 0.0
 
     def atualizar(self):
@@ -495,11 +496,16 @@ class NaveMenu:
         jog.tilt = 0.35
         jog.invencivel = 0
 
-        surf = pygame.Surface((96, 96), pygame.SRCALPHA)
-        jog.skin.desenhar(surf, jog)
-        if abs(escala - 1.0) > 0.01:
-            surf = pygame.transform.smoothscale(
-                surf, (int(96 * escala), int(96 * escala)))
+        chave = (skin.id, round(escala, 2))
+        surf = self._sprites.get(chave)
+        if surf is None:
+            base = pygame.Surface((96, 96), pygame.SRCALPHA)
+            jog.skin.desenhar(base, jog)
+            if abs(escala - 1.0) > 0.01:
+                base = pygame.transform.smoothscale(
+                    base, (int(96 * escala), int(96 * escala)))
+            self._sprites[chave] = base
+            surf = base
 
         bob = math.sin(self.tempo * 2.4) * 4
         cx = int(x + math.sin(self.tempo * 1.7) * 5)
@@ -580,13 +586,6 @@ class DestaqueMenu:
 
     def desenhar(self, tela, x, tema):
         forma = self._forma(tema)
-        h = forma.get_height()
-        escala = 1.0 + 0.06 * self._pulso_escala + \
-            0.02 * math.sin(self.tempo * 5)
-        if abs(escala - 1.0) > 0.01:
-            forma = pygame.transform.smoothscale(
-                forma, (max(1, int(forma.get_width() * escala)),
-                        max(1, int(h * escala))))
         rect = forma.get_rect(midleft=(x, int(self.y)))
         tela.blit(forma, rect)
 

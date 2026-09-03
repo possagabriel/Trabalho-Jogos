@@ -40,16 +40,13 @@ class ControladorRenderizacao:
         """Compoe a tela conforme o estado ativo e apresenta o quadro."""
         jogo = self.jogo
         if jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
-            jogo.tela_ui.fill(VOID_BLACK)
-            jogo.menu.desenhar(jogo.tela_ui)
-            jogo.janela.blit(jogo.tela_ui, (0, 0))
-            self._desenhar_overlays_janela()
-            pygame.display.flip()
-            return
-        if jogo.estado is EstadoJogo.PREPARANDO:
+            jogo.tela.fill(VOID_BLACK)
+            jogo.menu.desenhar(jogo.tela)
+        elif jogo.estado is EstadoJogo.PREPARANDO:
             jogo._desenhar_carregando()
         elif jogo.estado is EstadoJogo.JOGANDO:
             jogo._desenhar_jogo()
+            self.desenhar_hud()
         elif jogo.estado is EstadoJogo.PAUSA:
             jogo._desenhar_jogo()
             self.desenhar_hud()
@@ -61,19 +58,7 @@ class ControladorRenderizacao:
         self._desenhar_overlays_logicos()
         self.aplicar_shake()
         jogo._apresentar()
-        if jogo.estado is EstadoJogo.JOGANDO:
-            jogo.hud.desenhar(jogo.janela, jogo)
         pygame.display.flip()
-
-    def _desenhar_overlays_janela(self) -> None:
-        jogo = self.jogo
-        if jogo.flash > 0:
-            jogo._janela_flash.fill((255, 0, 0, jogo.flash * 18))
-            jogo.janela.blit(jogo._janela_flash, (0, 0))
-        if jogo.fade > 0:
-            jogo._janela_fade.fill(NEGRO)
-            jogo._janela_fade.set_alpha(jogo.fade)
-            jogo.janela.blit(jogo._janela_fade, (0, 0))
 
     def _desenhar_overlays_logicos(self) -> None:
         jogo = self.jogo

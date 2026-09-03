@@ -156,6 +156,18 @@ def test_iniciar_nivel_troca_cenario():
     assert jogo.cenario.id == 2
 
 
+def test_voltar_ao_menu_salva_checkpoint_da_fase_atual():
+    jogo = novo_jogo()
+    jogo._iniciar_nivel(13)
+    with mock.patch.object(jogo.progresso, "salvar_arquivo") as salvar:
+        jogo.pausa_controller.confirmar_saida()
+    campanha = jogo.progresso.campanha
+    assert jogo.estado is EstadoJogo.MENU
+    assert campanha["fase_atual"] == "identidade"
+    assert campanha["nivel_atual"] == 13
+    salvar.assert_called_once()
+
+
 def test_verificar_desbloqueio_arma():
     jogo = novo_jogo()
     jogo.jogador.armas_desbloqueadas = [0]
@@ -447,8 +459,49 @@ def test_adicionar_trauma_limita_a_1():
 
 
 # ---------------------------------------------------------------------------
-# Desenho
+# Desenho e apresentacao
 # ---------------------------------------------------------------------------
+
+def test_interface_usa_o_canvas_logico_em_vez_da_resolucao_da_janela():
+    jogo = Jogo()
+    assert jogo.tela_ui is jogo.tela
+    assert (jogo.layout.largura, jogo.layout.altura) == (LARGURA, ALTURA)
+
+
+def test_hud_e_composto_no_canvas_logico_antes_da_apresentacao():
+    jogo = novo_jogo()
+    jogo._desenhar_jogo = mock.Mock()
+    jogo._apresentar = mock.Mock()
+    jogo.hud.desenhar = mock.Mock()
+
+    jogo.render_controller.desenhar()
+
+    jogo.hud.desenhar.assert_called_once_with(jogo.tela, jogo)
+    jogo._apresentar.assert_called_once()
+
+
+def test_apresentador_gpu_recebe_um_unico_frame_logico_e_destino_fisico():
+    jogo = Jogo()
+    jogo.janela = pygame.Surface((1800, 1400))
+    jogo._apresentador_gpu = mock.Mock()
+
+    jogo._apresentar()
+
+    jogo._apresentador_gpu.apresentar.assert_called_once_with(
+        jogo.tela, (0, 0, 1800, 1400), (1800, 1400), (8, 8, 13))
+
+
+def test_modo_video_usa_resolucao_nativa_em_tela_cheia():
+    jogo = Jogo()
+    jogo.config["resolucao"] = "1024x768"
+    jogo.config["tela_cheia"] = True
+    jogo._criar_janela_video = mock.Mock(return_value=pygame.Surface((1920, 1080)))
+
+    with mock.patch("src.runtime.application.core.pygame.display.get_desktop_sizes",
+                    return_value=[(1920, 1080)]):
+        jogo._aplicar_modo_video()
+
+    jogo._criar_janela_video.assert_called_once_with((1920, 1080), pygame.FULLSCREEN)
 
 def test_desenha_estados():
     jogo = novo_jogo()
@@ -458,6 +511,14 @@ def test_desenha_estados():
     jogo.estado = "JOGANDO"
     jogo._desenhar_jogo()
     jogo._desenhar_hud()
+
+
+def test_arsenal_desenha_catalogo_completo():
+    jogo = novo_jogo()
+    jogo.menu_equipamento = True
+    jogo.jogador.armas_desbloqueadas = list(range(len(ARMARIA)))
+    jogo.especiais_desbloqueados = ["bomba", "cura", "imortal"]
+    jogo._desenhar_jogo()
     jogo._desenhar_carregando()
     jogo._desenhar_game_over()
 

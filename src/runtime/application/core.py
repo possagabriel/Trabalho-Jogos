@@ -41,15 +41,22 @@ from src.runtime.presentation.ui import desenhar_barra, desenhar_cantos, desenha
     desenhar_titulo
 from src.runtime.domain.entities.weapons import ARMARIA, Projetil
 
+try:
+    from src.runtime.infrastructure.graphics.gpu_renderer import ApresentadorGPU, \
+        GPU_DISPONIVEL
+except ImportError:  # pragma: no cover - PyOpenGL e opcional
+    ApresentadorGPU = None
+    GPU_DISPONIVEL = False
+
 DICAS_CARREGAMENTO = [
     "Prepare-se para atravessar a fenda!",
     "Use combos para ganhar mais pontos!",
     "Troque de arma com as teclas 1 a 9.",
     "Abates carregam a Bomba Vortex (tecla E).",
-    "Derrote entidades RIFT para abrir novas dimensoes.",
+    "Derrote entidades da Fenda para abrir novas dimensões.",
     "Skins raras caem dos inimigos cristalinos.",
     "Junte moedas para expandir o hangar.",
-    "A cada 5 niveis surge uma entidade RIFT.",
+    "A cada 5 níveis surge uma entidade da Fenda.",
     "Cada dimensao tem inimigos e armadilhas proprios.",
 ]
 
@@ -154,13 +161,50 @@ class Jogo:
     # ----- modo de video -----
 
     def _criar_layout_ui(self):
-        """Cria Layout, tela_ui e superficies de efeito na resolucao da janela."""
-        w, h = self.janela.get_size()
-        self.layout = Layout(w, h)
-        self.tela_ui = pygame.Surface((w, h))
-        self._janela_sombra = pygame.Surface((w, h), pygame.SRCALPHA)
-        self._janela_flash = pygame.Surface((w, h), pygame.SRCALPHA)
-        self._janela_fade = pygame.Surface((w, h))
+        """Mantem toda a interface na superficie logica do jogo.
+
+        Desenhar menu, HUD e gameplay no mesmo canvas de 900x700 evita que
+        cada camada seja rasterizada novamente na resolucao do monitor. A
+        janela fisica recebe apenas o quadro final em ``_apresentar``.
+        """
+        self.layout = Layout(LARGURA, ALTURA)
+        self.tela_ui = self.tela
+
+    def _liberar_apresentador_gpu(self):
+        """Libera a textura antes de recriar o contexto de video."""
+        apresentador = getattr(self, "_apresentador_gpu", None)
+        if apresentador is not None:
+            apresentador.liberar()
+        self._apresentador_gpu = None
+
+    def _criar_janela_video(self, tamanho, flags):
+        """Cria uma janela OpenGL quando houver suporte, com fallback seguro.
+
+        O Pygame continua sendo responsavel pelo desenho do jogo. Quando
+        PyOpenGL e o driver estiverem disponiveis, somente o ultimo upscale
+        da superficie logica e feito pela GPU.
+        """
+        self._apresentador_gpu = None
+        if GPU_DISPONIVEL and ApresentadorGPU is not None:
+            try:
+                janela = pygame.display.set_mode(
+                    tamanho, flags | pygame.OPENGL | pygame.DOUBLEBUF)
+                self._apresentador_gpu = ApresentadorGPU((LARGURA, ALTURA))
+                return janela
+            except Exception:  # driver, contexto ou PyOpenGL indisponivel
+                self._apresentador_gpu = None
+        try:
+            return pygame.display.set_mode(tamanho, flags)
+        except pygame.error:
+            # Alguns drivers nao oferecem todos os modos exclusivos. Nesse
+            # caso a tela cheia continua utilizavel na resolucao do desktop.
+            if flags & pygame.FULLSCREEN:
+                try:
+                    desktop = pygame.display.get_desktop_sizes()[0]
+                    return pygame.display.set_mode(desktop, flags)
+                except (IndexError, pygame.error):
+                    pass
+            raise
 
     def _escala_janela(self):
         """Fator de escala e offsets para encaixar a tela 900x700 na janela.
@@ -194,15 +238,19 @@ class Jogo:
     def _aplicar_modo_video(self):
         """Reconfigura a janela: tela cheia (resolucao nativa) ou escolhida."""
         from src.core.settings import parse_resolucao
+        self._liberar_apresentador_gpu()
+        tamanho = parse_resolucao(self.config["resolucao"])
         if self.config["tela_cheia"]:
+            # Tela cheia em modo nativo evita troca de modo de vídeo,
+            # imagem esticada e áreas mortas em monitores Windows. A escolha
+            # de resolução é aplicada em modo janela pelo menu.
             try:
-                w, h = pygame.display.get_desktop_sizes()[0]
+                tamanho = pygame.display.get_desktop_sizes()[0]
             except (IndexError, pygame.error):
-                w, h = parse_resolucao(self.config["resolucao"])
-            self.janela = pygame.display.set_mode((w, h), pygame.FULLSCREEN)
+                pass
+            self.janela = self._criar_janela_video(tamanho, pygame.FULLSCREEN)
         else:
-            self.janela = pygame.display.set_mode(
-                parse_resolucao(self.config["resolucao"]))
+            self.janela = self._criar_janela_video(tamanho, 0)
         if hasattr(self, "hud") and hasattr(self, "menu"):
             self._criar_layout_ui()
             self.hud.layout = self.layout
@@ -223,24 +271,34 @@ class Jogo:
         no modo PREENCHE estica a cena. flip() e chamado por _desenhar().
         """
         w, h = self.janela.get_size()
-        if (w, h) == (LARGURA, ALTURA):
+        if (w, h) == (LARGURA, ALTURA) and self._apresentador_gpu is None:
             self.janela.blit(self.tela, (0, 0))
             return
         if self.config["aspecto"] == "PREENCHE":
             escala = max(0.5, self.config["ajuste_escala"])
-            superficie = pygame.transform.smoothscale(
-                self.tela,
-                (max(1, int(w * escala)), max(1, int(h * escala))))
+            destino = (int(self.config["ajuste_off_x"]),
+                        int(self.config["ajuste_off_y"]),
+                        max(1, int(w * escala)), max(1, int(h * escala)))
+            if self._apresentador_gpu is not None:
+                self._apresentador_gpu.apresentar(self.tela, destino, (w, h),
+                                                  VOID_BLACK)
+                return
+            superficie = pygame.transform.smoothscale(self.tela,
+                                                       destino[2:])
             self.janela.fill(VOID_BLACK)
-            self.janela.blit(superficie, (int(self.config["ajuste_off_x"]),
-                                          int(self.config["ajuste_off_y"])))
+            self.janela.blit(superficie, destino[:2])
             return
         escala, off_x, off_y = self._transformacao_janela()
+        destino = (int(off_x), int(off_y), max(1, int(LARGURA * escala)),
+                    max(1, int(ALTURA * escala)))
+        if self._apresentador_gpu is not None:
+            self._apresentador_gpu.apresentar(self.tela, destino, (w, h),
+                                              VOID_BLACK)
+            return
         superficie = pygame.transform.smoothscale(
-            self.tela,
-            (max(1, int(LARGURA * escala)), max(1, int(ALTURA * escala))))
+            self.tela, destino[2:])
         self.janela.fill(VOID_BLACK)
-        self.janela.blit(superficie, (int(off_x), int(off_y)))
+        self.janela.blit(superficie, destino[:2])
         cor_safe = (32, 28, 48)
         pygame.draw.aaline(self.janela, cor_safe,
                            (int(off_x), int(off_y)),
@@ -506,7 +564,7 @@ class Jogo:
     def _ativar_especial(self):
         """Dispara o especial (tecla E): lança a Bomba Vortex.
 
-        Consome a carga do medidor (SPECIAL READY). A bomba é grande, viaja
+        Consome a carga do medidor de especial pronto. A bomba é grande, viaja
         devagar e explode em área enorme causando dano massivo. Não afeta o
         boss diretamente por colisão, mas a explosão em área sim.
         """
@@ -564,40 +622,85 @@ class Jogo:
             self._desenhar_menu_equipamento()
 
     def _desenhar_menu_equipamento(self):
-        """Desenha o arsenal pausado, aberto pela tecla TAB."""
+        """Desenha o arsenal em formato de terminal tático aberto por TAB."""
         sombra = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
-        sombra.fill((2, 4, 14, 205))
+        sombra.fill((2, 4, 14, 220))
         self.tela.blit(sombra, (0, 0))
-        painel = pygame.Rect(90, 115, LARGURA - 180, ALTURA - 230)
-        desenhar_painel(self.tela, CIANO, painel, cor_fundo=(10, 16, 30),
-                        raio_canto=12, alpha=245, glow_raio=20)
-        desenhar_texto(self.tela, "ARSENAL // TAB PARA FECHAR",
-                       (LARGURA // 2, 145), BRANCO, 32, "centro", self.fontes)
+        painel = pygame.Rect(60, 70, LARGURA - 120, ALTURA - 140)
+        tema = tema_atual(self.config["tema"])
+        desenhar_painel_cartoon(self.tela, tema["primaria"], painel,
+                                cor_fundo=(8, 14, 30), raio_canto=24,
+                                espessura_borda=5, alpha=248, glow_raio=28)
+        desenhar_cantos(self.tela, tema["secundaria"], painel, tamanho=18)
+
+        # Cabeçalho de console com indicador de sistema ativo.
+        cabecalho = pygame.Rect(painel.x + 20, painel.y + 18, painel.w - 40, 64)
+        retangulo_suave(self.tela, (16, 28, 54), cabecalho, 12)
+        retangulo_suave(self.tela, tema["secundaria"], cabecalho, 12, 1,
+                         glow_cor=tema["secundaria"], glow_raio=12)
+        desenhar_glow(self.tela, tema["secundaria"], (cabecalho.x + 31,
+                      cabecalho.centery), 19, 0.9)
+        pygame.draw.circle(self.tela, tema["secundaria"],
+                           (cabecalho.x + 31, cabecalho.centery), 6)
+        desenhar_texto(self.tela, "ARSENAL", (cabecalho.x + 56,
+                       cabecalho.y + 17), BRANCO, 31, "esquerda", self.fontes)
+        desenhar_texto(self.tela, "EQUIPAMENTO // SELEÇÃO TÁTICA",
+                       (cabecalho.x + 58, cabecalho.y + 45),
+                       (145, 170, 215), 14, "esquerda", self.fontes)
+        desenhar_texto(self.tela, "TAB  FECHAR", (cabecalho.right - 18,
+                       cabecalho.centery), tema["secundaria"], 15, "direita",
+                       self.fontes)
+
         linhas = [
-            ("ARMAS", [ARMARIA[i]["nome"] for i in self.jogador.armas_desbloqueadas],
-             ARMARIA[self.jogador.arma_atual]["nome"]),
-            ("ESPECIAIS", [ESPECIAIS[i]["nome"] for i in self.especiais_desbloqueados],
-             ESPECIAIS[self.especial_atual]["nome"]),
+            ("ARMAS", self.jogador.armas_desbloqueadas, self.jogador.arma_atual),
+            ("ESPECIAIS", self.especiais_desbloqueados, self.especial_atual),
         ]
         for linha, (titulo, itens, equipado) in enumerate(linhas):
-            y = 215 + linha * 180
-            cor = CIANO if linha == self.linha_equipamento else (130, 145, 175)
-            desenhar_texto(self.tela, titulo, (130, y), cor, 24, "esquerda",
-                           self.fontes)
-            for indice, nome in enumerate(itens):
-                x = 135 + (indice % 4) * 160
-                item_y = y + 48 + (indice // 4) * 48
+            y = painel.y + (104 if linha == 0 else 358)
+            cor = tema["secundaria"] if linha == self.linha_equipamento else (125, 145, 188)
+            desenhar_texto(self.tela, f"0{linha + 1} // {titulo}",
+                           (painel.x + 28, y), cor, 19, "esquerda", self.fontes)
+            linha_y = y + 25
+            pygame.draw.line(self.tela, cor, (painel.x + 28, linha_y),
+                             (painel.right - 28, linha_y), 1)
+            for indice, item in enumerate(itens):
+                coluna, fileira = indice % 3, indice // 3
+                x = painel.x + 27 + coluna * 244
+                item_y = y + 40 + fileira * 70
+                card = pygame.Rect(x, item_y, 226, 58)
                 selecionado = (linha == self.linha_equipamento and
                                indice == self.indice_equipamento % max(1, len(itens)))
-                texto = ("> " if selecionado else "  ") + nome
-                if nome == equipado:
-                    texto += " [E]"
-                desenhar_texto(self.tela, texto, (x, item_y),
-                               DIMENSION_GOLD if selecionado else BRANCO,
+                if linha == 0:
+                    arma = ARMARIA[item]
+                    nome, detalhe = arma["nome"], f"DANO {arma['dano']}  //  RECARGA {arma['cooldown']}"
+                    equipado_agora = item == equipado
+                    numero = f"{item + 1:02d}"
+                else:
+                    especial = ESPECIAIS[item]
+                    nome, detalhe = especial["nome"], especial["descricao"].upper()
+                    equipado_agora = item == equipado
+                    numero = f"0{indice + 1}"
+                fundo = (28, 38, 68) if selecionado else (13, 23, 45)
+                borda = DIMENSION_GOLD if selecionado else cor if equipado_agora else (58, 77, 116)
+                retangulo_suave(self.tela, fundo, card, 9)
+                retangulo_suave(self.tela, borda, card, 9, 2 if selecionado else 1,
+                                 glow_cor=borda if selecionado else None,
+                                 glow_raio=10 if selecionado else 0)
+                numero_surf = self.fontes[22].render(numero, True, borda)
+                self.tela.blit(numero_surf, (card.x + 10, card.y + 7))
+                desenhar_texto(self.tela, nome, (card.x + 42, card.y + 8), BRANCO,
                                17, "esquerda", self.fontes)
-        desenhar_texto(self.tela, "SETAS/WASD: navegar   ENTER: equipar",
-                       (LARGURA // 2, ALTURA - 145), (160, 175, 205), 18,
-                       "centro", self.fontes)
+                desenhar_texto(self.tela, detalhe, (card.x + 42, card.y + 31),
+                               (148, 166, 205), 12, "esquerda", self.fontes)
+                if equipado_agora:
+                    badge = pygame.Rect(card.right - 52, card.y + 8, 42, 16)
+                    retangulo_suave(self.tela, tema["primaria"], badge, 5)
+                    desenhar_texto(self.tela, "USO", badge.center, VOID_BLACK,
+                                   10, "centro", self.fontes)
+        rodape = pygame.Rect(painel.x + 20, painel.bottom - 44, painel.w - 40, 25)
+        retangulo_suave(self.tela, (14, 24, 47), rodape, 6)
+        desenhar_texto(self.tela, "SETAS / WASD  NAVEGAR     ENTER / ESPAÇO  EQUIPAR",
+                       rodape.center, (165, 183, 222), 14, "centro", self.fontes)
 
     def _desenhar_boss_intro(self):
         """Overlay de apresentacao da entidade RIFT ao entrar num boss."""
@@ -614,19 +717,19 @@ class Jogo:
                         alpha=int(215 * alfa), glow_raio=24)
         desenhar_cantos(self.tela, DIMENSION_GOLD, painel, tamanho=16)
 
-        desenhar_texto(self.tela, "RIFT ENTITY DETECTED",
+        desenhar_texto(self.tela, "ENTIDADE DA FENDA DETECTADA",
                        (LARGURA // 2, y + 30), DIMENSION_GOLD, 24, "centro",
                        self.fontes)
-        desenhar_texto(self.tela, f"ENTITY // {boss.nivel // 5:02d}",
+        desenhar_texto(self.tela, f"ENTIDADE // {boss.nivel // 5:02d}",
                        (LARGURA // 2, y + 64), QUANTUM_CYAN, 20, "centro",
                        self.fontes)
         desenhar_texto(self.tela, boss.nome, (LARGURA // 2, y + 102), BRANCO,
                        34, "centro", self.fontes)
-        desenhar_texto(self.tela, "THREAT LEVEL", (LARGURA // 2, y + 150),
+        desenhar_texto(self.tela, "NÍVEL DE AMEAÇA", (LARGURA // 2, y + 150),
                        (220, 190, 130), 16, "centro", self.fontes)
         desenhar_barra(self.tela, x + 120, y + 172, largura - 240, 12, 0.8,
                        DIMENSION_GOLD)
-        desenhar_texto(self.tela, f"DIMENSION 0{boss.cenario_id}",
+        desenhar_texto(self.tela, f"DIMENSÃO 0{boss.cenario_id}",
                        (LARGURA // 2, y + 206), boss.cor, 18, "centro",
                        self.fontes)
 
@@ -743,7 +846,7 @@ class Jogo:
 
         info_texto = (f"NIVEL {self.jogador.nivel}   |   "
                       f"{self.jogador.pontuacao} PTS   |   "
-                      f"SKIN {self.jogador.skin}")
+                      f"VISUAL {self.jogador.skin}")
         desenhar_texto(self.tela, info_texto,
                        (LARGURA // 2, info_y + 24), DOURADO, 18, "centro",
                        self.fontes)
@@ -752,7 +855,7 @@ class Jogo:
         pulso = 0.4 + 0.6 * math.sin(t * 2.5)
         cor_dica = tuple(int(c * pulso) for c in (160, 165, 200))
         desenhar_texto(self.tela,
-                       "UP/DOWN navegar   |   ENTER selecionar   "
+                       "CIMA/BAIXO navegar   |   ENTER selecionar   "
                        "|   ESC retomar",
                        (LARGURA // 2, painel.bottom - 18), cor_dica, 14,
                        "centro", self.fontes)
@@ -884,7 +987,7 @@ class Jogo:
                                    (knob_cx, by + 20), 11)
                 pygame.draw.circle(self.tela, BRANCO,
                                    (knob_cx, by + 20), 10)
-                estado = "ON" if ligado else "OFF"
+                estado = "LIGADO" if ligado else "DESLIGADO"
                 cor_estado = VERDE if ligado else (160, 90, 90)
                 est_surf = fonte_item.render(estado, True, cor_estado)
                 self.tela.blit(est_surf, (tx + tw + 14, by + 8))
@@ -1081,7 +1184,7 @@ class Jogo:
 
         t = pygame.time.get_ticks() * 0.001
         desenhar_glow(self.tela, RIFT_MAGENTA, (LARGURA // 2, 76), 120, 0.5)
-        desenhar_titulo(self.tela, "RIFT COLLAPSED", (LARGURA // 2, 84),
+        desenhar_titulo(self.tela, "FENDA COLAPSADA", (LARGURA // 2, 84),
                         RIFT_MAGENTA, 48)
 
         painel = pygame.Rect(LARGURA // 2 - 250, 140, 500, 300)
@@ -1116,12 +1219,12 @@ class Jogo:
             desenhar_texto(self.tela, "NOVO RECORDE!", (LARGURA // 2, 452),
                            cor_recorde, 34, "centro", self.fontes)
 
-        desenhar_texto(self.tela, "TOP 5", (LARGURA // 2, 504),
+        desenhar_texto(self.tela, "5 MELHORES", (LARGURA // 2, 504),
                        tema["terciaria"], 24, "centro", self.fontes)
         self._desenhar_recordes(self.recordes[:5], 534)
 
         desenhar_glow(self.tela, VERDE, (LARGURA // 2, ALTURA - 50), 40, 0.4)
-        desenhar_texto(self.tela, "ENTER: jogar de novo   ESC: menu",
+        desenhar_texto(self.tela, "ENTER: jogar novamente   ESC: menu",
                        (LARGURA // 2, ALTURA - 50), VERDE, 22, "centro",
                        self.fontes)
 
@@ -1134,7 +1237,7 @@ class Jogo:
 
         desenhar_titulo(self.tela, "VOID//SHIFT",
                         (LARGURA // 2, ALTURA // 2 - 130), RIFT_MAGENTA, 44)
-        desenhar_texto(self.tela, "DIMENSIONAL TRANSIT",
+        desenhar_texto(self.tela, "TRÂNSITO DIMENSIONAL",
                        (LARGURA // 2, ALTURA // 2 - 92), QUANTUM_CYAN, 22,
                        "centro", self.fontes)
 
@@ -1144,7 +1247,7 @@ class Jogo:
                         alpha=200, glow_raio=16)
         desenhar_cantos(self.tela, tema["borda_forte"], painel, tamanho=12)
 
-        desenhar_texto(self.tela, "CALIBRATING RIFT...",
+        desenhar_texto(self.tela, "CALIBRANDO A FENDA...",
                        (LARGURA // 2, ALTURA // 2 - 44), (200, 205, 235), 18,
                        "centro", self.fontes)
 
@@ -1159,7 +1262,7 @@ class Jogo:
                        (LARGURA // 2, ALTURA // 2 + 12), BRANCO, 22, "centro",
                        self.fontes)
         desenhar_texto(self.tela,
-                       f"RIFT STABILITY  {self.carregamento * 0.8742:.2f}%",
+                       f"ESTABILIDADE DA FENDA  {self.carregamento * 0.8742:.2f}%",
                        (LARGURA // 2, ALTURA // 2 + 46), QUANTUM_CYAN, 18,
                        "centro", self.fontes)
         dica = random.choice(DICAS_CARREGAMENTO)
