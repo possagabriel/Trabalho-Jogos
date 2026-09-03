@@ -11,11 +11,10 @@ from typing import Dict, Optional
 
 import pygame
 
-PASTA_FONTES = os.path.join(os.path.dirname(os.path.dirname(
-    os.path.abspath(__file__))), "data", "fonts")
+from src.shared.paths import PASTA_FONTES
 
-ARQUIVO_TITULO = os.path.join(PASTA_FONTES, "Orbitron.ttf")
-ARQUIVO_TEXTO = os.path.join(PASTA_FONTES, "Rajdhani.ttf")
+ARQUIVO_TITULO = os.fspath(PASTA_FONTES / "Orbitron.ttf")
+ARQUIVO_TEXTO = os.fspath(PASTA_FONTES / "Rajdhani.ttf")
 
 _CACHE: Dict[tuple, pygame.font.Font] = {}
 

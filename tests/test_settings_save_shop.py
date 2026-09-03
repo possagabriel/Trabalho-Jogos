@@ -305,6 +305,19 @@ def test_loja_equipar_skin():
         assert loja.lista_desbloqueadas() == ["padrao", "fenix"]
 
 
+def test_loja_reembolsar_skin_equipada():
+    dados = _tmp_dados()
+    with _patch_shop(dados):
+        loja = shop.LojaSkins(moedas=0, desbloqueadas=["padrao", "fenix"],
+                              skin_atual="fenix")
+        ok, skin = loja.reembolsar_skin(1)
+        assert ok is True
+        assert skin.desbloqueada is False
+        assert loja.moedas == skin.preco
+        assert loja.skin_atual == "padrao"
+        assert loja.reembolsar_skin(0)[0] is False
+
+
 def test_loja_sincronizar_com_save():
     dados = _tmp_dados()
     with _patch_shop(dados), _patches(dados):

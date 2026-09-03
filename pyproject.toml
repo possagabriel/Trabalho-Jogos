@@ -3,16 +3,15 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "incarnate"
+name = "void-shift"
 version = "1.0.0"
-description = "INCARNATE — Enter the Rift"
+description = "VOID//SHIFT — Enter the Rift"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 
 dependencies = [
-    "pygame-ce>=2.5.0",
-    "PyOpenGL>=3.1.10",
+    "pygame>=2.5.0",
 ]
 
 [project.optional-dependencies]
@@ -20,13 +19,14 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "ruff>=0.1.0",
+    "mypy>=1.10",
 ]
 
 [project.scripts]
-incarnate = "game.core:main"
+void-shift = "src.core.application:main"
 
 [tool.setuptools.packages.find]
-include = ["game*"]
+include = ["src*"]
 
 [tool.ruff]
 line-length = 99
@@ -38,3 +38,13 @@ select = ["E", "F", "I", "W"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src/core/application.py", "src/runtime/controllers"]
+follow_imports = "skip"
+ignore_missing_imports = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true

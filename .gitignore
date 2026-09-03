@@ -19,7 +19,7 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
+.venv
 .vscode/
 .idea/
 *.swp

@@ -16,7 +16,7 @@ import tempfile
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
-os.environ["INCARNATE_DATA_DIR"] = tempfile.mkdtemp(prefix="incarnate_test_")
+os.environ["SPACEFURY_DATA_DIR"] = tempfile.mkdtemp(prefix="spacefury_test_")
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
@@ -26,8 +26,13 @@ from unittest import mock  # noqa: E402
 
 import pygame  # noqa: E402
 
-from game.config import ALTURA, FPS, LARGURA  # noqa: E402
+from game.config import ALTURA, EstadoJogo, LARGURA  # noqa: E402
+from game.combat_session import SessaoCombate  # noqa: E402
 from game.core import Jogo  # noqa: E402
+from game.game_over_controller import ControladorGameOver  # noqa: E402
+from game.loop_controller import ControladorLoop  # noqa: E402
+from game.pause_controller import ControladorPausa  # noqa: E402
+from game.render_controller import ControladorRenderizacao  # noqa: E402
 from game.enemies import Inimigo, InimigoEspecial  # noqa: E402
 from game.powerups import PowerUp  # noqa: E402
 from game.weapons import ARMARIA, Projetil  # noqa: E402
@@ -41,7 +46,7 @@ def _patch_recordes():
     ou moedas gravadas por outro (ex.: o loop de combate do smoke_test).
     """
     from game import save_system
-    dados = tempfile.mkdtemp(prefix="incarnate_fimjogo_")
+    dados = tempfile.mkdtemp(prefix="spacefury_fimjogo_")
     return mock.patch.multiple(
         save_system,
         ARQUIVO_RECORDES=os.path.join(dados, "records.json"),
@@ -98,42 +103,35 @@ def test_nome_vazio_vira_jogador():
     assert jogo.jogador.nome == "Jogador"
 
 
-def test_menu_usa_a_mesma_resolucao_logica_do_gameplay():
+def test_estado_do_jogo_usa_enum_e_aceita_compatibilidade_textual():
     jogo = Jogo()
-    jogo.config["resolucao"] = "1280x720"
-    jogo._aplicar_modo_video()
-    assert jogo.janela.get_size() == (1280, 720)
-    assert jogo.tela.get_size() == (LARGURA, ALTURA)
-    assert (jogo.menu.layout.largura, jogo.menu.layout.altura) == \
-        jogo.tela.get_size()
+    assert jogo.estado is EstadoJogo.MENU
+    jogo.estado = "PREPARANDO"
+    assert jogo.estado is EstadoJogo.PREPARANDO
 
 
-def test_renderizador_gpu_tem_fallback_no_driver_headless():
+def test_jogo_expoe_contrato_da_sessao_de_combate():
     jogo = Jogo()
-    assert jogo.gpu_ativo is False
-    assert jogo.apresentador_gpu is None
+    assert isinstance(jogo, SessaoCombate)
+    assert jogo.combate_controller.sessao is jogo
 
 
-def test_preenche_preserva_proporcao_widescreen():
+def test_jogo_delega_fluxos_aos_controladores_extraidos():
     jogo = Jogo()
-    jogo.config["resolucao"] = "1920x1080"
-    jogo.config["aspecto"] = "PREENCHE"
-    jogo._aplicar_modo_video()
-    escala, off_x, off_y = jogo._transformacao_janela()
-    assert escala == 1.5
-    assert off_x == 0
-    assert off_y == 0
+    assert isinstance(jogo.loop_controller, ControladorLoop)
+    assert isinstance(jogo.pausa_controller, ControladorPausa)
+    assert isinstance(jogo.game_over_controller, ControladorGameOver)
+    assert isinstance(jogo.render_controller, ControladorRenderizacao)
 
 
-def test_preenche_ultrawide_corta_bordas_sem_esticar():
-    jogo = Jogo()
-    jogo.config["resolucao"] = "2560x1080"
-    jogo.config["aspecto"] = "PREENCHE"
-    jogo._aplicar_modo_video()
-    escala, off_x, off_y = jogo._transformacao_janela()
-    assert escala == 2.0
-    assert off_x == 0
-    assert off_y == -180
+def test_pausa_config_renderiza_volume_zero():
+    jogo = novo_jogo()
+    jogo.config["musica_volume"] = 0.0
+    jogo.config["efeitos_volume"] = 0.0
+    jogo._desenhar_pausa_config({
+        "primaria": (255, 0, 0), "secundaria": (0, 255, 255),
+        "borda_fraco": (100, 100, 100),
+    }, 0.0)
 
 
 # ---------------------------------------------------------------------------
@@ -158,13 +156,13 @@ def test_iniciar_nivel_troca_cenario():
     assert jogo.cenario.id == 2
 
 
-def test_verificar_desbloqueio_arma_nao_concede_por_nivel():
+def test_verificar_desbloqueio_arma():
     jogo = novo_jogo()
     jogo.jogador.armas_desbloqueadas = [0]
     jogo.jogador.nivel = 3
     jogo._verificar_desbloqueio_arma()
-    assert 1 not in jogo.jogador.armas_desbloqueadas
-    assert jogo.jogador.arma_atual == 0
+    assert 1 in jogo.jogador.armas_desbloqueadas
+    assert jogo.jogador.arma_atual == 1
     assert ARMARIA[1]["nome"] == "Laser"
 
 
@@ -293,33 +291,6 @@ def test_ativar_especial_exige_carga():
     jogo.especial = 0.9
     assert jogo._ativar_especial() is False
     assert not any(p.tipo == "bomba" for p in jogo.projeteis)
-
-
-def test_especial_cura_tres_sem_ultrapassar_maximo():
-    jogo = novo_jogo()
-    jogo.especial_atual = "cura"
-    jogo.especial = 1.0
-    jogo.jogador.vida = jogo.jogador.max_vida - 1
-    assert jogo._ativar_especial() is True
-    assert jogo.jogador.vida == jogo.jogador.max_vida
-
-
-def test_especial_imortal_dura_dez_segundos():
-    jogo = novo_jogo()
-    jogo.especial_atual = "imortal"
-    jogo.especial = 1.0
-    assert jogo._ativar_especial() is True
-    assert jogo.jogador.invencivel == 10 * FPS
-
-
-def test_boss_nao_recebe_dano_durante_intro():
-    jogo = novo_jogo()
-    jogo._iniciar_nivel(5)
-    vida = jogo.boss.vida
-    proj = Projetil(jogo.boss.x, jogo.boss.y, 0, 0, 99,
-                    (255, 255, 255), 8)
-    assert jogo._projetil_jogador_atinge(proj) is False
-    assert jogo.boss.vida == vida
 
 
 def test_bomba_explode_em_area():

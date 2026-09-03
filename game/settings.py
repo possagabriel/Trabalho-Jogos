@@ -1,91 +1,11 @@
-"""Configuracoes do jogo persistidas em JSON (volume, video, controles)."""
+"""Alias temporario para as configuracoes canônicas em :mod:`src.core`.
 
-import json
-import os
+O alias de modulo mantém compatibilidade inclusive para ferramentas e testes
+que ajustam ``ARQUIVO_CONFIG`` durante a transição.
+"""
 
-import pygame
+import sys
 
-from .config import ALTURA, LARGURA
-from .persistence import salvar_json_atomico
+from src.core import settings as _settings
 
-# Diretorio de dados (JSON) do jogo. Pode ser redirecionado via variavel de
-# ambiente (ex.: testes) sem afetar a leitura das fontes em data/fonts.
-PASTA_DADOS = (os.environ.get("INCARNATE_DATA_DIR")
-               or os.environ.get("SPACE" + "FURY_DATA_DIR")
-               or os.path.join(os.path.dirname(os.path.dirname(
-                   os.path.abspath(__file__))), "data"))
-ARQUIVO_CONFIG = os.path.join(PASTA_DADOS, "settings.json")
-
-RESOLUCOES = ["900x700", "1024x768", "1280x720", "1280x800", "1366x768",
-              "1440x900", "1600x900", "1680x1050", "1920x1080", "2560x1080",
-              "2560x1440", "3440x1440", "3840x2160"]
-TEMAS = ["NEON", "AURORA", "MAGMA"]
-
-ACOES_CONTROLE = ["cima", "baixo", "esquerda", "direita", "atirar", "pausar"]
-
-DEFAULT_CONTROLES = {
-    "cima": pygame.K_UP,
-    "baixo": pygame.K_DOWN,
-    "esquerda": pygame.K_LEFT,
-    "direita": pygame.K_RIGHT,
-    "atirar": pygame.K_SPACE,
-    "pausar": pygame.K_p,
-}
-
-_DEFAULT = {
-    "musica_volume": 0.8,
-    "efeitos_volume": 0.8,
-    "resolucao": "1280x720",
-    "tela_cheia": False,
-    "sensibilidade": 1.0,
-    "controles": DEFAULT_CONTROLES,
-    "tema": "NEON",
-    # AJUSTAR cria letterbox; PREENCHE usa cover e corta bordas sem deformar.
-    "aspecto": "AJUSTAR",
-    "ajuste_escala": 1.0,  # zoom manual da imagem (0.9 - 1.2)
-    "ajuste_off_x": 0,     # deslocamento horizontal da imagem (px da janela)
-    "ajuste_off_y": 0,     # deslocamento vertical da imagem (px da janela)
-}
-
-
-def parse_resolucao(texto):
-    """Converte '1280x720' em tupla (1280, 720)."""
-    try:
-        larg, alt = texto.lower().split("x")
-        return int(larg), int(alt)
-    except (ValueError, AttributeError):
-        return LARGURA, ALTURA
-
-
-class Configuracoes:
-    """Configuracoes do jogador com carregamento e persistencia em JSON."""
-
-    def __init__(self):
-        self._dados = self._carregar()
-
-    def _carregar(self):
-        try:
-            with open(ARQUIVO_CONFIG, "r", encoding="utf-8") as f:
-                dados = json.load(f)
-            valores = dict(_DEFAULT)
-            valores.update(dados)
-            controles = dict(DEFAULT_CONTROLES)
-            controles.update(valores.get("controles", {}))
-            valores["controles"] = controles
-            return valores
-        except (FileNotFoundError, json.JSONDecodeError, OSError):
-            return {k: (dict(v) if isinstance(v, dict) else v)
-                    for k, v in _DEFAULT.items()}
-
-    def salvar(self):
-        return salvar_json_atomico(ARQUIVO_CONFIG, self._dados)
-
-    def __getitem__(self, chave):
-        return self._dados[chave]
-
-    def __setitem__(self, chave, valor):
-        self._dados[chave] = valor
-
-    @property
-    def controles(self):
-        return self._dados["controles"]
+sys.modules[__name__] = _settings

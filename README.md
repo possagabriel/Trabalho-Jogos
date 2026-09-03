@@ -1,9 +1,9 @@
-# INCARNATE - Enter the Rift
+# VOID//SHIFT - Enter the Rift
 
 Shoot 'em up vertical em **Pygame** com progressão, personalização de nave,
-6 dimensões, inimigos especiais e entidades RIFT (bosses). O jogo combina
-efeitos e áudio gerados em runtime com imagens e fontes locais versionadas no
-repositório.
+6 dimensões, inimigos especiais e entidades RIFT (bosses). O código é 100%
+procedural (visual, sons e música são gerados em runtime, sem assets
+externos).
 
 > Este README é orientado a **desenvolvedores e IAs**: explica a arquitetura,
 > o fluxo de dados e as convenções para que qualquer pessoa (ou modelo) possa
@@ -27,19 +27,8 @@ repositório.
 ## Como executar
 
 ```bash
-python -m pip install -r requirements.txt   # pygame-ce + PyOpenGL
+python -m pip install -r requirements.txt   # pygame-ce
 python main.py
-```
-
-Quando o sistema oferece OpenGL, a apresentação e a escala do frame são feitas
-pela GPU através do PyOpenGL. O jogo volta automaticamente ao modo por
-software em máquinas sem suporte ou em ambientes headless. Para forçar esse
-fallback durante diagnóstico, use `INCARNATE_SOFTWARE_RENDERER=1`.
-
-Para desenvolvimento (testes, cobertura e lint):
-
-```bash
-python -m pip install -e ".[dev]"
 ```
 
 Sem áudio/vídeo (CI, servidores, debugging):
@@ -50,10 +39,9 @@ SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python main.py
 
 ### Resolução e responsividade
 
-O jogo renderiza numa superfície interna widescreen de **1280×720** e a
-ajusta à janela preservando a proporção (scale-to-fit). O posicionamento de
-**toda** a UI passa pelo módulo `game/layout.py` — um sistema responsivo com
-**ancoras** (grade
+O jogo renderiza numa superfície interna de **900×700** e a ajusta à janela
+preservando a proporção (scale-to-fit). O posicionamento de **toda** a UI passa
+pelo módulo `game/layout.py` — um sistema responsivo com **ancoras** (grade
 3x3), **containers** ancorados, **proporções** da superfície, **escala** de uma
 base de design (900×700) e **safe areas** (margem interna). Nenhum elemento usa
 coordenada rígida em pixels: se a superfície lógica mudar de tamanho, o menu se
@@ -66,8 +54,7 @@ recompõe automaticamente.
 - **Modo de aspecto** (configuração `aspecto`, disponível em Settings):
   - `AJUSTAR` (padrão): *scale-to-fit* com **safe areas** (letterbox) em
     `VOID_BLACK`, mantendo proporções iguais em qualquer formato de tela.
-  - `PREENCHE`: preenche a janela com escala uniforme e corta apenas as bordas
-    excedentes, sem deformar a imagem.
+  - `PREENCHE`: estica a cena para preencher a janela inteira.
 - **Tela cheia:** usa a resolução nativa do monitor (sem `SCALED`, sem esticar).
 - **Ajustar Tela** (Config → Ajustar Tela): calibra a imagem para o monitor
   (TVs com overscan, telas com bordas cortadas etc.). Com setas move a imagem
@@ -89,47 +76,28 @@ recompõe automaticamente.
 ## Arquitetura
 
 O projeto segue o padrão **Game Loop** clássico: um estado global
-(`Jogo.estado`) decide o que é atualizado e desenhado a cada frame. Todo o
-estado do gameplay vive em **um único objeto `Jogo`** (`game/core.py`),
-que é referenciado pelos módulos de UI quando precisam acessar config,
-progresso, loja e sons.
-
-O pacote canônico e distribuído é `game/`. A árvore `src/` permanece apenas
-como protótipo da migração arquitetural e não integra o executável publicado.
+(`Jogo.estado`) decide o que é atualizado e desenhado a cada frame. O runtime
+executável fica em `src/runtime/`; `game/` existe apenas como fachada de
+compatibilidade para imports antigos.
 
 ```
-incarnate/
-├── main.py               # bootstrap: ajusta sys.path e chama Jogo().executar()
-├── preview_hud.py        # demonstração do HUD em 1920x1080 (janela animada ou --save)
-├── requirements.txt      # dependências
-├── images/               # artes de fundo e sprites (carregadas por game/assets.py)
-├── tests/
-│   └── smoke_test.py     # smoke tests headless (sem janela)
-├── game/
-│   ├── core.py           # Jogo: estado, game loop, combate, HUD, transições
-│   ├── config.py         # constantes globais (tela, FPS, cores, limites)
-│   ├── assets.py         # caminhos e carregamento das imagens de images/
-│   ├── settings.py       # Configuracoes: persistidas em data/settings.json
-│   ├── player.py         # Jogador, SistemaCombo, catálogo de Skins
-│   ├── enemies.py        # Inimigo, InimigoEspecial (sistema de carga), ondas
-│   ├── bosses.py         # Entidade RIFT: 6 bosses, um por dimensão, com ataques próprios
-│   ├── scenarios.py      # Cenario: gradiente, estrelas, nebulosas e efeitos
-│   ├── weapons.py        # ARMARIA (9 armas) e Projetil (inclui ion/feixe)
-│   ├── particles.py      # SistemaParticulas, MensagemFlutuante
-│   ├── powerups.py       # PowerUp (escudo, vida, arma, velocidade, moedas, skin)
-│   ├── shop.py           # LojaSkins: compra/equipa skins (data/skins.json)
-│   ├── save_system.py    # SistemaProgressao: save, recordes, estatísticas
-│   ├── menu.py           # MenuPrincipal: todas as telas fora do gameplay
-│   ├── menu_scene.py     # componentes visuais do menu (fundo, HUD, nave…)
-│   ├── hud.py            # HUD profissional de combate (jogador, score, setor, boost, arma, especial, boss)
-│   ├── layout.py         # layout responsivo: ancoras, containers, proporções, safe areas
-│   ├── ui.py             # BotaoNeon e helpers de desenho (HUD, textos, barras)
-│   ├── smooth.py         # renderização suave: glow, AA, gradientes, easing
-│   ├── theme.py          # paletas NEON/AURORA/MAGMA + utilidades de cor
-│   ├── fonts.py          # carregamento das fontes (Orbitron/Rajdhani)
-│   ├── geometry.py       # formas geométricas (polígono, estrela, losango...)
-│   └── sounds.py         # Sons: efeitos e música gerados proceduralmente
-└── data/                 # gerado em runtime (JSON de progresso/config)
+Trabalho-Jogos/
+├── main.py                       # chama src.core.application.main
+├── src/
+│   ├── core/                     # entry point, estados, constantes e configurações
+│   ├── runtime/                  # implementação executável, por responsabilidade
+│   │   ├── application/          # composição do jogo
+│   │   ├── controllers/          # loop, combate, pausa, progressão e renderização
+│   │   ├── domain/               # entidades e mundo do gameplay
+│   │   ├── infrastructure/       # gráficos, áudio, ativos e persistência
+│   │   └── presentation/         # HUD, menu e telas
+│   ├── domain/                   # abstrações reutilizáveis em evolução
+│   ├── infrastructure/           # adaptadores reutilizáveis em evolução
+│   └── presentation/             # componentes e telas reutilizáveis em evolução
+├── game/                          # fachadas de compatibilidade sem lógica
+├── tests/                         # testes unitários, integração e arquitetura
+├── docs/architecture-migration.md # regras e mapa da migração
+└── data/                          # progresso/configuração gerados em runtime
 ```
 
 ### Ativos visuais
@@ -137,18 +105,18 @@ incarnate/
 A pasta `images/` concentra as artes: fundos por cenário, o menu e a folha de
 sprites de naves (`naves.png`). A nave padrão do jogador é um recorte da folha
 (`nave-padrao.png`, extraído com fundo transparente) e é carregada por
-`game/player.py` com fallback para a nave procedural caso o arquivo falte.
+`src/runtime/domain/entities/player.py` com fallback para a nave procedural
+caso o arquivo falte.
 
 ### Responsabilidades por camada
 
 | Camada | Módulos | Responsabilidade |
 |--------|---------|------------------|
-| **Núcleo** | `core`, `config` | Loop, estados, colisões, pontuação, HUD |
-| **Entidades** | `player`, `enemies`, `bosses`, `weapons`, `powerups` | Objetos com `atualizar()` + `desenhar()` |
-| **Mundo** | `scenarios`, `particles` | Fundo, efeitos, partículas e mensagens |
-| **Metagame** | `shop`, `save_system`, `settings` | Persistência (JSON) e progressão |
-| **UI** | `menu`, `ui`, `theme`, `fonts` | Telas de menu e elementos de interface |
-| **Visual/Som** | `smooth`, `geometry`, `sounds` | Primitivas de desenho/áudio reutilizáveis |
+| **Aplicação** | `src.runtime.application`, `src.runtime.controllers` | Composição, loop, estados e regras de fluxo |
+| **Domínio** | `src.runtime.domain` | Entidades, armas, cenários, efeitos e colisões |
+| **Infraestrutura** | `src.runtime.infrastructure`, `src.infrastructure` | Gráficos, áudio, ativos, layout e persistência |
+| **Apresentação** | `src.runtime.presentation`, `src.presentation` | HUD, menu, telas e componentes |
+| **Compatibilidade** | `game` | Mantém imports históricos sem duplicar estado |
 
 ---
 
@@ -328,7 +296,7 @@ python tests/run_all.py        # alternativa standalone, sem pytest
 
 Os testes rodam **headless** (drivers dummy do SDL). O `tests/conftest.py`
 define o ambiente antes de qualquer importação do jogo e cria um
-`INCARNATE_DATA_DIR` temporário para a sessão do pytest; cada arquivo também
+`SPACEFURY_DATA_DIR` temporário para a sessão do pytest; cada arquivo também
 funciona isolado. Cobertura por módulo:
 
 | Arquivo | Módulos | O que cobre |
@@ -345,9 +313,6 @@ funciona isolado. Cobertura por módulo:
 | `test_core.py` | core | estados, níveis/boss a cada 5, desbloqueio de armas, combate e fim de jogo |
 | `test_hud.py` | hud | HUD: renderização de todos os módulos, segmentos, barra de boss, medidores e duck typing |
 | `test_layout.py` | layout | layout responsivo nas resoluções-alvo |
-
-Os testes de menu também cobrem a seleção de fases, cancelamento seguro de
-nova campanha, cache de miniaturas e coordenadas de mouse responsivas.
 
 O `smoke_test.py` faz um smoke test geral: inicialização, loop de combate
 avançando níveis, desenho dos 6 cenários e mapeamento nível→cenário.
