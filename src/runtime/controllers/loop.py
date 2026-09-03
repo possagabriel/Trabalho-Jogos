@@ -65,7 +65,11 @@ class ControladorLoop:
                 continue
             if jogo.estado is EstadoJogo.JOGANDO:
                 tecla_pausar = jogo.controles.get("pausar", 0)
-                if evento.key in (pygame.K_p, pygame.K_ESCAPE, tecla_pausar):
+                if evento.key == pygame.K_TAB:
+                    jogo.menu_equipamento = not jogo.menu_equipamento
+                elif jogo.menu_equipamento:
+                    jogo._tratar_menu_equipamento(evento)
+                elif evento.key in (pygame.K_p, pygame.K_ESCAPE, tecla_pausar):
                     jogo.estado = EstadoJogo.PAUSA
                 elif evento.key == pygame.K_e:
                     jogo._ativar_especial()

@@ -53,6 +53,12 @@ DICAS_CARREGAMENTO = [
     "Cada dimensao tem inimigos e armadilhas proprios.",
 ]
 
+ESPECIAIS = {
+    "bomba": {"nome": "BOMBA VORTEX", "descricao": "Dano em uma grande area"},
+    "cura": {"nome": "REPARO +3", "descricao": "Recupera 3 pontos de vida"},
+    "imortal": {"nome": "IMORTALIDADE", "descricao": "10 segundos sem receber dano"},
+}
+
 
 class Jogo:
     """Controla o fluxo do jogo: menu, loja, partida, pausa e game over."""
@@ -123,6 +129,9 @@ class Jogo:
         self._pausa_mostrando_config = False
         self._pausa_dialogo = None
         self._pausa_mouse = (0, 0)
+        self.menu_equipamento = False
+        self.linha_equipamento = 0
+        self.indice_equipamento = 0
         self.progressao_controller = ControladorProgressao(self)
         self.combate_controller = ControladorCombate(self)
         self.pausa_controller = ControladorPausa(self)
@@ -378,6 +387,8 @@ class Jogo:
     # ----- atualizacao da partida -----
 
     def _atualizar_jogando(self):
+        if self.menu_equipamento:
+            return
         teclas = pygame.key.get_pressed()
         usando_boost = (teclas[pygame.K_LSHIFT] or teclas[pygame.K_RSHIFT]
                         or teclas[pygame.K_LCTRL] or teclas[pygame.K_RCTRL])
@@ -471,6 +482,27 @@ class Jogo:
         if not self.jogador.vivo:
             self._fim_de_jogo()
 
+    def _tratar_menu_equipamento(self, evento):
+        """Navega pelo arsenal aberto com TAB durante a partida."""
+        if evento.key in (pygame.K_UP, pygame.K_w, pygame.K_DOWN, pygame.K_s):
+            self.linha_equipamento = 1 - self.linha_equipamento
+            self.indice_equipamento = 0
+        elif evento.key in (pygame.K_LEFT, pygame.K_a):
+            self.indice_equipamento -= 1
+        elif evento.key in (pygame.K_RIGHT, pygame.K_d):
+            self.indice_equipamento += 1
+        elif evento.key in (pygame.K_RETURN, pygame.K_SPACE):
+            if self.linha_equipamento == 0:
+                armas = self.jogador.armas_desbloqueadas
+                if armas:
+                    self.jogador.selecionar_arma(
+                        armas[self.indice_equipamento % len(armas)])
+            else:
+                especiais = self.especiais_desbloqueados
+                if especiais:
+                    self.especial_atual = especiais[
+                        self.indice_equipamento % len(especiais)]
+
     def _ativar_especial(self):
         """Dispara o especial (tecla E): lança a Bomba Vortex.
 
@@ -528,6 +560,44 @@ class Jogo:
         desenhar_vignette(self.tela, intensidade=0.45, raio_interno=0.5)
         if self.boss_intro > 0:
             self._desenhar_boss_intro()
+        if self.menu_equipamento:
+            self._desenhar_menu_equipamento()
+
+    def _desenhar_menu_equipamento(self):
+        """Desenha o arsenal pausado, aberto pela tecla TAB."""
+        sombra = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+        sombra.fill((2, 4, 14, 205))
+        self.tela.blit(sombra, (0, 0))
+        painel = pygame.Rect(90, 115, LARGURA - 180, ALTURA - 230)
+        desenhar_painel(self.tela, CIANO, painel, cor_fundo=(10, 16, 30),
+                        raio_canto=12, alpha=245, glow_raio=20)
+        desenhar_texto(self.tela, "ARSENAL // TAB PARA FECHAR",
+                       (LARGURA // 2, 145), BRANCO, 32, "centro", self.fontes)
+        linhas = [
+            ("ARMAS", [ARMARIA[i]["nome"] for i in self.jogador.armas_desbloqueadas],
+             ARMARIA[self.jogador.arma_atual]["nome"]),
+            ("ESPECIAIS", [ESPECIAIS[i]["nome"] for i in self.especiais_desbloqueados],
+             ESPECIAIS[self.especial_atual]["nome"]),
+        ]
+        for linha, (titulo, itens, equipado) in enumerate(linhas):
+            y = 215 + linha * 180
+            cor = CIANO if linha == self.linha_equipamento else (130, 145, 175)
+            desenhar_texto(self.tela, titulo, (130, y), cor, 24, "esquerda",
+                           self.fontes)
+            for indice, nome in enumerate(itens):
+                x = 135 + (indice % 4) * 160
+                item_y = y + 48 + (indice // 4) * 48
+                selecionado = (linha == self.linha_equipamento and
+                               indice == self.indice_equipamento % max(1, len(itens)))
+                texto = ("> " if selecionado else "  ") + nome
+                if nome == equipado:
+                    texto += " [E]"
+                desenhar_texto(self.tela, texto, (x, item_y),
+                               DIMENSION_GOLD if selecionado else BRANCO,
+                               17, "esquerda", self.fontes)
+        desenhar_texto(self.tela, "SETAS/WASD: navegar   ENTER: equipar",
+                       (LARGURA // 2, ALTURA - 145), (160, 175, 205), 18,
+                       "centro", self.fontes)
 
     def _desenhar_boss_intro(self):
         """Overlay de apresentacao da entidade RIFT ao entrar num boss."""

@@ -36,6 +36,11 @@ class ControladorProgressao:
         jogo.timer_spawn = jogo.inimigos_abates = jogo.bosses_abates = 0
         jogo.boss_intro = jogo.tiros_disparados = jogo.tempo_partida = 0
         jogo.boost, jogo.especial, jogo.energia = 1.0, 0.0, 100.0
+        jogo.especial_atual = "bomba"
+        jogo.especiais_desbloqueados = ["bomba"]
+        jogo.menu_equipamento = False
+        jogo.linha_equipamento = 0
+        jogo.indice_equipamento = 0
         jogo.particulas.limpar()
         jogo.flash, jogo.fade, jogo.trauma, jogo.hitstop = 0, 255, 0.0, 0
         jogo.novo_recorde = False

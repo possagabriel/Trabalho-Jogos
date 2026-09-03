@@ -281,6 +281,22 @@ def test_tecla_numero_seleciona_arma_desbloqueada():
     assert jogo.jogador.arma_atual == 1
 
 
+def test_tab_abre_arsenal_e_equipa_arma_desbloqueada():
+    jogo = novo_jogo_partida()
+    jogo.jogador.armas_desbloqueadas = [0, 2]
+    tecla(pygame.K_TAB)
+    jogo._tratar_eventos()
+    assert jogo.menu_equipamento is True
+    tecla(pygame.K_RIGHT)
+    jogo._tratar_eventos()
+    tecla(pygame.K_RETURN)
+    jogo._tratar_eventos()
+    assert jogo.jogador.arma_atual == 2
+    tecla(pygame.K_TAB)
+    jogo._tratar_eventos()
+    assert jogo.menu_equipamento is False
+
+
 def test_tecla_m_na_pausa_volta_ao_menu():
     jogo = novo_jogo_partida()
     tecla(pygame.K_ESCAPE)
