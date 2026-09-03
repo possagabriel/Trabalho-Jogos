@@ -193,7 +193,18 @@ class Jogo:
                 return janela
             except Exception:  # driver, contexto ou PyOpenGL indisponivel
                 self._apresentador_gpu = None
-        return pygame.display.set_mode(tamanho, flags)
+        try:
+            return pygame.display.set_mode(tamanho, flags)
+        except pygame.error:
+            # Alguns drivers nao oferecem todos os modos exclusivos. Nesse
+            # caso a tela cheia continua utilizavel na resolucao do desktop.
+            if flags & pygame.FULLSCREEN:
+                try:
+                    desktop = pygame.display.get_desktop_sizes()[0]
+                    return pygame.display.set_mode(desktop, flags)
+                except (IndexError, pygame.error):
+                    pass
+            raise
 
     def _escala_janela(self):
         """Fator de escala e offsets para encaixar a tela 900x700 na janela.
@@ -228,15 +239,14 @@ class Jogo:
         """Reconfigura a janela: tela cheia (resolucao nativa) ou escolhida."""
         from src.core.settings import parse_resolucao
         self._liberar_apresentador_gpu()
+        tamanho = parse_resolucao(self.config["resolucao"])
         if self.config["tela_cheia"]:
-            try:
-                w, h = pygame.display.get_desktop_sizes()[0]
-            except (IndexError, pygame.error):
-                w, h = parse_resolucao(self.config["resolucao"])
-            self.janela = self._criar_janela_video((w, h), pygame.FULLSCREEN)
+            # A resolucao selecionada tambem vale em tela cheia. O codigo
+            # anterior sempre usava o desktop aqui, tornando o seletor
+            # inoperante para quem jogava fullscreen.
+            self.janela = self._criar_janela_video(tamanho, pygame.FULLSCREEN)
         else:
-            self.janela = self._criar_janela_video(
-                parse_resolucao(self.config["resolucao"]), 0)
+            self.janela = self._criar_janela_video(tamanho, 0)
         if hasattr(self, "hud") and hasattr(self, "menu"):
             self._criar_layout_ui()
             self.hud.layout = self.layout
