@@ -205,6 +205,12 @@ class Jogo:
         except (pygame.error, TypeError):
             return pygame.display.set_mode(tamanho, flags)
 
+    @staticmethod
+    def _modo_tela_cheia_disponivel(tamanho) -> bool:
+        """Informa se o monitor oferece o modo exclusivo solicitado."""
+        modos = pygame.display.list_modes()
+        return modos in (-1, None) or tamanho in modos
+
     def _criar_janela_video(self, tamanho, flags):
         """Cria uma janela OpenGL quando houver suporte, com fallback seguro.
 
@@ -213,6 +219,8 @@ class Jogo:
         da superficie logica e feito pela GPU.
         """
         self._apresentador_gpu = None
+        if flags & pygame.FULLSCREEN and not self._modo_tela_cheia_disponivel(tamanho):
+            raise pygame.error("Resolucao indisponivel em tela cheia")
         if GPU_DISPONIVEL and ApresentadorGPU is not None:
             try:
                 janela = self._criar_modo_com_vsync(
@@ -221,18 +229,10 @@ class Jogo:
                 return janela
             except Exception:  # driver, contexto ou PyOpenGL indisponivel
                 self._apresentador_gpu = None
-        try:
-            return pygame.display.set_mode(tamanho, flags)
-        except pygame.error:
-            # Alguns drivers nao oferecem todos os modos exclusivos. Nesse
-            # caso a tela cheia continua utilizavel na resolucao do desktop.
-            if flags & pygame.FULLSCREEN:
-                try:
-                    desktop = pygame.display.get_desktop_sizes()[0]
-                    return pygame.display.set_mode(desktop, flags)
-                except (IndexError, pygame.error):
-                    pass
-            raise
+        janela = pygame.display.set_mode(tamanho, flags)
+        if flags & pygame.FULLSCREEN and janela.get_size() != tamanho:
+            raise pygame.error("O driver nao aplicou a resolucao solicitada")
+        return janela
 
     def _escala_janela(self):
         """Fator de escala e offsets para encaixar a tela 900x700 na janela.

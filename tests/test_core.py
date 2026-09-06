@@ -563,6 +563,12 @@ def test_modo_video_usa_resolucao_escolhida_em_tela_cheia():
 
     jogo._criar_janela_video.assert_called_once_with((1024, 768), pygame.FULLSCREEN)
 
+
+def test_modo_tela_cheia_recusa_resolucao_que_o_monitor_nao_oferece():
+    with mock.patch("src.runtime.application.core.pygame.display.list_modes",
+                    return_value=[(1920, 1080)]):
+        assert Jogo._modo_tela_cheia_disponivel((1280, 720)) is False
+
 def test_desenha_estados():
     jogo = novo_jogo()
     for estado in ("MENU", "JOGANDO", "PAUSA", "GAME_OVER", "PREPARANDO"):

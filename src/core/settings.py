@@ -28,7 +28,7 @@ DEFAULT_CONTROLES = {
     "direita": pygame.K_RIGHT, "atirar": pygame.K_SPACE, "pausar": pygame.K_p,
 }
 _DEFAULT: dict[str, Any] = {
-    "musica_volume": 0.8, "efeitos_volume": 0.8, "resolucao": "1280x720",
+    "musica_volume": 0.8, "efeitos_volume": 0.8, "resolucao": "900x700",
     "tela_cheia": False, "sensibilidade": 1.0, "controles": DEFAULT_CONTROLES,
     "tema": "NEON", "aspecto": "AJUSTAR", "ajuste_escala": 1.0,
     "ajuste_off_x": 0, "ajuste_off_y": 0, "qualidade_grafica": "ALTA",

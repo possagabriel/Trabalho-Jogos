@@ -55,6 +55,7 @@ base de design (900×700) e **safe areas** (margem interna). Nenhum elemento usa
 coordenada rígida em pixels: se a superfície lógica mudar de tamanho, o menu se
 recompõe automaticamente.
 
+- **Inicialização padrão:** abre em **janela**, na menor resolução (`900x700`).
 - **Resoluções suportadas:** `900x700`, `1024x768`, `1280x720`, `1280x800`,
   `1366x768`, `1440x900`, `1600x900`, `1680x1050`, `1920x1080`, `2560x1080`,
   `2560x1440`, `3440x1440`, `3840x2160` (a lista vive em `settings.RESOLUCOES`;
@@ -63,9 +64,9 @@ recompõe automaticamente.
   - `AJUSTAR` (padrão): *scale-to-fit* com **safe areas** (letterbox) em
     `VOID_BLACK`, mantendo proporções iguais em qualquer formato de tela.
   - `PREENCHE`: estica a cena para preencher a janela inteira.
-- **Tela cheia:** usa a resolução escolhida no menu (sem `SCALED`, sem
-  esticar). Alterar a resolução mantém a tela cheia ligada; se o monitor não
-  suportar o modo selecionado, o jogo volta automaticamente à resolução nativa.
+- **Tela cheia:** usa exatamente a resolução escolhida no menu (sem `SCALED`,
+  sem esticar). Alterar a resolução mantém a tela cheia ligada; se o monitor
+  não suportar o modo selecionado, o jogo restaura a configuração anterior.
 - **Qualidade visual:** em **Config → Qualidade Visual**, escolha `ALTA`,
   `EQUILIBRADA` ou `DESEMPENHO`. Os perfis reduzem apenas detalhes de fundo e
   orçamento de partículas; inimigos, colisões e regras da partida não mudam.

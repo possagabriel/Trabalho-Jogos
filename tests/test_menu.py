@@ -86,6 +86,18 @@ def test_ciclar_resolucao_preserva_tela_cheia_ativa():
     jogo._aplicar_modo_video.assert_called_once()
 
 
+def test_tela_cheia_reverte_se_a_resolucao_nao_for_suportada():
+    jogo, menu = novo_menu()
+    jogo.config.salvar = mock.Mock()
+    jogo._aplicar_modo_video = mock.Mock(side_effect=[pygame.error(), None])
+
+    menu._toggle_tela_cheia()
+
+    assert jogo.config["tela_cheia"] is False
+    assert jogo._aplicar_modo_video.call_count == 2
+    jogo.config.salvar.assert_not_called()
+
+
 def test_resolucao_so_e_salva_apos_confirmacao():
     jogo, menu = novo_menu()
     anterior = jogo.config["resolucao"]

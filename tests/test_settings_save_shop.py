@@ -80,7 +80,7 @@ def test_configuracoes_carregar_defaults():
     with _patch_config(dados):
         cfg = settings.Configuracoes()
         assert cfg["musica_volume"] == 0.8
-        assert cfg["resolucao"] == "1280x720"
+        assert cfg["resolucao"] == "900x700"
         assert cfg["tela_cheia"] is False
         assert cfg["sensibilidade"] == 1.0
         assert cfg["tema"] == "NEON"

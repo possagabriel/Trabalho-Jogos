@@ -1174,9 +1174,19 @@ class MenuPrincipal:
         self._aplicar_resolucao(indice)
 
     def _toggle_tela_cheia(self):
-        self.jogo.config["tela_cheia"] = not self.jogo.config["tela_cheia"]
+        anterior = self.jogo.config["tela_cheia"]
+        self.jogo.config["tela_cheia"] = not anterior
+        try:
+            self.jogo._aplicar_modo_video()
+        except pygame.error:
+            self.jogo.config["tela_cheia"] = anterior
+            self.jogo._aplicar_modo_video()
+            self.notificacoes.adicionar(
+                "Resolucao nao suportada em tela cheia. Escolha outra resolucao.",
+                "erro",
+            )
+            return
         self.jogo.config.salvar()
-        self.jogo._aplicar_modo_video()
         estado = "LIGADA" if self.jogo.config["tela_cheia"] else "DESLIGADA"
         self.notificacoes.adicionar(f"Tela cheia {estado}", "info")
 
