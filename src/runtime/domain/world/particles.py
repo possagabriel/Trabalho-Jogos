@@ -293,9 +293,10 @@ class MensagemFlutuante:
     def desenhar(self, tela: pygame.Surface) -> None:
         if self.tempo <= 0:
             return
-        from src.runtime.infrastructure.graphics.smooth import texto_suave
+        from src.runtime.infrastructure.graphics.smooth import superficie_com_alpha, texto_suave
         superficie = texto_suave(self._fonte, self.texto, self.cor,
                                  glow_cor=self.cor, glow_raio=3)
-        superficie.set_alpha(int(255 * self.tempo / self.tempo_max))
+        superficie = superficie_com_alpha(
+            superficie, int(255 * self.tempo / self.tempo_max))
         tela.blit(superficie, superficie.get_rect(center=(int(self.x),
                                                           int(self.y))))

@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Instalar dependências de empacotamento
-        run: python -m pip install --upgrade pip pyinstaller ".[gpu]"
+        run: python -m pip install --upgrade pip ".[gpu,windows]"
       - name: Criar executável
         run: >-
           pyinstaller --noconfirm --clean --onefile --windowed
@@ -29,11 +29,6 @@ jobs:
           --collect-submodules src --collect-submodules game
           --collect-submodules OpenGL
           --hidden-import game.phase_select main.py
-      - name: Criar instalador Windows
-        shell: pwsh
-        run: |
-          choco install innosetup --no-progress --yes
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\void-shift.iss
       - name: Assinar executável quando houver certificado
         shell: pwsh
         env:
@@ -47,7 +42,30 @@ jobs:
           $certificate = Join-Path $env:RUNNER_TEMP "void-shift.pfx"
           [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64))
           signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f $certificate /p $env:WINDOWS_CERTIFICATE_PASSWORD dist/VOID-SHIFT.exe
+      - name: Criar instalador Windows
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress --yes
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\void-shift.iss
+      - name: Assinar instalador quando houver certificado
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          if (-not $env:WINDOWS_CERTIFICATE_BASE64) {
+            Write-Host "Certificado não configurado; artefato será publicado sem assinatura."
+            exit 0
+          }
+          $certificate = Join-Path $env:RUNNER_TEMP "void-shift.pfx"
+          [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64))
           signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f $certificate /p $env:WINDOWS_CERTIFICATE_PASSWORD dist/VOID-SHIFT-Setup.exe
+      - name: Gerar somas SHA-256
+        shell: pwsh
+        run: |
+          Get-FileHash dist/VOID-SHIFT.exe, dist/VOID-SHIFT-Setup.exe -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash) *$($_.Path | Split-Path -Leaf)" } |
+            Set-Content -Encoding ascii dist/SHA256SUMS.txt
       - name: Publicar executável baixável
         uses: actions/upload-artifact@v4
         with:
@@ -55,6 +73,7 @@ jobs:
           path: |
             dist/VOID-SHIFT.exe
             dist/VOID-SHIFT-Setup.exe
+            dist/SHA256SUMS.txt
           if-no-files-found: error
       - name: Publicar executável na Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -64,3 +83,4 @@ jobs:
           files: |
             dist/VOID-SHIFT.exe
             dist/VOID-SHIFT-Setup.exe
+            dist/SHA256SUMS.txt

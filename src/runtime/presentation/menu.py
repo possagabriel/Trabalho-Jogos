@@ -1165,10 +1165,8 @@ class MenuPrincipal:
         indice = RESOLUCOES.index(atual) if atual in RESOLUCOES else 0
         indice = (indice + delta) % len(RESOLUCOES)
         self.jogo.config["resolucao"] = RESOLUCOES[indice]
-        # A resolução escolhida representa o tamanho da janela. Forçar um
-        # modo exclusivo menor que o monitor no Windows causa escala ruim;
-        # portanto selecioná-la sai da tela cheia de forma explícita.
-        self.jogo.config["tela_cheia"] = False
+        # A resolucao permanece como preferencia para o modo janela, mas nao
+        # deve desligar a tela cheia que o jogador escolheu manter ativa.
         self.jogo.config.salvar()
         self.jogo._aplicar_modo_video()
         self.notificacoes.adicionar(
@@ -1373,7 +1371,6 @@ class MenuPrincipal:
 
     def _aplicar_resolucao(self, indice):
         self.jogo.config["resolucao"] = RESOLUCOES[indice]
-        self.jogo.config["tela_cheia"] = False
         self.jogo.config.salvar()
         self.jogo._aplicar_modo_video()
         self.notificacoes.adicionar(

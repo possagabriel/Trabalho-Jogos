@@ -17,8 +17,22 @@ _CACHE_GRADIENTE = {}
 _CACHE_GLOW = {}
 _CACHE_PAINEL = {}
 _CACHE_VIGNETTE = {}
+_CACHE_ALPHA = {}
 
 _SCALA_AA = 2  # fator de supersampling para anti-aliasing
+
+
+def _armazenar_cache(cache, chave, valor, limite):
+    """Armazena ``valor`` e descarta a entrada mais antiga ao atingir o limite.
+
+    Alguns desenhos usam valores que variam durante uma partida (textos de
+    pontuacao e poligonos rotacionados, por exemplo). Sem um teto, esses
+    caches transformavam uma sessao longa em consumo crescente de memoria.
+    """
+    if len(cache) >= limite:
+        cache.pop(next(iter(cache)))
+    cache[chave] = valor
+    return valor
 
 
 def limpar_cache():
@@ -31,6 +45,23 @@ def limpar_cache():
     _CACHE_PAINEL.clear()
     _CACHE_VIGNETTE.clear()
     _CACHE_PAINEL_CARTOON.clear()
+    _CACHE_ALPHA.clear()
+
+
+def superficie_com_alpha(superficie, alpha):
+    """Retorna uma variante opaca cacheada sem alterar ``superficie``.
+
+    A opacidade e quantizada em 16 niveis, imperceptivel durante o fade e
+    suficiente para eliminar copias por quadro. A superficie original pode
+    vir de qualquer cache de desenho e permanece imutavel.
+    """
+    nivel = max(0, min(15, int(alpha) * 15 // 255))
+    chave = (superficie, nivel)
+    if chave not in _CACHE_ALPHA:
+        variante = superficie.copy()
+        variante.set_alpha(nivel * 17)
+        _armazenar_cache(_CACHE_ALPHA, chave, variante, 512)
+    return _CACHE_ALPHA[chave]
 
 
 # ---------------------------------------------------------------------------
@@ -82,8 +113,7 @@ def gradiente_vertical(topo, base):
         t = y / ALTURA
         cor = tuple(int(topo[i] + (base[i] - topo[i]) * t) for i in range(3))
         pygame.draw.line(surf, cor, (0, y), (LARGURA, y))
-    _CACHE_GRADIENTE[chave] = surf
-    return surf
+    return _armazenar_cache(_CACHE_GRADIENTE, chave, surf, 32)
 
 
 # ---------------------------------------------------------------------------
@@ -109,8 +139,7 @@ def luz_radial(cor, raio, intensidade=1.0):
         if alfa <= 0:
             continue
         pygame.draw.circle(surf, cor3 + (alfa,), (cx, cy), r)
-    _CACHE_GLOW[chave] = surf
-    return surf
+    return _armazenar_cache(_CACHE_GLOW, chave, surf, 256)
 
 
 def desenhar_glow(tela, cor, centro, raio, intensidade=1.0):
@@ -158,8 +187,7 @@ def circulo_suave(cor, raio, espessura=0, brilho=1.0):
             pygame.draw.circle(surf, cor3 + (alfa,), (cx, cy), raio - i // 2 + 1,
                                max(1, i))
 
-    _CACHE_CIRCULO[chave] = surf
-    return surf
+    return _armazenar_cache(_CACHE_CIRCULO, chave, surf, 256)
 
 
 def desenhar_circulo(tela, cor, centro, raio, espessura=0, brilho=1.0):
@@ -211,8 +239,7 @@ def poligono_suave(cor, pontos, espessura=0, brilho=1.0):
         pygame.draw.polygon(big, cor3 + (255,), pts_big, esp * _SCALA_AA)
 
     surf = pygame.transform.smoothscale(big, (larg, alt))
-    _CACHE_POLIGONO[chave] = surf
-    return surf, (int(min_x), int(min_y))
+    return _armazenar_cache(_CACHE_POLIGONO, chave, surf, 512), (int(min_x), int(min_y))
 
 
 def desenhar_poligono(tela, cor, pontos, espessura=0, brilho=1.0,
@@ -286,8 +313,7 @@ def texto_suave(fonte, texto, cor, glow_cor=None, glow_raio=4,
             surf.blit(glow_surf, (ox - i // 2, oy - i // 2))
 
     surf.blit(base, (ox, oy))
-    _CACHE_TEXTO[chave] = surf
-    return surf
+    return _armazenar_cache(_CACHE_TEXTO, chave, surf, 512)
 
 
 def desenhar_texto_suave(tela, fonte, texto, pos, cor, glow_cor=None,
@@ -389,8 +415,7 @@ def painel_glass(cor_borda, rect, cor_fundo=(12, 14, 32), raio_canto=14,
                          (0, 0, w, h), esp, border_radius=raio_canto)
         surf.blit(b, (pad, pad))
 
-    _CACHE_PAINEL[chave] = surf
-    return surf
+    return _armazenar_cache(_CACHE_PAINEL, chave, surf, 128)
 
 
 def desenhar_painel(tela, cor_borda, rect, cor_fundo=(12, 14, 32),
@@ -442,8 +467,7 @@ def superficie_vignette(intensidade=0.85, raio_interno=0.55):
             surf.set_at((min(x + 1, LARGURA - 1), min(y + 1, ALTURA - 1)),
                         (0, 0, 0, alfa))
     surf = pygame.transform.smoothscale(surf, (LARGURA, ALTURA))
-    _CACHE_VIGNETTE[chave] = surf
-    return surf
+    return _armazenar_cache(_CACHE_VIGNETTE, chave, surf, 32)
 
 
 def desenhar_vignette(tela, intensidade=0.85, raio_interno=0.55):
@@ -503,8 +527,7 @@ def painel_cartoon(cor_borda, rect, cor_fundo=(18, 18, 35), raio_canto=22,
                          (0, i, w - 20, 1), border_radius=8)
     surf.blit(highlight, (pad + 10, pad + 8))
 
-    _CACHE_PAINEL_CARTOON[chave] = surf
-    return surf
+    return _armazenar_cache(_CACHE_PAINEL_CARTOON, chave, surf, 128)
 
 
 def desenhar_painel_cartoon(tela, cor_borda, rect, cor_fundo=(18, 18, 35),

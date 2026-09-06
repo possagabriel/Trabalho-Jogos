@@ -63,7 +63,7 @@ def test_construcao_carregou_fundo_do_menu():
     assert menu.fundo.fundo_imagem is not None or menu.fundo.gradiente
 
 
-def test_escolher_resolucao_abre_em_modo_janela_estavel():
+def test_escolher_resolucao_preserva_tela_cheia_ativa():
     jogo, menu = novo_menu()
     jogo.config["tela_cheia"] = True
     jogo._aplicar_modo_video = mock.Mock()
@@ -71,7 +71,18 @@ def test_escolher_resolucao_abre_em_modo_janela_estavel():
     menu._aplicar_resolucao(1)
 
     assert jogo.config["resolucao"] == "1024x768"
-    assert jogo.config["tela_cheia"] is False
+    assert jogo.config["tela_cheia"] is True
+    jogo._aplicar_modo_video.assert_called_once()
+
+
+def test_ciclar_resolucao_preserva_tela_cheia_ativa():
+    jogo, menu = novo_menu()
+    jogo.config["tela_cheia"] = True
+    jogo._aplicar_modo_video = mock.Mock()
+
+    menu._ciclar_resolucao()
+
+    assert jogo.config["tela_cheia"] is True
     jogo._aplicar_modo_video.assert_called_once()
 
 

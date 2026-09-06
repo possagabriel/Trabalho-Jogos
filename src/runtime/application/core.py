@@ -81,6 +81,7 @@ class Jogo:
             loja: Catalogo e estado de skins do jogador.
         """
         pygame.init()
+        self._configurar_backend_escala()
         self.config = config or Configuracoes()
         self.janela = self._aplicar_modo_video()
         self.tela = pygame.Surface((LARGURA, ALTURA))
@@ -181,6 +182,26 @@ class Jogo:
             apresentador.liberar()
         self._apresentador_gpu = None
 
+    def _configurar_backend_escala(self):
+        """Prioriza o backend SIMD para o upscale de alta resolucao.
+
+        O Pygame usa SSE2 nas maquinas Windows modernas, o que reduz o custo
+        do ``smoothscale`` quando o caminho OpenGL nao estiver disponivel.
+        Drivers e builds sem SSE continuam com o backend padrao.
+        """
+        try:
+            pygame.transform.set_smoothscale_backend("SSE2")
+        except (pygame.error, ValueError):
+            pass
+
+    @staticmethod
+    def _criar_modo_com_vsync(tamanho, flags):
+        """Cria uma janela sincronizada quando SDL e o driver suportarem."""
+        try:
+            return pygame.display.set_mode(tamanho, flags, vsync=1)
+        except (pygame.error, TypeError):
+            return pygame.display.set_mode(tamanho, flags)
+
     def _criar_janela_video(self, tamanho, flags):
         """Cria uma janela OpenGL quando houver suporte, com fallback seguro.
 
@@ -191,7 +212,7 @@ class Jogo:
         self._apresentador_gpu = None
         if GPU_DISPONIVEL and ApresentadorGPU is not None:
             try:
-                janela = pygame.display.set_mode(
+                janela = self._criar_modo_com_vsync(
                     tamanho, flags | pygame.OPENGL | pygame.DOUBLEBUF)
                 self._apresentador_gpu = ApresentadorGPU((LARGURA, ALTURA))
                 return janela
@@ -240,18 +261,14 @@ class Jogo:
         return escala, off_x, off_y
 
     def _aplicar_modo_video(self):
-        """Reconfigura a janela: tela cheia (resolucao nativa) ou escolhida."""
+        """Reconfigura a janela na resolucao escolhida, em janela ou fullscreen."""
         from src.core.settings import parse_resolucao
         self._liberar_apresentador_gpu()
         tamanho = parse_resolucao(self.config["resolucao"])
         if self.config["tela_cheia"]:
-            # Tela cheia em modo nativo evita troca de modo de vídeo,
-            # imagem esticada e áreas mortas em monitores Windows. A escolha
-            # de resolução é aplicada em modo janela pelo menu.
-            try:
-                tamanho = pygame.display.get_desktop_sizes()[0]
-            except (IndexError, pygame.error):
-                pass
+            # O modo exclusivo respeita a resolucao selecionada. Se o driver
+            # nao oferecer esse modo, ``_criar_janela_video`` usa o desktop
+            # como fallback sem fechar o jogo.
             self.janela = self._criar_janela_video(tamanho, pygame.FULLSCREEN)
         else:
             self.janela = self._criar_janela_video(tamanho, 0)
@@ -332,7 +349,7 @@ class Jogo:
             self._quadros_lentos = max(0, self._quadros_lentos - 1)
             self._quadros_estaveis = 0
 
-        if self._quadros_lentos >= 8:
+        if self._quadros_lentos >= 4:
             self._escala_rapida = True
         elif self._quadros_estaveis >= 90:
             self._escala_rapida = False
