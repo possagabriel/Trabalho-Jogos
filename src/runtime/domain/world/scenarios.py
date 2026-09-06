@@ -8,8 +8,13 @@ import pygame
 from src.runtime.infrastructure.assets import carregar_imagem
 from src.core.constants import ALTURA, LARGURA
 from src.runtime.infrastructure.graphics.geometry import cruz, losango
-from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, desenhar_glow, desenhar_poligono, \
-    linha_suave
+from src.runtime.infrastructure.graphics.smooth import (
+    desenhar_circulo,
+    desenhar_glow,
+    desenhar_poligono,
+    linha_suave,
+    luz_radial,
+)
 
 
 def _superficie_alpha(raio, cor):
@@ -114,33 +119,40 @@ class Estrela:
     def desenhar(self, tela):
         x, y = int(self.x), int(self.y)
         t = self.tamanho
+        cor = self._cor_pulsante()
         if self.forma == "circulo":
             if t <= 1:
-                desenhar_circulo(tela, self.cor, (x, y), t)
+                desenhar_circulo(tela, cor, (x, y), t)
             else:
-                desenhar_glow(tela, self.cor, (x, y), t * 2, 0.5)
-                desenhar_circulo(tela, self.cor, (x, y), t)
+                desenhar_glow(tela, cor, (x, y), t * 2, 0.5)
+                desenhar_circulo(tela, cor, (x, y), t)
         elif self.forma == "chama":
             # formato de chama: triangulo fino apontando para baixo
-            desenhar_glow(tela, self.cor, (x, y), t * 2.5, 0.4)
-            desenhar_poligono(tela, self.cor, [(x, y - t), (x + t, y + t),
+            desenhar_glow(tela, cor, (x, y), t * 2.5, 0.4)
+            desenhar_poligono(tela, cor, [(x, y - t), (x + t, y + t),
                                                 (x - t, y + t)])
         elif self.forma == "bolha":
-            desenhar_glow(tela, self.cor, (x, y), t * 2.5, 0.5)
-            desenhar_circulo(tela, self.cor, (x, y), t)
+            desenhar_glow(tela, cor, (x, y), t * 2.5, 0.5)
+            desenhar_circulo(tela, cor, (x, y), t)
             desenhar_circulo(tela, (255, 255, 255),
                              (x - t // 2, y - t // 2), max(1, t // 3),
                              brilho=1.4)
         elif self.forma == "diamante":
-            desenhar_glow(tela, self.cor, (x, y), t * 2.5, 0.4)
-            desenhar_poligono(tela, self.cor, losango((x, y), t, t, 0.0))
+            desenhar_glow(tela, cor, (x, y), t * 2.5, 0.4)
+            desenhar_poligono(tela, cor, losango((x, y), t, t, 0.0))
         elif self.forma == "espiral":
-            desenhar_glow(tela, self.cor, (x, y), t * 2.5, 0.5)
-            desenhar_circulo(tela, self.cor, (x, y), t)
+            desenhar_glow(tela, cor, (x, y), t * 2.5, 0.5)
+            desenhar_circulo(tela, cor, (x, y), t)
             desenhar_circulo(tela, (10, 0, 30), (x, y), t // 2)
         elif self.forma == "cruz":
-            desenhar_glow(tela, self.cor, (x, y), t * 2, 0.4)
-            desenhar_poligono(tela, self.cor, cruz((x, y), t))
+            desenhar_glow(tela, cor, (x, y), t * 2, 0.4)
+            desenhar_poligono(tela, cor, cruz((x, y), t))
+
+    def _cor_pulsante(self):
+        """Retorna um dos cinco niveis de brilho para cintilar sem novo cache."""
+        nivel = min(4, max(0, int((math.sin(self.fase) + 1) * 2.5)))
+        fator = (0.68, 0.76, 0.84, 0.92, 1.0)[nivel]
+        return tuple(min(255, int(canal * fator)) for canal in self.cor)
 
 
 class Cenario:
@@ -163,6 +175,9 @@ class Cenario:
         self.estrelas = self._criar_estrelas(cfg["camadas_estrelas"])
         self.efeitos = []
         self.fundo_imagem = _imagem_fundo(self.id)
+        self.fundo_estatico = self._criar_fundo_estatico()
+        self.luzes_ambiente = self._criar_luzes_ambiente()
+        self._efeitos_alpha = {}
 
     # ----- construcao -----
 
@@ -191,6 +206,26 @@ class Cenario:
                     random.randint(0, LARGURA), random.randint(0, ALTURA),
                     tamanho, velocidade, self.cor_estrela, self.forma_estrela))
         return estrelas
+
+    def _criar_fundo_estatico(self):
+        """Combina imagem, gradiente e nebulosas uma unica vez por cenario."""
+        fundo = pygame.Surface((LARGURA, ALTURA))
+        fundo.blit(self.fundo_imagem if self.fundo_imagem is not None
+                   else self.gradiente, (0, 0))
+        for nebulosa in self.nebulosas:
+            fundo.blit(nebulosa, (0, 0))
+        return fundo
+
+    def _criar_luzes_ambiente(self):
+        """Prepara halos coloridos para dar profundidade ao plano de fundo."""
+        luzes = [
+            (self.cores_principais[0], 112, 0.0),
+            (self.cores_principais[1], 86, math.pi),
+        ]
+        # Preaquece os halos fora do desenho do primeiro quadro da partida.
+        for cor, raio, _ in luzes:
+            luz_radial(cor, raio, 0.18)
+        return luzes
 
     # ----- atualizacao -----
 
@@ -235,16 +270,21 @@ class Cenario:
     # ----- desenho -----
 
     def desenhar(self, tela):
-        fundo = self.fundo_imagem
-        if fundo is not None:
-            tela.blit(fundo, (0, 0))
-        else:
-            tela.blit(self.gradiente, (0, 0))
-        for nebulosa in self.nebulosas:
-            tela.blit(nebulosa, (0, 0))
+        tela.blit(self.fundo_estatico, (0, 0))
+        self._desenhar_luzes_ambiente(tela)
         for estrela in self.estrelas:
             estrela.desenhar(tela)
         self._desenhar_efeito(tela)
+
+    def _desenhar_luzes_ambiente(self, tela):
+        """Move dois halos devagar para criar profundidade sem novas surfaces."""
+        for indice, (cor, raio, fase) in enumerate(self.luzes_ambiente):
+            direcao = -1 if indice else 1
+            x_base = LARGURA * (0.23 if indice == 0 else 0.78)
+            y_base = ALTURA * (0.26 if indice == 0 else 0.70)
+            x = x_base + math.sin(self.tempo * 0.011 + fase) * 46 * direcao
+            y = y_base + math.cos(self.tempo * 0.009 + fase) * 32
+            desenhar_glow(tela, cor, (x, y), raio, 0.18)
 
     def _desenhar_efeito(self, tela):
         for ef in self.efeitos:
@@ -254,17 +294,27 @@ class Cenario:
                 desenhar_poligono(tela, ef["cor"],
                                   losango((x, y), r * 2, r, 0.0))
             elif self.efeito == "fogo":
-                surf = _superficie_alpha(r * 4, ef["cor"])
-                surf.set_alpha(int(255 * alfa))
+                surf = self._superficie_efeito(r * 4, ef["cor"], alfa)
                 tela.blit(surf, (x - r * 2, y - r * 2))
             else:
-                surf = _superficie_alpha(r * 4, ef["cor"])
-                surf.set_alpha(int(255 * alfa))
+                surf = self._superficie_efeito(r * 4, ef["cor"], alfa)
                 tela.blit(surf, (x - r * 2, y - r * 2))
         if self.efeito == "distorcao":
             self._desenhar_distorcao(tela)
         elif self.efeito == "raios":
             self._desenhar_raios(tela)
+
+    def _superficie_efeito(self, raio, cor, alfa):
+        """Variante de brilho com alpha quantizado, sem copia por quadro."""
+        nivel = max(0, min(15, int(alfa * 255) * 15 // 255))
+        chave = (raio, cor, nivel)
+        if chave not in self._efeitos_alpha:
+            superficie = luz_radial(cor, raio, 1.0).copy()
+            superficie.set_alpha(nivel * 17)
+            if len(self._efeitos_alpha) >= 128:
+                self._efeitos_alpha.pop(next(iter(self._efeitos_alpha)))
+            self._efeitos_alpha[chave] = superficie
+        return self._efeitos_alpha[chave]
 
     def _desenhar_distorcao(self, tela):
         """Ondas de distorcao atravessando a tela (Vazio Dimensional)."""

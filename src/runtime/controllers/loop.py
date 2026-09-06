@@ -60,6 +60,7 @@ class ControladorLoop:
         jogo = self.jogo
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
+                jogo.menu.cancelar_confirmacao_resolucao()
                 jogo._salvar_tudo()
                 return False
             if jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):

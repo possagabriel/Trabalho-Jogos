@@ -30,6 +30,7 @@ from game.particles import (  # noqa: E402
     MensagemFlutuante, Particula, SistemaParticulas)
 from game.scenarios import CENARIOS, Cenario, Estrela, _ajustar_cover, \
     _superficie_alpha, cenario_do_nivel  # noqa: E402
+from game import smooth  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -65,6 +66,23 @@ def test_cenario_atualiza_e_desenha_todos():
             c.desenhar(tela)
 
 
+def test_cenario_compoe_fundo_estatico_uma_vez():
+    """Imagem, gradiente e nebulosas viram uma camada unica reutilizavel."""
+    pygame.init()
+    cenario = Cenario(1)
+    fundo = cenario.fundo_estatico
+    cenario.desenhar(pygame.Surface((LARGURA, ALTURA)))
+    assert fundo.get_size() == (LARGURA, ALTURA)
+    assert cenario.fundo_estatico is fundo
+
+
+def test_cenario_tem_luzes_ambiente_preaquecidas():
+    """Halos do cenario sao preparados antes do primeiro quadro visivel."""
+    cenario = Cenario(1)
+    assert len(cenario.luzes_ambiente) == 2
+    assert all(raio > 0 for _, raio, _ in cenario.luzes_ambiente)
+
+
 def test_cenario_desenha_efeitos_distorcao_e_raios():
     pygame.init()
     tela = pygame.Surface((LARGURA, ALTURA))
@@ -90,6 +108,16 @@ def test_estrela_desenha_formas():
                   "cruz"):
         e = Estrela(200, 200, 3, 1.0, (255, 255, 255), forma)
         e.desenhar(tela)
+
+
+def test_estrela_pulsa_em_niveis_cacheaveis():
+    estrela = Estrela(200, 200, 3, 1.0, (200, 160, 120), "circulo")
+    estrela.fase = -1.5708
+    escura = estrela._cor_pulsante()
+    estrela.fase = 1.5708
+    clara = estrela._cor_pulsante()
+    assert escura != clara
+    assert all(a <= b for a, b in zip(escura, clara))
 
 
 def test_cenario_do_nivel():
@@ -237,6 +265,18 @@ def test_mensagem_desenha():
     m.desenhar(tela)
     m.tempo = 0
     m.desenhar(tela)
+
+
+def test_mensagem_nao_muta_texto_compartilhado_do_cache():
+    """O fade de uma mensagem nao pode apagar outra que usa o mesmo texto."""
+    pygame.init()
+    mensagem = MensagemFlutuante("PONTOS +100", 200, 200, tempo=10)
+    original = smooth.texto_suave(mensagem._fonte, mensagem.texto, mensagem.cor,
+                                  glow_cor=mensagem.cor, glow_raio=3)
+    alpha_original = original.get_alpha()
+    mensagem.tempo = 1
+    mensagem.desenhar(pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA))
+    assert original.get_alpha() == alpha_original
 
 
 def main():

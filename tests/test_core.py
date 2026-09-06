@@ -526,17 +526,32 @@ def test_modo_desempenho_troca_escala_somente_apos_atraso_sustentado():
     assert jogo._escala_rapida is False
 
 
-def test_modo_video_usa_resolucao_nativa_em_tela_cheia():
+def test_modo_desempenho_reage_rapido_a_quedas_sustentadas():
+    jogo = Jogo()
+    for _ in range(3):
+        jogo._atualizar_modo_desempenho(25)
+    assert jogo._escala_rapida is False
+    jogo._atualizar_modo_desempenho(25)
+    assert jogo._escala_rapida is True
+
+
+def test_modo_opengl_tenta_habilitar_vsync():
+    janela = pygame.Surface((900, 700))
+    with mock.patch("src.runtime.application.core.pygame.display.set_mode",
+                    return_value=janela) as set_mode:
+        assert Jogo._criar_modo_com_vsync((900, 700), pygame.OPENGL) is janela
+    set_mode.assert_called_once_with((900, 700), pygame.OPENGL, vsync=1)
+
+
+def test_modo_video_usa_resolucao_escolhida_em_tela_cheia():
     jogo = Jogo()
     jogo.config["resolucao"] = "1024x768"
     jogo.config["tela_cheia"] = True
     jogo._criar_janela_video = mock.Mock(return_value=pygame.Surface((1920, 1080)))
 
-    with mock.patch("src.runtime.application.core.pygame.display.get_desktop_sizes",
-                    return_value=[(1920, 1080)]):
-        jogo._aplicar_modo_video()
+    jogo._aplicar_modo_video()
 
-    jogo._criar_janela_video.assert_called_once_with((1920, 1080), pygame.FULLSCREEN)
+    jogo._criar_janela_video.assert_called_once_with((1024, 768), pygame.FULLSCREEN)
 
 def test_desenha_estados():
     jogo = novo_jogo()

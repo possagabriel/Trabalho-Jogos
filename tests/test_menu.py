@@ -63,7 +63,7 @@ def test_construcao_carregou_fundo_do_menu():
     assert menu.fundo.fundo_imagem is not None or menu.fundo.gradiente
 
 
-def test_escolher_resolucao_abre_em_modo_janela_estavel():
+def test_escolher_resolucao_preserva_tela_cheia_ativa():
     jogo, menu = novo_menu()
     jogo.config["tela_cheia"] = True
     jogo._aplicar_modo_video = mock.Mock()
@@ -71,8 +71,82 @@ def test_escolher_resolucao_abre_em_modo_janela_estavel():
     menu._aplicar_resolucao(1)
 
     assert jogo.config["resolucao"] == "1024x768"
-    assert jogo.config["tela_cheia"] is False
+    assert jogo.config["tela_cheia"] is True
     jogo._aplicar_modo_video.assert_called_once()
+
+
+def test_ciclar_resolucao_preserva_tela_cheia_ativa():
+    jogo, menu = novo_menu()
+    jogo.config["tela_cheia"] = True
+    jogo._aplicar_modo_video = mock.Mock()
+
+    menu._ciclar_resolucao()
+
+    assert jogo.config["tela_cheia"] is True
+    jogo._aplicar_modo_video.assert_called_once()
+
+
+def test_resolucao_so_e_salva_apos_confirmacao():
+    jogo, menu = novo_menu()
+    anterior = jogo.config["resolucao"]
+    jogo._aplicar_modo_video = mock.Mock()
+    jogo.config.salvar = mock.Mock()
+
+    menu._aplicar_resolucao(1)
+
+    assert menu._resolucao_pendente["resolucao"] == anterior
+    assert jogo.config["resolucao"] == "1024x768"
+    jogo.config.salvar.assert_not_called()
+    menu.desenhar(pygame.Surface((LARGURA, ALTURA)))
+
+    menu._confirmar_resolucao()
+
+    assert menu._resolucao_pendente is None
+    jogo.config.salvar.assert_called_once()
+
+
+def test_resolucao_reverte_quando_o_tempo_expira():
+    jogo, menu = novo_menu()
+    anterior = jogo.config["resolucao"]
+    jogo._aplicar_modo_video = mock.Mock()
+
+    menu._aplicar_resolucao(1)
+    menu._prazo_confirmacao_resolucao = 0
+    menu.atualizar()
+
+    assert menu._resolucao_pendente is None
+    assert jogo.config["resolucao"] == anterior
+    assert jogo._aplicar_modo_video.call_count == 2
+
+
+def test_confirmacao_de_resolucao_aceita_enter_e_escape():
+    jogo, menu = novo_menu()
+    jogo._aplicar_modo_video = mock.Mock()
+    jogo.config.salvar = mock.Mock()
+
+    menu._aplicar_resolucao(1)
+    menu.tratar_eventos(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+    assert menu._resolucao_pendente is None
+    jogo.config.salvar.assert_called_once()
+
+    resolucao_confirmada = jogo.config["resolucao"]
+    menu._aplicar_resolucao(2)
+    menu.tratar_eventos(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_ESCAPE}))
+    assert menu._resolucao_pendente is None
+    assert jogo.config["resolucao"] == resolucao_confirmada
+
+
+def test_teste_de_resolucao_nao_emite_som():
+    jogo, menu = novo_menu()
+    jogo._aplicar_modo_video = mock.Mock()
+    menu._som = mock.Mock()
+
+    menu._aplicar_resolucao(1)
+    menu._confirmar_resolucao()
+    menu._aplicar_resolucao(2)
+    menu._reverter_resolucao()
+
+    menu._som.assert_not_called()
 
 
 def test_logo_principal_e_gerado_por_tipografia():
