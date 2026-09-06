@@ -99,7 +99,6 @@ class TelaConfiguracoesJogo:
                 menu._aplicar_resolucao(menu.resolucao_selecao)
             else:
                 return True
-            menu._som("navegar")
             return True
         if menu.config_submodo == "ajuste":
             return menu._tecla_ajuste(evento)

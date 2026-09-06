@@ -45,6 +45,7 @@ from src.runtime.presentation.ui import BotaoNeon
 
 NEGRO = (0, 0, 0)
 LOGGER = logging.getLogger(__name__)
+_DURACAO_CONFIRMACAO_RESOLUCAO_MS = 15_000
 
 
 def formatar_pontos(n):
@@ -448,6 +449,10 @@ class MenuPrincipal:
         self.destaque = DestaqueMenu(self.layout)
         self.notificacoes = SistemaNotificacao(self.layout)
         self.dialogo = None
+        self._resolucao_pendente = None
+        self._prazo_confirmacao_resolucao = 0
+        self._overlay_confirmacao_resolucao = pygame.Surface(
+            (self.layout.largura, self.layout.altura), pygame.SRCALPHA)
         self.transicao = TransicaoTela(layout=self.layout)
         self.transicao_missao = TransicaoMissao(layout=self.layout)
         self.alpha_entrada = 0
@@ -1164,13 +1169,7 @@ class MenuPrincipal:
         atual = self.jogo.config["resolucao"]
         indice = RESOLUCOES.index(atual) if atual in RESOLUCOES else 0
         indice = (indice + delta) % len(RESOLUCOES)
-        self.jogo.config["resolucao"] = RESOLUCOES[indice]
-        # A resolucao permanece como preferencia para o modo janela, mas nao
-        # deve desligar a tela cheia que o jogador escolheu manter ativa.
-        self.jogo.config.salvar()
-        self.jogo._aplicar_modo_video()
-        self.notificacoes.adicionar(
-            "Resolucao alterada: " + RESOLUCOES[indice], "info")
+        self._aplicar_resolucao(indice)
 
     def _toggle_tela_cheia(self):
         self.jogo.config["tela_cheia"] = not self.jogo.config["tela_cheia"]
@@ -1205,6 +1204,7 @@ class MenuPrincipal:
             self._set_efeitos(max(0.0, min(1.0, valor)))
         elif indice == 2:
             self._ciclar_resolucao(delta)
+            return
         elif indice == 3 and delta > 0:
             self._toggle_tela_cheia()
         elif indice == 4:
@@ -1370,12 +1370,118 @@ class MenuPrincipal:
             self._som("navegar")
 
     def _aplicar_resolucao(self, indice):
-        self.jogo.config["resolucao"] = RESOLUCOES[indice]
+        """Testa uma resolucao e pede confirmacao antes de persisti-la."""
+        nova_resolucao = RESOLUCOES[indice]
+        if nova_resolucao == self.jogo.config["resolucao"]:
+            self.notificacoes.adicionar("Esta resolucao ja esta ativa.", "info")
+            return
+        self._resolucao_pendente = {
+            "resolucao": self.jogo.config["resolucao"],
+            "tela_cheia": self.jogo.config["tela_cheia"],
+        }
+        self.jogo.config["resolucao"] = nova_resolucao
+        try:
+            self.jogo._aplicar_modo_video()
+        except pygame.error:
+            self._reverter_resolucao(notificar=False)
+            self.notificacoes.adicionar("Resolucao indisponivel neste monitor.", "erro")
+            return
+        self._prazo_confirmacao_resolucao = (
+            pygame.time.get_ticks() + _DURACAO_CONFIRMACAO_RESOLUCAO_MS)
+
+    def _segundos_confirmacao_resolucao(self):
+        """Retorna os segundos restantes para manter o modo de video testado."""
+        restante = self._prazo_confirmacao_resolucao - pygame.time.get_ticks()
+        return max(0, math.ceil(restante / 1000))
+
+    def _confirmar_resolucao(self):
+        """Persiste a resolucao temporaria apos confirmacao do jogador."""
+        if self._resolucao_pendente is None:
+            return
+        self._resolucao_pendente = None
+        self._prazo_confirmacao_resolucao = 0
         self.jogo.config.salvar()
+        self.notificacoes.adicionar("Resolucao confirmada.", "sucesso")
+
+    def _reverter_resolucao(self, notificar=True):
+        """Restaura o modo de video anterior se o teste nao for confirmado."""
+        pendente = self._resolucao_pendente
+        if pendente is None:
+            return
+        self._resolucao_pendente = None
+        self._prazo_confirmacao_resolucao = 0
+        self.jogo.config["resolucao"] = pendente["resolucao"]
+        self.jogo.config["tela_cheia"] = pendente["tela_cheia"]
         self.jogo._aplicar_modo_video()
-        self.notificacoes.adicionar(
-            "Resolucao: " + RESOLUCOES[indice], "sucesso")
-        self._som("equipar")
+        if notificar:
+            self.notificacoes.adicionar("Resolucao anterior restaurada.", "info")
+
+    def cancelar_confirmacao_resolucao(self):
+        """Descarta o teste de video pendente, inclusive ao fechar o jogo."""
+        self._reverter_resolucao(notificar=False)
+
+    def _botoes_confirmacao_resolucao(self):
+        """Retorna os botoes logicos da tela de confirmacao de resolucao."""
+        l = self.layout
+        largura, altura = l.px(180), l.px(50)
+        y = l.altura // 2 + l.px(98)
+        return (
+            pygame.Rect(l.x(0.5) - largura - l.px(12), y, largura, altura),
+            pygame.Rect(l.x(0.5) + l.px(12), y, largura, altura),
+        )
+
+    def _tratar_confirmacao_resolucao(self, evento):
+        """Trata somente a confirmacao enquanto a resolucao esta em teste."""
+        if evento.type == pygame.KEYDOWN:
+            if evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                self._confirmar_resolucao()
+            elif evento.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+                self._reverter_resolucao()
+        elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+            manter, reverter = self._botoes_confirmacao_resolucao()
+            pos = self._pos_logica(evento.pos)
+            if manter.collidepoint(pos):
+                self._confirmar_resolucao()
+            elif reverter.collidepoint(pos):
+                self._reverter_resolucao()
+        return True
+
+    def _desenhar_confirmacao_resolucao(self, tela, tema):
+        """Exibe a tela temporizada de confirmacao do novo modo de video."""
+        l = self.layout
+        self._overlay_confirmacao_resolucao.fill((0, 0, 0, 205))
+        tela.blit(self._overlay_confirmacao_resolucao, (0, 0))
+        painel = pygame.Rect(l.x(0.5) - l.px(260), l.y(0.5) - l.px(145),
+                             l.px(520), l.px(290))
+        desenhar_painel_cartoon(tela, tema["primaria"], painel,
+                                cor_fundo=(10, 14, 32), raio_canto=l.px(22),
+                                espessura_borda=l.px(4), alpha=248,
+                                glow_raio=l.px(26))
+        titulo = self.fonte_sub.render("MANTER ESTA RESOLUÇÃO?", True,
+                                       tema["secundaria"])
+        tela.blit(titulo, titulo.get_rect(center=(painel.centerx,
+                                                  painel.y + l.px(52))))
+        modo = "TELA CHEIA" if self.jogo.config["tela_cheia"] else "JANELA"
+        detalhe = self.fonte_media.render(
+            f"{self.jogo.config['resolucao']}  //  {modo}", True, BRANCO)
+        tela.blit(detalhe, detalhe.get_rect(center=(painel.centerx,
+                                                    painel.y + l.px(105))))
+        segundos = self._segundos_confirmacao_resolucao()
+        aviso = self.fonte_media.render(f"Reverte automaticamente em {segundos}s", True,
+                                        (255, 205, 100))
+        tela.blit(aviso, aviso.get_rect(center=(painel.centerx,
+                                                painel.y + l.px(150))))
+        manter, reverter = self._botoes_confirmacao_resolucao()
+        desenhar_botao_cartoon(tela, "MANTER", manter, (32, 145, 78),
+                               fonte=self.fonte_media,
+                               hover=manter.collidepoint(self.mouse))
+        desenhar_botao_cartoon(tela, "REVERTER", reverter, (165, 48, 62),
+                               fonte=self.fonte_media,
+                               hover=reverter.collidepoint(self.mouse))
+        dica = self.fonte_pequena.render("ENTER: manter   //   ESC: reverter", True,
+                                         (165, 175, 210))
+        tela.blit(dica, dica.get_rect(center=(painel.centerx,
+                                               painel.bottom - l.px(34))))
 
     def _desenhar_resolucoes(self, tela):
         l = self.layout
@@ -2057,6 +2163,8 @@ class MenuPrincipal:
         if self.dialogo and self.dialogo.ativo:
             self.dialogo.desenhar(tela, self.fonte_sub, self.fonte_media,
                                   self.mouse, tema)
+        if self._resolucao_pendente is not None:
+            self._desenhar_confirmacao_resolucao(tela, tema)
         self.transicao.desenhar(tela)
         self.transicao_missao.desenhar(tela, tema)
         if self.alpha_entrada < 255:
@@ -2073,6 +2181,9 @@ class MenuPrincipal:
         self.transicao.atualizar()
         self.transicao_missao.atualizar()
         self.notificacoes.atualizar()
+        if (self._resolucao_pendente is not None and
+                pygame.time.get_ticks() >= self._prazo_confirmacao_resolucao):
+            self._reverter_resolucao()
         self.alpha_entrada = min(255, self.alpha_entrada + 4)
         if self.preview_skin and self.preview_anim < 0.5:
             self.preview_anim += 1 / 60.0
@@ -2099,6 +2210,8 @@ class MenuPrincipal:
             pos = self._pos_logica(evento.pos) if hasattr(evento, "pos") else None
             self.dialogo.tratar_evento(evento, pos)
             return True
+        if self._resolucao_pendente is not None:
+            return self._tratar_confirmacao_resolucao(evento)
         if self.remapando:
             return self._tratar_remap(evento)
         if evento.type == pygame.MOUSEMOTION:
@@ -2244,13 +2357,11 @@ class MenuPrincipal:
             if evento.key == pygame.K_ESCAPE:
                 self.config_submodo = None
                 self.sub_anim = 0.0
-                self._som("navegar")
             elif evento.key in (pygame.K_UP, pygame.K_DOWN):
                 n = len(RESOLUCOES)
                 passo = 1 if evento.key == pygame.K_DOWN else -1
                 self.resolucao_selecao = (self.resolucao_selecao + passo) % n
                 self._rolar_resolucao(self.resolucao_selecao)
-                self._som("navegar")
             elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                 self._aplicar_resolucao(self.resolucao_selecao)
             return True
