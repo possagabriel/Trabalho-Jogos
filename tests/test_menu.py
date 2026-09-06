@@ -149,6 +149,20 @@ def test_teste_de_resolucao_nao_emite_som():
     menu._som.assert_not_called()
 
 
+def test_qualidade_visual_e_monitor_de_fps_sao_configuraveis():
+    jogo, menu = novo_menu()
+    jogo._aplicar_qualidade_grafica = mock.Mock()
+    jogo.config.salvar = mock.Mock()
+
+    menu._ciclar_qualidade_grafica()
+    menu._toggle_monitor_desempenho()
+
+    assert jogo.config["qualidade_grafica"] == "EQUILIBRADA"
+    assert jogo.config["mostrar_desempenho"] is True
+    jogo._aplicar_qualidade_grafica.assert_called_once()
+    assert jogo.config.salvar.call_count == 2
+
+
 def test_logo_principal_e_gerado_por_tipografia():
     _, menu = novo_menu()
     tema = menu.jogo.config["tema"]

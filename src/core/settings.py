@@ -21,6 +21,7 @@ RESOLUCOES = ["900x700", "1024x768", "1280x720", "1280x800", "1366x768",
               "1440x900", "1600x900", "1680x1050", "1920x1080", "2560x1080",
               "2560x1440", "3440x1440", "3840x2160"]
 TEMAS = ["NEON", "AURORA", "MAGMA"]
+QUALIDADES_GRAFICAS = ["ALTA", "EQUILIBRADA", "DESEMPENHO"]
 ACOES_CONTROLE = ["cima", "baixo", "esquerda", "direita", "atirar", "pausar"]
 DEFAULT_CONTROLES = {
     "cima": pygame.K_UP, "baixo": pygame.K_DOWN, "esquerda": pygame.K_LEFT,
@@ -30,7 +31,8 @@ _DEFAULT: dict[str, Any] = {
     "musica_volume": 0.8, "efeitos_volume": 0.8, "resolucao": "1280x720",
     "tela_cheia": False, "sensibilidade": 1.0, "controles": DEFAULT_CONTROLES,
     "tema": "NEON", "aspecto": "AJUSTAR", "ajuste_escala": 1.0,
-    "ajuste_off_x": 0, "ajuste_off_y": 0,
+    "ajuste_off_x": 0, "ajuste_off_y": 0, "qualidade_grafica": "ALTA",
+    "mostrar_desempenho": False,
 }
 
 

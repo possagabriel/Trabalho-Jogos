@@ -47,6 +47,7 @@ class ControladorProgressao:
         jogo.moedas_ganhas = 0
         jogo.textos_acao = []
         jogo.cenario = Cenario(1)
+        jogo._aplicar_qualidade_grafica()
         self.iniciar_nivel(1)
         jogo.mensagens.append(MensagemFlutuante(
             f"Bem-vindo, {nome}!", LARGURA // 2, ALTURA // 2 + 20, CIANO, 110))
@@ -125,6 +126,7 @@ class ControladorProgressao:
             jogo._apresentar()
             jogo.relogio.tick(FPS)
         jogo.cenario = Cenario(novo_id)
+        jogo._aplicar_qualidade_grafica()
         jogo.progresso.desbloquear_cenario(novo_id)
         jogo.particulas.limpar()
         jogo.particulas.espiral_revelacao(LARGURA // 2, ALTURA // 2, cor)

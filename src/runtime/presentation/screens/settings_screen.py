@@ -135,6 +135,10 @@ class TelaConfiguracoesJogo:
             menu.config_submodo, menu.controle_selecao, menu.sub_anim = "controles", 0, 0.0
         elif menu.config_selecao == 8:
             menu._abrir_ajuste_tela()
+        elif menu.config_selecao == 9:
+            menu._ciclar_qualidade_grafica()
+        elif menu.config_selecao == 10:
+            menu._toggle_monitor_desempenho()
         else:
             menu._ajustar_config(1)
 
@@ -192,9 +196,19 @@ class TelaConfiguracoesJogo:
             texto = menu.fonte_media.render("LIGADO" if estado else "DESLIGADO", True, VERDE if estado else (160, 160, 190))
             menu._blit_alfa(tela, texto, texto.get_rect(midleft=(controle_x + layout.px(90) + dx, y)), int(255 * alfa))
         else:
-            valores = {"resolucao": menu.jogo.config["resolucao"], "tema": menu.jogo.config["tema"],
-                       "aspecto": menu.jogo.config["aspecto"], "controles": "PERSONALIZAR >", "ajuste": "CALIBRAR >"}
+            valores = {
+                "resolucao": menu.jogo.config["resolucao"],
+                "tema": menu.jogo.config["tema"],
+                "aspecto": menu.jogo.config["aspecto"],
+                "controles": "PERSONALIZAR >",
+                "ajuste": "CALIBRAR >",
+                "qualidade": menu.jogo.config["qualidade_grafica"],
+                "desempenho": ("LIGADO" if menu.jogo.config["mostrar_desempenho"]
+                                else "DESLIGADO"),
+            }
             valor = valores.get(tipo, "")
-            cor = tema["secundaria"] if tipo == "resolucao" else QUANTUM_CYAN if tipo == "aspecto" else (200, 150, 255)
+            cor = (tema["secundaria"] if tipo in ("resolucao", "qualidade")
+                   else QUANTUM_CYAN if tipo in ("aspecto", "desempenho")
+                   else (200, 150, 255))
             texto = menu.fonte_media.render(valor, True, cor)
             menu._blit_alfa(tela, texto, texto.get_rect(midleft=(controle_x + dx, y)), int(255 * alfa))

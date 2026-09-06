@@ -96,6 +96,11 @@ def _imagem_fundo(cenario_id=None):
 # Raios de luz do Plano Divino, cacheados por largura (evita alocar
 # superficies e smoothscale a cada frame).
 _CACHE_RAIOS = {}
+_PERFIS_QUALIDADE = {
+    "ALTA": (1, True, True),
+    "EQUILIBRADA": (2, True, True),
+    "DESEMPENHO": (3, False, False),
+}
 
 
 class Estrela:
@@ -178,6 +183,15 @@ class Cenario:
         self.fundo_estatico = self._criar_fundo_estatico()
         self.luzes_ambiente = self._criar_luzes_ambiente()
         self._efeitos_alpha = {}
+        self.configurar_qualidade("ALTA")
+
+    def configurar_qualidade(self, qualidade: str) -> None:
+        """Define o detalhe visual do fundo sem alterar inimigos ou colisao."""
+        self.qualidade = qualidade if qualidade in _PERFIS_QUALIDADE else "ALTA"
+        self._passo_estrelas, self._desenhar_luzes, self._desenhar_efeitos = \
+            _PERFIS_QUALIDADE[self.qualidade]
+        if not self._desenhar_efeitos:
+            self.efeitos.clear()
 
     # ----- construcao -----
 
@@ -231,9 +245,10 @@ class Cenario:
 
     def atualizar(self):
         self.tempo += 1
-        for estrela in self.estrelas:
+        for estrela in self.estrelas[::self._passo_estrelas]:
             estrela.atualizar()
-        self._atualizar_efeito()
+        if self._desenhar_efeitos:
+            self._atualizar_efeito()
 
     def _atualizar_efeito(self):
         if self.efeito == "fogo":
@@ -271,10 +286,12 @@ class Cenario:
 
     def desenhar(self, tela):
         tela.blit(self.fundo_estatico, (0, 0))
-        self._desenhar_luzes_ambiente(tela)
-        for estrela in self.estrelas:
+        if self._desenhar_luzes:
+            self._desenhar_luzes_ambiente(tela)
+        for estrela in self.estrelas[::self._passo_estrelas]:
             estrela.desenhar(tela)
-        self._desenhar_efeito(tela)
+        if self._desenhar_efeitos:
+            self._desenhar_efeito(tela)
 
     def _desenhar_luzes_ambiente(self, tela):
         """Move dois halos devagar para criar profundidade sem novas surfaces."""

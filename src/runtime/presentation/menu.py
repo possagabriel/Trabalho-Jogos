@@ -34,7 +34,7 @@ from src.runtime.presentation.menu_scene import DestaqueMenu, FundoCinematico, H
     TransicaoMissao, texto_espacado
 from src.runtime.domain.entities.player import Jogador
 from src.runtime.infrastructure.persistence.save_system import ARQUIVO_RECORDES, SistemaProgressao
-from src.core.settings import ACOES_CONTROLE, RESOLUCOES, TEMAS
+from src.core.settings import ACOES_CONTROLE, QUALIDADES_GRAFICAS, RESOLUCOES, TEMAS
 from src.runtime.infrastructure.persistence.shop import LojaSkins
 from src.runtime.infrastructure.graphics.smooth import desenhar_cantos, desenhar_circulo as \
     desenhar_circulo_suave, desenhar_glow, ease_out, ease_out_back, \
@@ -1077,6 +1077,8 @@ class MenuPrincipal:
             ("Tema", "tema"),
             ("Aspecto", "aspecto"),
             ("Ajustar Tela", "ajuste"),
+            ("Qualidade Visual", "qualidade"),
+            ("Monitor de FPS", "desempenho"),
         ]
 
     _CONFIG_VISIVEIS = 6
@@ -1185,6 +1187,26 @@ class MenuPrincipal:
         self.jogo.config["tema"] = TEMAS[indice]
         self.jogo.config.salvar()
 
+    def _ciclar_qualidade_grafica(self, delta: int = 1) -> None:
+        """Alterna o perfil visual e aplica-o imediatamente durante a partida."""
+        atual = self.jogo.config["qualidade_grafica"]
+        indice = (QUALIDADES_GRAFICAS.index(atual)
+                  if atual in QUALIDADES_GRAFICAS else 0)
+        indice = (indice + delta) % len(QUALIDADES_GRAFICAS)
+        qualidade = QUALIDADES_GRAFICAS[indice]
+        self.jogo.config["qualidade_grafica"] = qualidade
+        self.jogo._aplicar_qualidade_grafica()
+        self.jogo.config.salvar()
+        self.notificacoes.adicionar(f"Qualidade visual: {qualidade}", "info")
+
+    def _toggle_monitor_desempenho(self) -> None:
+        """Exibe ou oculta a telemetria leve de FPS no HUD."""
+        ativo = not self.jogo.config["mostrar_desempenho"]
+        self.jogo.config["mostrar_desempenho"] = ativo
+        self.jogo.config.salvar()
+        estado = "LIGADO" if ativo else "DESLIGADO"
+        self.notificacoes.adicionar(f"Monitor de FPS {estado}", "info")
+
     def _aplicar_slider(self, indice, fracao):
         if indice == 0:
             self._set_musica(fracao)
@@ -1217,6 +1239,10 @@ class MenuPrincipal:
             self.jogo.config["aspecto"] = ("PREENCHE" if atual == "AJUSTAR"
                                            else "AJUSTAR")
             self.jogo.config.salvar()
+        elif indice == 9:
+            self._ciclar_qualidade_grafica(delta)
+        elif indice == 10 and delta > 0:
+            self._toggle_monitor_desempenho()
         self._som("navegar")
 
     def _painel_controles(self):
@@ -1271,6 +1297,10 @@ class MenuPrincipal:
                     self._ajustar_config(1)
                 elif i == 8:
                     self._abrir_ajuste_tela()
+                elif i == 9:
+                    self._ciclar_qualidade_grafica()
+                elif i == 10:
+                    self._toggle_monitor_desempenho()
                 elif linhas[i][1] == "slider":
                     self._aplicar_slider(i, self._slider_fracao(pos[0]))
                 return

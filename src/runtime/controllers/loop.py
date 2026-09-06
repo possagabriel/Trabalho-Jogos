@@ -105,6 +105,8 @@ class ControladorLoop:
                 self.atualizar()
             jogo.render_controller.desenhar()
             jogo.relogio.tick(FPS)
+            jogo.fps_atual = jogo.relogio.get_fps()
+            jogo.tempo_quadro_ms = jogo.relogio.get_time()
             jogo._atualizar_modo_desempenho(jogo.relogio.get_rawtime())
         pygame.quit()
         sys.exit(0)

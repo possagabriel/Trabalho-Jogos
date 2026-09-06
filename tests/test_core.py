@@ -535,6 +535,16 @@ def test_modo_desempenho_reage_rapido_a_quedas_sustentadas():
     assert jogo._escala_rapida is True
 
 
+def test_qualidade_visual_e_aplicada_ao_mundo_e_as_particulas():
+    jogo = Jogo()
+    jogo.config["qualidade_grafica"] = "DESEMPENHO"
+
+    jogo._aplicar_qualidade_grafica()
+
+    assert jogo.cenario.qualidade == "DESEMPENHO"
+    assert jogo.particulas.qualidade == "DESEMPENHO"
+
+
 def test_modo_opengl_tenta_habilitar_vsync():
     janela = pygame.Surface((900, 700))
     with mock.patch("src.runtime.application.core.pygame.display.set_mode",

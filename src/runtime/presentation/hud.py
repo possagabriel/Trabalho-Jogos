@@ -339,6 +339,8 @@ class HudJogo:
         self._f_titulo_m = l.fonte_titulo(24)
         self._f_titulo_g = l.fonte_titulo(34)
         self._f_numero = l.fonte_titulo(30)
+        self._telemetria_surface = None
+        self._telemetria_chave = None
 
     # ------------------------------------------------------------- dados
 
@@ -393,7 +395,33 @@ class HudJogo:
         self._base_direita(tela, d, t)
         self._base_centro(tela, d, t)
         self._barra_boss(tela, d, t)
+        self._desenhar_telemetria(tela, jogo)
         return d
+
+    def _desenhar_telemetria(self, tela, jogo) -> None:
+        """Mostra FPS e perfil visual somente quando o monitor esta habilitado."""
+        try:
+            if not jogo.config["mostrar_desempenho"]:
+                return
+            qualidade = jogo.config["qualidade_grafica"]
+        except (AttributeError, KeyError):
+            return
+        fps = max(0, round(getattr(jogo, "fps_atual", 0)))
+        quadro = max(0, round(getattr(jogo, "tempo_quadro_ms", 0)))
+        escala = "RÁPIDA" if getattr(jogo, "_escala_rapida", False) else "SUAVE"
+        chave = (fps, quadro, qualidade, escala)
+        if chave != self._telemetria_chave:
+            texto = f"{fps:02d} FPS  {quadro:02d} ms  {qualidade}  {escala}"
+            self._telemetria_surface = _render(self._f_padrao_xxs, texto, CIANO_HUD)
+            self._telemetria_chave = chave
+        if self._telemetria_surface is None:
+            return
+        l = self.layout
+        rect = self._telemetria_surface.get_rect(midtop=(l.x(0.5), l.px(112)))
+        fundo = rect.inflate(l.px(16), l.px(8))
+        retangulo_suave(tela, (9, 18, 38), fundo, l.px(5), 1,
+                         glow_cor=CIANO_HUD, glow_raio=l.px(4))
+        _blit_alfa(tela, self._telemetria_surface, rect, 220)
 
     # -------------------------------------------------------- modulos
 

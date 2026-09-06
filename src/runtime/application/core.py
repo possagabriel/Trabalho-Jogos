@@ -122,6 +122,9 @@ class Jogo:
         self.flash = 0
         self.cenario = Cenario(1)
         self.particulas = SistemaParticulas()
+        self.fps_atual = float(FPS)
+        self.tempo_quadro_ms = 1000 / FPS
+        self._aplicar_qualidade_grafica()
         # superficies reutilizadas por frame (evita alocar a cada desenho)
         self._tela_sombra = pygame.Surface((LARGURA, ALTURA),
                                            pygame.SRCALPHA)
@@ -353,6 +356,12 @@ class Jogo:
             self._escala_rapida = True
         elif self._quadros_estaveis >= 90:
             self._escala_rapida = False
+
+    def _aplicar_qualidade_grafica(self) -> None:
+        """Aplica o perfil visual atual aos efeitos que consomem mais CPU."""
+        qualidade = self.config["qualidade_grafica"]
+        self.cenario.configurar_qualidade(qualidade)
+        self.particulas.configurar_qualidade(qualidade)
 
     # ----- utilidades -----
 

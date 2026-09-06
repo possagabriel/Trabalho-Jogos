@@ -66,6 +66,12 @@ recompõe automaticamente.
 - **Tela cheia:** usa a resolução escolhida no menu (sem `SCALED`, sem
   esticar). Alterar a resolução mantém a tela cheia ligada; se o monitor não
   suportar o modo selecionado, o jogo volta automaticamente à resolução nativa.
+- **Qualidade visual:** em **Config → Qualidade Visual**, escolha `ALTA`,
+  `EQUILIBRADA` ou `DESEMPENHO`. Os perfis reduzem apenas detalhes de fundo e
+  orçamento de partículas; inimigos, colisões e regras da partida não mudam.
+- **Monitor de FPS:** em **Config → Monitor de FPS**, habilite uma leitura
+  discreta de FPS, tempo de quadro, perfil visual e modo de escala durante a
+  partida. Ele começa desligado e a configuração é persistida.
 - **Ajustar Tela** (Config → Ajustar Tela): calibra a imagem para o monitor
   (TVs com overscan, telas com bordas cortadas etc.). Com setas move a imagem
   (4 px por passo), `W/S` aplica zoom (0.9–1.2), `R` reseta e `Enter` confirma

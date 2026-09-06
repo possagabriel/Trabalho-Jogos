@@ -85,6 +85,8 @@ def test_configuracoes_carregar_defaults():
         assert cfg["sensibilidade"] == 1.0
         assert cfg["tema"] == "NEON"
         assert cfg["aspecto"] == "AJUSTAR"
+        assert cfg["qualidade_grafica"] == "ALTA"
+        assert cfg["mostrar_desempenho"] is False
         assert cfg["ajuste_escala"] == 1.0
         assert cfg["ajuste_off_x"] == 0
         assert cfg.controles["atirar"] == pygame.K_SPACE

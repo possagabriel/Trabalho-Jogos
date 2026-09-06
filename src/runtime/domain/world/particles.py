@@ -16,6 +16,11 @@ _CACHE = {}
 _CACHE_ALPHA = {}
 _LIMITE_DESENHO = 320
 _LIMITE_ATIVAS = 480
+_PERFIS_QUALIDADE = {
+    "ALTA": (1.0, _LIMITE_DESENHO, _LIMITE_ATIVAS),
+    "EQUILIBRADA": (0.72, 230, 340),
+    "DESEMPENHO": (0.45, 140, 220),
+}
 
 Cor: TypeAlias = tuple[int, int, int]
 Velocidade: TypeAlias = tuple[float, float]
@@ -94,10 +99,21 @@ class SistemaParticulas:
 
     def __init__(self) -> None:
         self.particulas: list[Particula] = []
+        self.configurar_qualidade("ALTA")
+
+    def configurar_qualidade(self, qualidade: str) -> None:
+        """Ajusta a densidade de efeitos sem alterar o comportamento do jogo."""
+        self.qualidade = qualidade if qualidade in _PERFIS_QUALIDADE else "ALTA"
+        self._densidade, self._limite_desenho, self._limite_ativas = \
+            _PERFIS_QUALIDADE[self.qualidade]
+
+    def _quantidade(self, quantidade: int) -> int:
+        """Converte a quantidade visual solicitada para o perfil selecionado."""
+        return max(1, round(quantidade * self._densidade))
 
     def explosao(self, x: float, y: float, cor: Cor, qtd: int = 20,
                  forca: float = 6.0, gravidade: float = 0.0) -> None:
-        for _ in range(qtd):
+        for _ in range(self._quantidade(qtd)):
             ang = random.uniform(0, math.tau)
             v = random.uniform(1, forca)
             self.particulas.append(
@@ -107,8 +123,9 @@ class SistemaParticulas:
                           gravidade))
 
     def espiral(self, x: float, y: float, cor: Cor, qtd: int) -> None:
-        for i in range(qtd):
-            frac = i / qtd
+        quantidade = self._quantidade(qtd)
+        for i in range(quantidade):
+            frac = i / quantidade
             ang = frac * math.tau * 2
             raio = frac * 45
             px = x + math.cos(ang) * raio
@@ -119,7 +136,7 @@ class SistemaParticulas:
                 Particula(px, py, cor, (vx, vy), random.randint(2, 4), 40))
 
     def estrela(self, x: float, y: float, cor: Cor, qtd: int) -> None:
-        for i in range(qtd):
+        for i in range(self._quantidade(qtd)):
             ponta = i % 5
             ang = ponta * math.tau / 5 - math.pi / 2
             raio = random.uniform(5, 60)
@@ -131,7 +148,7 @@ class SistemaParticulas:
                           random.randint(2, 5), random.randint(25, 45)))
 
     def pulsacao(self, x: float, y: float, cor: Cor, qtd: int) -> None:
-        for _ in range(qtd):
+        for _ in range(self._quantidade(qtd)):
             ang = random.uniform(0, math.tau)
             v = random.uniform(4, 8)
             self.particulas.append(
@@ -140,7 +157,7 @@ class SistemaParticulas:
 
     def mega(self, x: float, y: float) -> None:
         cores = [BRANCO, CIANO, VERMELHO, LARANJA, ROXO, DOURADO]
-        for _ in range(100):
+        for _ in range(self._quantidade(100)):
             ang = random.uniform(0, math.tau)
             v = random.uniform(2, 10)
             cor = random.choice(cores)
@@ -155,7 +172,7 @@ class SistemaParticulas:
     def faiscas(self, x: float, y: float, cor: Cor, qtd: int = 6,
                 forca: float = 4.0) -> None:
         """Faiscas curtas de impacto ao acertar um alvo."""
-        for _ in range(qtd):
+        for _ in range(self._quantidade(qtd)):
             ang = random.uniform(0, math.tau)
             v = random.uniform(1.5, forca)
             self.particulas.append(
@@ -163,6 +180,8 @@ class SistemaParticulas:
                           random.randint(1, 2), random.randint(5, 13)))
 
     def rastro(self, x: float, y: float, cor: Cor, forca: float = 1.5) -> None:
+        if random.random() > self._densidade:
+            return
         self.particulas.append(
             Particula(x + random.uniform(-2, 2), y + random.uniform(-2, 2),
                       cor, (random.uniform(-forca, forca),
@@ -171,7 +190,7 @@ class SistemaParticulas:
 
     def chamas(self, x: float, y: float, cor: Cor, qtd: int = 2) -> None:
         """Particulas de chama subindo (cenario flamejante / skins)."""
-        for _ in range(qtd):
+        for _ in range(self._quantidade(qtd)):
             self.particulas.append(
                 Particula(x + random.uniform(-3, 3), y,
                           random.choice([cor, LARANJA, DOURADO]),
@@ -181,7 +200,7 @@ class SistemaParticulas:
 
     def bolhas(self, x: float, y: float, cor: Cor, qtd: int = 1) -> None:
         """Particulas de bolha subindo lentamente (Oceano Cosmico)."""
-        for _ in range(qtd):
+        for _ in range(self._quantidade(qtd)):
             self.particulas.append(
                 Particula(x + random.uniform(-2, 2), y, cor,
                           (random.uniform(-0.3, 0.3),
@@ -191,7 +210,7 @@ class SistemaParticulas:
 
     def cristais(self, x: float, y: float, cor: Cor, qtd: int = 1) -> None:
         """Particulas de cristal caindo lentamente (Floresta de Cristais)."""
-        for _ in range(qtd):
+        for _ in range(self._quantidade(qtd)):
             self.particulas.append(
                 Particula(x + random.uniform(-2, 2), y, cor,
                           (random.uniform(-0.4, 0.4),
@@ -210,7 +229,7 @@ class SistemaParticulas:
         for i in range(len(pontos) - 1):
             a, b = pontos[i], pontos[i + 1]
             qtd = max(1, int(math.hypot(b[0] - a[0], b[1] - a[1]) / 6))
-            for _ in range(qtd):
+            for _ in range(self._quantidade(qtd)):
                 t = random.random()
                 ex = a[0] + (b[0] - a[0]) * t
                 ey = a[1] + (b[1] - a[1]) * t
@@ -222,7 +241,7 @@ class SistemaParticulas:
 
     def buraco_negro(self, x: float, y: float) -> None:
         """Espiral de particulas girando em torno de um ponto."""
-        for i in range(14):
+        for i in range(self._quantidade(14)):
             ang = random.uniform(0, math.tau)
             self.particulas.append(
                 Particula(x + math.cos(ang) * 16, y + math.sin(ang) * 16,
@@ -232,8 +251,9 @@ class SistemaParticulas:
 
     def salto_dimensional(self, x: float, y: float, cor: Cor) -> None:
         """Espiral de particulas usada na transicao de cenarios."""
-        for i in range(30):
-            frac = i / 30
+        quantidade = self._quantidade(30)
+        for i in range(quantidade):
+            frac = i / quantidade
             ang = frac * math.tau * 3
             raio = frac * 260
             px = x + math.cos(ang) * raio
@@ -245,7 +265,7 @@ class SistemaParticulas:
 
     def espiral_revelacao(self, x: float, y: float, cor: Cor) -> None:
         """Revelacao com particulas nas cores do novo cenario."""
-        for i in range(50):
+        for i in range(self._quantidade(50)):
             px = random.uniform(0, 900)
             py = random.uniform(0, 700)
             self.particulas.append(
@@ -260,11 +280,11 @@ class SistemaParticulas:
         # Explosões encadeadas podiam acumular milhares de partículas: mesmo
         # limitando o desenho, todas ainda eram atualizadas. Mantemos as mais
         # recentes dentro de um orçamento previsível de CPU e memória.
-        self.particulas = vivas[-_LIMITE_ATIVAS:]
+        self.particulas = vivas[-self._limite_ativas:]
 
     def desenhar(self, tela: pygame.Surface) -> None:
         total = len(self.particulas)
-        passo = max(1, math.ceil(total / _LIMITE_DESENHO))
+        passo = max(1, math.ceil(total / self._limite_desenho))
         for p in self.particulas[::passo]:
             p.desenhar(tela)
 
