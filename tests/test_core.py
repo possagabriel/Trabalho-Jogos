@@ -36,6 +36,7 @@ from game.render_controller import ControladorRenderizacao  # noqa: E402
 from game.enemies import Inimigo, InimigoEspecial  # noqa: E402
 from game.powerups import PowerUp  # noqa: E402
 from game.weapons import ARMARIA, Projetil  # noqa: E402
+from src.core.settings import Configuracoes  # noqa: E402
 
 
 def _patch_recordes():
@@ -568,6 +569,22 @@ def test_modo_tela_cheia_recusa_resolucao_que_o_monitor_nao_oferece():
     with mock.patch("src.runtime.application.core.pygame.display.list_modes",
                     return_value=[(1920, 1080)]):
         assert Jogo._modo_tela_cheia_disponivel((1280, 720)) is False
+
+
+def test_inicio_restaura_janela_se_o_modo_salvo_nao_estiver_disponivel():
+    config = Configuracoes()
+    config["tela_cheia"] = True
+    config["resolucao"] = "900x700"
+    config.salvar = mock.Mock()
+    janela = pygame.Surface((900, 700))
+
+    with mock.patch.object(Jogo, "_criar_janela_video",
+                           side_effect=[pygame.error(), janela]):
+        jogo = Jogo(config=config)
+
+    assert jogo.config["tela_cheia"] is False
+    assert jogo.config["resolucao"] == "900x700"
+    config.salvar.assert_called_once()
 
 def test_desenha_estados():
     jogo = novo_jogo()

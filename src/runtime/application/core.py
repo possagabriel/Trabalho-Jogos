@@ -83,7 +83,7 @@ class Jogo:
         pygame.init()
         self._configurar_backend_escala()
         self.config = config or Configuracoes()
-        self.janela = self._aplicar_modo_video()
+        self.janela = self._iniciar_modo_video()
         self.tela = pygame.Surface((LARGURA, ALTURA))
         self._criar_layout_ui()
         pygame.display.set_caption(TITULO)
@@ -167,6 +167,21 @@ class Jogo:
         self._estado = valor if isinstance(valor, EstadoJogo) else EstadoJogo(valor)
 
     # ----- modo de video -----
+
+    def _iniciar_modo_video(self) -> pygame.Surface:
+        """Abre o jogo com um modo de video seguro, inclusive apos uma falha.
+
+        Um modo exclusivo salvo anteriormente pode deixar de existir depois de
+        trocar de monitor ou driver. Nesse caso o jogo precisa abrir em janela
+        para que o jogador consiga ajustar a resolucao no menu.
+        """
+        try:
+            return self._aplicar_modo_video()
+        except pygame.error:
+            self.config["tela_cheia"] = False
+            self.config["resolucao"] = "900x700"
+            self.config.salvar()
+            return self._aplicar_modo_video()
 
     def _criar_layout_ui(self):
         """Mantem toda a interface na superficie logica do jogo.
