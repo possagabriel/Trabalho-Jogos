@@ -15,6 +15,7 @@ from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, luz_rad
 _CACHE = {}
 _CACHE_ALPHA = {}
 _LIMITE_DESENHO = 320
+_LIMITE_ATIVAS = 480
 
 Cor: TypeAlias = tuple[int, int, int]
 Velocidade: TypeAlias = tuple[float, float]
@@ -255,7 +256,11 @@ class SistemaParticulas:
     def atualizar(self) -> None:
         for p in self.particulas:
             p.atualizar()
-        self.particulas = [p for p in self.particulas if p.vida > 0]
+        vivas = [p for p in self.particulas if p.vida > 0]
+        # Explosões encadeadas podiam acumular milhares de partículas: mesmo
+        # limitando o desenho, todas ainda eram atualizadas. Mantemos as mais
+        # recentes dentro de um orçamento previsível de CPU e memória.
+        self.particulas = vivas[-_LIMITE_ATIVAS:]
 
     def desenhar(self, tela: pygame.Surface) -> None:
         total = len(self.particulas)

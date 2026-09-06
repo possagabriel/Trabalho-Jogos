@@ -89,6 +89,31 @@ def test_carregamento_transiciona_para_jogando():
     assert jogo.carregamento == 100
 
 
+def test_loop_nao_atualiza_mundo_de_combate_no_menu():
+    jogo = Jogo()
+    jogo.menu.atualizar = mock.Mock()
+    jogo.particulas.atualizar = mock.Mock()
+    jogo.cenario.atualizar = mock.Mock()
+
+    jogo.loop_controller.atualizar()
+
+    jogo.menu.atualizar.assert_called_once()
+    jogo.particulas.atualizar.assert_not_called()
+    jogo.cenario.atualizar.assert_not_called()
+
+
+def test_loop_atualiza_mundo_quando_partida_esta_visivel():
+    jogo = novo_jogo()
+    jogo._atualizar_jogando = mock.Mock()
+    jogo.particulas.atualizar = mock.Mock()
+    jogo.cenario.atualizar = mock.Mock()
+
+    jogo.loop_controller.atualizar()
+
+    jogo.particulas.atualizar.assert_called_once()
+    jogo.cenario.atualizar.assert_called_once()
+
+
 def test_novo_jogo_estado_jogando():
     jogo = Jogo()
     jogo._novo_jogo("Teste")
@@ -489,6 +514,16 @@ def test_apresentador_gpu_recebe_um_unico_frame_logico_e_destino_fisico():
 
     jogo._apresentador_gpu.apresentar.assert_called_once_with(
         jogo.tela, (0, 0, 1800, 1400), (1800, 1400), (8, 8, 13))
+
+
+def test_modo_desempenho_troca_escala_somente_apos_atraso_sustentado():
+    jogo = Jogo()
+    for _ in range(8):
+        jogo._atualizar_modo_desempenho(25)
+    assert jogo._escala_rapida is True
+    for _ in range(90):
+        jogo._atualizar_modo_desempenho(8)
+    assert jogo._escala_rapida is False
 
 
 def test_modo_video_usa_resolucao_nativa_em_tela_cheia():
