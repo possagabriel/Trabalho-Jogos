@@ -96,6 +96,21 @@ def test_desenha_hud_com_boss():
     assert tela.get_width() == LARGURA
 
 
+def test_monitor_de_desempenho_e_renderizado_quando_habilitado():
+    jogo = JogoFake()
+    jogo.config = {
+        "mostrar_desempenho": True,
+        "qualidade_grafica": "DESEMPENHO",
+    }
+    jogo.fps_atual = 58.7
+    jogo.tempo_quadro_ms = 17.2
+    jogo._escala_rapida = True
+
+    _, hud, _ = _desenha(jogo)
+
+    assert hud._telemetria_surface is not None
+
+
 def test_dados_lidos_do_jogo():
     jogo = JogoFake(vida=3, escudo=True, combo=6, pontuacao=99999, abates=13)
     _, _, dados = _desenha(jogo)

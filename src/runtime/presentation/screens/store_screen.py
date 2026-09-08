@@ -55,19 +55,32 @@ class TelaLojaJogo:
         menu = self.menu
         layout = menu.layout
         tema = tema_atual(menu.jogo.config["tema"])
-        menu._cabecalho_sub_animado(tela, "LOJA DE VISUAIS", tema["primaria"])
-        dx, dy, alfa = menu._entrada_anim(menu._frac_sub(0.06, 0.3), dx_design=-16)
-        moeda = menu.fonte_media.render(f"Moedas: {menu.jogo.loja.moedas:,}".replace(",", "."), True, DOURADO)
-        menu._blit_alfa(tela, moeda, (layout.px(20) + dx, layout.px(30) + dy), int(255 * alfa))
+        menu._cabecalho_sub_animado(tela, "HANGAR DE VISUAIS", tema["primaria"])
+        painel = menu._painel_loja()
+        menu._painel_sub(tela, painel, tema)
+        menu._detalhe_painel(tela, painel, tema, tema["secundaria"])
+        dx, dy, alfa = menu._entrada_anim(
+            menu._frac_sub(0.06, 0.3), dx_design=-16)
+        moedas = f"Moedas: {menu.jogo.loja.moedas:,}".replace(",", ".")
+        moeda = menu.fonte_media.render(moedas, True, DOURADO)
+        menu._blit_alfa(
+            tela,
+            moeda,
+            (painel.x + layout.px(20) + dx, painel.y + layout.px(17) + dy),
+            int(255 * alfa),
+        )
         atual = menu.jogo.loja.pegar_skin(menu.jogo.loja.skin_atual)
-        skin_atual = menu.fonte_media.render(f"Visual atual: {atual.nome}", True, tema["secundaria"])
-        menu._blit_alfa(tela, skin_atual, skin_atual.get_rect(
-            topright=(layout.largura - layout.px(20) - dx, layout.px(30) + dy)), int(255 * alfa))
         total = len(menu.jogo.loja.skins)
         desbloqueadas = len(menu.jogo.loja.lista_desbloqueadas())
-        resumo = menu.fonte_pequena.render(f"{desbloqueadas}/{total} visuais desbloqueados", True, (150, 155, 200))
-        menu._blit_alfa(tela, resumo, resumo.get_rect(
-            topright=(layout.largura - layout.px(20), layout.px(56))), int(255 * alfa))
+        resumo_visual = (
+            f"Visual atual: {atual.nome}  //  "
+            f"{desbloqueadas}/{total} desbloqueados"
+        )
+        skin_atual = menu.fonte_media.render(
+            resumo_visual, True, tema["secundaria"])
+        menu._blit_alfa(tela, skin_atual, skin_atual.get_rect(
+            topright=(painel.right - layout.px(20) - dx,
+                      painel.y + layout.px(17) + dy)), int(255 * alfa))
         cards = menu._rects_loja()
         for indice, skin in enumerate(menu.jogo.loja.skins):
             entrada = menu._frac_sub(0.16 + (indice % 4) * 0.05 + (indice // 4) * 0.09, 0.35)
@@ -81,7 +94,8 @@ class TelaLojaJogo:
         dx, dy, alfa = menu._entrada_anim(menu._frac_sub(0.62, 0.25), dy_design=16)
         descricao = menu.fonte_pequena.render(selecionada.descricao, True, (170, 175, 220))
         menu._blit_alfa(tela, descricao, descricao.get_rect(
-            center=(layout.x(0.5) + dx, layout.altura - layout.px(36) + dy)), int(255 * alfa))
+            center=(layout.x(0.5) + dx,
+                    layout.altura - layout.px(91) + dy)), int(255 * alfa))
         if menu.preview_skin:
             menu._desenhar_preview_overlay(tela)
 

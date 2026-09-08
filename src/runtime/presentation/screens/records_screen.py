@@ -9,7 +9,6 @@ import pygame
 from src.core.constants import BRANCO, CIANO, DOURADO, VOID_BLACK
 from src.runtime.infrastructure.graphics.smooth import desenhar_cantos, desenhar_glow, \
     linha_suave, retangulo_suave
-from src.infrastructure.ui.layout import CENTRO, LARGURA_BASE, ALTURA_BASE
 from src.infrastructure.graphics.theme import tema_atual
 from src.runtime.presentation.ui import BotaoNeon
 
@@ -25,9 +24,7 @@ class TelaRecordesJogo:
 
     def botao_voltar(self) -> BotaoNeon:
         """Cria o botao de retorno ao menu principal."""
-        layout = self.menu.layout
-        return BotaoNeon("VOLTAR", (layout.x(0.5) - layout.px(90),
-                                    layout.altura - layout.px(64), layout.px(180), layout.px(46)))
+        return self.menu._botoes_rodape(["VOLTAR"])[0]
 
     def desenhar(self, tela: pygame.Surface) -> None:
         """Renderiza um painel de recordes em formato de arquivo de voo."""
@@ -35,9 +32,10 @@ class TelaRecordesJogo:
         layout = menu.layout
         tema = tema_atual(menu.jogo.config["tema"])
         lista = menu.jogo.recordes
-        painel = layout.rect(CENTRO, 790 / LARGURA_BASE, 510 / ALTURA_BASE, dy=-12)
+        menu._cabecalho_sub_animado(tela, "RECORDES", tema["primaria"])
+        painel = menu._painel_recordes()
         menu._painel_sub(tela, painel, tema)
-        menu._detalhe_painel(tela, painel, tema, DOURADO)
+        menu._detalhe_painel(tela, painel, tema, tema["secundaria"])
         desenhar_cantos(tela, tema["secundaria"], painel, tamanho=layout.px(20))
 
         # Cabeçalho de arquivo com uma barra de energia que organiza o painel.
@@ -52,7 +50,7 @@ class TelaRecordesJogo:
         pygame.draw.circle(tela, tema["secundaria"],
                            (cabecalho.x + layout.px(34), cabecalho.centery),
                            layout.px(7))
-        menu._blit_alfa(tela, menu.fonte_cabecalho.render("RECORDES", True, BRANCO),
+        menu._blit_alfa(tela, menu.fonte_media.render("ARQUIVO DE VOO", True, BRANCO),
                         (cabecalho.x + layout.px(58), cabecalho.y + layout.px(11)), 255)
         rotulo = menu.fonte_pequena.render("// GALERIA DA FENDA", True,
                                            tema["secundaria"])

@@ -8,15 +8,31 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.runtime.infrastructure.graphics.cel_shading import (circulo_com_contorno, contorno_circulo,
-                          contorno_poligono, desenhar_brilho_contorno,
-                          desenhar_highlight, desenhar_sombra_chapada,
-                          escurecer_cor, estrela_com_contorno,
-                          poligono_com_contorno)
-from src.core.constants import ALTURA, AZUL, BRANCO, CIANO, DOURADO, LARGURA, ROSA, ROXO, \
-    VERMELHO
-from src.runtime.infrastructure.graphics.geometry import estrela, losango, pentagono as pent_pontos, poligono
-from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, desenhar_glow, desenhar_poligono
+from src.core.constants import (
+    ALTURA, AZUL, BRANCO, CIANO, DOURADO, LARGURA, ROSA, ROXO, VERMELHO,
+)
+from src.runtime.infrastructure.graphics.cel_shading import (
+    circulo_com_contorno,
+    contorno_circulo,
+    contorno_poligono,
+    desenhar_brilho_contorno,
+    desenhar_highlight,
+    desenhar_sombra_chapada,
+    escurecer_cor,
+    estrela_com_contorno,
+    poligono_com_contorno,
+)
+from src.runtime.infrastructure.graphics.geometry import (
+    estrela,
+    losango,
+    pentagono as pent_pontos,
+    poligono,
+)
+from src.runtime.infrastructure.graphics.smooth import (
+    desenhar_circulo,
+    desenhar_glow,
+    desenhar_poligono,
+)
 from src.runtime.domain.entities.weapons import Projetil
 
 if TYPE_CHECKING:
@@ -26,6 +42,8 @@ if TYPE_CHECKING:
 
 class Boss:
     """Boss de um cenario. Aparece a cada 5 niveis."""
+
+    VELOCIDADE_TELEGUIADO = 4.2
 
     def __init__(self, nivel: int, cenario: Cenario) -> None:
         self.nivel = nivel
@@ -53,6 +71,8 @@ class Boss:
         self.teleportando = False
         self.teleport_timer = 130
         self.alvo = None
+        self.fase_anterior = 1
+        self.pulso_fase = 0
 
     @property
     def rect(self) -> pygame.Rect:
@@ -62,11 +82,23 @@ class Boss:
     def _fracao_vida(self):
         return max(0.0, self.vida / self.vida_max)
 
+    @property
+    def fase_atual(self) -> int:
+        """Fase comportamental atual, de um a três, baseada na vida."""
+        fracao = self._fracao_vida()
+        if fracao > 0.66:
+            return 1
+        if fracao > 0.33:
+            return 2
+        return 3
+
     def atualizar(self, jogador: Jogador) -> list[Projetil]:
         novos = []
         self.t += 1
         if self.flash > 0:
             self.flash -= 1
+        if self.pulso_fase > 0:
+            self.pulso_fase -= 1
 
         if self.entrando:
             self.y += 2
@@ -75,22 +107,31 @@ class Boss:
                 self.entrando = False
             return novos
 
-        velocidade = 1.5 if self.enraivecido else 1.0
+        fase = self.fase_atual
+        if fase != self.fase_anterior:
+            self.fase_anterior = fase
+            self.pulso_fase = 75
+        velocidade = (1.0 + (fase - 1) * 0.2) * (1.5 if self.enraivecido else 1.0)
         if self.mov == "zigzag":
-            self.x = LARGURA // 2 + math.sin(self.t * 0.03) * 220
+            amplitude = 220 + (fase - 1) * 55
+            self.x = LARGURA // 2 + math.sin(self.t * 0.03 * velocidade) * amplitude
             self.angulo += 0.02 * velocidade
         elif self.mov == "gira":
             self.angulo += 0.03 * velocidade
             self.x += math.sin(self.t * 0.01) * 1.2 * velocidade
             self.x = max(self.raio, min(LARGURA - self.raio, self.x))
         elif self.mov == "infinito":
-            self.x = LARGURA // 2 + math.sin(self.t * 0.02) * 320
-            self.y = self.alvo_y + math.sin(self.t * 0.04) * 100
+            self.x = LARGURA // 2 + math.sin(self.t * 0.02 * velocidade) * 320
+            self.y = self.alvo_y + math.sin(self.t * 0.04 * velocidade) * 100
             self.angulo += 0.02 * velocidade
         elif self.mov == "teletransporte":
             self._atualizar_teletransporte()
         elif self.mov == "centro":
             self.angulo += 0.01 * velocidade
+            if fase > 1:
+                amplitude = 130 if fase == 2 else 250
+                self.x = LARGURA // 2 + math.sin(self.t * 0.018 * velocidade) * amplitude
+                self.y = self.alvo_y + math.sin(self.t * 0.031) * 45
 
         if not self.enraivecido and self._fracao_vida() <= 0.33:
             self.enraivecido = True
@@ -147,12 +188,36 @@ class Boss:
         disponiveis = self._ataques_por_fase()
         if not disponiveis:
             return []
-        escolhidos = random.sample(disponiveis,
-                                   min(1 + (len(disponiveis) > 1), 3))
+        escolhidos = random.sample(
+            disponiveis, min(self.fase_atual, 2, len(disponiveis)),
+        )
         projs = []
         for nome in escolhidos:
             projs += self._executar_ataque(nome, jogador, x, y)
         return projs
+
+    def _tiros_teleguiados(self, jogador, x, y):
+        """Cria uma salva teleguiada visivel e desviavel.
+
+        O vetor ate o jogador define somente a direcao. Usar a distancia como
+        velocidade fazia o tiro cruzar a arena inteira em um unico quadro.
+        """
+        dx, dy = jogador.x - x, jogador.y - y
+        angulo = math.atan2(dy, dx)
+        return [
+            Projetil(
+                x,
+                y,
+                math.cos(angulo + desvio) * self.VELOCIDADE_TELEGUIADO,
+                math.sin(angulo + desvio) * self.VELOCIDADE_TELEGUIADO,
+                1,
+                self.cor,
+                5,
+                origem="inimigo",
+                teleguiado=True,
+            )
+            for desvio in (-0.18, 0.0, 0.18)
+        ]
 
     def _executar_ataque(self, nome, jogador, x, y):
         if nome == "leque":
@@ -163,9 +228,7 @@ class Boss:
                              self.cor, 5, origem="inimigo")
                     for a in [i * math.tau / 8 for i in range(8)]]
         if nome == "teleguiado":
-            return [Projetil(x, y, jogador.x - x, jogador.y - y, 1,
-                             self.cor, 5, origem="inimigo", teleguiado=True)
-                    for _ in range(3)]
+            return self._tiros_teleguiados(jogador, x, y)
         if nome == "tudo":
             return [Projetil(x, y, math.cos(a) * 3.2, math.sin(a) * 3.2, 1,
                              self.cor, 5, origem="inimigo")
@@ -188,9 +251,10 @@ class Boss:
                                    origem="inimigo")
                           for a in [i * math.tau / 8 for i in range(8)]]
             if fracao <= 0.33:
-                projs += [Projetil(x, y, jogador.x - x, jogador.y - y, 1,
-                                   CIANO, 5, origem="inimigo",
-                                   teleguiado=True) for _ in range(3)]
+                teleguiados = self._tiros_teleguiados(jogador, x, y)
+                for projetil in teleguiados:
+                    projetil.cor = CIANO
+                projs += teleguiados
             projs += [Projetil(x, y, dx, 4.5, 1, self.cor, 5,
                                origem="inimigo") for dx in (-2, 0, 2)]
             return projs
@@ -205,15 +269,17 @@ class Boss:
         x, y = int(self.x), int(self.y)
         cor = BRANCO if self.flash > 0 else self.cor
         centro = (x, y)
+        if self.pulso_fase > 0:
+            raio_fase = self.raio + (75 - self.pulso_fase) * 3
+            intensidade = self.pulso_fase / 75
+            contorno_circulo(
+                tela, centro, raio_fase, 3,
+                cor_contorno=tuple(int(c * intensidade) for c in DOURADO),
+            )
         if self.enraivecido:
             desenhar_glow(tela, VERMELHO, centro, self.raio + 12, 0.5)
             contorno_circulo(tela, centro, self.raio + 8, 2,
                             cor_contorno=VERMELHO)
-        if 0 < self.timer_ataque <= 40:
-            pulso = 0.5 + 0.5 * math.sin(self.t * 0.6)
-            contorno_circulo(tela, centro,
-                            self.raio + 10 + int(pulso * 14), 2,
-                            cor_contorno=(255, 60, 90))
         if self.entrando:
             desenhar_glow(tela, cor, centro, self.raio * 1.3, 0.6)
             circulo_com_contorno(tela, cor, centro, self.raio,

@@ -35,7 +35,8 @@ class ControladorLoop:
         # O fundo de combate e suas partículas não são visíveis no menu.
         # Evitar esse trabalho fora da partida reduz uso de CPU em idle.
         mundo_visivel = jogo.estado in (
-            EstadoJogo.JOGANDO, EstadoJogo.PAUSA, EstadoJogo.GAME_OVER)
+            EstadoJogo.JOGANDO, EstadoJogo.MELHORIA,
+            EstadoJogo.PAUSA, EstadoJogo.GAME_OVER)
         if mundo_visivel and not jogo.menu_equipamento:
             jogo.particulas.atualizar()
             jogo.cenario.atualizar()
@@ -81,6 +82,19 @@ class ControladorLoop:
                     jogo._ativar_especial()
                 elif pygame.K_1 <= evento.key <= pygame.K_9:
                     jogo.jogador.selecionar_arma(evento.key - pygame.K_1)
+            elif jogo.estado is EstadoJogo.MELHORIA:
+                if evento.key in (pygame.K_LEFT, pygame.K_a):
+                    jogo.melhoria_selecionada = (jogo.melhoria_selecionada - 1) % 3
+                elif evento.key in (pygame.K_RIGHT, pygame.K_d):
+                    jogo.melhoria_selecionada = (jogo.melhoria_selecionada + 1) % 3
+                elif evento.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    jogo.progressao_controller.selecionar_melhoria(
+                        jogo.melhoria_selecionada,
+                    )
+                elif pygame.K_1 <= evento.key <= pygame.K_3:
+                    jogo.progressao_controller.selecionar_melhoria(
+                        evento.key - pygame.K_1,
+                    )
             elif jogo.estado is EstadoJogo.PAUSA:
                 jogo.pausa_controller.tratar_evento(evento)
             elif jogo.estado is EstadoJogo.GAME_OVER:
@@ -105,6 +119,8 @@ class ControladorLoop:
                 self.atualizar()
             jogo.render_controller.desenhar()
             jogo.relogio.tick(FPS)
+            jogo.fps_atual = jogo.relogio.get_fps()
+            jogo.tempo_quadro_ms = jogo.relogio.get_time()
             jogo._atualizar_modo_desempenho(jogo.relogio.get_rawtime())
         pygame.quit()
         sys.exit(0)

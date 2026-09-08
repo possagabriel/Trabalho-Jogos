@@ -269,6 +269,17 @@ class Jogador:
         self.burst_left = 0
         self.angulo_arma = 0.0
         self.invencivel = 0
+        self.cooldown_esquiva = 0
+        self.tempo_esquiva = 0
+        self.esquiva_iniciada = False
+        self._esquiva_pressionada = False
+        self._direcao_esquiva = (0.0, -1.0)
+        self.multiplicador_velocidade = 1.0
+        self.multiplicador_cadencia = 1.0
+        self.bonus_dano = 0
+        self.multiplicador_especial = 1.0
+        self.melhorias: dict[str, int] = {}
+        self.tiros_padrao = 0
         self.tilt = 0.0
         self.vivo = True
         self.skin = skin or Skin(SKINS[0])
@@ -305,8 +316,28 @@ class Jogador:
         if dx and dy:
             dx *= 0.7071
             dy *= 0.7071
-        self.x += dx * self.velocidade
-        self.y += dy * self.velocidade
+        if self.cooldown_esquiva > 0:
+            self.cooldown_esquiva -= 1
+        tecla_esquiva = controles.get("esquivar", pygame.K_x)
+        esquiva_pressionada = bool(teclas[pygame.K_x] or teclas[tecla_esquiva])
+        self.esquiva_iniciada = False
+        if (esquiva_pressionada and not self._esquiva_pressionada
+                and self.cooldown_esquiva <= 0 and self.vivo):
+            direcao = (dx, dy) if dx or dy else (0.0, -1.0)
+            self._direcao_esquiva = direcao
+            self.tempo_esquiva = 9
+            self.cooldown_esquiva = 90
+            self.esquiva_iniciada = True
+        self._esquiva_pressionada = esquiva_pressionada
+        if self.tempo_esquiva > 0:
+            dx, dy = self._direcao_esquiva
+            self.x += dx * 15
+            self.y += dy * 15
+            self.tempo_esquiva -= 1
+            self.invencivel = max(self.invencivel, 2)
+        else:
+            self.x += dx * self.velocidade
+            self.y += dy * self.velocidade
         self.x = max(20, min(LARGURA - 20, self.x))
         self.y = max(40, min(ALTURA - 30, self.y))
         self.tilt += (dx * 5 - self.tilt) * 0.15
@@ -322,22 +353,31 @@ class Jogador:
         self.combo.adicionar_tiro()
         x, y = self.x, self.y - 20
         tipo = arma["tipo"]
+        dano = arma["dano"] + self.bonus_dano
+
+        if tipo == "padrao":
+            self.tiros_padrao += 1
+            if self.tiros_padrao % 5 == 0:
+                dano += 1
+
+        def cooldown(valor: int) -> int:
+            return max(2, round(valor * self.multiplicador_cadencia))
 
         if tipo == "metralhadora":
             if self.burst_left <= 0:
                 self.burst_left = arma["qtd"]
             self.burst_left -= 1
-            self.cooldown_tiro = 4 if self.burst_left > 0 else arma["cooldown"]
-            return [Projetil(x, y, 0, -arma["vel"], arma["dano"], arma["cor"],
+            self.cooldown_tiro = cooldown(4 if self.burst_left > 0 else arma["cooldown"])
+            return [Projetil(x, y, 0, -arma["vel"], dano, arma["cor"],
                              arma["raio"], tipo=tipo)]
 
-        self.cooldown_tiro = arma["cooldown"]
+        self.cooldown_tiro = cooldown(arma["cooldown"])
 
         if tipo == "duplo":
             return [
-                Projetil(x - 9, y, 0, -arma["vel"], arma["dano"], arma["cor"],
+                Projetil(x - 9, y, -0.7, -arma["vel"], dano, arma["cor"],
                          arma["raio"], tipo=tipo),
-                Projetil(x + 9, y, 0, -arma["vel"], arma["dano"], arma["cor"],
+                Projetil(x + 9, y, 0.7, -arma["vel"], dano, arma["cor"],
                          arma["raio"], tipo=tipo),
             ]
         if tipo == "espiral":
@@ -346,20 +386,20 @@ class Jogador:
             for i in range(arma["qtd"]):
                 a = self.angulo_arma + (i - 1) * 0.7
                 projs.append(Projetil(x, y, math.sin(a) * 2.2, -arma["vel"],
-                                      arma["dano"], arma["cor"], arma["raio"],
+                                      dano, arma["cor"], arma["raio"],
                                       tipo=tipo))
             return projs
         if tipo == "ion":
-            return [Projetil(x, y, 0, 0, arma["dano"], arma["cor"],
+            return [Projetil(x, y, 0, 0, dano, arma["cor"],
                              arma["raio"], tipo=tipo)]
         if tipo == "gauss":
-            return [Projetil(x, y, 0, -arma["vel"], arma["dano"], arma["cor"],
+            return [Projetil(x, y, 0, -arma["vel"], dano, arma["cor"],
                              arma["raio"], tipo=tipo)]
         if tipo == "nova":
-            return [Projetil(x, y, 0, -arma["vel"], arma["dano"], arma["cor"],
+            return [Projetil(x, y, 0, -arma["vel"], dano, arma["cor"],
                              arma["raio"], tipo=tipo)]
 
-        return [Projetil(x, y, 0, -arma["vel"], arma["dano"], arma["cor"],
+        return [Projetil(x, y, 0, -arma["vel"], dano, arma["cor"],
                          arma["raio"], tipo=tipo)]
 
     def selecionar_arma(self, indice: int) -> None:
@@ -385,6 +425,13 @@ class Jogador:
                  particulas: SistemaParticulas | None = None) -> None:
         if self.invencivel > 0 and (self.invencivel // 4) % 2 == 0:
             return
+        if self.tempo_esquiva > 0:
+            desenhar_glow(tela, CIANO, (self.x, self.y), self.raio + 18, 0.8)
+            dx, dy = self._direcao_esquiva
+            desenhar_glow(
+                tela, AZUL_CLARO, (self.x - dx * 24, self.y - dy * 24),
+                self.raio + 8, 0.45,
+            )
         self.skin.desenhar(tela, self, particulas)
         if self.escudo:
             pulso = 1 + 0.15 * math.sin(pygame.time.get_ticks() * 0.008)
