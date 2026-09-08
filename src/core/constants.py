@@ -8,10 +8,10 @@ from enum import Enum
 # Dimensoes e desempenho
 # ---------------------------------------------------------------------------
 
-LARGURA: int = 900
+LARGURA: int = 1280
 """Largura logica da superficie de jogo (pixels)."""
 
-ALTURA: int = 700
+ALTURA: int = 720
 """Altura logica da superficie de jogo (pixels)."""
 
 FPS: int = 60
@@ -80,6 +80,7 @@ class EstadoJogo(str, Enum):
     CONFIG = "CONFIG"
     PREPARANDO = "PREPARANDO"
     JOGANDO = "JOGANDO"
+    MELHORIA = "MELHORIA"
     PAUSA = "PAUSA"
     GAME_OVER = "GAME_OVER"
 

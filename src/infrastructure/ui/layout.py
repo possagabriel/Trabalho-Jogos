@@ -1,6 +1,6 @@
 """Responsive layout system: anchors, containers, proportions and safe areas.
 
-The game draws on a logical surface (900x700) that the core renderer scales
+The game draws on a logical surface (1280x720) that the core renderer scales
 to the window preserving proportions (letterbox / safe areas).  This module
 centralises the positioning of ALL UI: no rigid pixel coordinates should be
 used outside of it.

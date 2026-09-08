@@ -83,6 +83,15 @@ def test_cenario_tem_luzes_ambiente_preaquecidas():
     assert all(raio > 0 for _, raio, _ in cenario.luzes_ambiente)
 
 
+def test_cenario_perfil_desempenho_reduz_detalhes_visuais():
+    cenario = Cenario(1)
+    cenario.configurar_qualidade("DESEMPENHO")
+
+    assert cenario._passo_estrelas == 3
+    assert cenario._desenhar_luzes is False
+    assert cenario._desenhar_efeitos is False
+
+
 def test_cenario_desenha_efeitos_distorcao_e_raios():
     pygame.init()
     tela = pygame.Surface((LARGURA, ALTURA))
@@ -216,6 +225,15 @@ def test_atualizar_limita_particulas_ativas_em_picos():
                      for _ in range(700)]
     sp.atualizar()
     assert len(sp.particulas) == 480
+
+
+def test_perfil_desempenho_reduz_orcamento_de_particulas():
+    sp = SistemaParticulas()
+    sp.configurar_qualidade("DESEMPENHO")
+    sp.explosao(100, 100, (255, 0, 0), qtd=20)
+
+    assert len(sp.particulas) == 9
+    assert sp._limite_ativas == 220
 
 
 def test_particulas_desenham():
