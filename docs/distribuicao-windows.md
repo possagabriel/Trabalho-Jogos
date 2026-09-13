@@ -1,12 +1,18 @@
 # Executável Windows
 
-O workflow **Executável Windows** gera o arquivo portátil `VOID-SHIFT.exe` e o
+O workflow **Executáveis Desktop** gera o arquivo portátil `VOID-SHIFT.exe` e o
 instalador `VOID-SHIFT-Setup.exe` em uma máquina Windows, publicando ambos como
 artefato baixável da execução no GitHub Actions. Ele também publica
 `SHA256SUMS.txt`, com as somas de verificação dos dois arquivos.
 
+O arquivo `BUILD-COMMIT-Windows.txt` deve ser igual ao
+`BUILD-COMMIT-Linux.txt` da mesma execução. Isso garante que os dois pacotes
+foram produzidos a partir da mesma revisão da `main`.
+
 O executável inclui imagens, fontes e o ícone de Windows. Progresso e
 configurações ficam em `%LOCALAPPDATA%\VoidShift`, fora da pasta do aplicativo.
+Antes de publicar os artefatos, o workflow inicia o executável, simula três
+quadros e confirma uma gravação em diretório temporário.
 
 ## Download público por Release
 
@@ -24,8 +30,8 @@ Em um PowerShell, com Python 3.10 ou superior e o
 [Inno Setup 6](https://jrsoftware.org/isinfo.php) instalados:
 
 ```powershell
-py -m pip install -e ".[gpu,windows]"
-pyinstaller --noconfirm --clean --onefile --windowed --name VOID-SHIFT --icon assets/windows/void-shift.ico --add-data "images;images" --add-data "data/fonts;data/fonts" --collect-submodules src --collect-submodules game --collect-submodules OpenGL --hidden-import game.phase_select main.py
+py -m pip install -e ".[desktop]"
+py tools/build_desktop.py
 & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\void-shift.iss
 Get-FileHash dist/VOID-SHIFT.exe, dist/VOID-SHIFT-Setup.exe -Algorithm SHA256
 ```

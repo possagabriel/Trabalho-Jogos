@@ -166,6 +166,40 @@ def test_luz_radial_tamanho_e_alpha():
     assert surf.get_at((ext // 2, ext // 2)).a > 50
 
 
+def test_luz_retangular_respeita_margem_e_cache():
+    pygame.init()
+    primeira = smooth.luz_retangular((0, 180, 255), (300, 100), 10, 12, 0.6)
+    segunda = smooth.luz_retangular((0, 180, 255), (300, 100), 10, 12, 0.6)
+    assert primeira.get_size() == (324, 124)
+    assert primeira is segunda
+    assert (primeira.get_flags() & pygame.SRCALPHA)
+
+
+def test_paineis_grandes_nao_usam_glow_radial():
+    pygame.init()
+    smooth.limpar_cache()
+    tela = pygame.Surface((1280, 720), pygame.SRCALPHA)
+    rect = pygame.Rect(60, 70, 1160, 580)
+    luz_radial_original = smooth.luz_radial
+
+    def falhar_glow_radial(*_args, **_kwargs):
+        raise AssertionError("painel retangular tentou criar glow radial gigante")
+
+    smooth.luz_radial = falhar_glow_radial
+    try:
+        smooth.retangulo_suave(
+            tela, (20, 30, 50), rect, glow_cor=(0, 180, 255), glow_raio=12
+        )
+        smooth.desenhar_painel(
+            tela, (0, 180, 255), rect, glow_raio=18
+        )
+        smooth.desenhar_painel_cartoon(
+            tela, (0, 180, 255), rect, glow_raio=28
+        )
+    finally:
+        smooth.luz_radial = luz_radial_original
+
+
 def test_circulo_suave_cache_e_tamanho():
     pygame.init()
     a = smooth.circulo_suave((50, 100, 150), 12, brilho=1.0)

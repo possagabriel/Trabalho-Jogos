@@ -409,10 +409,13 @@ class HudJogo:
             return
         fps = max(0, round(getattr(jogo, "fps_atual", 0)))
         quadro = max(0, round(getattr(jogo, "tempo_quadro_ms", 0)))
+        p95 = max(0, round(getattr(jogo, "p95_quadro_ms", 0)))
+        fps_1_baixo = max(0, round(getattr(jogo, "fps_1_baixo", 0)))
         escala = "RÁPIDA" if getattr(jogo, "_escala_rapida", False) else "SUAVE"
-        chave = (fps, quadro, qualidade, escala)
+        chave = (fps, quadro, p95, fps_1_baixo, qualidade, escala)
         if chave != self._telemetria_chave:
-            texto = f"{fps:02d} FPS  {quadro:02d} ms  {qualidade}  {escala}"
+            texto = (f"{fps:02d} FPS  {quadro:02d} ms  P95 {p95:02d} ms  "
+                     f"1% {fps_1_baixo:02d} FPS  {qualidade}  {escala}")
             self._telemetria_surface = _render(self._f_padrao_xxs, texto, CIANO_HUD)
             self._telemetria_chave = chave
         if self._telemetria_surface is None:
