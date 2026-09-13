@@ -21,6 +21,7 @@ from src.runtime.domain.entities.enemies import Inimigo, InimigoEspecial, compos
 from src.runtime.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
 from src.runtime.presentation.hud import HudJogo
 from src.runtime.presentation.menu import Dialogo, MenuPrincipal
+from src.runtime.presentation.screens.upgrade_screen import TelaMelhorias
 from src.runtime.domain.world.particles import MensagemFlutuante, SistemaParticulas
 from src.runtime.domain.entities.player import Jogador
 from src.runtime.domain.entities.powerups import PowerUp, sortear_tipo
@@ -53,6 +54,7 @@ DICAS_CARREGAMENTO = [
     "Prepare-se para atravessar a fenda!",
     "Use combos para ganhar mais pontos!",
     "Troque de arma com as teclas 1 a 9.",
+    "Use X para esquivar e atravessar ataques por um instante.",
     "Abates carregam a Bomba Vortex (tecla E).",
     "Derrote entidades da Fenda para abrir novas dimensões.",
     "Skins raras caem dos inimigos cristalinos.",
@@ -83,7 +85,7 @@ class Jogo:
         pygame.init()
         self._configurar_backend_escala()
         self.config = config or Configuracoes()
-        self.janela = self._aplicar_modo_video()
+        self.janela = self._iniciar_modo_video()
         self.tela = pygame.Surface((LARGURA, ALTURA))
         self._criar_layout_ui()
         pygame.display.set_caption(TITULO)
@@ -122,6 +124,9 @@ class Jogo:
         self.flash = 0
         self.cenario = Cenario(1)
         self.particulas = SistemaParticulas()
+        self.fps_atual = float(FPS)
+        self.tempo_quadro_ms = 1000 / FPS
+        self._aplicar_qualidade_grafica()
         # superficies reutilizadas por frame (evita alocar a cada desenho)
         self._tela_sombra = pygame.Surface((LARGURA, ALTURA),
                                            pygame.SRCALPHA)
@@ -133,6 +138,7 @@ class Jogo:
         self.hitstop = 0
         self.recordes = SistemaProgressao.carregar_recordes()
         self.hud = HudJogo(self.layout)
+        self.tela_melhorias = TelaMelhorias(self.layout)
         self.menu = MenuPrincipal(self, self.layout)
         # --- estado do menu de pausa ---
         self._pausa_selecao = 0
@@ -165,10 +171,25 @@ class Jogo:
 
     # ----- modo de video -----
 
+    def _iniciar_modo_video(self) -> pygame.Surface:
+        """Abre o jogo com um modo de video seguro, inclusive apos uma falha.
+
+        Um modo exclusivo salvo anteriormente pode deixar de existir depois de
+        trocar de monitor ou driver. Nesse caso o jogo precisa abrir em janela
+        para que o jogador consiga ajustar a resolucao no menu.
+        """
+        try:
+            return self._aplicar_modo_video()
+        except pygame.error:
+            self.config["tela_cheia"] = False
+            self.config["resolucao"] = "1920x1080"
+            self.config.salvar()
+            return self._aplicar_modo_video()
+
     def _criar_layout_ui(self):
         """Mantem toda a interface na superficie logica do jogo.
 
-        Desenhar menu, HUD e gameplay no mesmo canvas de 900x700 evita que
+        Desenhar menu, HUD e gameplay no mesmo canvas 16:9 de 1280x720 evita que
         cada camada seja rasterizada novamente na resolucao do monitor. A
         janela fisica recebe apenas o quadro final em ``_apresentar``.
         """
@@ -202,6 +223,12 @@ class Jogo:
         except (pygame.error, TypeError):
             return pygame.display.set_mode(tamanho, flags)
 
+    @staticmethod
+    def _modo_tela_cheia_disponivel(tamanho) -> bool:
+        """Informa se o monitor oferece o modo exclusivo solicitado."""
+        modos = pygame.display.list_modes()
+        return modos in (-1, None) or tamanho in modos
+
     def _criar_janela_video(self, tamanho, flags):
         """Cria uma janela OpenGL quando houver suporte, com fallback seguro.
 
@@ -210,6 +237,8 @@ class Jogo:
         da superficie logica e feito pela GPU.
         """
         self._apresentador_gpu = None
+        if flags & pygame.FULLSCREEN and not self._modo_tela_cheia_disponivel(tamanho):
+            raise pygame.error("Resolucao indisponivel em tela cheia")
         if GPU_DISPONIVEL and ApresentadorGPU is not None:
             try:
                 janela = self._criar_modo_com_vsync(
@@ -218,21 +247,13 @@ class Jogo:
                 return janela
             except Exception:  # driver, contexto ou PyOpenGL indisponivel
                 self._apresentador_gpu = None
-        try:
-            return pygame.display.set_mode(tamanho, flags)
-        except pygame.error:
-            # Alguns drivers nao oferecem todos os modos exclusivos. Nesse
-            # caso a tela cheia continua utilizavel na resolucao do desktop.
-            if flags & pygame.FULLSCREEN:
-                try:
-                    desktop = pygame.display.get_desktop_sizes()[0]
-                    return pygame.display.set_mode(desktop, flags)
-                except (IndexError, pygame.error):
-                    pass
-            raise
+        janela = pygame.display.set_mode(tamanho, flags)
+        if flags & pygame.FULLSCREEN and janela.get_size() != tamanho:
+            raise pygame.error("O driver nao aplicou a resolucao solicitada")
+        return janela
 
     def _escala_janela(self):
-        """Fator de escala e offsets para encaixar a tela 900x700 na janela.
+        """Fator de escala e offsets para encaixar a tela 1280x720 na janela.
 
         Usa scale-to-fit (proporcao preservada) e centraliza a cena, criando
         as "safe areas" (letterbox) nos lados. Com isso o menu e o jogo ficam
@@ -286,7 +307,7 @@ class Jogo:
         return self.janela
 
     def _apresentar(self):
-        """Redimensiona a superficie interna (900x700) para a janela.
+        """Redimensiona a superficie interna (1280x720) para a janela.
 
         No modo AJUSTAR preserva as proporcoes com safe areas (letterbox);
         no modo PREENCHE estica a cena. flip() e chamado por _desenhar().
@@ -333,11 +354,18 @@ class Jogo:
     def _atualizar_modo_desempenho(self, tempo_quadro_ms: float) -> None:
         """Alterna o upscale de CPU sem travar o jogo em máquinas modestas.
 
-        A renderização normal usa ``smoothscale``. Se vários quadros passam
-        do orçamento de 60 FPS, o próximo trecho usa ``scale``, que é bem mais
-        leve. A qualidade suave retorna somente após estabilidade sustentada,
-        evitando uma alternância visual a cada quadro.
+        O perfil ALTA sempre usa ``smoothscale`` para não degradar a imagem.
+        Nos demais perfis, se vários quadros passam do orçamento de 60 FPS, o
+        próximo trecho usa ``scale``, que é mais leve. A qualidade suave
+        retorna somente após estabilidade sustentada, evitando uma alternância
+        visual a cada quadro.
         """
+        if self.config["qualidade_grafica"] == "ALTA":
+            self._escala_rapida = False
+            self._quadros_lentos = 0
+            self._quadros_estaveis = 0
+            return
+
         orcamento = 1000 / FPS
         if tempo_quadro_ms > orcamento * 1.15:
             self._quadros_lentos = min(8, self._quadros_lentos + 1)
@@ -353,6 +381,16 @@ class Jogo:
             self._escala_rapida = True
         elif self._quadros_estaveis >= 90:
             self._escala_rapida = False
+
+    def _aplicar_qualidade_grafica(self) -> None:
+        """Aplica o perfil visual atual aos efeitos que consomem mais CPU."""
+        qualidade = self.config["qualidade_grafica"]
+        self.cenario.configurar_qualidade(qualidade)
+        self.particulas.configurar_qualidade(qualidade)
+        if qualidade == "ALTA":
+            self._escala_rapida = False
+            self._quadros_lentos = 0
+            self._quadros_estaveis = 0
 
     # ----- utilidades -----
 
@@ -503,10 +541,14 @@ class Jogo:
                         or teclas[pygame.K_LCTRL] or teclas[pygame.K_RCTRL])
         if usando_boost and self.boost > 0 and self.jogador.vivo:
             self.boost = max(0.0, self.boost - 0.008)
-            self.jogador.velocidade = 5.0 * self.sensibilidade * 2.1
+            self.jogador.velocidade = (
+                5.0 * self.sensibilidade * self.jogador.multiplicador_velocidade * 2.1
+            )
         else:
             self.boost = min(1.0, self.boost + 0.006)
-            self.jogador.velocidade = 5.0 * self.sensibilidade
+            self.jogador.velocidade = (
+                5.0 * self.sensibilidade * self.jogador.multiplicador_velocidade
+            )
         # energia: esgota ao turbinar, regenera aos poucos
         if usando_boost and self.boost > 0:
             self.energia = max(0.0, self.energia - 1.6)
@@ -578,6 +620,10 @@ class Jogo:
         if random.random() < 0.5:
             self.particulas.rastro(self.jogador.x + random.uniform(-4, 4),
                                    self.jogador.y + 20, (140, 160, 180), 1.2)
+        if self.jogador.esquiva_iniciada:
+            self.particulas.faiscas(
+                self.jogador.x, self.jogador.y, CIANO, 12,
+            )
 
         if not self.fila_onda and not self.inimigos and not self.boss:
             bonus = int((100 + 50 * self.jogador.nivel) *
@@ -586,7 +632,7 @@ class Jogo:
             self.mensagens.append(MensagemFlutuante(
                 f"NIVEL {self.jogador.nivel} CONCLUIDO! +{bonus}",
                 LARGURA // 2, ALTURA // 2 + 30, VERDE, 90))
-            self._iniciar_nivel(self.jogador.nivel + 1)
+            self.progressao_controller.oferecer_melhorias(self.jogador.nivel + 1)
 
         if not self.jogador.vivo:
             self._fim_de_jogo()
@@ -723,7 +769,8 @@ class Jogo:
                                indice == self.indice_equipamento % max(1, len(itens)))
                 if linha == 0:
                     arma = ARMARIA[item]
-                    nome, detalhe = arma["nome"], f"DANO {arma['dano']}  //  RECARGA {arma['cooldown']}"
+                    nome = arma["nome"]
+                    detalhe = arma["papel"].upper()
                     equipado_agora = item == equipado
                     numero = f"{item + 1:02d}"
                 else:

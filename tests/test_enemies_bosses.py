@@ -316,6 +316,31 @@ def test_boss_ataques_por_nome():
                 assert p.origem == "inimigo"
 
 
+def test_ataques_do_boss_tem_velocidade_limitada():
+    jog = novo_jogador()
+    jog.x, jog.y = LARGURA - 60, ALTURA - 60
+    for cid in range(1, 7):
+        boss = Boss(BOSSES_POR_CENARIO[cid]["nivel"], Cenario(cid))
+        boss.vida = boss.vida_max * 0.3
+        for nome in boss.ataques:
+            for projetil in boss._executar_ataque(nome, jog, 80, 80):
+                assert math.hypot(projetil.vel_x, projetil.vel_y) <= 7.01
+
+
+def test_tiro_teleguiado_do_boss_nao_cruza_o_mapa_em_um_quadro():
+    jog = novo_jogador()
+    jog.x, jog.y = LARGURA - 60, ALTURA - 60
+    boss = Boss(15, Cenario(3))
+    tiros = boss._executar_ataque("teleguiado", jog, 80, 80)
+
+    for tiro in tiros:
+        origem = (tiro.x, tiro.y)
+        tiro.atualizar_teleguiado(jog.x, jog.y)
+        deslocamento = math.hypot(tiro.x - origem[0], tiro.y - origem[1])
+        assert deslocamento <= Boss.VELOCIDADE_TELEGUIADO + 0.01
+        assert not tiro.rect.colliderect(jog.rect)
+
+
 def test_boss_fases_de_ataque():
     boss = Boss(5, Cenario(1))
     boss.ataques = ["leque", "8dir", "mira"]
@@ -335,6 +360,15 @@ def test_boss_atacar_gera_projeteis():
     random.seed(5)
     projs = boss.atualizar(jog)
     assert projs
+
+
+def test_boss_muda_fase_comportamental_e_emite_pulso():
+    boss = Boss(5, Cenario(1))
+    boss.entrando = False
+    boss.vida = boss.vida_max * 0.5
+    boss.atualizar(novo_jogador())
+    assert boss.fase_atual == 2
+    assert boss.pulso_fase > 0
 
 
 def test_boss_sofrer_dano_e_enraivecer():

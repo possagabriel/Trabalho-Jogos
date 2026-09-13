@@ -21,11 +21,13 @@ import pygame
 
 from src.runtime.presentation.screens.continue_screen import TelaContinuarJogo
 from src.core.constants import BRANCO, CIANO, DOURADO, QUANTUM_CYAN, VERDE
-from src.infrastructure.ui.layout import ALTURA_BASE, CENTRO, LARGURA_BASE, TOPO_DIREITA, \
-    TOPO_ESQUERDA, Layout
+from src.infrastructure.ui.layout import (
+    ALTURA_BASE, CENTRO, LARGURA_BASE, TOPO_DIREITA, TOPO_ESQUERDA, Layout,
+)
 from src.runtime.presentation.screens.main_menu_screen import TelaPrincipalJogo
-from src.runtime.presentation.screens.menu_screens import (TelaConfiguracoes, TelaContinuar, TelaLoja,
-                           TelaPrincipal, TelaRecordes)
+from src.runtime.presentation.screens.menu_screens import (
+    TelaConfiguracoes, TelaContinuar, TelaLoja, TelaPrincipal, TelaRecordes,
+)
 from src.runtime.presentation.screens.records_screen import TelaRecordesJogo
 from src.runtime.presentation.screens.store_screen import TelaLojaJogo
 from src.runtime.presentation.screens.settings_screen import TelaConfiguracoesJogo
@@ -34,7 +36,7 @@ from src.runtime.presentation.menu_scene import DestaqueMenu, FundoCinematico, H
     TransicaoMissao, texto_espacado
 from src.runtime.domain.entities.player import Jogador
 from src.runtime.infrastructure.persistence.save_system import ARQUIVO_RECORDES, SistemaProgressao
-from src.core.settings import ACOES_CONTROLE, RESOLUCOES, TEMAS
+from src.core.settings import ACOES_CONTROLE, QUALIDADES_GRAFICAS, RESOLUCOES, TEMAS
 from src.runtime.infrastructure.persistence.shop import LojaSkins
 from src.runtime.infrastructure.graphics.smooth import desenhar_cantos, desenhar_circulo as \
     desenhar_circulo_suave, desenhar_glow, ease_out, ease_out_back, \
@@ -694,24 +696,32 @@ class MenuPrincipal:
         self._iniciar_missao(self.jogo._preparar_jogo)
 
     def _botoes_continuar(self):
-        l = self.layout
-        largura = l.px(205)
-        cx = l.x(0.5)
-        x1 = cx - largura - l.px(15)
-        x2 = cx + l.px(15)
-        b0 = BotaoNeon("CONTINUAR",
-                       (x1, l.altura - l.px(118), largura, l.px(48)))
-        b1 = BotaoNeon("NOVO JOGO",
-                       (x2, l.altura - l.px(118), largura, l.px(48)))
-        b2 = BotaoNeon("VOLTAR",
-                       (cx - l.px(90), l.altura - l.px(60), l.px(180),
-                        l.px(42)))
-        return [b0, b1, b2]
+        return self._botoes_rodape(["CONTINUAR", "NOVO JOGO", "VOLTAR"])
 
     def _painel_central(self, largura_design, altura_design, dy_design=0):
         """Container central (ancora CENTRO) a partir de px de design."""
         return self.layout.rect(CENTRO, largura_design / LARGURA_BASE,
                                 altura_design / ALTURA_BASE, dy=dy_design)
+
+    def _botoes_rodape(self, nomes: list[str]) -> list[BotaoNeon]:
+        """Cria uma fileira padronizada de ações para todos os submenus."""
+        l = self.layout
+        quantidade = max(1, len(nomes))
+        espaco = l.px(18)
+        largura_disponivel = min(l.largura - l.px(80), l.px(760))
+        largura = min(
+            l.px(180),
+            (largura_disponivel - espaco * (quantidade - 1)) // quantidade,
+        )
+        altura = l.px(46)
+        total = largura * quantidade + espaco * (quantidade - 1)
+        x = l.x(0.5) - total // 2
+        y = l.altura - l.px(68)
+        return [
+            BotaoNeon(nome, (x + indice * (largura + espaco), y,
+                              largura, altura))
+            for indice, nome in enumerate(nomes)
+        ]
 
     def _desenhar_continuar(self, tela):
         l = self.layout
@@ -784,24 +794,38 @@ class MenuPrincipal:
 
     def _rects_loja(self):
         l = self.layout
-        colunas, celula = 4, l.px(205)
-        x_inicio = (l.largura - colunas * celula) // 2
-        y_inicio = l.px(122)
+        painel = self._painel_loja()
+        colunas = 4
+        celula = (painel.width - l.px(40)) // colunas
+        x_inicio = painel.x + l.px(20)
+        y_inicio = painel.y + l.px(54)
         return [pygame.Rect(x_inicio + (i % colunas) * celula,
-                            y_inicio + (i // colunas) * l.px(150),
-                            celula - l.px(10), l.px(138))
+                            y_inicio + (i // colunas) * l.px(144),
+                            celula - l.px(10), l.px(132))
                 for i in range(len(self.jogo.loja.skins))]
 
-    def _botoes_loja(self):
+    def _painel_loja(self) -> pygame.Rect:
+        """Retorna o painel padronizado que contém a grade do hangar."""
         l = self.layout
+        largura = min(l.largura - l.px(80), l.px(860))
+        altura = min(l.altura - l.px(210), l.px(500))
+        return pygame.Rect(l.x(0.5) - largura // 2, l.px(108),
+                           largura, altura)
+
+    def _painel_recordes(self) -> pygame.Rect:
+        """Retorna o painel de recordes alinhado aos demais submenus."""
+        l = self.layout
+        largura = min(l.largura - l.px(80), l.px(1090))
+        altura = min(l.altura - l.px(210), l.px(500))
+        return pygame.Rect(l.x(0.5) - largura // 2, l.px(108),
+                           largura, altura)
+
+    def _botoes_loja(self):
         nomes = ["COMPRAR", "EQUIPAR", "PRÉVIA", "VOLTAR"]
-        largura, espaco = l.px(140), l.px(18)
-        total = largura * 4 + espaco * 3
-        x = (l.largura - total) // 2
-        y = l.altura - l.px(94)
-        return {nome.lower(): BotaoNeon(nome, (x + i * (largura + espaco),
-                                               y, largura, l.px(46)))
-                for i, nome in enumerate(nomes)}
+        return dict(zip(
+            (nome.lower() for nome in nomes),
+            self._botoes_rodape(nomes),
+        ))
 
     def _desenhar_preview_skin(self, tela, skin, x, y):
         prev = Jogador(skin=skin)
@@ -1005,9 +1029,7 @@ class MenuPrincipal:
     # ------------------------------------------------------------- recordes
 
     def _botao_voltar(self):
-        l = self.layout
-        return BotaoNeon("VOLTAR", (l.x(0.5) - l.px(90), l.altura - l.px(64),
-                                    l.px(180), l.px(46)))
+        return self._botoes_rodape(["VOLTAR"])[0]
 
     def _desenhar_recordes(self, tela):
         l = self.layout
@@ -1077,6 +1099,8 @@ class MenuPrincipal:
             ("Tema", "tema"),
             ("Aspecto", "aspecto"),
             ("Ajustar Tela", "ajuste"),
+            ("Qualidade Visual", "qualidade"),
+            ("Monitor de FPS", "desempenho"),
         ]
 
     _CONFIG_VISIVEIS = 6
@@ -1172,9 +1196,19 @@ class MenuPrincipal:
         self._aplicar_resolucao(indice)
 
     def _toggle_tela_cheia(self):
-        self.jogo.config["tela_cheia"] = not self.jogo.config["tela_cheia"]
+        anterior = self.jogo.config["tela_cheia"]
+        self.jogo.config["tela_cheia"] = not anterior
+        try:
+            self.jogo._aplicar_modo_video()
+        except pygame.error:
+            self.jogo.config["tela_cheia"] = anterior
+            self.jogo._aplicar_modo_video()
+            self.notificacoes.adicionar(
+                "Resolucao nao suportada em tela cheia. Escolha outra resolucao.",
+                "erro",
+            )
+            return
         self.jogo.config.salvar()
-        self.jogo._aplicar_modo_video()
         estado = "LIGADA" if self.jogo.config["tela_cheia"] else "DESLIGADA"
         self.notificacoes.adicionar(f"Tela cheia {estado}", "info")
 
@@ -1184,6 +1218,26 @@ class MenuPrincipal:
         indice = (indice + delta) % len(TEMAS)
         self.jogo.config["tema"] = TEMAS[indice]
         self.jogo.config.salvar()
+
+    def _ciclar_qualidade_grafica(self, delta: int = 1) -> None:
+        """Alterna o perfil visual e aplica-o imediatamente durante a partida."""
+        atual = self.jogo.config["qualidade_grafica"]
+        indice = (QUALIDADES_GRAFICAS.index(atual)
+                  if atual in QUALIDADES_GRAFICAS else 0)
+        indice = (indice + delta) % len(QUALIDADES_GRAFICAS)
+        qualidade = QUALIDADES_GRAFICAS[indice]
+        self.jogo.config["qualidade_grafica"] = qualidade
+        self.jogo._aplicar_qualidade_grafica()
+        self.jogo.config.salvar()
+        self.notificacoes.adicionar(f"Qualidade visual: {qualidade}", "info")
+
+    def _toggle_monitor_desempenho(self) -> None:
+        """Exibe ou oculta a telemetria leve de FPS no HUD."""
+        ativo = not self.jogo.config["mostrar_desempenho"]
+        self.jogo.config["mostrar_desempenho"] = ativo
+        self.jogo.config.salvar()
+        estado = "LIGADO" if ativo else "DESLIGADO"
+        self.notificacoes.adicionar(f"Monitor de FPS {estado}", "info")
 
     def _aplicar_slider(self, indice, fracao):
         if indice == 0:
@@ -1217,6 +1271,10 @@ class MenuPrincipal:
             self.jogo.config["aspecto"] = ("PREENCHE" if atual == "AJUSTAR"
                                            else "AJUSTAR")
             self.jogo.config.salvar()
+        elif indice == 9:
+            self._ciclar_qualidade_grafica(delta)
+        elif indice == 10 and delta > 0:
+            self._toggle_monitor_desempenho()
         self._som("navegar")
 
     def _painel_controles(self):
@@ -1271,6 +1329,10 @@ class MenuPrincipal:
                     self._ajustar_config(1)
                 elif i == 8:
                     self._abrir_ajuste_tela()
+                elif i == 9:
+                    self._ciclar_qualidade_grafica()
+                elif i == 10:
+                    self._toggle_monitor_desempenho()
                 elif linhas[i][1] == "slider":
                     self._aplicar_slider(i, self._slider_fracao(pos[0]))
                 return
@@ -2114,8 +2176,8 @@ class MenuPrincipal:
         versao = self._espacado(f, "v3.0 // ENTRE NA FENDA", 1,
                                 (110, 122, 160))
         self._blit_alfa(tela, versao,
-                        (l.largura - l.px(46) - versao.get_width(),
-                         l.altura - l.px(32)),
+                        (l.x(0.5) - versao.get_width() // 2,
+                         l.altura - l.px(28)),
                         int(alfa * 0.7))
 
     def _desenhar_menu(self, tela):
@@ -2149,8 +2211,14 @@ class MenuPrincipal:
         tema = tema_atual(self.jogo.config["tema"])
         self.fundo.desenhar(tela)
         skin = self.jogo.loja.pegar_skin(self.jogo.loja.skin_atual)
-        self.nave.desenhar(tela, skin, l.px(856), l.px(560),
-                           2.2 * l.escala, tema)
+        self.nave.desenhar(
+            tela,
+            skin,
+            l.largura - l.px(92),
+            l.altura - l.px(158),
+            1.35 * l.escala,
+            tema,
+        )
         self.hud.desenhar(tela, tema)
         if self.subestado == "FASES":
             self.phase_screen.draw(tela)

@@ -18,7 +18,7 @@ Componentes:
 Uso:
 
     hud = HudJogo()
-    hud.desenhar(tela, jogo)   # tela = superficie logica 900x700
+    hud.desenhar(tela, jogo)   # tela = superficie logica 1280x720
 
 O ``HudJogo`` le apenas os atributos de que precisa de ``jogo`` (duck typing),
 entao funciona com o ``core.Jogo`` real ou com um objeto de demonstracao.
@@ -339,6 +339,8 @@ class HudJogo:
         self._f_titulo_m = l.fonte_titulo(24)
         self._f_titulo_g = l.fonte_titulo(34)
         self._f_numero = l.fonte_titulo(30)
+        self._telemetria_surface = None
+        self._telemetria_chave = None
 
     # ------------------------------------------------------------- dados
 
@@ -377,6 +379,7 @@ class HudJogo:
             "especial": max(0.0, min(1.0, getattr(jogo, "especial", 0.0))),
             "energia": max(0.0, min(100.0, getattr(jogo, "energia", 100.0))),
             "vel": getattr(jog, "velocidade", 5.0),
+            "esquiva": max(0.0, 1 - getattr(jog, "cooldown_esquiva", 0) / 90),
             "boss": jogo.boss,
         }
 
@@ -393,7 +396,33 @@ class HudJogo:
         self._base_direita(tela, d, t)
         self._base_centro(tela, d, t)
         self._barra_boss(tela, d, t)
+        self._desenhar_telemetria(tela, jogo)
         return d
+
+    def _desenhar_telemetria(self, tela, jogo) -> None:
+        """Mostra FPS e perfil visual somente quando o monitor esta habilitado."""
+        try:
+            if not jogo.config["mostrar_desempenho"]:
+                return
+            qualidade = jogo.config["qualidade_grafica"]
+        except (AttributeError, KeyError):
+            return
+        fps = max(0, round(getattr(jogo, "fps_atual", 0)))
+        quadro = max(0, round(getattr(jogo, "tempo_quadro_ms", 0)))
+        escala = "RÁPIDA" if getattr(jogo, "_escala_rapida", False) else "SUAVE"
+        chave = (fps, quadro, qualidade, escala)
+        if chave != self._telemetria_chave:
+            texto = f"{fps:02d} FPS  {quadro:02d} ms  {qualidade}  {escala}"
+            self._telemetria_surface = _render(self._f_padrao_xxs, texto, CIANO_HUD)
+            self._telemetria_chave = chave
+        if self._telemetria_surface is None:
+            return
+        l = self.layout
+        rect = self._telemetria_surface.get_rect(midtop=(l.x(0.5), l.px(112)))
+        fundo = rect.inflate(l.px(16), l.px(8))
+        retangulo_suave(tela, (9, 18, 38), fundo, l.px(5), 1,
+                         glow_cor=CIANO_HUD, glow_raio=l.px(4))
+        _blit_alfa(tela, self._telemetria_surface, rect, 220)
 
     # -------------------------------------------------------- modulos
 
@@ -544,7 +573,7 @@ class HudJogo:
     def _base_esquerda(self, tela, d, t):
         l = self.layout
         m = l.margem(14)
-        centro = (m + l.px(46), l.altura - m - l.px(58))
+        centro = (m + l.px(46), l.altura - m - l.px(82))
         raio = l.px(38)
         fracao = d["boost"]
         if fracao < 0.25:
@@ -564,6 +593,12 @@ class HudJogo:
         barra_vel = pygame.Rect(vx - l.px(30), vy + l.px(10), l.px(60), l.px(3))
         _barra_fina(tela, l, barra_vel, min(1.0, d["vel"] / 12.0),
                     self._paleta["primaria"], brilho=False)
+        esquiva = _render(
+            self._f_padrao_xxs,
+            "ESQUIVA PRONTA" if d["esquiva"] >= 1 else f"ESQUIVA {d['esquiva']:.0%}",
+            self._paleta["primaria"] if d["esquiva"] >= 1 else CINZA_HUD,
+        )
+        _blit_alfa(tela, esquiva, esquiva.get_rect(center=(vx, vy + l.px(25))), 220)
 
     def _base_direita(self, tela, d, t):
         l = self.layout
@@ -605,7 +640,7 @@ class HudJogo:
         largura = l.px(236)
         altura = l.px(10)
         m = l.margem(14)
-        y = l.altura - m - altura
+        y = l.altura - m - altura - l.px(18)
         barra = pygame.Rect(cx - largura // 2, y, largura, altura)
 
         pronto = d["especial"] >= 1.0
@@ -660,3 +695,10 @@ class HudJogo:
                           raio_canto=4)
         desenhar_glow(tela, OURO_HUD, barra.center, max(barra.w, barra.h),
                       0.25)
+
+        fase_atual = getattr(boss, "fase_atual", None)
+        if fase_atual is None:
+            fase_atual = 1 if fracao > 0.66 else 2 if fracao > 0.33 else 3
+        fase = _render(self._f_padrao_xxs, f"FASE {fase_atual}/3", OURO_HUD)
+        _blit_alfa(tela, fase, fase.get_rect(midleft=(barra.right + l.px(14),
+                                                      barra.centery)), 220)

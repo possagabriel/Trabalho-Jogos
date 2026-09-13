@@ -426,7 +426,8 @@ class HudMenu:
         coord_txt = "GRID %.0f.%.0f" % (self._coord % 1000,
                                         self._coord * 3 % 1000)
         self._desenhar_texto(tela, "coord", l.fonte_texto(11), coord_txt,
-                             (l.largura - l.px(34), l.px(42)), dim, 2, "direita")
+                             (l.largura - l.px(34), l.px(58)), dim, 2,
+                             "direita")
 
         # radar inferior esquerdo
         cx, cy = l.px(74), l.px(588)

@@ -132,7 +132,9 @@ class ControladorCombate:
         sessao.sons.tocar("explosao")
         sessao.adicionar_trauma(0.2)
         sessao.inimigos_abates += 1
-        sessao.especial = min(1.0, sessao.especial + 0.02)
+        sessao.especial = min(
+            1.0, sessao.especial + 0.02 * sessao.jogador.multiplicador_especial,
+        )
         if inimigo.tipo == "bomba":
             sessao.particulas.explosao(
                 inimigo.x, inimigo.y, (255, 120, 40), 24, 6.5)
@@ -263,6 +265,8 @@ class ControladorCombate:
             else:
                 sessao.sons.tocar("acerto")
                 sessao.particulas.faiscas(proj.x, proj.y, proj.cor, 5)
+            if proj.tipo == "plasma":
+                self._dano_secundario_plasma(proj, inimigo)
             acertou = True
             if not penetrante:
                 return True
@@ -275,6 +279,18 @@ class ControladorCombate:
                 sessao.adicionar_trauma(0.15)
             acertou = True
         return acertou
+
+    def _dano_secundario_plasma(self, proj: Projetil, alvo_principal: Inimigo) -> None:
+        """Aplica a onda curta do plasma aos alvos vizinhos do impacto."""
+        sessao = self.sessao
+        sessao.particulas.explosao(proj.x, proj.y, proj.cor, 10, 3)
+        sessao.adicionar_trauma(0.1)
+        dano = max(1, proj.dano // 2)
+        for inimigo in sessao.inimigos[:]:
+            if inimigo is alvo_principal or self.distancia(inimigo, proj) > 58:
+                continue
+            if inimigo.sofrer_dano(dano):
+                self.explodir_inimigo(inimigo)
 
     def atualizar_powerups(self) -> None:
         """Atualiza quedas e aplica as coletas do jogador."""

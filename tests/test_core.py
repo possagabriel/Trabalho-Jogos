@@ -36,6 +36,7 @@ from game.render_controller import ControladorRenderizacao  # noqa: E402
 from game.enemies import Inimigo, InimigoEspecial  # noqa: E402
 from game.powerups import PowerUp  # noqa: E402
 from game.weapons import ARMARIA, Projetil  # noqa: E402
+from src.core.settings import Configuracoes  # noqa: E402
 
 
 def _patch_recordes():
@@ -211,6 +212,22 @@ def test_verificar_desbloqueio_arma_nao_repete():
     assert 1 in jogo.jogador.armas_desbloqueadas
 
 
+def test_escolha_de_melhoria_aplica_efeito_e_inicia_proximo_nivel():
+    jogo = novo_jogo()
+    jogo.nivel_pendente = 2
+    jogo.melhorias_oferecidas = [{
+        "id": "potencia", "nome": "MUNIÇÃO PESADA",
+        "descricao": "+1 dano", "nivel": 0,
+    }]
+    jogo.estado = EstadoJogo.MELHORIA
+
+    assert jogo.progressao_controller.selecionar_melhoria(0) is True
+
+    assert jogo.jogador.bonus_dano == 1
+    assert jogo.jogador.nivel == 2
+    assert jogo.estado is EstadoJogo.JOGANDO
+
+
 # ---------------------------------------------------------------------------
 # Combate
 # ---------------------------------------------------------------------------
@@ -223,6 +240,20 @@ def test_projetil_jogador_remove_inimigo():
     jogo._atualizar_projeteis()
     assert not jogo.inimigos
     assert jogo.inimigos_abates == 1
+
+
+def test_plasma_causa_dano_secundario_em_alvo_proximo():
+    jogo = novo_jogo()
+    _limpar_campo(jogo)
+    principal = Inimigo("forja", 1, x=450, y=170)
+    vizinho = Inimigo("forja", 1, x=490, y=170)
+    vida_vizinho = vizinho.vida
+    jogo.inimigos = [principal, vizinho]
+    plasma = Projetil(450, 170, 0, -7, 3, (150, 50, 200), 8, tipo="plasma")
+
+    assert jogo._projetil_jogador_atinge(plasma) is True
+
+    assert vizinho.vida < vida_vizinho
 
 
 def test_ion_atravessa_inimigos_na_coluna():
@@ -507,17 +538,30 @@ def test_hud_e_composto_no_canvas_logico_antes_da_apresentacao():
 
 def test_apresentador_gpu_recebe_um_unico_frame_logico_e_destino_fisico():
     jogo = Jogo()
-    jogo.janela = pygame.Surface((1800, 1400))
+    jogo.janela = pygame.Surface((1920, 1080))
     jogo._apresentador_gpu = mock.Mock()
 
     jogo._apresentar()
 
     jogo._apresentador_gpu.apresentar.assert_called_once_with(
-        jogo.tela, (0, 0, 1800, 1400), (1800, 1400), (8, 8, 13))
+        jogo.tela, (0, 0, 1920, 1080), (1920, 1080), (8, 8, 13))
+
+
+def test_canvas_logico_16_por_9_preenche_full_hd_sem_barras():
+    jogo = Jogo()
+    jogo.janela = pygame.Surface((1920, 1080))
+
+    escala, off_x, off_y = jogo._escala_janela()
+
+    assert (jogo.tela.get_width(), jogo.tela.get_height()) == (1280, 720)
+    assert escala == 1.5
+    assert off_x == 0
+    assert off_y == 0
 
 
 def test_modo_desempenho_troca_escala_somente_apos_atraso_sustentado():
     jogo = Jogo()
+    jogo.config["qualidade_grafica"] = "EQUILIBRADA"
     for _ in range(8):
         jogo._atualizar_modo_desempenho(25)
     assert jogo._escala_rapida is True
@@ -528,11 +572,46 @@ def test_modo_desempenho_troca_escala_somente_apos_atraso_sustentado():
 
 def test_modo_desempenho_reage_rapido_a_quedas_sustentadas():
     jogo = Jogo()
+    jogo.config["qualidade_grafica"] = "EQUILIBRADA"
     for _ in range(3):
         jogo._atualizar_modo_desempenho(25)
     assert jogo._escala_rapida is False
     jogo._atualizar_modo_desempenho(25)
     assert jogo._escala_rapida is True
+
+
+def test_qualidade_alta_nunca_troca_para_escala_pixelada():
+    jogo = Jogo()
+    jogo.config["qualidade_grafica"] = "ALTA"
+    jogo._escala_rapida = True
+
+    for _ in range(30):
+        jogo._atualizar_modo_desempenho(25)
+
+    assert jogo._escala_rapida is False
+    assert jogo._quadros_lentos == 0
+
+
+def test_qualidade_visual_e_aplicada_ao_mundo_e_as_particulas():
+    jogo = Jogo()
+    jogo.config["qualidade_grafica"] = "DESEMPENHO"
+
+    jogo._aplicar_qualidade_grafica()
+
+    assert jogo.cenario.qualidade == "DESEMPENHO"
+    assert jogo.particulas.qualidade == "DESEMPENHO"
+
+
+def test_aplicar_qualidade_alta_restaura_escala_suave_imediatamente():
+    jogo = Jogo()
+    jogo.config["qualidade_grafica"] = "ALTA"
+    jogo._escala_rapida = True
+    jogo._quadros_lentos = 4
+
+    jogo._aplicar_qualidade_grafica()
+
+    assert jogo._escala_rapida is False
+    assert jogo._quadros_lentos == 0
 
 
 def test_modo_opengl_tenta_habilitar_vsync():
@@ -553,9 +632,32 @@ def test_modo_video_usa_resolucao_escolhida_em_tela_cheia():
 
     jogo._criar_janela_video.assert_called_once_with((1024, 768), pygame.FULLSCREEN)
 
+
+def test_modo_tela_cheia_recusa_resolucao_que_o_monitor_nao_oferece():
+    with mock.patch("src.runtime.application.core.pygame.display.list_modes",
+                    return_value=[(1920, 1080)]):
+        assert Jogo._modo_tela_cheia_disponivel((1280, 720)) is False
+
+
+def test_inicio_restaura_janela_se_o_modo_salvo_nao_estiver_disponivel():
+    config = Configuracoes()
+    config["tela_cheia"] = True
+    config["resolucao"] = "1920x1080"
+    config.salvar = mock.Mock()
+    janela = pygame.Surface((1920, 1080))
+
+    with mock.patch.object(Jogo, "_criar_janela_video",
+                           side_effect=[pygame.error(), janela]):
+        jogo = Jogo(config=config)
+
+    assert jogo.config["tela_cheia"] is False
+    assert jogo.config["resolucao"] == "1920x1080"
+    config.salvar.assert_called_once()
+
 def test_desenha_estados():
     jogo = novo_jogo()
-    for estado in ("MENU", "JOGANDO", "PAUSA", "GAME_OVER", "PREPARANDO"):
+    jogo.progressao_controller.oferecer_melhorias(2)
+    for estado in ("MENU", "JOGANDO", "MELHORIA", "PAUSA", "GAME_OVER", "PREPARANDO"):
         jogo.estado = estado
         jogo._desenhar()
     jogo.estado = "JOGANDO"

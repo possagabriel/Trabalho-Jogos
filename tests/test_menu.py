@@ -58,6 +58,46 @@ def test_construcao_subestado_e_opcoes():
     assert menu.x_opcoes <= menu.layout.largura
 
 
+def test_menu_widescreen_separa_titulo_da_coluna_de_opcoes():
+    _, menu = novo_menu()
+
+    limite_titulo = menu.layout.px(520)
+    inicio_opcoes = menu.x_opcoes - menu.layout.px(46)
+
+    assert menu.layout.largura == 1280
+    assert inicio_opcoes > limite_titulo
+
+
+def test_submenus_usam_a_mesma_fileira_de_acoes():
+    _, menu = novo_menu()
+    grupos = [
+        menu._botoes_continuar(),
+        list(menu._botoes_loja().values()),
+        [menu._botao_voltar()],
+        menu._botoes_rodape(["SALVAR", "VOLTAR"]),
+    ]
+
+    alturas = {botao.rect.height for grupo in grupos for botao in grupo}
+    posicoes_y = {botao.rect.y for grupo in grupos for botao in grupo}
+
+    assert len(alturas) == 1
+    assert len(posicoes_y) == 1
+
+
+def test_painel_do_hangar_contem_todos_os_cards():
+    _, menu = novo_menu()
+    painel = menu._painel_loja()
+
+    assert all(painel.contains(rect) for rect in menu._rects_loja())
+
+
+def test_paineis_amplos_dos_submenus_compartilham_alinhamento():
+    _, menu = novo_menu()
+
+    assert menu._painel_loja().top == menu._painel_recordes().top
+    assert menu._painel_loja().height == menu._painel_recordes().height
+
+
 def test_construcao_carregou_fundo_do_menu():
     _, menu = novo_menu()
     assert menu.fundo.fundo_imagem is not None or menu.fundo.gradiente
@@ -84,6 +124,18 @@ def test_ciclar_resolucao_preserva_tela_cheia_ativa():
 
     assert jogo.config["tela_cheia"] is True
     jogo._aplicar_modo_video.assert_called_once()
+
+
+def test_tela_cheia_reverte_se_a_resolucao_nao_for_suportada():
+    jogo, menu = novo_menu()
+    jogo.config.salvar = mock.Mock()
+    jogo._aplicar_modo_video = mock.Mock(side_effect=[pygame.error(), None])
+
+    menu._toggle_tela_cheia()
+
+    assert jogo.config["tela_cheia"] is False
+    assert jogo._aplicar_modo_video.call_count == 2
+    jogo.config.salvar.assert_not_called()
 
 
 def test_resolucao_so_e_salva_apos_confirmacao():
@@ -147,6 +199,20 @@ def test_teste_de_resolucao_nao_emite_som():
     menu._reverter_resolucao()
 
     menu._som.assert_not_called()
+
+
+def test_qualidade_visual_e_monitor_de_fps_sao_configuraveis():
+    jogo, menu = novo_menu()
+    jogo._aplicar_qualidade_grafica = mock.Mock()
+    jogo.config.salvar = mock.Mock()
+
+    menu._ciclar_qualidade_grafica()
+    menu._toggle_monitor_desempenho()
+
+    assert jogo.config["qualidade_grafica"] == "EQUILIBRADA"
+    assert jogo.config["mostrar_desempenho"] is True
+    jogo._aplicar_qualidade_grafica.assert_called_once()
+    assert jogo.config.salvar.call_count == 2
 
 
 def test_logo_principal_e_gerado_por_tipografia():

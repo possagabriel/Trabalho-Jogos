@@ -17,6 +17,16 @@ if TYPE_CHECKING:
     from src.runtime.application.core import Jogo
 
 
+MELHORIAS = {
+    "potencia": ("MUNIÇÃO PESADA", "+1 de dano em todos os disparos"),
+    "cadencia": ("CICLO ACELERADO", "12% menos intervalo entre tiros"),
+    "motor": ("MOTOR VETORIAL", "+8% de velocidade de movimento"),
+    "blindagem": ("BLINDAGEM", "+1 de vida máxima e reparo imediato"),
+    "escudo": ("ESCUDO DE FENDA", "Recebe um escudo protetor"),
+    "especial": ("REATOR VORTEX", "+25% de carga especial por abate"),
+}
+
+
 class ControladorProgressao:
     """Coordena inicio de partida, ondas, bosses e saltos dimensionais."""
 
@@ -46,7 +56,11 @@ class ControladorProgressao:
         jogo.novo_recorde = False
         jogo.moedas_ganhas = 0
         jogo.textos_acao = []
+        jogo.melhorias_oferecidas = []
+        jogo.melhoria_selecionada = 0
+        jogo.nivel_pendente = 1
         jogo.cenario = Cenario(1)
+        jogo._aplicar_qualidade_grafica()
         self.iniciar_nivel(1)
         jogo.mensagens.append(MensagemFlutuante(
             f"Bem-vindo, {nome}!", LARGURA // 2, ALTURA // 2 + 20, CIANO, 110))
@@ -92,6 +106,55 @@ class ControladorProgressao:
         jogo.fila_onda = [random.choice(tipos) for _ in range(quantidade)]
         jogo.xs_onda = list(xs)
 
+    def oferecer_melhorias(self, proximo_nivel: int) -> None:
+        """Pausa o avanço e sorteia três aprimoramentos para o jogador."""
+        jogo = self.jogo
+        jogo.nivel_pendente = proximo_nivel
+        # O setor já foi conquistado; refletir o avanço imediatamente também
+        # mantém checkpoint, telemetria e integrações externas consistentes.
+        jogo.jogador.nivel = proximo_nivel
+        chaves = random.sample(list(MELHORIAS), 3)
+        jogo.melhorias_oferecidas = [
+            {
+                "id": chave,
+                "nome": MELHORIAS[chave][0],
+                "descricao": MELHORIAS[chave][1],
+                "nivel": jogo.jogador.melhorias.get(chave, 0),
+            }
+            for chave in chaves
+        ]
+        jogo.melhoria_selecionada = 0
+        jogo.estado = EstadoJogo.MELHORIA
+
+    def selecionar_melhoria(self, indice: int) -> bool:
+        """Instala a opção escolhida e começa o nível pendente."""
+        jogo = self.jogo
+        if not 0 <= indice < len(jogo.melhorias_oferecidas):
+            return False
+        chave = jogo.melhorias_oferecidas[indice]["id"]
+        jogador = jogo.jogador
+        jogador.melhorias[chave] = jogador.melhorias.get(chave, 0) + 1
+        if chave == "potencia":
+            jogador.bonus_dano += 1
+        elif chave == "cadencia":
+            jogador.multiplicador_cadencia = max(
+                0.55, jogador.multiplicador_cadencia * 0.88,
+            )
+        elif chave == "motor":
+            jogador.multiplicador_velocidade *= 1.08
+        elif chave == "blindagem":
+            jogador.max_vida += 1
+            jogador.vida = min(jogador.max_vida, jogador.vida + 1)
+        elif chave == "escudo":
+            jogador.escudo = True
+        elif chave == "especial":
+            jogador.multiplicador_especial *= 1.25
+        nivel = jogo.nivel_pendente
+        jogo.melhorias_oferecidas = []
+        jogo.estado = EstadoJogo.JOGANDO
+        self.iniciar_nivel(nivel)
+        return True
+
     def verificar_desbloqueio_arma(self) -> None:
         """Libera armas disponiveis para o nivel atual."""
         jogo = self.jogo
@@ -125,6 +188,7 @@ class ControladorProgressao:
             jogo._apresentar()
             jogo.relogio.tick(FPS)
         jogo.cenario = Cenario(novo_id)
+        jogo._aplicar_qualidade_grafica()
         jogo.progresso.desbloquear_cenario(novo_id)
         jogo.particulas.limpar()
         jogo.particulas.espiral_revelacao(LARGURA // 2, ALTURA // 2, cor)

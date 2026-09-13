@@ -103,7 +103,7 @@ def interpolar_cor(cor1, cor2, t):
 # ---------------------------------------------------------------------------
 
 def gradiente_vertical(topo, base):
-    """Surface 900x700 com gradiente suave vertical (cacheada)."""
+    """Superficie logica com gradiente suave vertical cacheado."""
     chave = (tuple(topo[:3]), tuple(base[:3]))
     if chave in _CACHE_GRADIENTE:
         return _CACHE_GRADIENTE[chave]

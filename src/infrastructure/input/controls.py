@@ -20,11 +20,14 @@ DEFAULT_CONTROLES: Dict[str, int] = {
     "esquerda": pygame.K_LEFT,
     "direita": pygame.K_RIGHT,
     "atirar": pygame.K_SPACE,
+    "esquivar": pygame.K_x,
     "pausar": pygame.K_p,
 }
 
 # List of all valid action names.
-ACOES_CONTROLE = ["cima", "baixo", "esquerda", "direita", "atirar", "pausar"]
+ACOES_CONTROLE = [
+    "cima", "baixo", "esquerda", "direita", "atirar", "esquivar", "pausar",
+]
 
 # Available resolutions for the display selector.
 RESOLUCOES = [

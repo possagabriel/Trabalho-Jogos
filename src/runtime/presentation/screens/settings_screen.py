@@ -9,7 +9,6 @@ import pygame
 from src.core.constants import BRANCO, QUANTUM_CYAN, VERDE
 from src.infrastructure.graphics.theme import tema_atual
 from src.runtime.infrastructure.graphics.smooth import retangulo_suave
-from src.runtime.presentation.ui import BotaoNeon
 from src.core.settings import ACOES_CONTROLE, RESOLUCOES
 
 if TYPE_CHECKING:
@@ -27,7 +26,15 @@ class TelaConfiguracoesJogo:
         menu = self.menu
         layout = menu.layout
         tema = tema_atual(menu.jogo.config["tema"])
-        menu._cabecalho_sub_animado(tela, "CONFIGURACOES", tema["primaria"])
+        if menu.config_submodo == "ajuste":
+            menu._desenhar_ajuste(tela)
+            return
+        titulos = {
+            "controles": "CONTROLES",
+            "resolucao": "RESOLUÇÃO",
+        }
+        titulo = titulos.get(menu.config_submodo, "CONFIGURAÇÕES")
+        menu._cabecalho_sub_animado(tela, titulo, tema["primaria"])
         if menu.remapando:
             menu._desenhar_remapando(tela)
             return
@@ -36,9 +43,6 @@ class TelaConfiguracoesJogo:
             return
         if menu.config_submodo == "resolucao":
             menu._desenhar_resolucoes(tela)
-            return
-        if menu.config_submodo == "ajuste":
-            menu._desenhar_ajuste(tela)
             return
         painel = menu._painel_config()
         menu._painel_sub(tela, painel, tema)
@@ -50,15 +54,20 @@ class TelaConfiguracoesJogo:
             indice = inicio + deslocamento
             rotulo, tipo = linhas[indice]
             progresso = menu._frac_sub(0.12 + deslocamento * 0.05, 0.35)
-            dx, dy, alfa = menu._entrada_anim(progresso, dx_design=30, dy_design=18)
+            dx, dy, alfa = menu._entrada_anim(
+                progresso, dx_design=30, dy_design=18)
             y = menu._y_linha_config(deslocamento) + dy
             selecionada = indice == menu.config_selecao
-            texto = menu.fonte_media.render(rotulo, True, BRANCO if selecionada else (190, 195, 235))
-            menu._blit_alfa(tela, texto, texto.get_rect(midleft=(rotulo_x + dx, y)), int(255 * alfa))
+            cor_texto = BRANCO if selecionada else (190, 195, 235)
+            texto = menu.fonte_media.render(rotulo, True, cor_texto)
+            menu._blit_alfa(
+                tela, texto, texto.get_rect(midleft=(rotulo_x + dx, y)),
+                int(255 * alfa))
             if selecionada:
                 retangulo_suave(
                     tela, (255, 200, 100),
-                    pygame.Rect(indicador_x + dx, y - layout.px(24), layout.px(6), layout.px(30)),
+                    pygame.Rect(indicador_x + dx, y - layout.px(24),
+                                layout.px(6), layout.px(30)),
                     3,
                 )
             self._desenhar_valor(
@@ -66,12 +75,12 @@ class TelaConfiguracoesJogo:
             )
         if len(linhas) > menu._CONFIG_VISIVEIS:
             menu._desenhar_indicador_config(tela, painel, inicio, fim)
-        for indice, botao in enumerate((
-            BotaoNeon("SALVAR", (layout.x(0.5) - layout.px(190), layout.altura - layout.px(80), layout.px(180), layout.px(44))),
-            BotaoNeon("VOLTAR", (layout.x(0.5) + layout.px(10), layout.altura - layout.px(80), layout.px(180), layout.px(44))),
-        )):
+        botoes = menu._botoes_rodape(["SALVAR", "VOLTAR"])
+        for indice, botao in enumerate(botoes):
             botao.atualizar(menu.mouse)
-            menu._desenhar_botao_entrada(tela, botao, menu.fonte_media, menu._frac_sub(0.62 + indice * 0.06, 0.25))
+            progresso = menu._frac_sub(0.62 + indice * 0.06, 0.25)
+            menu._desenhar_botao_entrada(
+                tela, botao, menu.fonte_media, progresso)
 
     def tratar_tecla(self, evento: pygame.event.Event) -> bool:
         """Trata navegacao e abertura dos submodos de configuracao."""
@@ -130,11 +139,19 @@ class TelaConfiguracoesJogo:
         """Abre ou ajusta o controle atualmente selecionado."""
         menu = self.menu
         if menu.config_selecao == 2:
-            menu.config_submodo, menu.resolucao_selecao, menu.sub_anim = "resolucao", menu._indice_resolucao_atual(), 0.0
+            menu.config_submodo = "resolucao"
+            menu.resolucao_selecao = menu._indice_resolucao_atual()
+            menu.sub_anim = 0.0
         elif menu.config_selecao == 5:
-            menu.config_submodo, menu.controle_selecao, menu.sub_anim = "controles", 0, 0.0
+            menu.config_submodo = "controles"
+            menu.controle_selecao = 0
+            menu.sub_anim = 0.0
         elif menu.config_selecao == 8:
             menu._abrir_ajuste_tela()
+        elif menu.config_selecao == 9:
+            menu._ciclar_qualidade_grafica()
+        elif menu.config_selecao == 10:
+            menu._toggle_monitor_desempenho()
         else:
             menu._ajustar_config(1)
 
@@ -149,8 +166,10 @@ class TelaConfiguracoesJogo:
         if menu.config_submodo == "controles":
             painel = menu._painel_controles()
             for indice, acao in enumerate(ACOES_CONTROLE):
-                rect = pygame.Rect(painel.x + layout.px(30), painel.y + layout.px(64) + indice * layout.px(48),
-                                   painel.width - layout.px(60), layout.px(40))
+                rect = pygame.Rect(
+                    painel.x + layout.px(30),
+                    painel.y + layout.px(64) + indice * layout.px(48),
+                    painel.width - layout.px(60), layout.px(40))
                 if rect.collidepoint(pos):
                     menu.controle_selecao, menu.remapando = indice, acao
                     menu._som("navegar")
@@ -168,11 +187,13 @@ class TelaConfiguracoesJogo:
             else:
                 self._abrir_selecao()
             return
-        salvar = pygame.Rect(layout.x(0.5) - layout.px(190), layout.altura - layout.px(80), layout.px(180), layout.px(44))
-        if salvar.collidepoint(pos):
+        salvar, voltar = menu._botoes_rodape(["SALVAR", "VOLTAR"])
+        if salvar.rect.collidepoint(pos):
             menu.jogo.config.salvar()
             menu.notificacoes.adicionar("Configuracoes salvas!", "sucesso")
             menu._som("equipar")
+        elif voltar.rect.collidepoint(pos):
+            menu._voltar_menu()
 
     def _desenhar_valor(
         self, tela, indice, tipo, y, dx, alfa, tema, controle_x, percentual_x,
@@ -180,21 +201,46 @@ class TelaConfiguracoesJogo:
         """Desenha o controle correspondente a uma linha de configuracao."""
         menu, layout = self.menu, self.menu.layout
         if tipo == "slider":
-            chave = "sensibilidade" if indice == 4 else ("musica_volume" if indice == 0 else "efeitos_volume")
-            fracao = max(0.0, min(1.0, menu.jogo.config[chave] - 0.5 if indice == 4 else menu.jogo.config[chave]))
+            if indice == 4:
+                chave = "sensibilidade"
+                valor = menu.jogo.config[chave] - 0.5
+            else:
+                chave = "musica_volume" if indice == 0 else "efeitos_volume"
+                valor = menu.jogo.config[chave]
+            fracao = max(0.0, min(1.0, valor))
             menu._desenhar_slider(tela, y, fracao)
-            percentual = int((0.5 + fracao) * 100) if indice == 4 else int(fracao * 100)
-            texto = menu.fonte_media.render(f"{percentual}%", True, (170, 175, 220))
-            menu._blit_alfa(tela, texto, texto.get_rect(midleft=(percentual_x + dx, y)), int(255 * alfa))
+            base = 0.5 + fracao if indice == 4 else fracao
+            percentual = int(base * 100)
+            texto = menu.fonte_media.render(
+                f"{percentual}%", True, (170, 175, 220))
+            menu._blit_alfa(
+                tela, texto, texto.get_rect(midleft=(percentual_x + dx, y)),
+                int(255 * alfa))
         elif tipo == "toggle":
             estado = menu.jogo.config["tela_cheia"]
             menu._desenhar_toggle(tela, controle_x + dx, y, estado)
-            texto = menu.fonte_media.render("LIGADO" if estado else "DESLIGADO", True, VERDE if estado else (160, 160, 190))
-            menu._blit_alfa(tela, texto, texto.get_rect(midleft=(controle_x + layout.px(90) + dx, y)), int(255 * alfa))
+            texto = menu.fonte_media.render(
+                "LIGADO" if estado else "DESLIGADO", True,
+                VERDE if estado else (160, 160, 190))
+            posicao = (controle_x + layout.px(90) + dx, y)
+            menu._blit_alfa(
+                tela, texto, texto.get_rect(midleft=posicao), int(255 * alfa))
         else:
-            valores = {"resolucao": menu.jogo.config["resolucao"], "tema": menu.jogo.config["tema"],
-                       "aspecto": menu.jogo.config["aspecto"], "controles": "PERSONALIZAR >", "ajuste": "CALIBRAR >"}
+            valores = {
+                "resolucao": menu.jogo.config["resolucao"],
+                "tema": menu.jogo.config["tema"],
+                "aspecto": menu.jogo.config["aspecto"],
+                "controles": "PERSONALIZAR >",
+                "ajuste": "CALIBRAR >",
+                "qualidade": menu.jogo.config["qualidade_grafica"],
+                "desempenho": ("LIGADO" if menu.jogo.config["mostrar_desempenho"]
+                                else "DESLIGADO"),
+            }
             valor = valores.get(tipo, "")
-            cor = tema["secundaria"] if tipo == "resolucao" else QUANTUM_CYAN if tipo == "aspecto" else (200, 150, 255)
+            cor = (tema["secundaria"] if tipo in ("resolucao", "qualidade")
+                   else QUANTUM_CYAN if tipo in ("aspecto", "desempenho")
+                   else (200, 150, 255))
             texto = menu.fonte_media.render(valor, True, cor)
-            menu._blit_alfa(tela, texto, texto.get_rect(midleft=(controle_x + dx, y)), int(255 * alfa))
+            menu._blit_alfa(
+                tela, texto, texto.get_rect(midleft=(controle_x + dx, y)),
+                int(255 * alfa))

@@ -47,6 +47,10 @@ class ControladorRenderizacao:
         elif jogo.estado is EstadoJogo.JOGANDO:
             jogo._desenhar_jogo()
             self.desenhar_hud()
+        elif jogo.estado is EstadoJogo.MELHORIA:
+            jogo._desenhar_jogo()
+            self.desenhar_hud()
+            jogo.tela_melhorias.desenhar(jogo.tela, jogo)
         elif jogo.estado is EstadoJogo.PAUSA:
             jogo._desenhar_jogo()
             self.desenhar_hud()

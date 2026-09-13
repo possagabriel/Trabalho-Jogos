@@ -47,14 +47,17 @@ SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python main.py
 
 ### Resolução e responsividade
 
-O jogo renderiza numa superfície interna de **900×700** e a ajusta à janela
-preservando a proporção (scale-to-fit). O posicionamento de **toda** a UI passa
+O jogo renderiza numa superfície interna **16:9 de 1280×720** e a ajusta à
+janela preservando a proporção (scale-to-fit). Em Full HD, a cena ocupa toda a
+tela sem ser esticada; o custo continua bem menor que uma renderização nativa
+em 1920×1080. O posicionamento de **toda** a UI passa
 pelo módulo `game/layout.py` — um sistema responsivo com **ancoras** (grade
 3x3), **containers** ancorados, **proporções** da superfície, **escala** de uma
 base de design (900×700) e **safe areas** (margem interna). Nenhum elemento usa
 coordenada rígida em pixels: se a superfície lógica mudar de tamanho, o menu se
 recompõe automaticamente.
 
+- **Inicialização padrão:** abre em **janela Full HD** (`1920x1080`).
 - **Resoluções suportadas:** `900x700`, `1024x768`, `1280x720`, `1280x800`,
   `1366x768`, `1440x900`, `1600x900`, `1680x1050`, `1920x1080`, `2560x1080`,
   `2560x1440`, `3440x1440`, `3840x2160` (a lista vive em `settings.RESOLUCOES`;
@@ -63,9 +66,17 @@ recompõe automaticamente.
   - `AJUSTAR` (padrão): *scale-to-fit* com **safe areas** (letterbox) em
     `VOID_BLACK`, mantendo proporções iguais em qualquer formato de tela.
   - `PREENCHE`: estica a cena para preencher a janela inteira.
-- **Tela cheia:** usa a resolução escolhida no menu (sem `SCALED`, sem
-  esticar). Alterar a resolução mantém a tela cheia ligada; se o monitor não
-  suportar o modo selecionado, o jogo volta automaticamente à resolução nativa.
+- **Tela cheia:** usa exatamente a resolução escolhida no menu (sem `SCALED`,
+  sem esticar). Alterar a resolução mantém a tela cheia ligada; se o monitor
+  não suportar o modo selecionado, o jogo restaura a configuração anterior.
+- **Qualidade visual:** em **Config → Qualidade Visual**, escolha `ALTA`,
+  `EQUILIBRADA` ou `DESEMPENHO`. `ALTA` preserva o redimensionamento suave em
+  qualquer situação; os outros perfis podem usar uma escala mais leve durante
+  quedas de FPS, além de reduzir detalhes do fundo e partículas. Inimigos,
+  colisões e regras da partida não mudam.
+- **Monitor de FPS:** em **Config → Monitor de FPS**, habilite uma leitura
+  discreta de FPS, tempo de quadro, perfil visual e modo de escala durante a
+  partida. Ele começa desligado e a configuração é persistida.
 - **Ajustar Tela** (Config → Ajustar Tela): calibra a imagem para o monitor
   (TVs com overscan, telas com bordas cortadas etc.). Com setas move a imagem
   (4 px por passo), `W/S` aplica zoom (0.9–1.2), `R` reseta e `Enter` confirma
@@ -280,13 +291,16 @@ sem elas usa a paleta padrão da marca ciano/magenta):
 | Jogador | topo-esquerda | ícone da nave, `PLAYER 01`, vida segmentada + numérica, escudo (ciano), energia |
 | Score | topo-direita | `SCORE` grande, `HIGH SCORE`, abates, multiplicador combo |
 | Setor | topo-centro | `SECTOR xx`, nome da região e barra de progresso da fase (discreta) |
-| Boost | base-esquerda | medidor circular com ticks, velocidade |
+| Boost | base-esquerda | medidor circular, velocidade e recarga da esquiva |
 | Arma | base-direita | ícone geométrico da arma, nome, `LVL`, carga/munição |
 | Especial | base-centro | barra de especial com `SPECIAL READY` pulsando quando cheia (tecla `E`) |
-| Boss | topo-centro | barra dourada segmentada com nome (só aparece com chefe em tela) |
+| Boss | topo-centro | barra dourada segmentada com nome e fase comportamental |
 
 Os medidores novos (`boost`, `especial`, `energia`) são mantidos pelo core:
 SHIFT/LCTRL turbina (drena boost e energia), abates carregam o especial.
+`X` executa uma esquiva curta com invulnerabilidade e recarga; a tecla pode
+ser remapeada em Configurações. Entre níveis, três módulos aleatórios permitem
+especializar dano, cadência, motor, blindagem, escudo ou carga do especial.
 
 Para ver todos os componentes sobre um fundo neutro em 1920x1080:
 

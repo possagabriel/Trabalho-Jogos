@@ -205,6 +205,29 @@ def test_jogador_cooldown_diminui():
     assert jog.cooldown_tiro == 4
 
 
+def test_esquiva_move_concede_invulnerabilidade_e_exige_recarga():
+    jog = novo_jogador()
+    y_inicial = jog.y
+    jog.atualizar(_teclas(pygame.K_UP, pygame.K_x))
+    assert jog.esquiva_iniciada is True
+    assert jog.y == y_inicial - 15
+    assert jog.invencivel > 0
+    assert jog.cooldown_esquiva == 90
+
+    jog.atualizar(_teclas())
+    jog.atualizar(_teclas(pygame.K_x))
+    assert jog.esquiva_iniciada is False
+
+
+def test_tiro_padrao_tem_disparo_critico_a_cada_cinco_tiros():
+    jog = novo_jogador()
+    danos = []
+    for _ in range(5):
+        danos.append(jog.atirar()[0].dano)
+        jog.cooldown_tiro = 0
+    assert danos == [1, 1, 1, 1, 2]
+
+
 def test_jogador_atira_todas_as_armas():
     for indice, arma in enumerate(ARMARIA):
         jog = novo_jogador()
