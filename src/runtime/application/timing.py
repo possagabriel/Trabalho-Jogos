@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from src.core.constants import FPS
 
-
 PASSO_FIXO = 1.0 / FPS
 MAXIMO_PASSOS_POR_QUADRO = 5
 
