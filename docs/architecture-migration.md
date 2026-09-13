@@ -41,7 +41,9 @@ mas não são o local para adicionar comportamento.
 | Tema visual | `src.infrastructure.graphics.theme` | `game.theme` | `tests/test_src_migration.py` |
 | Layout responsivo | `src.infrastructure.ui.layout` | `game.layout` | `tests/test_src_migration.py` |
 | Configurações | `src.core.settings` | `game.settings` (alias de módulo) | `tests/test_src_migration.py` |
+| JSON atômico e backup | `src.shared.persistence` | `game.persistence` (alias de módulo) | `tests/test_settings_save_shop.py` |
 | Runtime executável organizado | `src.runtime` por camada | fachadas em `game` | `tests/test_runtime_module_layout.py` |
+| Overlay do arsenal | `src.runtime.presentation.equipment_overlay` | chamada fina em `Jogo` | `tests/test_cross_platform.py` |
 | Domínio (jogador, inimigos, bosses, projéteis) | `src.domain` | pendente: integrar no fluxo executável |
 | Ponto de entrada | `src.core.application` | `main.py` | `tests/test_application_entrypoint.py` |
 

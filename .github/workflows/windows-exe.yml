@@ -2,6 +2,7 @@ name: Executáveis Desktop
 
 on:
   workflow_dispatch:
+  pull_request:
   push:
     branches:
       - main
@@ -22,6 +23,11 @@ jobs:
         run: python -m pip install --upgrade pip ".[desktop]"
       - name: Criar executável
         run: python tools/build_desktop.py
+      - name: Validar inicialização do executável
+        shell: pwsh
+        run: |
+          & .\dist\VOID-SHIFT.exe --smoke-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Assinar executável quando houver certificado
         shell: pwsh
         env:
@@ -96,11 +102,16 @@ jobs:
         run: python -m pip install --upgrade pip ".[desktop]"
       - name: Criar executável
         run: python tools/build_desktop.py
+      - name: Validar inicialização do executável
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: ./dist/VOID-SHIFT/VOID-SHIFT --smoke-test
       - name: Empacotar e registrar commit do build
         run: |
-          chmod +x dist/VOID-SHIFT
+          chmod +x dist/VOID-SHIFT/VOID-SHIFT
           echo "${{ github.sha }}" > dist/BUILD-COMMIT-Linux.txt
-          tar -C dist -czf dist/VOID-SHIFT-Linux-x86_64.tar.gz VOID-SHIFT
+          tar -czf dist/VOID-SHIFT-Linux-x86_64.tar.gz -C dist VOID-SHIFT
           cd dist
           sha256sum VOID-SHIFT-Linux-x86_64.tar.gz > SHA256SUMS-Linux.txt
       - name: Publicar executável baixável

@@ -14,8 +14,9 @@ artefatos do workflow **Executáveis Desktop**. Veja as instruções de
 [distribuição para Windows](docs/distribuicao-windows.md).
 
 No Linux, a mesma Release inclui `VOID-SHIFT-Linux-x86_64.tar.gz`. Extraia o
-arquivo, marque `VOID-SHIFT` como executável se necessário e abra-o. Builds de
-teste e instruções locais estão em
+arquivo e abra `VOID-SHIFT/VOID-SHIFT`. O formato de pasta autocontida reduz o
+tempo de abertura e evita depender da extração em diretórios temporários. Builds
+de teste e instruções locais estão em
 [distribuição para Linux](docs/distribuicao-linux.md).
 
 Os dois pacotes são gerados no mesmo workflow e no mesmo commit. Os arquivos
@@ -56,6 +57,20 @@ Sem áudio/vídeo (CI, servidores, debugging):
 ```bash
 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python main.py
 ```
+
+### Backup e transferência de progresso
+
+Cada gravação substitui o arquivo de forma atômica e mantém uma cópia `.bak`.
+Se o arquivo principal estiver corrompido, o jogo tenta recuperar essa cópia.
+Para levar o progresso entre Linux e Windows, use o mesmo executável/Python:
+
+```bash
+python main.py --export-save progresso.json
+python main.py --import-save progresso.json
+```
+
+Os comandos equivalentes também funcionam com `VOID-SHIFT.exe` no Windows e
+`VOID-SHIFT/VOID-SHIFT` no Linux.
 
 ### Resolução e responsividade
 
@@ -166,12 +181,13 @@ falsa) → `JOGANDO` → `PAUSA` / `GAME_OVER`.
 
 ### Loop principal (`core.Jogo.executar`)
 
-A cada frame, na ordem:
+A cada quadro renderizado, na ordem:
 
-1. `_tratar_eventos()` — eventos do SDL (teclado, mouse, sair).
-2. `_atualizar()` — avança o estado do mundo conforme `self.estado`.
-3. `_desenhar()` — desenha o cenário atual + HUD + overlays.
-4. `relogio.tick(FPS)` — trava a 60 FPS.
+1. `relogio.tick(FPS)` mede e limita o tempo real do quadro.
+2. `_tratar_eventos()` processa teclado, mouse e saída do SDL.
+3. `RelogioSimulacao` converte o tempo acumulado em passos fixos de 1/60 s.
+4. `_atualizar()` avança o mundo de zero a cinco vezes, sem espiral de atraso.
+5. `_desenhar()` apresenta uma vez o cenário, HUD e overlays.
 
 ### Combate (`_atualizar_jogando`)
 
@@ -211,9 +227,10 @@ arquivos ficam em `%LOCALAPPDATA%\VoidShift`; no Linux, em
 | `settings.json` | Configurações: volumes, resolução, tela cheia, sensibilidade, controles, tema, aspecto |
 | `skins.json` | Catálogo de skins (criado na primeira execução, espelha `player.SKINS`) |
 
-**Fluxo de gravação:** `MenuPrincipal`/`Jogo` mutam os objetos em memória
+**Fluxo de gravação:** `MenuPrincipal`/`Jogo` alteram os objetos em memória
 (loja, config, progresso) e chamam `_salvar_tudo()` /
-`config.salvar()` que serializam em disco. `SistemaProgressao.sincronizar_loja`
+`config.salvar()` que serializam em disco por substituição atômica. A versão
+anterior é mantida como `.bak` para recuperação. `SistemaProgressao.sincronizar_loja`
 garante que moedas/skins da `LojaSkins` sejam espelhadas no save.
 
 ---
@@ -253,10 +270,16 @@ O jogo roda a 60 FPS; as regras abaixo mantêm isso:
    `_tela_flash` e `_tela_fade` do `core` para overlays.
 3. **Cacheie superfícies caras.** Ex.: `_CACHE_RAIOS` em `scenarios.py`
    evita recriar os raios de luz a cada frame.
-4. **Evite `pygame.draw.*` em loops quentes**; prefira `smooth.*` (cacheado).
-5. **Supersampling** (`_SCALA_AA`) já é aplicado em polígonos/retângulos —
+4. **Colisões usam grade espacial.** Consulte `GradeEspacial` em vez de comparar
+   cada projétil com todos os inimigos.
+5. **Evite `pygame.draw.*` em loops quentes**; prefira `smooth.*` (cacheado).
+6. **Supersampling** (`_SCALA_AA`) já é aplicado em polígonos/retângulos —
    não re-renderize na mão.
-6. Fontes são cacheadas por tamanho em `fonts.py`.
+7. Fontes são cacheadas por tamanho em `fonts.py`.
+
+O monitor de desempenho mostra tempo atual, p95 e 1% low. A CI também executa
+`python -m tools.benchmark_runtime --check` nos dois sistemas para detectar
+regressões severas na busca de colisões.
 
 ---
 

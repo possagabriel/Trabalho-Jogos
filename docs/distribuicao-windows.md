@@ -11,6 +11,8 @@ foram produzidos a partir da mesma revisão da `main`.
 
 O executável inclui imagens, fontes e o ícone de Windows. Progresso e
 configurações ficam em `%LOCALAPPDATA%\VoidShift`, fora da pasta do aplicativo.
+Antes de publicar os artefatos, o workflow inicia o executável, simula três
+quadros e confirma uma gravação em diretório temporário.
 
 ## Download público por Release
 

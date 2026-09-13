@@ -20,10 +20,11 @@ def argumentos_distribuicao(
     """
     plataforma = plataforma or sys.platform
     separador = ";" if plataforma.startswith("win") else ":"
+    formato = "--onefile" if plataforma.startswith("win") else "--onedir"
     argumentos = [
         "--noconfirm",
         "--clean",
-        "--onefile",
+        formato,
         "--windowed",
         "--name",
         "VOID-SHIFT",

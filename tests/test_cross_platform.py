@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pygame
 
+import main
 from src.infrastructure.graphics.renderer import MainRenderer
 from src.runtime.application.core import Jogo
 from src.shared import user_data
@@ -47,6 +48,8 @@ def test_build_desktop_usa_separador_correto_por_sistema(tmp_path) -> None:
     assert f"{tmp_path / 'images'}:images" in linux
     assert "--icon" in windows
     assert "--icon" not in linux
+    assert "--onefile" in windows
+    assert "--onedir" in linux
     assert windows[-1] == str(tmp_path / "main.py")
     assert linux[-1] == str(tmp_path / "main.py")
 
@@ -78,3 +81,11 @@ def test_runtime_reutiliza_buffer_no_fallback_sem_gpu() -> None:
 
     assert primeiro is segundo
     assert rapido is primeiro
+
+
+def test_cli_executa_smoke_test_sem_abrir_jogo(monkeypatch) -> None:
+    chamado = []
+    monkeypatch.setattr(main, "executar_smoke_test", lambda: chamado.append(True) or 0)
+
+    assert main.cli(["--smoke-test"]) == 0
+    assert chamado == [True]

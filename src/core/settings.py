@@ -3,20 +3,18 @@
 from __future__ import annotations
 
 import json
-import logging
 import os
 from typing import Any
 
 import pygame
 
+from src.shared.persistence import carregar_json_resiliente, salvar_json_atomico
 from src.shared.user_data import diretorio_dados
 
 from .constants import ALTURA, LARGURA
 
 PASTA_DADOS = diretorio_dados()
 ARQUIVO_CONFIG = os.path.join(PASTA_DADOS, "settings.json")
-LOGGER = logging.getLogger(__name__)
-
 RESOLUCOES = ["900x700", "1024x768", "1280x720", "1280x800", "1366x768",
               "1440x900", "1600x900", "1680x1050", "1920x1080", "2560x1080",
               "2560x1440", "3440x1440", "3840x2160"]
@@ -56,8 +54,7 @@ class Configuracoes:
 
     def _carregar(self) -> dict[str, Any]:
         try:
-            with open(ARQUIVO_CONFIG, "r", encoding="utf-8") as arquivo:
-                dados = json.load(arquivo)
+            dados = carregar_json_resiliente(ARQUIVO_CONFIG)
             valores = dict(_DEFAULT)
             valores.update(dados)
             controles = dict(DEFAULT_CONTROLES)
@@ -70,14 +67,7 @@ class Configuracoes:
 
     def salvar(self) -> bool:
         """Persiste as configuracoes e informa se a gravacao foi concluida."""
-        os.makedirs(PASTA_DADOS, exist_ok=True)
-        try:
-            with open(ARQUIVO_CONFIG, "w", encoding="utf-8") as arquivo:
-                json.dump(self._dados, arquivo, ensure_ascii=False, indent=2)
-        except OSError as erro:
-            LOGGER.warning("Nao foi possivel salvar configuracoes: %s", erro)
-            return False
-        return True
+        return salvar_json_atomico(ARQUIVO_CONFIG, self._dados)
 
     def __getitem__(self, chave: str) -> Any:
         return self._dados[chave]
