@@ -472,6 +472,22 @@ def test_atualizar_menu_principal():
         menu.atualizar()
 
 
+def test_animacoes_do_menu_abrem_sem_demora():
+    _, menu = novo_menu()
+    menu.alpha_entrada = 0
+    menu.entrada_t = 0.0
+    for _ in range(27):
+        menu.atualizar()
+    assert menu.alpha_entrada == 255
+    assert menu.entrada_t >= menu.entrada_total
+
+    menu.subestado = "CONFIG"
+    menu.sub_anim = 0.0
+    for _ in range(18):
+        menu.atualizar()
+    assert menu.sub_anim >= menu.sub_anim_total
+
+
 def test_desenhar_todas_as_telas():
     jogo, menu = novo_menu()
     tela = pygame.Surface((LARGURA, ALTURA))
