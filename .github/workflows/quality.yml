@@ -52,6 +52,7 @@ jobs:
         run: >-
           python -m pytest tests/ -q
           --cov=src
+          --cov-fail-under=45
           --cov-report=term
           --cov-report=xml
       - name: Verificar orçamento de desempenho

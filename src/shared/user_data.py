@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import posixpath
 import sys
 from pathlib import Path
 
@@ -28,5 +29,5 @@ def diretorio_dados() -> str:
                          "VoidShift")
     base_xdg = os.environ.get("XDG_DATA_HOME")
     if base_xdg:
-        return os.fspath(Path(base_xdg).expanduser() / "void-shift")
+        return posixpath.join(posixpath.expanduser(base_xdg), "void-shift")
     return os.fspath(Path.home() / ".local" / "share" / "void-shift")
