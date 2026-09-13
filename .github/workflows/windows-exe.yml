@@ -94,8 +94,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Instalar dependências de empacotamento
@@ -115,7 +115,7 @@ jobs:
           cd dist
           sha256sum VOID-SHIFT-Linux-x86_64.tar.gz > SHA256SUMS-Linux.txt
       - name: Publicar executável baixável
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: VOID-SHIFT-Linux-x86_64
           path: |

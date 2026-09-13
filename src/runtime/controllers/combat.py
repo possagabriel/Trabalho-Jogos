@@ -39,7 +39,7 @@ class ControladorCombate:
         self._grade.reconstruir(self.sessao.inimigos)
         self._inimigos_ativos = {id(inimigo) for inimigo in self.sessao.inimigos}
 
-    def _candidatos(self, area) -> list[Inimigo]:
+    def _candidatos(self, area: pygame.Rect) -> list[Inimigo]:
         if not self._processando_lote:
             self._reconstruir_grade()
         return [inimigo for inimigo in self._grade.consultar(area)
