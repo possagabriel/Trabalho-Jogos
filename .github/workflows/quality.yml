@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  validar:
+  analise-estatica:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -13,6 +13,28 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install -e ".[dev]"
-      - run: python -m ruff check src/core/application.py tests/test_application_entrypoint.py tests/test_runtime_module_layout.py
+      - run: >-
+          python -m ruff check
+          src/core/application.py
+          src/shared/user_data.py
+          src/infrastructure/graphics/renderer.py
+          tools/build_desktop.py
+          tests/test_application_entrypoint.py
+          tests/test_cross_platform.py
+          tests/test_runtime_module_layout.py
       - run: python -m mypy
+
+  testes-desktop:
+    name: Testes (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[dev]"
       - run: python -m pytest tests/ -q

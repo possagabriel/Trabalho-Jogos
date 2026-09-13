@@ -87,6 +87,7 @@ class Jogo:
         self.config = config or Configuracoes()
         self.janela = self._iniciar_modo_video()
         self.tela = pygame.Surface((LARGURA, ALTURA))
+        self._superficie_escalada: pygame.Surface | None = None
         self._criar_layout_ui()
         pygame.display.set_caption(TITULO)
         pygame.display.set_icon(self._criar_icone())
@@ -306,6 +307,21 @@ class Jogo:
             self.menu._recriar_fontes()
         return self.janela
 
+    def _escalar_quadro_cpu(self, tamanho: tuple[int, int]) -> pygame.Surface:
+        """Redimensiona o quadro reutilizando o mesmo buffer de destino.
+
+        ``pygame.transform`` cria uma ``Surface`` nova quando nenhum destino é
+        informado. Em 60 FPS, isso gerava dezenas de alocações grandes por
+        segundo no fallback sem OpenGL, sobretudo em Full HD e 4K.
+        """
+        if (self._superficie_escalada is None or
+                self._superficie_escalada.get_size() != tamanho):
+            self._superficie_escalada = pygame.Surface(tamanho, depth=self.tela)
+        escalar = (pygame.transform.scale if self._escala_rapida
+                   else pygame.transform.smoothscale)
+        escalar(self.tela, tamanho, self._superficie_escalada)
+        return self._superficie_escalada
+
     def _apresentar(self):
         """Redimensiona a superficie interna (1280x720) para a janela.
 
@@ -313,8 +329,6 @@ class Jogo:
         no modo PREENCHE estica a cena. flip() e chamado por _desenhar().
         """
         w, h = self.janela.get_size()
-        escalar = (pygame.transform.scale if self._escala_rapida
-                   else pygame.transform.smoothscale)
         if (w, h) == (LARGURA, ALTURA) and self._apresentador_gpu is None:
             self.janela.blit(self.tela, (0, 0))
             return
@@ -327,7 +341,7 @@ class Jogo:
                 self._apresentador_gpu.apresentar(self.tela, destino, (w, h),
                                                   VOID_BLACK)
                 return
-            superficie = escalar(self.tela, destino[2:])
+            superficie = self._escalar_quadro_cpu(destino[2:])
             self.janela.fill(VOID_BLACK)
             self.janela.blit(superficie, destino[:2])
             return
@@ -338,7 +352,7 @@ class Jogo:
             self._apresentador_gpu.apresentar(self.tela, destino, (w, h),
                                               VOID_BLACK)
             return
-        superficie = escalar(self.tela, destino[2:])
+        superficie = self._escalar_quadro_cpu(destino[2:])
         self.janela.fill(VOID_BLACK)
         self.janela.blit(superficie, destino[:2])
         cor_safe = (32, 28, 48)

@@ -43,6 +43,7 @@ class MainRenderer:
         # Internal logical surface (the game always draws here).
         self.tela: pygame.Surface = pygame.Surface(
             (LARGURA_LOGICA, ALTURA_LOGICA))
+        self._superficie_escalada: pygame.Surface | None = None
 
         # Actual display window.
         self.janela: pygame.Surface = self._criar_janela()
@@ -129,6 +130,15 @@ class MainRenderer:
     # Presentation
     # ------------------------------------------------------------------
 
+    def _escalar_quadro(self, tamanho: Tuple[int, int]) -> pygame.Surface:
+        """Escala o canvas reutilizando a superfície de destino."""
+        if (self._superficie_escalada is None or
+                self._superficie_escalada.get_size() != tamanho):
+            self._superficie_escalada = pygame.Surface(tamanho, depth=self.tela)
+        pygame.transform.smoothscale(
+            self.tela, tamanho, self._superficie_escalada)
+        return self._superficie_escalada
+
     def apresentar(self,
                    ajuste_escala: float = 1.0,
                    ajuste_off_x: int = 0,
@@ -148,8 +158,7 @@ class MainRenderer:
 
         if aspecto == "PREENCHE":
             escala = max(0.5, ajuste_escala)
-            superficie = pygame.transform.smoothscale(
-                self.tela,
+            superficie = self._escalar_quadro(
                 (max(1, int(w * escala)), max(1, int(h * escala))))
             self.janela.fill(cor_fundo)
             self.janela.blit(superficie, (int(ajuste_off_x),
@@ -159,8 +168,7 @@ class MainRenderer:
 
         escala, off_x, off_y = self.transformacao_janela(
             ajuste_escala, ajuste_off_x, ajuste_off_y, aspecto)
-        superficie = pygame.transform.smoothscale(
-            self.tela,
+        superficie = self._escalar_quadro(
             (max(1, int(LARGURA_LOGICA * escala)),
              max(1, int(ALTURA_LOGICA * escala))))
         self.janela.fill(cor_fundo)

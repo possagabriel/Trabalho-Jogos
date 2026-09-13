@@ -5,13 +5,22 @@ Shoot 'em up vertical em **Pygame** com progressão, personalização de nave,
 procedural (visual, sons e música são gerados em runtime, sem assets
 externos).
 
-## Windows
+## Windows e Linux
 
 Baixe a versão para Windows em [Releases](../../releases). Em cada versão,
 `VOID-SHIFT-Setup.exe` instala o jogo com atalho e desinstalador; `VOID-SHIFT.exe`
 é a opção portátil. Não é necessário abrir o GitHub Actions. Builds de teste continuam disponíveis como
-artefatos do workflow **Executável Windows**. Veja as instruções de
+artefatos do workflow **Executáveis Desktop**. Veja as instruções de
 [distribuição para Windows](docs/distribuicao-windows.md).
+
+No Linux, a mesma Release inclui `VOID-SHIFT-Linux-x86_64.tar.gz`. Extraia o
+arquivo, marque `VOID-SHIFT` como executável se necessário e abra-o. Builds de
+teste e instruções locais estão em
+[distribuição para Linux](docs/distribuicao-linux.md).
+
+Os dois pacotes são gerados no mesmo workflow e no mesmo commit. Os arquivos
+`BUILD-COMMIT-Windows.txt` e `BUILD-COMMIT-Linux.txt` permitem confirmar que
+as distribuições contêm exatamente a mesma versão do jogo.
 
 > Este README é orientado a **desenvolvedores e IAs**: explica a arquitetura,
 > o fluxo de dados e as convenções para que qualquer pessoa (ou modelo) possa
@@ -35,9 +44,12 @@ artefatos do workflow **Executável Windows**. Veja as instruções de
 ## Como executar
 
 ```bash
-python -m pip install -r requirements.txt   # pygame-ce
+python -m pip install -e ".[gpu]"           # Linux ou Windows
 python main.py
 ```
+
+Sem aceleração OpenGL, instale apenas com `python -m pip install -e .`; o jogo
+usa automaticamente o renderizador de CPU e os perfis de desempenho.
 
 Sem áudio/vídeo (CI, servidores, debugging):
 
@@ -77,6 +89,9 @@ recompõe automaticamente.
 - **Monitor de FPS:** em **Config → Monitor de FPS**, habilite uma leitura
   discreta de FPS, tempo de quadro, perfil visual e modo de escala durante a
   partida. Ele começa desligado e a configuração é persistida.
+- **Fallback eficiente:** quando OpenGL não está disponível, o redimensionamento
+  por CPU reutiliza o mesmo buffer entre quadros, evitando alocações grandes a
+  cada frame.
 - **Ajustar Tela** (Config → Ajustar Tela): calibra a imagem para o monitor
   (TVs com overscan, telas com bordas cortadas etc.). Com setas move a imagem
   (4 px por passo), `W/S` aplica zoom (0.9–1.2), `R` reseta e `Enter` confirma
@@ -118,7 +133,7 @@ Trabalho-Jogos/
 ├── game/                          # fachadas de compatibilidade sem lógica
 ├── tests/                         # testes unitários, integração e arquitetura
 ├── docs/architecture-migration.md # regras e mapa da migração
-└── data/                          # progresso/configuração gerados em runtime
+└── data/fonts/                    # fontes incluídas na distribuição
 ```
 
 ### Ativos visuais
@@ -184,7 +199,10 @@ partida atual**), atualiza estatísticas, sincroniza a loja e vai para
 
 ## Modelo de dados
 
-Tudo é persistido em `data/` como JSON. **Não há banco de dados.**
+Tudo é persistido como JSON. **Não há banco de dados.** No Windows, os
+arquivos ficam em `%LOCALAPPDATA%\VoidShift`; no Linux, em
+`$XDG_DATA_HOME/void-shift` ou `~/.local/share/void-shift`. As variáveis
+`INCARNATE_DATA_DIR` e `SPACEFURY_DATA_DIR` permitem substituir esse local.
 
 | Arquivo | Conteúdo |
 |---------|----------|
