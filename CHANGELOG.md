@@ -38,6 +38,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved input handling to infrastructure/input with Command pattern
 - Moved UI components to infrastructure/ui
 
+## [1.1.0] - 2026-09-18
+
+### Added
+- Estilo comic original: tinta, materiais chapados, hachuras, papel e halftone.
+- Pipeline de posterização, máscaras e contornos em cache, com banking pré-calculado.
+- Fundos procedurais, bursts, traços de velocidade, lettering e painéis angulares.
+- Números de dano normal, crítico e elemental; raridade visual no HUD das armas.
+- Perfis comic BAIXA/MEDIA/ALTA, toggles independentes e tremida opcional dos contornos.
+- Preview reproduzível, benchmark por componente e documentação em `docs/visual/README.md`.
+- Testes de cache, configuração, transparência, fallback e replay entre estilos.
+
+### Changed
+- COMIC como estilo padrão; ORIGINAL pode ser selecionado nas configurações.
+- Renderização delega aos helpers de infraestrutura sem alterar regras de combate,
+  colisões, movimento, controles, catálogo de atributos ou formato de progresso.
+- Fontes padrão de efeitos passam a ser reutilizadas em cache.
+
 ## [1.0.0] - 2026-08-21
 
 ### Added

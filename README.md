@@ -340,3 +340,12 @@ funciona isolado. Cobertura por módulo:
 
 O `smoke_test.py` faz um smoke test geral: inicialização, loop de combate
 avançando níveis, desenho dos 6 cenários e mapeamento nível→cenário.
+
+## Visual comic (1.1.0)
+
+O estilo comic inclui contornos em cache, tons chapados, hachuras, papel,
+retícula, bursts e UI angular. Em **Configurações → Estilo visual**, alterne
+entre **COMIC** e **ORIGINAL**. **Detalhe comic** oferece BAIXA/MEDIA/ALTA,
+com toggles para texturas e tremida.
+
+Veja [pipeline visual, screenshots, testes e custos medidos](docs/visual/README.md).
