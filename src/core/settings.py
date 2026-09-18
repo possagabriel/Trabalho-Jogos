@@ -36,6 +36,9 @@ _DEFAULT: dict[str, Any] = {
     "tema": "NEON", "aspecto": "AJUSTAR", "ajuste_escala": 1.0,
     "ajuste_off_x": 0, "ajuste_off_y": 0, "qualidade_grafica": "ALTA",
     "mostrar_desempenho": False,
+    "estilo_visual": "COMIC", "qualidade_comic": "MEDIA",
+    "comic_papel": True, "comic_halftone": True, "comic_hachuras": True,
+    "line_boil": False,
 }
 
 

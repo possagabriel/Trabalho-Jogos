@@ -6,13 +6,14 @@ import math
 import random
 from typing import Callable, Protocol
 
+from src.core.constants import ALTURA, LARANJA, EstadoJogo
 from src.runtime.controllers.session import SessaoCombate
-from src.core.constants import ALTURA, EstadoJogo, LARANJA
 from src.runtime.domain.entities.enemies import Inimigo, InimigoEspecial
-from src.runtime.infrastructure.graphics.cel_shading import TextoAcao
-from src.runtime.domain.world.particles import MensagemFlutuante
 from src.runtime.domain.entities.powerups import PowerUp, sortear_tipo
 from src.runtime.domain.entities.weapons import Projetil
+from src.runtime.domain.world.particles import MensagemFlutuante
+from src.runtime.infrastructure.graphics.cel_shading import TextoAcao
+from src.runtime.presentation.damage_feedback import registrar_impacto
 
 
 class EntidadePosicionada(Protocol):
@@ -76,15 +77,19 @@ class ControladorCombate:
         efeitos(proj)
         for inimigo in sessao.inimigos[:]:
             if self.distancia(inimigo, proj) < raio:
+                vida_antes = inimigo.vida
                 if inimigo.sofrer_dano(proj.dano):
                     self.explodir_inimigo(inimigo)
                 else:
                     inimigo.flash = flash_inimigo
+                registrar_impacto(sessao, inimigo, proj, vida_antes)
         if sessao.boss and self.distancia(sessao.boss, proj) < raio:
+            alvo, vida_antes = sessao.boss, sessao.boss.vida
             if sessao.boss.sofrer_dano(proj.dano):
                 self.derrotar_boss()
             else:
                 sessao.adicionar_trauma(0.15)
+            registrar_impacto(sessao, alvo, proj, vida_antes)
         return True
 
     def efeitos_nova(self, proj: Projetil) -> None:
@@ -254,6 +259,7 @@ class ControladorCombate:
                     proj.refletir()
                     sessao.sons.tocar("coleta")
                 return True
+            vida_antes = inimigo.vida
             if isinstance(inimigo, InimigoEspecial):
                 morreu = inimigo.receber_tiro(proj.dano)
                 sessao.sons.tocar("carga")
@@ -265,18 +271,21 @@ class ControladorCombate:
             else:
                 sessao.sons.tocar("acerto")
                 sessao.particulas.faiscas(proj.x, proj.y, proj.cor, 5)
+            registrar_impacto(sessao, inimigo, proj, vida_antes)
             if proj.tipo == "plasma":
                 self._dano_secundario_plasma(proj, inimigo)
             acertou = True
             if not penetrante:
                 return True
         if sessao.boss and proj.rect.colliderect(sessao.boss.rect):
+            alvo, vida_antes = sessao.boss, sessao.boss.vida
             if sessao.boss.sofrer_dano(proj.dano):
                 self.derrotar_boss()
             else:
                 sessao.sons.tocar("acerto")
                 sessao.particulas.faiscas(proj.x, proj.y, proj.cor, 6)
                 sessao.adicionar_trauma(0.15)
+            registrar_impacto(sessao, alvo, proj, vida_antes)
             acertou = True
         return acertou
 
@@ -289,8 +298,10 @@ class ControladorCombate:
         for inimigo in sessao.inimigos[:]:
             if inimigo is alvo_principal or self.distancia(inimigo, proj) > 58:
                 continue
+            vida_antes = inimigo.vida
             if inimigo.sofrer_dano(dano):
                 self.explodir_inimigo(inimigo)
+            registrar_impacto(sessao, inimigo, proj, vida_antes)
 
     def atualizar_powerups(self) -> None:
         """Atualiza quedas e aplica as coletas do jogador."""

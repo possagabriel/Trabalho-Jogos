@@ -5,8 +5,10 @@ import random
 
 import pygame
 
-from src.runtime.infrastructure.assets import carregar_imagem
 from src.core.constants import ALTURA, LARGURA
+from src.infrastructure.graphics.comic_render import desenhar_fundo
+from src.infrastructure.graphics.comic_theme import opcoes_atuais
+from src.runtime.infrastructure.assets import carregar_imagem
 from src.runtime.infrastructure.graphics.geometry import cruz, losango
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_circulo,
@@ -285,6 +287,9 @@ class Cenario:
     # ----- desenho -----
 
     def desenhar(self, tela):
+        if opcoes_atuais().ativo:
+            desenhar_fundo(tela, self.id)
+            return
         tela.blit(self.fundo_estatico, (0, 0))
         if self._desenhar_luzes:
             self._desenhar_luzes_ambiente(tela)

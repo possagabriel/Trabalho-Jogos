@@ -41,3 +41,11 @@ def fonte_texto(tamanho):
 
 def limpar_cache():
     _CACHE.clear()
+
+
+def fonte_padrao(tamanho: int) -> pygame.font.Font:
+    """Cacheia a fonte original do pygame para preservar o visual legado."""
+    chave = ("padrao", tamanho)
+    if chave not in _CACHE:
+        _CACHE[chave] = pygame.font.Font(None, tamanho)
+    return _CACHE[chave]

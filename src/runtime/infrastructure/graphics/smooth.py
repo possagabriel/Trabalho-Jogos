@@ -9,6 +9,9 @@ import math
 
 import pygame
 
+from src.infrastructure.graphics.comic_render import painel_tinta, texto_tinta
+from src.infrastructure.graphics.comic_theme import TINTA, opcoes_atuais
+
 _CACHE_CIRCULO = {}
 _CACHE_POLIGONO = {}
 _CACHE_LINHA = {}
@@ -144,6 +147,8 @@ def luz_radial(cor, raio, intensidade=1.0):
 
 def desenhar_glow(tela, cor, centro, raio, intensidade=1.0):
     """Desenha brilho radial suave centrado em `centro`."""
+    if opcoes_atuais().ativo:
+        return
     surf = luz_radial(cor, raio, intensidade)
     ext = surf.get_width() // 2
     tela.blit(surf, (int(centro[0]) - ext, int(centro[1]) - ext))
@@ -288,6 +293,8 @@ def linha_suave(tela, cor, inicio, fim, espessura=2, brilho=1.0):
 def texto_suave(fonte, texto, cor, glow_cor=None, glow_raio=4,
                 sombra=True):
     """Surface SRCALPHA de texto com glow e sombra suave (cacheada)."""
+    if opcoes_atuais().ativo:
+        return texto_tinta(str(texto), max(10, int(fonte.get_height() * .8)), tuple(cor[:3]))
     cor_rgb = tuple(max(0, min(255, int(c))) for c in cor[:3])
     glow_rgb = tuple(max(0, min(255, int(c))) for c in glow_cor[:3]) if glow_cor else None
     chave = (fonte.size(texto), texto, cor_rgb, glow_rgb, glow_raio, sombra)
@@ -338,6 +345,11 @@ def desenhar_texto_suave(tela, fonte, texto, pos, cor, glow_cor=None,
 def retangulo_suave(tela, cor, rect, raio_canto=8, espessura=0, brilho=1.0,
                     glow_cor=None, glow_raio=0):
     """Retangulo arredondado com bordas suaves e glow opcional."""
+    if opcoes_atuais().ativo:
+        pygame.draw.rect(tela, cor, rect, max(0, espessura))
+        if espessura <= 0:
+            pygame.draw.rect(tela, TINTA, rect, min(2, max(1, rect.h // 3)))
+        return
     if glow_cor and glow_raio > 0:
         desenhar_glow(tela, glow_cor, rect.center, max(rect.w, rect.h),
                       brilho * 0.6)
@@ -387,6 +399,8 @@ def painel_glass(cor_borda, rect, cor_fundo=(12, 14, 32), raio_canto=14,
     E o componente central da UI: um retangulo arredondado com fundo
     translucido escuro e uma borda colorida com glow.
     """
+    if opcoes_atuais().ativo:
+        return painel_tinta(rect.size, tuple(cor_borda[:3]))
     chave = (tuple(cor_borda[:3]), tuple(cor_fundo[:3]), rect.size,
              raio_canto, alpha, glow_raio)
     if chave in _CACHE_PAINEL:

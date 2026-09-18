@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.core.constants import EstadoJogo, NEGRO, VOID_BLACK
+from src.core.constants import NEGRO, VOID_BLACK, EstadoJogo
+from src.infrastructure.graphics.comic_theme import usar_visual
 
 if TYPE_CHECKING:
     from src.runtime.application.core import Jogo
@@ -18,6 +19,17 @@ class ControladorRenderizacao:
 
     def __init__(self, jogo: Jogo) -> None:
         self.jogo = jogo
+        self._preparar_sprites()
+
+    def _preparar_sprites(self) -> None:
+        from src.infrastructure.graphics.comic_pipeline import preparar_rotacoes
+        from src.runtime.domain.entities.player import _sprite_padrao
+
+        sprite = _sprite_padrao()
+        if sprite is not None:
+            for hachuras in (False, True):
+                for variacao in (0, 1):
+                    preparar_rotacoes(sprite, hachuras, variacao)
 
     def desenhar_hud(self) -> None:
         """Desenha o HUD na superficie logica de jogo."""
@@ -38,6 +50,10 @@ class ControladorRenderizacao:
 
     def desenhar(self) -> None:
         """Compoe a tela conforme o estado ativo e apresenta o quadro."""
+        with usar_visual(self.jogo.config):
+            self._compor()
+
+    def _compor(self) -> None:
         jogo = self.jogo
         if jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
             jogo.tela.fill(VOID_BLACK)

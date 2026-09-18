@@ -13,36 +13,64 @@ escala da base de design (900x700) e safe areas. Assim o menu se recompoe
 em qualquer resolucao sem coordenadas rigidas.
 """
 
-import math
 import logging
+import math
 import os
 
 import pygame
 
-from src.runtime.presentation.screens.continue_screen import TelaContinuarJogo
+from game.phase_select import PhaseSelectScreen
 from src.core.constants import BRANCO, CIANO, DOURADO, QUANTUM_CYAN, VERDE
+from src.core.settings import ACOES_CONTROLE, QUALIDADES_GRAFICAS, RESOLUCOES, TEMAS
+from src.infrastructure.graphics.comic_render import painel_tinta, texto_tinta
+from src.infrastructure.graphics.comic_theme import LARANJA, PAPEL, opcoes_atuais
+from src.infrastructure.graphics.theme import tema_atual
 from src.infrastructure.ui.layout import (
-    ALTURA_BASE, CENTRO, LARGURA_BASE, TOPO_DIREITA, TOPO_ESQUERDA, Layout,
+    ALTURA_BASE,
+    CENTRO,
+    LARGURA_BASE,
+    TOPO_DIREITA,
+    TOPO_ESQUERDA,
+    Layout,
 )
+from src.runtime.domain.entities.player import Jogador
+from src.runtime.infrastructure.graphics.smooth import (
+    desenhar_botao_cartoon,
+    desenhar_cantos,
+    desenhar_estrela,
+    desenhar_glow,
+    desenhar_painel_cartoon,
+    desenhar_poligono,
+    ease_out,
+    ease_out_back,
+    linha_suave,
+    painel_glass,
+    retangulo_suave,
+    texto_suave,
+)
+from src.runtime.infrastructure.graphics.smooth import desenhar_circulo as desenhar_circulo_suave
+from src.runtime.infrastructure.persistence.save_system import ARQUIVO_RECORDES, SistemaProgressao
+from src.runtime.infrastructure.persistence.shop import LojaSkins
+from src.runtime.presentation.menu_scene import (
+    DestaqueMenu,
+    FundoCinematico,
+    HudMenu,
+    NaveMenu,
+    TransicaoMissao,
+    texto_espacado,
+)
+from src.runtime.presentation.screens.continue_screen import TelaContinuarJogo
 from src.runtime.presentation.screens.main_menu_screen import TelaPrincipalJogo
 from src.runtime.presentation.screens.menu_screens import (
-    TelaConfiguracoes, TelaContinuar, TelaLoja, TelaPrincipal, TelaRecordes,
+    TelaConfiguracoes,
+    TelaContinuar,
+    TelaLoja,
+    TelaPrincipal,
+    TelaRecordes,
 )
 from src.runtime.presentation.screens.records_screen import TelaRecordesJogo
-from src.runtime.presentation.screens.store_screen import TelaLojaJogo
 from src.runtime.presentation.screens.settings_screen import TelaConfiguracoesJogo
-from game.phase_select import PhaseSelectScreen
-from src.runtime.presentation.menu_scene import DestaqueMenu, FundoCinematico, HudMenu, NaveMenu, \
-    TransicaoMissao, texto_espacado
-from src.runtime.domain.entities.player import Jogador
-from src.runtime.infrastructure.persistence.save_system import ARQUIVO_RECORDES, SistemaProgressao
-from src.core.settings import ACOES_CONTROLE, QUALIDADES_GRAFICAS, RESOLUCOES, TEMAS
-from src.runtime.infrastructure.persistence.shop import LojaSkins
-from src.runtime.infrastructure.graphics.smooth import desenhar_cantos, desenhar_circulo as \
-    desenhar_circulo_suave, desenhar_glow, ease_out, ease_out_back, \
-    desenhar_poligono, linha_suave, painel_glass, retangulo_suave, texto_suave, \
-    desenhar_painel_cartoon, desenhar_botao_cartoon, desenhar_estrela
-from src.infrastructure.graphics.theme import tema_atual
+from src.runtime.presentation.screens.store_screen import TelaLojaJogo
 from src.runtime.presentation.ui import BotaoNeon
 
 NEGRO = (0, 0, 0)
@@ -95,6 +123,14 @@ class OpcaoMenu:
 
     def desenhar(self, tela, fonte, fonte_sel, tema, x, selecionado,
                  deslocamento, alfa, layout):
+        if opcoes_atuais().ativo:
+            rect = self.get_rect(x, fonte, layout).move(deslocamento, 0)
+            painel = painel_tinta(rect.size, LARANJA if selecionado else PAPEL)
+            self._blit(tela, painel, rect.centerx, rect.centery, alfa, centrado=True)
+            surf = texto_tinta(self.texto, max(12, int(fonte.get_height() * .65)),
+                              LARANJA if selecionado else PAPEL)
+            self._blit(tela, surf, x + deslocamento, self.y, alfa)
+            return
         primaria = tema["primaria"]
         secundaria = tema["secundaria"]
         fonte_ativa = fonte_sel if selecionado else fonte
@@ -1101,6 +1137,12 @@ class MenuPrincipal:
             ("Ajustar Tela", "ajuste"),
             ("Qualidade Visual", "qualidade"),
             ("Monitor de FPS", "desempenho"),
+            ("Estilo visual", "estilo_visual"),
+            ("Detalhe comic", "qualidade_comic"),
+            ("Textura de papel", "comic_papel"),
+            ("Reticula", "comic_halftone"),
+            ("Hachuras", "comic_hachuras"),
+            ("Tremida (alta)", "line_boil"),
         ]
 
     _CONFIG_VISIVEIS = 6
@@ -1275,6 +1317,20 @@ class MenuPrincipal:
             self._ciclar_qualidade_grafica(delta)
         elif indice == 10 and delta > 0:
             self._toggle_monitor_desempenho()
+        elif indice >= 11:
+            chave = self._linhas_config()[indice][1]
+            escolhas = {
+                "estilo_visual": ("COMIC", "ORIGINAL"),
+                "qualidade_comic": ("BAIXA", "MEDIA", "ALTA"),
+            }
+            if chave in escolhas:
+                valores = escolhas[chave]
+                atual = self.jogo.config[chave]
+                i = valores.index(atual) if atual in valores else 0
+                self.jogo.config[chave] = valores[(i + delta) % len(valores)]
+            else:
+                self.jogo.config[chave] = not self.jogo.config[chave]
+            self.jogo.config.salvar()
         self._som("navegar")
 
     def _painel_controles(self):
@@ -2026,7 +2082,7 @@ class MenuPrincipal:
             tela.blit(s, pos)
 
     def _titulo_surfaces(self, tema):
-        nome = self.jogo.config["tema"]
+        nome = (self.jogo.config["tema"], opcoes_atuais().estilo)
         if nome not in self._titulo_cache:
             titulo = texto_suave(self.fonte_logo, "INCARNATE", BRANCO,
                                  tema["primaria"], 16, True)
@@ -2042,7 +2098,7 @@ class MenuPrincipal:
         return self._titulo_cache[nome]
 
     def _bloco_logo(self, tema):
-        nome = self.jogo.config["tema"]
+        nome = (self.jogo.config["tema"], opcoes_atuais().estilo)
         if nome in self._bloco_logo_cache:
             return self._bloco_logo_cache[nome]
         l = self.layout
@@ -2173,7 +2229,7 @@ class MenuPrincipal:
         self._blit_alfa(tela, surf2,
                         (l.largura // 2 - surf2.get_width() // 2, l.y(0.78)),
                         int(alfa * 0.75))
-        versao = self._espacado(f, "v3.0 // ENTRE NA FENDA", 1,
+        versao = self._espacado(f, "v1.1.0 // ENTRE NA FENDA", 1,
                                 (110, 122, 160))
         self._blit_alfa(tela, versao,
                         (l.x(0.5) - versao.get_width() // 2,
