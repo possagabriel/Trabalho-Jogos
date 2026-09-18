@@ -28,10 +28,10 @@ sys.path.insert(0, RAIZ)
 
 import pygame  # noqa: E402
 
+from game import persistence  # noqa: E402
 from game import save_system  # noqa: E402
 from game import settings  # noqa: E402
 from game import shop  # noqa: E402
-from game import persistence  # noqa: E402
 from game.config import ALTURA, LARGURA  # noqa: E402
 from game.player import Jogador, SKINS, Skin  # noqa: E402
 
@@ -208,6 +208,45 @@ def test_save_persistencia_em_disco():
         assert os.path.exists(os.path.join(dados, "save.json"))
         prog2 = save_system.SistemaProgressao()
         assert prog2.jogador["moedas"] == 500
+
+
+def test_save_corrompido_recupera_backup():
+    dados = _tmp_dados()
+    caminho = os.path.join(dados, "save.json")
+    with _patches(dados):
+        prog = save_system.SistemaProgressao()
+        prog.adicionar_moedas(100)
+        assert prog.salvar_arquivo() is True
+        prog.adicionar_moedas(50)
+        assert prog.salvar_arquivo() is True
+        with open(caminho, "w", encoding="utf-8") as arquivo:
+            arquivo.write("{corrompido")
+        recuperado = save_system.SistemaProgressao()
+    assert recuperado.jogador["moedas"] == 100
+
+
+def test_save_exporta_e_importa_entre_sistemas():
+    dados = _tmp_dados()
+    exportado = os.path.join(dados, "transferencia.json")
+    with _patches(dados):
+        origem = save_system.SistemaProgressao()
+        origem.adicionar_moedas(321)
+        assert origem.exportar_progresso(exportado) is True
+        destino = save_system.SistemaProgressao()
+        assert destino.importar_progresso(exportado) is True
+        assert destino.jogador["moedas"] == 321
+
+
+def test_save_recusa_importacao_invalida_sem_perder_estado():
+    dados = _tmp_dados()
+    invalido = os.path.join(dados, "invalido.json")
+    with open(invalido, "w", encoding="utf-8") as arquivo:
+        json.dump({"sem_jogador": True}, arquivo)
+    with _patches(dados):
+        progresso = save_system.SistemaProgressao()
+        progresso.adicionar_moedas(77)
+        assert progresso.importar_progresso(invalido) is False
+        assert progresso.jogador["moedas"] == 77
 
 
 def test_save_antigo_e_migrado_sem_perder_campos():

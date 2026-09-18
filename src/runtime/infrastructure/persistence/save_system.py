@@ -1,15 +1,14 @@
 """Sistema de progressao e salvamento em JSON."""
 
 import json
-import logging
 import os
 
+from src.shared.persistence import carregar_json_resiliente, salvar_json_atomico
 from src.shared.user_data import diretorio_dados
 
 PASTA_DADOS = diretorio_dados()
 ARQUIVO_SAVE = os.path.join(PASTA_DADOS, "save.json")
 ARQUIVO_RECORDES = os.path.join(PASTA_DADOS, "records.json")
-LOGGER = logging.getLogger(__name__)
 VERSAO_SAVE = 2
 
 
@@ -21,8 +20,7 @@ class SistemaProgressao:
 
     def _carregar(self):
         try:
-            with open(ARQUIVO_SAVE, "r", encoding="utf-8") as f:
-                dados = json.load(f)
+            dados = carregar_json_resiliente(ARQUIVO_SAVE)
             if not isinstance(dados, dict) or not isinstance(dados.get("jogador"), dict):
                 raise ValueError
             migrado = self._mesclar_padrao(self._novo_dados(), dados)
@@ -148,6 +146,27 @@ class SistemaProgressao:
         """Grava o save atual em disco."""
         return self._salvar(ARQUIVO_SAVE, self.dados)
 
+    def exportar_progresso(self, caminho):
+        """Exporta um save portátil para outro sistema operacional."""
+        return salvar_json_atomico(caminho, self.dados, criar_backup=False)
+
+    def importar_progresso(self, caminho):
+        """Importa um save válido sem substituir o atual em caso de erro."""
+        try:
+            dados = carregar_json_resiliente(caminho)
+            if not isinstance(dados, dict) or not isinstance(dados.get("jogador"), dict):
+                return False
+            migrado = self._mesclar_padrao(self._novo_dados(), dados)
+            migrado["versao"] = VERSAO_SAVE
+        except (FileNotFoundError, json.JSONDecodeError, OSError, ValueError):
+            return False
+        anterior = self.dados
+        self.dados = migrado
+        if self.salvar_arquivo():
+            return True
+        self.dados = anterior
+        return False
+
     def _moedas_fim_jogo(self, cenario_atual, bosses_abates):
         """Bonus de moedas ao fim do jogo (cenario atual + bosses da partida)."""
         return 50 * cenario_atual + 100 * bosses_abates
@@ -159,20 +178,12 @@ class SistemaProgressao:
         self.jogador["skin_atual"] = loja.skin_atual
 
     def _salvar(self, arquivo, dados):
-        os.makedirs(PASTA_DADOS, exist_ok=True)
-        try:
-            with open(arquivo, "w", encoding="utf-8") as f:
-                json.dump(dados, f, ensure_ascii=False, indent=2)
-        except OSError as erro:
-            LOGGER.warning("Nao foi possivel salvar progresso em %s: %s", arquivo, erro)
-            return False
-        return True
+        return salvar_json_atomico(arquivo, dados)
 
     def existe_save(self):
         """Verifica se existe um save valido em disco."""
         try:
-            with open(ARQUIVO_SAVE, "r", encoding="utf-8") as f:
-                dados = json.load(f)
+            dados = carregar_json_resiliente(ARQUIVO_SAVE)
             return "jogador" in dados
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             return False
@@ -184,8 +195,7 @@ class SistemaProgressao:
     @staticmethod
     def carregar_recordes():
         try:
-            with open(ARQUIVO_RECORDES, "r", encoding="utf-8") as f:
-                dados = json.load(f)
+            dados = carregar_json_resiliente(ARQUIVO_RECORDES)
             lista = dados.get("recordes", [])
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             return []
@@ -200,12 +210,7 @@ class SistemaProgressao:
         lista.append(registro)
         lista.sort(key=lambda r: r.get("pontos", 0), reverse=True)
         lista = lista[:10]
-        os.makedirs(PASTA_DADOS, exist_ok=True)
-        try:
-            with open(ARQUIVO_RECORDES, "w", encoding="utf-8") as f:
-                json.dump({"recordes": lista}, f, ensure_ascii=False, indent=2)
-        except OSError as erro:
-            LOGGER.warning("Nao foi possivel salvar recordes: %s", erro)
+        if not salvar_json_atomico(ARQUIVO_RECORDES, {"recordes": lista}):
             return False
         return lista
 

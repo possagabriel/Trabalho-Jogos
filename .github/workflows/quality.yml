@@ -2,17 +2,64 @@ name: Qualidade
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 jobs:
-  validar:
+  analise-estatica:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: python -m pip install -e ".[dev]"
-      - run: python -m ruff check src/core/application.py tests/test_application_entrypoint.py tests/test_runtime_module_layout.py
+      - run: >-
+          python -m ruff check
+          main.py
+          src/core/application.py
+          src/runtime/application/timing.py
+          src/runtime/diagnostics/frame_metrics.py
+          src/runtime/domain/spatial.py
+          src/runtime/presentation/equipment_overlay.py
+          src/shared/persistence.py
+          src/shared/user_data.py
+          src/infrastructure/graphics/renderer.py
+          tools/build_desktop.py
+          tools/benchmark_runtime.py
+          tests/test_application_entrypoint.py
+          tests/test_cross_platform.py
+          tests/test_runtime_module_layout.py
+          tests/test_spatial_index.py
+          tests/test_timing_metrics.py
       - run: python -m mypy
-      - run: python -m pytest tests/ -q
+
+  testes-desktop:
+    name: Testes (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[dev]"
+      - name: Executar testes e medir cobertura
+        run: >-
+          python -m pytest tests/ -q
+          --cov=src
+          --cov-fail-under=45
+          --cov-report=term
+          --cov-report=xml
+      - name: Verificar orçamento de desempenho
+        run: python -m tools.benchmark_runtime --check
+      - name: Publicar relatório de cobertura
+        uses: actions/upload-artifact@v6
+        with:
+          name: cobertura-${{ matrix.os }}
+          path: coverage.xml
+          if-no-files-found: error

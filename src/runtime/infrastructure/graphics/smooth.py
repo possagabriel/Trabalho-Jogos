@@ -15,6 +15,7 @@ _CACHE_LINHA = {}
 _CACHE_TEXTO = {}
 _CACHE_GRADIENTE = {}
 _CACHE_GLOW = {}
+_CACHE_GLOW_RETANGULAR = {}
 _CACHE_PAINEL = {}
 _CACHE_VIGNETTE = {}
 _CACHE_ALPHA = {}
@@ -42,6 +43,7 @@ def limpar_cache():
     _CACHE_TEXTO.clear()
     _CACHE_GRADIENTE.clear()
     _CACHE_GLOW.clear()
+    _CACHE_GLOW_RETANGULAR.clear()
     _CACHE_PAINEL.clear()
     _CACHE_VIGNETTE.clear()
     _CACHE_PAINEL_CARTOON.clear()
@@ -147,6 +149,64 @@ def desenhar_glow(tela, cor, centro, raio, intensidade=1.0):
     surf = luz_radial(cor, raio, intensidade)
     ext = surf.get_width() // 2
     tela.blit(surf, (int(centro[0]) - ext, int(centro[1]) - ext))
+
+
+def luz_retangular(
+    cor: tuple[int, ...],
+    tamanho: tuple[int, int],
+    raio_canto: int = 8,
+    glow_raio: int = 8,
+    intensidade: float = 1.0,
+) -> pygame.Surface:
+    """Surface cacheada com glow que acompanha uma borda retangular.
+
+    Paineis grandes nao precisam de um halo radial do tamanho da sua largura.
+    Limitar o desenho a margem real do efeito evita milhares de circulos e
+    superficies gigantes na primeira abertura dos menus.
+    """
+    largura = max(1, int(tamanho[0]))
+    altura = max(1, int(tamanho[1]))
+    raio = max(0, int(glow_raio))
+    canto = max(0, int(raio_canto))
+    cor3 = tuple(cor[:3])
+    chave = (cor3, (largura, altura), canto, raio, round(intensidade, 2))
+    if chave in _CACHE_GLOW_RETANGULAR:
+        return _CACHE_GLOW_RETANGULAR[chave]
+
+    surf = pygame.Surface((largura + raio * 2, altura + raio * 2),
+                          pygame.SRCALPHA)
+    for distancia in range(raio, -1, -1):
+        progresso = 1 - distancia / (raio + 1)
+        alfa = int(min(255, 140 * intensidade * progresso ** 2))
+        if alfa <= 0:
+            continue
+        area = pygame.Rect(
+            raio - distancia,
+            raio - distancia,
+            largura + distancia * 2,
+            altura + distancia * 2,
+        )
+        pygame.draw.rect(
+            surf,
+            cor3 + (alfa,),
+            area,
+            border_radius=canto + distancia,
+        )
+    return _armazenar_cache(_CACHE_GLOW_RETANGULAR, chave, surf, 256)
+
+
+def desenhar_glow_retangular(
+    tela: pygame.Surface,
+    cor: tuple[int, ...],
+    rect: pygame.Rect,
+    raio_canto: int = 8,
+    glow_raio: int = 8,
+    intensidade: float = 1.0,
+) -> None:
+    """Desenha um glow leve ao redor de ``rect``."""
+    raio = max(0, int(glow_raio))
+    surf = luz_retangular(cor, rect.size, raio_canto, raio, intensidade)
+    tela.blit(surf, (rect.x - raio, rect.y - raio))
 
 
 # ---------------------------------------------------------------------------
@@ -339,8 +399,8 @@ def retangulo_suave(tela, cor, rect, raio_canto=8, espessura=0, brilho=1.0,
                     glow_cor=None, glow_raio=0):
     """Retangulo arredondado com bordas suaves e glow opcional."""
     if glow_cor and glow_raio > 0:
-        desenhar_glow(tela, glow_cor, rect.center, max(rect.w, rect.h),
-                      brilho * 0.6)
+        desenhar_glow_retangular(tela, glow_cor, rect, raio_canto, glow_raio,
+                                 brilho * 0.6)
     # desenha em superficie maior e reduz para suavizar bordas
     escala = _SCALA_AA
     pad = 6
@@ -392,15 +452,14 @@ def painel_glass(cor_borda, rect, cor_fundo=(12, 14, 32), raio_canto=14,
     if chave in _CACHE_PAINEL:
         return _CACHE_PAINEL[chave]
 
-    pad = 12
+    pad = max(12, int(glow_raio))
     w, h = rect.w, rect.h
     surf = pygame.Surface((w + pad * 2, h + pad * 2), pygame.SRCALPHA)
 
     # glow por tras da borda
     if glow_raio > 0:
-        glow = luz_radial(cor_borda, max(w, h) // 2, 0.8)
-        surf.blit(glow, glow.get_rect(center=((w + pad * 2) // 2,
-                                              (h + pad * 2) // 2)))
+        glow = luz_retangular(cor_borda, (w, h), raio_canto, glow_raio, 0.8)
+        surf.blit(glow, (pad - glow_raio, pad - glow_raio))
 
     # fundo translucido
     fundo = pygame.Surface((w, h), pygame.SRCALPHA)
@@ -423,7 +482,9 @@ def desenhar_painel(tela, cor_borda, rect, cor_fundo=(12, 14, 32),
     """Desenha um painel glass com borda neon."""
     surf = painel_glass(cor_borda, rect, cor_fundo, raio_canto, alpha,
                         glow_raio)
-    tela.blit(surf, (rect.x - 12, rect.y - 12))
+    pad_x = (surf.get_width() - rect.w) // 2
+    pad_y = (surf.get_height() - rect.h) // 2
+    tela.blit(surf, (rect.x - pad_x, rect.y - pad_y))
 
 
 def desenhar_cantos(tela, cor, rect, tamanho=14, espessura=3):
@@ -447,26 +508,36 @@ def superficie_vignette(intensidade=0.85, raio_interno=0.55):
     if chave in _CACHE_VIGNETTE:
         return _CACHE_VIGNETTE[chave]
 
-    surf = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+    # A vinheta varia lentamente e ganha suavidade no redimensionamento. Gerar
+    # uma amostra menor elimina centenas de milhares de escritas por pixel na
+    # primeira abertura da pausa sem alterar o tamanho da superficie final.
+    passo = 8
+    largura_amostra = max(1, math.ceil(LARGURA / passo))
+    altura_amostra = max(1, math.ceil(ALTURA / passo))
+    amostra = pygame.Surface(
+        (largura_amostra, altura_amostra), pygame.SRCALPHA
+    )
     cx, cy = LARGURA / 2, ALTURA / 2
     max_dist = math.hypot(cx, cy)
     raio_alpha = raio_interno * max_dist
     raio_total = max_dist
-    for y in range(0, ALTURA, 3):
-        for x in range(0, LARGURA, 3):
-            dist = math.hypot(x - cx, y - cy)
+    distancias_x = [
+        (min(LARGURA - 1, x * passo + passo / 2) - cx) ** 2
+        for x in range(largura_amostra)
+    ]
+    for y in range(altura_amostra):
+        origem_y = min(ALTURA - 1, y * passo + passo / 2)
+        distancia_y = (origem_y - cy) ** 2
+        for x, distancia_x in enumerate(distancias_x):
+            dist = math.sqrt(distancia_x + distancia_y)
             if dist <= raio_alpha:
                 continue
             t = (dist - raio_alpha) / (raio_total - raio_alpha)
             alfa = int(255 * (t ** 2.2) * intensidade)
             if alfa <= 0:
                 continue
-            surf.set_at((x, y), (0, 0, 0, alfa))
-            surf.set_at((min(x + 1, LARGURA - 1), y), (0, 0, 0, alfa))
-            surf.set_at((x, min(y + 1, ALTURA - 1)), (0, 0, 0, alfa))
-            surf.set_at((min(x + 1, LARGURA - 1), min(y + 1, ALTURA - 1)),
-                        (0, 0, 0, alfa))
-    surf = pygame.transform.smoothscale(surf, (LARGURA, ALTURA))
+            amostra.set_at((x, y), (0, 0, 0, alfa))
+    surf = pygame.transform.smoothscale(amostra, (LARGURA, ALTURA))
     return _armazenar_cache(_CACHE_VIGNETTE, chave, surf, 32)
 
 
@@ -490,15 +561,14 @@ def painel_cartoon(cor_borda, rect, cor_fundo=(18, 18, 35), raio_canto=22,
     if chave in _CACHE_PAINEL_CARTOON:
         return _CACHE_PAINEL_CARTOON[chave]
 
-    pad = 20
+    pad = max(20, int(glow_raio))
     w, h = rect.w, rect.h
     surf = pygame.Surface((w + pad * 2, h + pad * 2), pygame.SRCALPHA)
 
     # glow suave atras
     if glow_raio > 0:
-        glow = luz_radial(cor_borda, max(w, h) // 2, 0.6)
-        surf.blit(glow, glow.get_rect(center=((w + pad * 2) // 2,
-                                               (h + pad * 2) // 2)))
+        glow = luz_retangular(cor_borda, (w, h), raio_canto, glow_raio, 0.6)
+        surf.blit(glow, (pad - glow_raio, pad - glow_raio))
 
     # contorno preto grosso (sombra cartoon)
     contorno = pygame.Surface((w + 8, h + 8), pygame.SRCALPHA)
@@ -536,7 +606,9 @@ def desenhar_painel_cartoon(tela, cor_borda, rect, cor_fundo=(18, 18, 35),
     """Desenha painel cartoon na tela."""
     surf = painel_cartoon(cor_borda, rect, cor_fundo, raio_canto,
                           espessura_borda, alpha, glow_raio)
-    tela.blit(surf, (rect.x - 20, rect.y - 20))
+    pad_x = (surf.get_width() - rect.w) // 2
+    pad_y = (surf.get_height() - rect.h) // 2
+    tela.blit(surf, (rect.x - pad_x, rect.y - pad_y))
 
 
 def botao_cartoon(texto, rect, cor_fundo, cor_borda=None, fonte=None,

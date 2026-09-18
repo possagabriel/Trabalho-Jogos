@@ -1,16 +1,16 @@
-name: Executável Windows
+name: Executáveis Desktop
 
 on:
   workflow_dispatch:
   pull_request:
   push:
     branches:
-      - test/windows-exe
+      - main
     tags:
       - "v*"
 
 jobs:
-  empacotar:
+  empacotar-windows:
     runs-on: windows-latest
     permissions:
       contents: write
@@ -20,15 +20,14 @@ jobs:
         with:
           python-version: "3.12"
       - name: Instalar dependências de empacotamento
-        run: python -m pip install --upgrade pip ".[gpu,windows]"
+        run: python -m pip install --upgrade pip ".[desktop]"
       - name: Criar executável
-        run: >-
-          pyinstaller --noconfirm --clean --onefile --windowed
-          --name VOID-SHIFT --icon assets/windows/void-shift.ico
-          --add-data "images;images" --add-data "data/fonts;data/fonts"
-          --collect-submodules src --collect-submodules game
-          --collect-submodules OpenGL
-          --hidden-import game.phase_select main.py
+        run: python tools/build_desktop.py
+      - name: Validar inicialização do executável
+        shell: pwsh
+        run: |
+          & .\dist\VOID-SHIFT.exe --smoke-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Assinar executável quando houver certificado
         shell: pwsh
         env:
@@ -60,6 +59,9 @@ jobs:
           $certificate = Join-Path $env:RUNNER_TEMP "void-shift.pfx"
           [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64))
           signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f $certificate /p $env:WINDOWS_CERTIFICATE_PASSWORD dist/VOID-SHIFT-Setup.exe
+      - name: Registrar commit do build
+        shell: pwsh
+        run: Set-Content -Encoding ascii dist/BUILD-COMMIT-Windows.txt "${{ github.sha }}"
       - name: Gerar somas SHA-256
         shell: pwsh
         run: |
@@ -73,6 +75,7 @@ jobs:
           path: |
             dist/VOID-SHIFT.exe
             dist/VOID-SHIFT-Setup.exe
+            dist/BUILD-COMMIT-Windows.txt
             dist/SHA256SUMS.txt
           if-no-files-found: error
       - name: Publicar executável na Release
@@ -83,4 +86,48 @@ jobs:
           files: |
             dist/VOID-SHIFT.exe
             dist/VOID-SHIFT-Setup.exe
+            dist/BUILD-COMMIT-Windows.txt
             dist/SHA256SUMS.txt
+
+  empacotar-linux:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Instalar dependências de empacotamento
+        run: python -m pip install --upgrade pip ".[desktop]"
+      - name: Criar executável
+        run: python tools/build_desktop.py
+      - name: Validar inicialização do executável
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: ./dist/VOID-SHIFT/VOID-SHIFT --smoke-test
+      - name: Empacotar e registrar commit do build
+        run: |
+          chmod +x dist/VOID-SHIFT/VOID-SHIFT
+          echo "${{ github.sha }}" > dist/BUILD-COMMIT-Linux.txt
+          tar -czf dist/VOID-SHIFT-Linux-x86_64.tar.gz -C dist VOID-SHIFT
+          cd dist
+          sha256sum VOID-SHIFT-Linux-x86_64.tar.gz > SHA256SUMS-Linux.txt
+      - name: Publicar executável baixável
+        uses: actions/upload-artifact@v6
+        with:
+          name: VOID-SHIFT-Linux-x86_64
+          path: |
+            dist/VOID-SHIFT-Linux-x86_64.tar.gz
+            dist/BUILD-COMMIT-Linux.txt
+            dist/SHA256SUMS-Linux.txt
+          if-no-files-found: error
+      - name: Publicar executável na Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            dist/VOID-SHIFT-Linux-x86_64.tar.gz
+            dist/BUILD-COMMIT-Linux.txt
+            dist/SHA256SUMS-Linux.txt

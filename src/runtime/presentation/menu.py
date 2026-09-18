@@ -478,6 +478,7 @@ class MenuPrincipal:
 
         self.entrada_t = 0.0
         self.entrada_total = 1.3
+        self.velocidade_entrada = 3.0
         self._titulo_cache = {}
         self._bloco_logo_cache = {}
         self._cabecalho_cache = {}
@@ -496,6 +497,7 @@ class MenuPrincipal:
         self.ajuste_snapshot = (1.0, 0, 0)
         self.sub_anim = 0.0
         self.sub_anim_total = 0.9
+        self.velocidade_submenu = 3.0
         self.preview_anim = 0.0
         self.tela_principal = TelaPrincipalJogo(self)
         self.tela_continuar = TelaContinuarJogo(self)
@@ -2252,16 +2254,16 @@ class MenuPrincipal:
         if (self._resolucao_pendente is not None and
                 pygame.time.get_ticks() >= self._prazo_confirmacao_resolucao):
             self._reverter_resolucao()
-        self.alpha_entrada = min(255, self.alpha_entrada + 4)
+        self.alpha_entrada = min(255, self.alpha_entrada + 18)
         if self.preview_skin and self.preview_anim < 0.5:
             self.preview_anim += 1 / 60.0
         if self.subestado != "MENU" and self.sub_anim < self.sub_anim_total:
-            self.sub_anim += 1 / 60.0
+            self.sub_anim += self.velocidade_submenu / 60.0
         if self.subestado == "FASES":
             self.phase_screen.update(pygame.key.get_pressed())
         if self.subestado == "MENU":
             if self.entrada_t < self.entrada_total:
-                self.entrada_t += 1 / 60.0
+                self.entrada_t += self.velocidade_entrada / 60.0
             for opcao in self.opcoes:
                 opcao.atualizar(self.mouse, self.x_opcoes, self.fonte_opcao,
                                 self.layout)

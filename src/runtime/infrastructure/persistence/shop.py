@@ -1,16 +1,13 @@
 """Loja de skins: compra, equipa e persiste desbloqueios."""
 
 import json
-import logging
 import os
 
 from src.runtime.domain.entities.player import SKINS, Skin
+from src.shared.persistence import carregar_json_resiliente, salvar_json_atomico
 from src.shared.user_data import diretorio_dados
 
 PASTA_DADOS = diretorio_dados()
-LOGGER = logging.getLogger(__name__)
-
-
 class LojaSkins:
     """Gerencia o catalogo de skins, moedas do jogador e desbloqueios."""
 
@@ -26,23 +23,15 @@ class LojaSkins:
         """Carrega o catalogo de skins.json ou usa o padrao embutido."""
         arquivo = os.path.join(PASTA_DADOS, "skins.json")
         try:
-            with open(arquivo, "r", encoding="utf-8") as f:
-                dados = json.load(f)
+            dados = carregar_json_resiliente(arquivo)
             return [Skin(c) for c in dados]
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             self._salvar_catalogo()
             return [Skin(c) for c in SKINS]
 
     def _salvar_catalogo(self):
-        os.makedirs(PASTA_DADOS, exist_ok=True)
-        try:
-            with open(os.path.join(PASTA_DADOS, "skins.json"), "w",
-                      encoding="utf-8") as f:
-                json.dump(SKINS, f, ensure_ascii=False, indent=2)
-        except OSError as erro:
-            LOGGER.warning("Nao foi possivel salvar catalogo de skins: %s", erro)
-            return False
-        return True
+        caminho = os.path.join(PASTA_DADOS, "skins.json")
+        return salvar_json_atomico(caminho, SKINS)
 
     def pegar_skin(self, skin_id):
         for skin in self.skins:

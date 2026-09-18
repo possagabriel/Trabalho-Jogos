@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.core.constants import EstadoJogo, FPS, INCREMENTO_CARREGAMENTO
+from src.runtime.application.timing import PASSO_FIXO, RelogioSimulacao
 
 if TYPE_CHECKING:
     from src.runtime.application.core import Jogo
@@ -23,7 +24,7 @@ class ControladorLoop:
         """Atualiza o estado ativo e os efeitos que independem da tela."""
         jogo = self.jogo
         if jogo.estado is EstadoJogo.JOGANDO:
-            jogo.tempo_partida += 1 / FPS
+            jogo.tempo_partida += PASSO_FIXO
             jogo._atualizar_jogando()
         elif jogo.estado is EstadoJogo.PREPARANDO:
             jogo.carregamento += INCREMENTO_CARREGAMENTO
@@ -47,14 +48,27 @@ class ControladorLoop:
 
     def _atualizar_textos_e_mensagens(self) -> None:
         jogo = self.jogo
-        for texto in jogo.textos_acao[:]:
+        textos_ativos = []
+        for texto in jogo.textos_acao:
             texto.atualizar()
-            if not texto.ativo:
-                jogo.textos_acao.remove(texto)
-        for mensagem in jogo.mensagens[:]:
+            if texto.ativo:
+                textos_ativos.append(texto)
+        jogo.textos_acao[:] = textos_ativos
+        mensagens_vivas = []
+        for mensagem in jogo.mensagens:
             mensagem.atualizar()
-            if not mensagem.viva:
-                jogo.mensagens.remove(mensagem)
+            if mensagem.viva:
+                mensagens_vivas.append(mensagem)
+        jogo.mensagens[:] = mensagens_vivas
+
+    def simular(self, passos: int) -> None:
+        """Executa passos fixos, incluindo o hitstop determinístico."""
+        jogo = self.jogo
+        for _ in range(passos):
+            if jogo.hitstop > 0:
+                jogo.hitstop -= 1
+            else:
+                self.atualizar()
 
     def tratar_eventos(self) -> bool:
         """Processa os eventos recebidos e informa se o jogo continua ativo."""
@@ -108,19 +122,20 @@ class ControladorLoop:
     def executar(self) -> None:
         """Mantem o loop ate o encerramento solicitado pelo usuario."""
         jogo = self.jogo
+        simulacao = RelogioSimulacao()
         rodando = True
         while rodando:
+            tempo_decorrido_ms = jogo.relogio.tick(FPS)
             rodando = self.tratar_eventos()
             if not rodando:
                 break
-            if jogo.hitstop > 0:
-                jogo.hitstop -= 1
-            else:
-                self.atualizar()
+            self.simular(simulacao.consumir(tempo_decorrido_ms))
             jogo.render_controller.desenhar()
-            jogo.relogio.tick(FPS)
             jogo.fps_atual = jogo.relogio.get_fps()
-            jogo.tempo_quadro_ms = jogo.relogio.get_time()
+            jogo.tempo_quadro_ms = tempo_decorrido_ms
+            jogo.metricas_quadro.registrar(tempo_decorrido_ms)
+            jogo.p95_quadro_ms = jogo.metricas_quadro.p95_ms
+            jogo.fps_1_baixo = jogo.metricas_quadro.fps_1_baixo
             jogo._atualizar_modo_desempenho(jogo.relogio.get_rawtime())
         pygame.quit()
         sys.exit(0)

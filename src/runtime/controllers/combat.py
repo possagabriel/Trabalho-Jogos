@@ -6,6 +6,8 @@ import math
 import random
 from typing import Callable, Protocol
 
+import pygame
+
 from src.runtime.controllers.session import SessaoCombate
 from src.core.constants import ALTURA, EstadoJogo, LARANJA
 from src.runtime.domain.entities.enemies import Inimigo, InimigoEspecial
@@ -13,6 +15,7 @@ from src.runtime.infrastructure.graphics.cel_shading import TextoAcao
 from src.runtime.domain.world.particles import MensagemFlutuante
 from src.runtime.domain.entities.powerups import PowerUp, sortear_tipo
 from src.runtime.domain.entities.weapons import Projetil
+from src.runtime.domain.spatial import GradeEspacial
 
 
 class EntidadePosicionada(Protocol):
@@ -27,6 +30,20 @@ class ControladorCombate:
 
     def __init__(self, sessao: SessaoCombate) -> None:
         self.sessao = sessao
+        self._grade: GradeEspacial[Inimigo] = GradeEspacial(96)
+        self._inimigos_ativos: set[int] = set()
+        self._processando_lote = False
+
+    def _reconstruir_grade(self) -> None:
+        """Atualiza os candidatos espaciais para o quadro de simulação."""
+        self._grade.reconstruir(self.sessao.inimigos)
+        self._inimigos_ativos = {id(inimigo) for inimigo in self.sessao.inimigos}
+
+    def _candidatos(self, area: pygame.Rect) -> list[Inimigo]:
+        if not self._processando_lote:
+            self._reconstruir_grade()
+        return [inimigo for inimigo in self._grade.consultar(area)
+                if id(inimigo) in self._inimigos_ativos]
 
     def ativar_especial(self) -> bool:
         """Lanca a Bomba Vortex se a carga especial estiver completa."""
@@ -67,14 +84,17 @@ class ControladorCombate:
                           flash_inimigo: int = 8) -> bool:
         """Aplica uma explosao a inimigos e boss dentro de um raio."""
         sessao = self.sessao
-        tem_alvo = any(
-            self.distancia(inimigo, proj) < raio for inimigo in sessao.inimigos)
+        area = pygame.Rect(int(proj.x - raio), int(proj.y - raio),
+                           int(raio * 2), int(raio * 2))
+        candidatos = self._candidatos(area)
+        tem_alvo = any(self.distancia(inimigo, proj) < raio
+                       for inimigo in candidatos)
         tem_alvo = tem_alvo or bool(
             sessao.boss and self.distancia(sessao.boss, proj) < raio)
         if not tem_alvo and proj.y > y_limite:
             return False
         efeitos(proj)
-        for inimigo in sessao.inimigos[:]:
+        for inimigo in candidatos:
             if self.distancia(inimigo, proj) < raio:
                 if inimigo.sofrer_dano(proj.dano):
                     self.explodir_inimigo(inimigo)
@@ -147,6 +167,7 @@ class ControladorCombate:
         elif random.random() < 0.08 + min(
                 0.12, sessao.jogador.combo.combo_atual * 0.004):
             sessao.powerups.append(PowerUp(sortear_tipo(), inimigo.x, inimigo.y))
+        self._inimigos_ativos.discard(id(inimigo))
         sessao.inimigos.remove(inimigo)
 
     def drop_especial(self, inimigo: InimigoEspecial) -> None:
@@ -197,7 +218,11 @@ class ControladorCombate:
     def atualizar_projeteis(self) -> None:
         """Atualiza movimento, colisao e remocao de todos os projeteis."""
         sessao = self.sessao
-        for proj in sessao.projeteis[:]:
+        originais = list(sessao.projeteis)
+        restantes = []
+        self._reconstruir_grade()
+        self._processando_lote = True
+        for proj in originais:
             if proj.teleguiado:
                 proj.atualizar_teleguiado(sessao.jogador.x, sessao.jogador.y)
             else:
@@ -208,20 +233,22 @@ class ControladorCombate:
             # aplicar dano nem efeitos visuais.
             if proj.origem == "jogador" and proj.tipo in ("nova", "bomba"):
                 if self.projetil_jogador_atinge(proj):
-                    sessao.projeteis.remove(proj)
                     continue
             if proj.saiu_da_tela():
-                sessao.projeteis.remove(proj)
                 continue
             if proj.origem == "jogador":
                 self._aplicar_atracao_gravitacional(proj)
                 acertou = self.projetil_jogador_atinge(proj)
                 if (acertou and proj.tipo not in ("ion", "gauss")
                         and proj.origem == "jogador"):
-                    sessao.projeteis.remove(proj)
+                    continue
             elif proj.rect.colliderect(sessao.jogador.rect):
-                sessao.projeteis.remove(proj)
                 self.aplicar_dano_jogador()
+                continue
+            restantes.append(proj)
+        self._processando_lote = False
+        novos = sessao.projeteis[len(originais):]
+        sessao.projeteis[:] = restantes + novos
 
     def _aplicar_atracao_gravitacional(self, proj: Projetil) -> None:
         """Curva tiros proximos de inimigos com campo gravitacional."""
@@ -246,7 +273,7 @@ class ControladorCombate:
             return self.explodir_bomba(proj)
         penetrante = proj.tipo in ("ion", "gauss")
         acertou = False
-        for inimigo in sessao.inimigos[:]:
+        for inimigo in self._candidatos(proj.rect):
             if not proj.rect.colliderect(inimigo.rect):
                 continue
             if isinstance(inimigo, InimigoEspecial) and inimigo.campo_forca:
@@ -286,7 +313,8 @@ class ControladorCombate:
         sessao.particulas.explosao(proj.x, proj.y, proj.cor, 10, 3)
         sessao.adicionar_trauma(0.1)
         dano = max(1, proj.dano // 2)
-        for inimigo in sessao.inimigos[:]:
+        area = pygame.Rect(int(proj.x - 58), int(proj.y - 58), 116, 116)
+        for inimigo in self._candidatos(area):
             if inimigo is alvo_principal or self.distancia(inimigo, proj) > 58:
                 continue
             if inimigo.sofrer_dano(dano):
@@ -295,13 +323,16 @@ class ControladorCombate:
     def atualizar_powerups(self) -> None:
         """Atualiza quedas e aplica as coletas do jogador."""
         sessao = self.sessao
-        for powerup in sessao.powerups[:]:
+        restantes = []
+        for powerup in sessao.powerups:
             powerup.atualizar()
             if powerup.y > ALTURA + 30:
-                sessao.powerups.remove(powerup)
+                continue
             elif powerup.rect.colliderect(sessao.jogador.rect):
-                sessao.powerups.remove(powerup)
                 mensagem = powerup.aplicar(sessao.jogador, sessao.desbloquear_skin)
                 sessao.mensagens.append(MensagemFlutuante(
                     mensagem, powerup.x, powerup.y, PowerUp.CORES[powerup.tipo]))
                 sessao.sons.tocar("coleta")
+                continue
+            restantes.append(powerup)
+        sessao.powerups[:] = restantes
