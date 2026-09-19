@@ -31,15 +31,12 @@ class TelaPrincipalJogo:
                                     tema["secundaria"])
             menu._blit_alfa(tela, rotulo, (menu.x_opcoes, menu.layout.px(132)),
                             int(255 * ease_out(progresso)))
-        if menu.entrada_t > 0.25:
-            menu.destaque.desenhar(tela, menu.x_opcoes - menu.layout.px(32), tema)
         for indice, opcao in enumerate(menu.opcoes):
             progresso = menu._frac(0.34 + indice * 0.07, 0.42)
             deslocamento = int((1 - ease_out(progresso)) * 150)
             opcao.desenhar(tela, menu.fonte_opcao, menu.fonte_opcao_sel, tema,
                            menu.x_opcoes, indice == menu.opcao_selecionada,
                            deslocamento, int(255 * ease_out(progresso)), menu.layout)
-        menu._desenhar_seta(tela, tema)
         menu._desenhar_rodape(tela, tema)
 
     def tratar_tecla(self, evento: pygame.event.Event) -> bool:

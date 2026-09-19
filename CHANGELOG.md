@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Save/records persistence in JSON
 
 ### Changed
+- Maior espaçamento entre as opções do menu principal, eliminando sobreposição
+  das áreas de clique e reposicionando o rodapé conforme o layout responsivo.
 - Restructured codebase into src/ package with hexagonal architecture
 - Separated domain logic from presentation and infrastructure
 - Extracted combat, progression, and collision into dedicated systems
