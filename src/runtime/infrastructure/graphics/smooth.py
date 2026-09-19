@@ -548,6 +548,14 @@ def desenhar_painel_cartoon(tela, cor_borda, rect, cor_fundo=(18, 18, 35),
                             raio_canto=22, espessura_borda=5, alpha=240,
                             glow_raio=20):
     """Desenha painel cartoon na tela."""
+    from src.infrastructure.graphics.comic_theme import opcoes_atuais
+
+    if opcoes_atuais().ativo:
+        from src.infrastructure.graphics.comic_render import painel_tinta
+
+        tela.blit(painel_tinta(rect.size, tuple(cor_borda[:3])),
+                  (rect.x - 12, rect.y - 12))
+        return
     surf = painel_cartoon(cor_borda, rect, cor_fundo, raio_canto,
                           espessura_borda, alpha, glow_raio)
     tela.blit(surf, (rect.x - 20, rect.y - 20))
@@ -613,6 +621,19 @@ def botao_cartoon(texto, rect, cor_fundo, cor_borda=None, fonte=None,
 def desenhar_botao_cartoon(tela, texto, rect, cor_fundo, cor_borda=None,
                            fonte=None, hover=False, habilitado=True):
     """Desenha botao cartoon na tela e retorna o rect."""
+    from src.infrastructure.graphics.comic_theme import LARANJA, PAPEL, opcoes_atuais
+
+    if opcoes_atuais().ativo:
+        from src.infrastructure.graphics.comic_render import painel_tinta, texto_tinta
+
+        cor = LARANJA if hover and habilitado else PAPEL
+        pygame_rect = pygame.Rect(rect)
+        painel = painel_tinta(pygame_rect.size, cor)
+        tela.blit(painel, (pygame_rect.x - 12, pygame_rect.y - 12))
+        tamanho = max(10, int((fonte.get_height() if fonte else 22) * 0.7))
+        rotulo = texto_tinta(texto, tamanho, PAPEL)
+        tela.blit(rotulo, rotulo.get_rect(center=pygame_rect.center))
+        return pygame_rect
     surf, pos = botao_cartoon(texto, rect, cor_fundo, cor_borda, fonte,
                               hover, habilitado)
     tela.blit(surf, pos)

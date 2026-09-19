@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Save/records persistence in JSON
 
 ### Changed
+- Menus secundários e telas de confirmação passaram a usar o mesmo painel
+  angular, borda e tipografia do menu principal.
 - Maior espaçamento entre as opções do menu principal, eliminando sobreposição
   das áreas de clique e reposicionando o rodapé conforme o layout responsivo.
 - Restructured codebase into src/ package with hexagonal architecture

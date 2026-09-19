@@ -218,3 +218,20 @@ def test_lettering_limita_cor_durante_easing_da_pausa():
 
     superficie = texto_tinta("RETOMAR", 14, (-3, 280, 90))
     assert superficie.get_width() > 0
+
+
+def test_confirmacoes_usam_o_modelo_angular_do_menu():
+    from src.runtime.infrastructure.graphics.smooth import desenhar_botao_cartoon
+    from src.runtime.presentation.menu import Dialogo
+
+    tela = pygame.Surface((900, 700), pygame.SRCALPHA).convert_alpha()
+    rect = pygame.Rect(260, 430, 180, 50)
+    with usar_visual({"estilo_visual": "COMIC"}):
+        desenhado = desenhar_botao_cartoon(
+            tela, "SIM", rect, (30, 160, 80), fonte=pygame.font.Font(None, 24))
+        dialogo = Dialogo("Sair do jogo", "Tem certeza que deseja sair?",
+                          lambda: None, lambda: None)
+        dialogo.desenhar(tela, pygame.font.Font(None, 34),
+                         pygame.font.Font(None, 24))
+    assert desenhado == rect
+    assert pygame.mask.from_surface(tela).count() > 0
