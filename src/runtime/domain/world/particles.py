@@ -8,7 +8,6 @@ from typing import TypeAlias
 
 import pygame
 
-from src.runtime.infrastructure.graphics.cel_shading import escurecer_cor
 from src.core.constants import (
     ALTURA,
     BRANCO,
@@ -19,6 +18,10 @@ from src.core.constants import (
     ROXO,
     VERMELHO,
 )
+from src.infrastructure.graphics.comic_render import burst, texto_tinta
+from src.infrastructure.graphics.comic_theme import opcoes_atuais
+from src.runtime.infrastructure.graphics.cel_shading import escurecer_cor
+from src.runtime.infrastructure.graphics.fonts import fonte_padrao
 from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, luz_radial
 
 _CACHE = {}
@@ -83,6 +86,10 @@ class Particula:
 
     def desenhar(self, tela: pygame.Surface) -> None:
         if self.vida <= 0:
+            return
+        if opcoes_atuais().ativo:
+            surf = burst(max(2, int(self.tamanho * 2)), tuple(self.cor))
+            tela.blit(surf, surf.get_rect(center=(int(self.x), int(self.y))))
             return
         alfa = int(255 * self.vida / self.vida_max)
         tam = max(1, int(self.tamanho))
@@ -309,7 +316,7 @@ class MensagemFlutuante:
         self.cor = cor
         self.tempo = tempo
         self.tempo_max = tempo
-        self._fonte = fonte or pygame.font.Font(None, 26)
+        self._fonte = fonte or fonte_padrao(26)
 
     def atualizar(self) -> None:
         self.y -= 1.0
@@ -323,6 +330,12 @@ class MensagemFlutuante:
         if self.tempo <= 0:
             return
         from src.runtime.infrastructure.graphics.smooth import superficie_com_alpha, texto_suave
+        if opcoes_atuais().ativo:
+            superficie = texto_tinta(self.texto, 20, tuple(self.cor))
+            superficie = superficie_com_alpha(
+                superficie, int(255 * self.tempo / self.tempo_max))
+            tela.blit(superficie, superficie.get_rect(center=(int(self.x), int(self.y))))
+            return
         superficie = texto_suave(self._fonte, self.texto, self.cor,
                                  glow_cor=self.cor, glow_raio=3)
         superficie = superficie_com_alpha(

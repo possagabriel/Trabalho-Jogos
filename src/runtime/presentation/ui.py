@@ -10,10 +10,19 @@ import math
 import pygame
 
 from src.core.constants import BRANCO, LARGURA
-from src.runtime.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
-from src.runtime.infrastructure.graphics.smooth import barra_suave, desenhar_cantos, desenhar_circulo, \
-    desenhar_glow, desenhar_painel, desenhar_texto_suave, retangulo_suave
+from src.infrastructure.graphics.comic_render import painel_tinta, texto_tinta
+from src.infrastructure.graphics.comic_theme import LARANJA, PAPEL, opcoes_atuais
 from src.infrastructure.graphics.theme import cor_tema
+from src.runtime.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
+from src.runtime.infrastructure.graphics.smooth import (
+    barra_suave,
+    desenhar_cantos,
+    desenhar_circulo,
+    desenhar_glow,
+    desenhar_painel,
+    desenhar_texto_suave,
+    retangulo_suave,
+)
 
 
 def cor_primaria():
@@ -51,6 +60,12 @@ class BotaoNeon:
         self.hover = self.rect.collidepoint(mouse_pos)
 
     def desenhar(self, tela, fonte):
+        if opcoes_atuais().ativo:
+            painel = painel_tinta(self.rect.size, LARANJA if self.hover else PAPEL)
+            tela.blit(painel, (self.rect.x - 12, self.rect.y - 12))
+            texto = texto_tinta(self.texto, max(10, int(fonte.get_height() * .7)), PAPEL)
+            tela.blit(texto, texto.get_rect(center=self.rect.center))
+            return
         if self.cor is not None:
             self._desenhar_solido(tela, fonte)
         else:

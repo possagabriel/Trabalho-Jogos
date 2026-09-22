@@ -29,15 +29,38 @@ import math
 
 import pygame
 
-from src.core.constants import ALTURA, DIMENSION_GOLD, LARGURA, QUANTUM_CYAN, RIFT_MAGENTA, \
-    SHIFT_WHITE, VOID_BLACK
+from src.core.constants import (
+    ALTURA,
+    DIMENSION_GOLD,
+    LARGURA,
+    QUANTUM_CYAN,
+    RIFT_MAGENTA,
+    SHIFT_WHITE,
+    VOID_BLACK,
+)
+from src.infrastructure.graphics.comic_render import texto_tinta
+from src.infrastructure.graphics.comic_theme import (
+    CIANO,
+    LARANJA,
+    RARIDADE_ARMAS,
+    RARIDADES,
+    SOMBRA,
+    opcoes_atuais,
+)
+from src.infrastructure.ui.layout import Layout
+from src.runtime.domain.entities.weapons import ARMARIA
 from src.runtime.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
 from src.runtime.infrastructure.graphics.geometry import losango
-from src.infrastructure.ui.layout import Layout
-from src.runtime.infrastructure.graphics.smooth import barra_suave, desenhar_cantos, desenhar_circulo, \
-    desenhar_glow, desenhar_painel, desenhar_poligono, linha_suave, \
-    retangulo_suave
-from src.runtime.domain.entities.weapons import ARMARIA
+from src.runtime.infrastructure.graphics.smooth import (
+    barra_suave,
+    desenhar_cantos,
+    desenhar_circulo,
+    desenhar_glow,
+    desenhar_painel,
+    desenhar_poligono,
+    linha_suave,
+    retangulo_suave,
+)
 
 # ---------------------------------------------------------------------------
 # Paleta do HUD (derivada da marca VOID//SHIFT, nunca saturada em excesso)
@@ -89,6 +112,8 @@ def _paleta_fase(cenario):
     principais do cenario (``cores_principais``); sem elas, cai no padrao da
     marca (ciano/magenta).
     """
+    if opcoes_atuais().ativo:
+        return {"primaria": LARANJA, "secundaria": CIANO, "energia": LARANJA, "fundo": SOMBRA}
     cores = getattr(cenario, "cores_principais", None) or []
     if len(cores) < 2:
         return dict(PALETA_HUD_PADRAO)
@@ -105,6 +130,8 @@ def _paleta_fase(cenario):
 # ---------------------------------------------------------------------------
 
 def _render(fonte, texto, cor):
+    if opcoes_atuais().ativo:
+        return texto_tinta(str(texto), max(9, int(fonte.get_height() * .7)), tuple(cor[:3]))
     return fonte.render(texto, True, cor[:3])
 
 
@@ -380,7 +407,7 @@ class HudJogo:
             "energia": max(0.0, min(100.0, getattr(jogo, "energia", 100.0))),
             "vel": getattr(jog, "velocidade", 5.0),
             "esquiva": max(0.0, 1 - getattr(jog, "cooldown_esquiva", 0) / 90),
-            "boss": jogo.boss,
+            "boss": jogo.boss or getattr(jogo, "miniboss", None),
         }
 
     # ----------------------------------------------------------- desenhar
@@ -391,7 +418,10 @@ class HudJogo:
         t = (pygame.time.get_ticks() * 0.001) if tempo is None else tempo
         self._topo_esquerda(tela, d, t)
         self._topo_direita(tela, d, t)
-        self._topo_centro(tela, d, t)
+        # O protocolo ocupa o cabeçalho durante o encontro; evita sobrepor
+        # o nome e a barra do miniboss ao indicador de setor.
+        if not getattr(jogo, "miniboss", None):
+            self._topo_centro(tela, d, t)
         self._base_esquerda(tela, d, t)
         self._base_direita(tela, d, t)
         self._base_centro(tela, d, t)
@@ -412,7 +442,7 @@ class HudJogo:
         p95 = max(0, round(getattr(jogo, "p95_quadro_ms", 0)))
         fps_1_baixo = max(0, round(getattr(jogo, "fps_1_baixo", 0)))
         escala = "RÁPIDA" if getattr(jogo, "_escala_rapida", False) else "SUAVE"
-        chave = (fps, quadro, p95, fps_1_baixo, qualidade, escala)
+        chave = (fps, quadro, p95, fps_1_baixo, qualidade, escala, opcoes_atuais().estilo)
         if chave != self._telemetria_chave:
             texto = (f"{fps:02d} FPS  {quadro:02d} ms  P95 {p95:02d} ms  "
                      f"1% {fps_1_baixo:02d} FPS  {qualidade}  {escala}")
@@ -621,10 +651,17 @@ class HudJogo:
         _icone_arma(tela, arma["tipo"], badge_c, arma["cor"], l.escala * 1.1)
 
         x0 = painel.x + l.px(58)
-        nome = _render(self._f_titulo_s, arma["nome"].upper(), BRANCO_HUD)
+        cor_nome = BRANCO_HUD
+        if opcoes_atuais().ativo:
+            indice = next(i for i, item in enumerate(ARMARIA) if item["tipo"] == arma["tipo"])
+            cor_nome = RARIDADES[RARIDADE_ARMAS[indice]]
+        nome = _render(self._f_titulo_s, arma["nome"].upper(), cor_nome)
         _blit_alfa(tela, nome, (x0, painel.y + l.px(12)), 240)
-        nivel = _render(self._f_padrao_xxs, f"NV {arma['nivel']:02d}",
-                        CINZA_HUD)
+        legenda = f"NV {arma['nivel']:02d}"
+        if opcoes_atuais().ativo:
+            legenda += " / " + RARIDADE_ARMAS[indice].upper()
+        nivel = _render(
+            self._f_padrao_xxs, legenda, cor_nome if opcoes_atuais().ativo else CINZA_HUD)
         _blit_alfa(tela, nivel, (x0, painel.y + l.px(30)), 200)
 
         # carga / municao da arma
@@ -702,6 +739,8 @@ class HudJogo:
         fase_atual = getattr(boss, "fase_atual", None)
         if fase_atual is None:
             fase_atual = 1 if fracao > 0.66 else 2 if fracao > 0.33 else 3
-        fase = _render(self._f_padrao_xxs, f"FASE {fase_atual}/3", OURO_HUD)
+        estado_miniboss = getattr(boss, "estado", None)
+        rotulo = getattr(estado_miniboss, "rotulo", f"FASE {fase_atual}/3")
+        fase = _render(self._f_padrao_xxs, rotulo, OURO_HUD)
         _blit_alfa(tela, fase, fase.get_rect(midleft=(barra.right + l.px(14),
                                                       barra.centery)), 220)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from src.runtime.domain.entities.bosses import Boss
 from src.runtime.infrastructure.graphics.cel_shading import TextoAcao
@@ -14,6 +14,10 @@ from src.runtime.domain.entities.powerups import PowerUp
 from src.runtime.infrastructure.persistence.save_system import SistemaProgressao
 from src.runtime.infrastructure.audio.sounds import Sons
 from src.runtime.domain.entities.weapons import Projetil
+
+if TYPE_CHECKING:
+    from src.runtime.controllers.miniboss import ControladorMiniboss
+    from src.runtime.domain.entities.minibosses import Miniboss
 
 
 @runtime_checkable
@@ -29,6 +33,8 @@ class SessaoCombate(Protocol):
     jogador: Jogador
     inimigos: list[Inimigo]
     boss: Boss | None
+    miniboss: Miniboss | None
+    miniboss_controller: ControladorMiniboss
     projeteis: list[Projetil]
     powerups: list[PowerUp]
     mensagens: list[MensagemFlutuante]

@@ -20,12 +20,20 @@ import random
 
 import pygame
 
-from src.runtime.infrastructure.assets import carregar_imagem
 from src.core.constants import NEGRO
+from src.infrastructure.graphics.comic_render import desenhar_fundo
+from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.infrastructure.ui.layout import Layout
 from src.runtime.domain.entities.player import Jogador
-from src.runtime.infrastructure.graphics.smooth import desenhar_cantos, desenhar_circulo, desenhar_glow, \
-    gradiente_vertical, luz_radial, retangulo_suave
+from src.runtime.infrastructure.assets import carregar_imagem
+from src.runtime.infrastructure.graphics.smooth import (
+    desenhar_cantos,
+    desenhar_circulo,
+    desenhar_glow,
+    gradiente_vertical,
+    luz_radial,
+    retangulo_suave,
+)
 
 
 def texto_espacado(fonte, texto, espacamento, cor):
@@ -241,6 +249,9 @@ class FundoCinematico:
     # ----- desenho -----
 
     def desenhar(self, tela):
+        if opcoes_atuais().ativo:
+            desenhar_fundo(tela)
+            return
         if self.fundo_imagem is not None:
             tela.blit(self.fundo_imagem, (0, 0))
         else:
@@ -497,7 +508,7 @@ class NaveMenu:
         jog.tilt = 0.35
         jog.invencivel = 0
 
-        chave = (skin.id, round(escala, 2))
+        chave = (skin.id, round(escala, 2), opcoes_atuais())
         surf = self._sprites.get(chave)
         if surf is None:
             base = pygame.Surface((96, 96), pygame.SRCALPHA)

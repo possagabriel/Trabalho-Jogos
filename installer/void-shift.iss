@@ -1,5 +1,7 @@
 ; Instalador oficial do VOID//SHIFT (Inno Setup 6)
-#define AppVersion "1.0.0"
+#ifndef AppVersion
+  #define AppVersion "0.0.0-dev"
+#endif
 
 [Setup]
 AppId={{B74AE7B0-9A9F-4C93-9A30-0D51F7C91000}

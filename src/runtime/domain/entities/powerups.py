@@ -8,11 +8,14 @@ from typing import TYPE_CHECKING, Callable, Literal, TypeAlias
 
 import pygame
 
-from src.runtime.infrastructure.graphics.cel_shading import circulo_com_contorno, desenhar_highlight
-from src.core.constants import AZUL, BRANCO, CIANO, DOURADO, LARANJA, VERDE, \
-    VERDE_CLARO
-from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, desenhar_glow
+from src.core.constants import AZUL, BRANCO, CIANO, DOURADO, LARANJA, VERDE, VERDE_CLARO
 from src.runtime.domain.entities.weapons import ARMARIA
+from src.runtime.infrastructure.graphics.cel_shading import (
+    circulo_com_contorno,
+    desenhar_highlight,
+)
+from src.runtime.infrastructure.graphics.fonts import fonte_padrao
+from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, desenhar_glow
 
 if TYPE_CHECKING:
     from src.runtime.domain.entities.player import Jogador
@@ -94,7 +97,7 @@ class PowerUp:
         circulo_com_contorno(tela, cor, (x, y), int(raio),
                             espessura_contorno=3)
         desenhar_highlight(tela, (x, y), raio, intensidade=0.6)
-        fonte = pygame.font.Font(None, 22)
+        fonte = fonte_padrao(22)
         texto = fonte.render(self.SIMBOLOS[self.tipo], True, BRANCO)
         tela.blit(texto, texto.get_rect(center=(int(x), int(y))))
 

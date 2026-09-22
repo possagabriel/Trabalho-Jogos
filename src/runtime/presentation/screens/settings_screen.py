@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.core.constants import BRANCO, QUANTUM_CYAN, VERDE
+from src.core.settings import ACOES_CONTROLE, RESOLUCOES
 from src.infrastructure.graphics.theme import tema_atual
 from src.runtime.infrastructure.graphics.smooth import retangulo_suave
-from src.core.settings import ACOES_CONTROLE, RESOLUCOES
 
 if TYPE_CHECKING:
     from src.runtime.presentation.menu import MenuPrincipal
@@ -236,6 +236,15 @@ class TelaConfiguracoesJogo:
                 "desempenho": ("LIGADO" if menu.jogo.config["mostrar_desempenho"]
                                 else "DESLIGADO"),
             }
+            for chave in ("estilo_visual", "qualidade_comic"):
+                valores[chave] = menu.jogo.config[chave]
+            for chave in ("comic_papel", "comic_halftone", "comic_hachuras", "line_boil"):
+                valores[chave] = "LIGADO" if menu.jogo.config[chave] else "DESLIGADO"
+            if menu.jogo.config["qualidade_comic"] == "BAIXA":
+                for chave in ("comic_papel", "comic_halftone", "comic_hachuras"):
+                    valores[chave] = "INATIVO (BAIXA)"
+            if menu.jogo.config["qualidade_comic"] != "ALTA":
+                valores["line_boil"] = "INATIVO (ALTA)"
             valor = valores.get(tipo, "")
             cor = (tema["secundaria"] if tipo in ("resolucao", "qualidade")
                    else QUANTUM_CYAN if tipo in ("aspecto", "desempenho")

@@ -7,12 +7,22 @@ from typing import Literal, TypeAlias
 
 import pygame
 
-from src.runtime.infrastructure.graphics.cel_shading import (circulo_com_contorno, contorno_circulo,
-                          contorno_retangulo, escurecer_cor)
-from src.core.constants import ALTURA, AZUL_CLARO, BRANCO, CIANO, LARANJA, LARGURA, ROXO, \
-    VERDE
-from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, desenhar_glow, desenhar_poligono, \
-    linha_suave, retangulo_suave
+from src.core.constants import ALTURA, AZUL_CLARO, BRANCO, CIANO, LARANJA, LARGURA, ROXO, VERDE
+from src.infrastructure.graphics.comic_render import trilha_tinta
+from src.infrastructure.graphics.comic_theme import opcoes_atuais
+from src.runtime.infrastructure.graphics.cel_shading import (
+    circulo_com_contorno,
+    contorno_circulo,
+    contorno_retangulo,
+    escurecer_cor,
+)
+from src.runtime.infrastructure.graphics.smooth import (
+    desenhar_circulo,
+    desenhar_glow,
+    desenhar_poligono,
+    linha_suave,
+    retangulo_suave,
+)
 
 CORES_ARCO_IRIS = [(255, 60, 60), (255, 220, 60), (90, 255, 90),
                    (60, 220, 255), (90, 120, 255), (230, 90, 255)]
@@ -113,6 +123,8 @@ class Projetil:
         return self.cor
 
     def desenhar(self, tela: pygame.Surface) -> None:
+        if opcoes_atuais().ativo:
+            trilha_tinta(tela, (self.x, self.y), (self.vel_x, self.vel_y), self.cor)
         x, y = int(self.x), int(self.y)
         cor = self._cor_atual()
         if self.tipo == "plasma":

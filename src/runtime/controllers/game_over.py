@@ -19,6 +19,7 @@ class ControladorGameOver:
     def encerrar_partida(self) -> None:
         """Registra a partida encerrada e dispara seu feedback final."""
         jogo = self.jogo
+        jogo.miniboss_controller.cancelar()
         melhor_anterior = SistemaProgressao.melhor_pontuacao()
         jogo.recordes = SistemaProgressao.salvar_recorde(
             jogo.jogador.nome, jogo.jogador.pontuacao, jogo.jogador.nivel,

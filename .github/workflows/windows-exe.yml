@@ -12,15 +12,36 @@ on:
 jobs:
   empacotar-windows:
     runs-on: windows-latest
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
       - name: Instalar dependências de empacotamento
         run: python -m pip install --upgrade pip ".[desktop]"
+      - name: Definir versão do instalador
+        id: versao
+        shell: pwsh
+        env:
+          GIT_REF_NAME: ${{ github.ref_name }}
+          GIT_REF_TYPE: ${{ github.ref_type }}
+        run: |
+          $versaoProjeto = python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"
+          $versao = if ($env:GIT_REF_TYPE -eq "tag") {
+            $env:GIT_REF_NAME -replace '^v', ''
+          } else {
+            $versaoProjeto
+          }
+          if ($versao -notmatch '^\d+\.\d+\.\d+([.-][0-9A-Za-z.-]+)?$') {
+            throw "Versão inválida para o instalador: $versao"
+          }
+          "valor=$versao" >> $env:GITHUB_OUTPUT
+          Write-Host "Versão do instalador: $versao"
       - name: Criar executável
         run: python tools/build_desktop.py
       - name: Validar inicialização do executável
@@ -43,9 +64,11 @@ jobs:
           signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f $certificate /p $env:WINDOWS_CERTIFICATE_PASSWORD dist/VOID-SHIFT.exe
       - name: Criar instalador Windows
         shell: pwsh
+        env:
+          APP_VERSION: ${{ steps.versao.outputs.valor }}
         run: |
           choco install innosetup --no-progress --yes
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\void-shift.iss
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$env:APP_VERSION" installer\void-shift.iss
       - name: Assinar instalador quando houver certificado
         shell: pwsh
         env:
@@ -62,6 +85,18 @@ jobs:
       - name: Registrar commit do build
         shell: pwsh
         run: Set-Content -Encoding ascii dist/BUILD-COMMIT-Windows.txt "${{ github.sha }}"
+      - name: Validar arquivos de distribuição
+        shell: pwsh
+        run: |
+          $arquivos = @("dist/VOID-SHIFT.exe", "dist/VOID-SHIFT-Setup.exe")
+          foreach ($arquivo in $arquivos) {
+            if (-not (Test-Path $arquivo -PathType Leaf)) {
+              throw "Arquivo esperado não foi criado: $arquivo"
+            }
+            if ((Get-Item $arquivo).Length -eq 0) {
+              throw "Arquivo gerado está vazio: $arquivo"
+            }
+          }
       - name: Gerar somas SHA-256
         shell: pwsh
         run: |
@@ -69,7 +104,7 @@ jobs:
             ForEach-Object { "$($_.Hash) *$($_.Path | Split-Path -Leaf)" } |
             Set-Content -Encoding ascii dist/SHA256SUMS.txt
       - name: Publicar executável baixável
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: VOID-SHIFT-Windows
           path: |
@@ -79,7 +114,7 @@ jobs:
             dist/SHA256SUMS.txt
           if-no-files-found: error
       - name: Publicar executável na Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true

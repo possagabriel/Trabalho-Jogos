@@ -8,14 +8,15 @@ from typing import Callable, Protocol
 
 import pygame
 
+from src.core.constants import ALTURA, LARANJA, EstadoJogo
 from src.runtime.controllers.session import SessaoCombate
-from src.core.constants import ALTURA, EstadoJogo, LARANJA
 from src.runtime.domain.entities.enemies import Inimigo, InimigoEspecial
-from src.runtime.infrastructure.graphics.cel_shading import TextoAcao
-from src.runtime.domain.world.particles import MensagemFlutuante
 from src.runtime.domain.entities.powerups import PowerUp, sortear_tipo
 from src.runtime.domain.entities.weapons import Projetil
 from src.runtime.domain.spatial import GradeEspacial
+from src.runtime.domain.world.particles import MensagemFlutuante
+from src.runtime.infrastructure.graphics.cel_shading import TextoAcao
+from src.runtime.presentation.damage_feedback import registrar_impacto
 
 
 class EntidadePosicionada(Protocol):
@@ -45,6 +46,14 @@ class ControladorCombate:
         return [inimigo for inimigo in self._grade.consultar(area)
                 if id(inimigo) in self._inimigos_ativos]
 
+    def remover_inimigos(self, inimigos: list[Inimigo]) -> None:
+        """Retira entidades sem recompensa e invalida suas colisões no lote atual."""
+        removidos = {id(inimigo) for inimigo in inimigos}
+        self._inimigos_ativos.difference_update(removidos)
+        self.sessao.inimigos[:] = [
+            inimigo for inimigo in self.sessao.inimigos if id(inimigo) not in removidos
+        ]
+
     def ativar_especial(self) -> bool:
         """Lanca a Bomba Vortex se a carga especial estiver completa."""
         sessao = self.sessao
@@ -54,6 +63,8 @@ class ControladorCombate:
         x, y = sessao.jogador.x, sessao.jogador.y - 24
         sessao.projeteis.append(Projetil(x, y, 0, -3.5, 25, LARANJA, 20,
                                          tipo="bomba"))
+        if sessao.miniboss:
+            sessao.miniboss.observar_tiros([sessao.projeteis[-1]])
         sessao.flash = 10
         sessao.sons.tocar("especial")
         sessao.adicionar_trauma(0.3)
@@ -91,20 +102,29 @@ class ControladorCombate:
                        for inimigo in candidatos)
         tem_alvo = tem_alvo or bool(
             sessao.boss and self.distancia(sessao.boss, proj) < raio)
+        tem_alvo = tem_alvo or bool(
+            sessao.miniboss and self.distancia(sessao.miniboss, proj) < raio)
         if not tem_alvo and proj.y > y_limite:
             return False
         efeitos(proj)
+        sessao.miniboss_controller.receber_area(proj, raio)
         for inimigo in candidatos:
+            if id(inimigo) not in self._inimigos_ativos:
+                continue
             if self.distancia(inimigo, proj) < raio:
+                vida_antes = inimigo.vida
                 if inimigo.sofrer_dano(proj.dano):
                     self.explodir_inimigo(inimigo)
                 else:
                     inimigo.flash = flash_inimigo
+                registrar_impacto(sessao, inimigo, proj, vida_antes)
         if sessao.boss and self.distancia(sessao.boss, proj) < raio:
+            alvo, vida_antes = sessao.boss, sessao.boss.vida
             if sessao.boss.sofrer_dano(proj.dano):
                 self.derrotar_boss()
             else:
                 sessao.adicionar_trauma(0.15)
+            registrar_impacto(sessao, alvo, proj, vida_antes)
         return True
 
     def efeitos_nova(self, proj: Projetil) -> None:
@@ -272,7 +292,9 @@ class ControladorCombate:
         if proj.tipo == "bomba":
             return self.explodir_bomba(proj)
         penetrante = proj.tipo in ("ion", "gauss")
-        acertou = False
+        acertou = sessao.miniboss_controller.receber_tiro(proj)
+        if acertou and not penetrante:
+            return True
         for inimigo in self._candidatos(proj.rect):
             if not proj.rect.colliderect(inimigo.rect):
                 continue
@@ -281,6 +303,7 @@ class ControladorCombate:
                     proj.refletir()
                     sessao.sons.tocar("coleta")
                 return True
+            vida_antes = inimigo.vida
             if isinstance(inimigo, InimigoEspecial):
                 morreu = inimigo.receber_tiro(proj.dano)
                 sessao.sons.tocar("carga")
@@ -292,18 +315,21 @@ class ControladorCombate:
             else:
                 sessao.sons.tocar("acerto")
                 sessao.particulas.faiscas(proj.x, proj.y, proj.cor, 5)
+            registrar_impacto(sessao, inimigo, proj, vida_antes)
             if proj.tipo == "plasma":
                 self._dano_secundario_plasma(proj, inimigo)
             acertou = True
             if not penetrante:
                 return True
         if sessao.boss and proj.rect.colliderect(sessao.boss.rect):
+            alvo, vida_antes = sessao.boss, sessao.boss.vida
             if sessao.boss.sofrer_dano(proj.dano):
                 self.derrotar_boss()
             else:
                 sessao.sons.tocar("acerto")
                 sessao.particulas.faiscas(proj.x, proj.y, proj.cor, 6)
                 sessao.adicionar_trauma(0.15)
+            registrar_impacto(sessao, alvo, proj, vida_antes)
             acertou = True
         return acertou
 
@@ -313,12 +339,15 @@ class ControladorCombate:
         sessao.particulas.explosao(proj.x, proj.y, proj.cor, 10, 3)
         sessao.adicionar_trauma(0.1)
         dano = max(1, proj.dano // 2)
+        sessao.miniboss_controller.receber_area(proj, 58, dano)
         area = pygame.Rect(int(proj.x - 58), int(proj.y - 58), 116, 116)
         for inimigo in self._candidatos(area):
             if inimigo is alvo_principal or self.distancia(inimigo, proj) > 58:
                 continue
+            vida_antes = inimigo.vida
             if inimigo.sofrer_dano(dano):
                 self.explodir_inimigo(inimigo)
+            registrar_impacto(sessao, inimigo, proj, vida_antes)
 
     def atualizar_powerups(self) -> None:
         """Atualiza quedas e aplica as coletas do jogador."""

@@ -10,8 +10,8 @@ import math
 import time
 from typing import Dict, Tuple
 
-from src.core.constants import (DIMENSION_GOLD, QUANTUM_CYAN, RIFT_MAGENTA,
-                                VOID_BLACK)
+from src.core.constants import DIMENSION_GOLD, QUANTUM_CYAN, RIFT_MAGENTA, VOID_BLACK
+from src.infrastructure.graphics.comic_theme import PALETA_UI, opcoes_atuais
 
 # Accent palettes by theme (all derived from the INCARNATE brand)
 TEMAS_CORES: Dict[str, Dict[str, tuple]] = {
@@ -61,6 +61,8 @@ def tempo() -> float:
 
 def tema_atual(nome: "str | None" = None) -> Dict[str, tuple]:
     """Return the colour palette for the current theme (fallback NEON)."""
+    if opcoes_atuais().ativo:
+        return dict(PALETA_UI)
     nome = nome or DEFAULT_TEMA
     return TEMAS_CORES.get(nome.upper(), TEMAS_CORES[DEFAULT_TEMA])
 
