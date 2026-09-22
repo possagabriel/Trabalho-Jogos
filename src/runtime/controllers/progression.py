@@ -42,6 +42,7 @@ class ControladorProgressao:
         jogo.jogador.velocidade = 5.0 * jogo.sensibilidade
         jogo.inimigos, jogo.projeteis, jogo.powerups = [], [], []
         jogo.boss = None
+        jogo.miniboss_controller.reiniciar()
         jogo.mensagens, jogo.fila_onda, jogo.xs_onda = [], [], []
         jogo.timer_spawn = jogo.inimigos_abates = jogo.bosses_abates = 0
         jogo.boss_intro = jogo.tiros_disparados = jogo.tempo_partida = 0
@@ -84,6 +85,7 @@ class ControladorProgressao:
     def iniciar_nivel(self, nivel: int) -> None:
         """Configura as ondas ou o boss correspondente ao nivel."""
         jogo = self.jogo
+        jogo.miniboss_controller.cancelar()
         jogo.jogador.nivel = nivel
         novo_cenario_id = cenario_do_nivel(nivel)
         if novo_cenario_id != jogo.cenario.id:
@@ -102,6 +104,7 @@ class ControladorProgressao:
             jogo.sons.tocar("boss")
             return
         jogo.boss = None
+        jogo.ondas_miniboss += 1
         tipos, quantidade, xs = composicao_onda(nivel, jogo.cenario.inimigos)
         jogo.fila_onda = [random.choice(tipos) for _ in range(quantidade)]
         jogo.xs_onda = list(xs)

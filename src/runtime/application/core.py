@@ -15,6 +15,7 @@ from src.runtime.domain.entities.bosses import Boss
 from src.runtime.infrastructure.assets import carregar_imagem_alpha
 from src.runtime.infrastructure.graphics.cel_shading import TextoAcao
 from src.runtime.controllers.combat import ControladorCombate
+from src.runtime.controllers.miniboss import ControladorMiniboss
 from src.runtime.controllers.game_over import ControladorGameOver
 from src.runtime.domain.entities.enemies import Inimigo, InimigoEspecial, composicao_onda, \
     sortear_inimigo_especial
@@ -154,6 +155,7 @@ class Jogo:
         self.indice_equipamento = 0
         self.progressao_controller = ControladorProgressao(self)
         self.combate_controller = ControladorCombate(self)
+        self.miniboss_controller = ControladorMiniboss(self)
         self.pausa_controller = ControladorPausa(self)
         self.game_over_controller = ControladorGameOver(self)
         self.render_controller = ControladorRenderizacao(self)
@@ -551,6 +553,7 @@ class Jogo:
     def _atualizar_jogando(self):
         if self.menu_equipamento:
             return
+        self.miniboss_controller.atualizar(1 / FPS)
         teclas = pygame.key.get_pressed()
         usando_boost = (teclas[pygame.K_LSHIFT] or teclas[pygame.K_RSHIFT]
                         or teclas[pygame.K_LCTRL] or teclas[pygame.K_RCTRL])
@@ -570,12 +573,17 @@ class Jogo:
         else:
             self.energia = min(100.0, self.energia + 0.7)
 
-        self.jogador.atualizar(teclas, self.controles)
+        self.jogador.atualizar(
+            teclas, self.controles,
+            inverter_movimento=bool(self.miniboss and self.miniboss.inverte_controles),
+        )
         tecla_atirar = self.controles.get("atirar", 0)
         if teclas[pygame.K_SPACE] or teclas[pygame.K_z] or teclas[tecla_atirar]:
             novos = self.jogador.atirar()
             if novos:
                 self.projeteis.extend(novos)
+                if self.miniboss:
+                    self.miniboss.observar_tiros(novos)
                 self.tiros_disparados += 1
                 self.sons.tocar("tiro")
 
@@ -631,6 +639,7 @@ class Jogo:
 
         if self.boss and self.boss.rect.colliderect(self.jogador.rect):
             self._aplicar_dano_jogador()
+        self.miniboss_controller.colidir_jogador()
 
         if random.random() < 0.5:
             self.particulas.rastro(self.jogador.x + random.uniform(-4, 4),
@@ -640,7 +649,7 @@ class Jogo:
                 self.jogador.x, self.jogador.y, CIANO, 12,
             )
 
-        if not self.fila_onda and not self.inimigos and not self.boss:
+        if not self.fila_onda and not self.inimigos and not self.boss and not self.miniboss:
             bonus = int((100 + 50 * self.jogador.nivel) *
                         self.jogador.combo.get_bonus())
             self.jogador.pontuacao += bonus
@@ -719,6 +728,8 @@ class Jogo:
             inimigo.desenhar(self.tela)
         if self.boss:
             self.boss.desenhar(self.tela)
+        if self.miniboss:
+            self.miniboss.desenhar(self.tela)
         for proj in self.projeteis:
             proj.desenhar(self.tela)
         self.jogador.desenhar(self.tela, self.particulas)

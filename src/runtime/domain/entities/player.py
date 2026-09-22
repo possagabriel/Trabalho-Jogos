@@ -9,17 +9,42 @@ from typing import TYPE_CHECKING, Any
 
 import pygame
 
-from src.runtime.infrastructure.assets import carregar_imagem_alpha
-from src.core.constants import ALTURA, AZUL, AZUL_CLARO, BRANCO, CIANO, DOURADO, INDIGO, \
-    COMBO_MULTIPLICADOR_ALTO, COMBO_MULTIPLICADOR_MEDIO, LARGURA, LARANJA, \
-    ROXO, VERDE, VERMELHO
-from src.runtime.infrastructure.graphics.geometry import losango
-from src.runtime.infrastructure.graphics.cel_shading import (circulo_com_contorno, clarear_cor,
-                          contorno_poligono, desenhar_highlight,
-                          desenhar_sombra_chapada, escurecer_cor,
-                          poligono_com_contorno, sprite_com_contorno)
-from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, desenhar_glow, desenhar_poligono
+from src.core.constants import (
+    ALTURA,
+    AZUL,
+    AZUL_CLARO,
+    BRANCO,
+    CIANO,
+    COMBO_MULTIPLICADOR_ALTO,
+    COMBO_MULTIPLICADOR_MEDIO,
+    DOURADO,
+    INDIGO,
+    LARANJA,
+    LARGURA,
+    ROXO,
+    VERDE,
+    VERMELHO,
+)
+from src.infrastructure.graphics.comic_pipeline import preparar_rotacoes
+from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.runtime.domain.entities.weapons import ARMARIA, Projetil
+from src.runtime.infrastructure.assets import carregar_imagem_alpha
+from src.runtime.infrastructure.graphics.cel_shading import (
+    circulo_com_contorno,
+    clarear_cor,
+    contorno_poligono,
+    desenhar_highlight,
+    desenhar_sombra_chapada,
+    escurecer_cor,
+    poligono_com_contorno,
+    sprite_com_contorno,
+)
+from src.runtime.infrastructure.graphics.geometry import losango
+from src.runtime.infrastructure.graphics.smooth import (
+    desenhar_circulo,
+    desenhar_glow,
+    desenhar_poligono,
+)
 
 if TYPE_CHECKING:
     from src.runtime.domain.world.particles import SistemaParticulas
@@ -153,6 +178,12 @@ class Skin:
         return [(x, y - 20), (x - 15, y + 16), (x, y + 7), (x + 15, y + 16)]
 
     def _desenhar_sprite(self, tela, x, y, tilt):
+        if opcoes_atuais().ativo and _sprite_padrao() is not None:
+            boil = (pygame.time.get_ticks() // 120) % 2 if opcoes_atuais().line_boil else 0
+            rotacoes = preparar_rotacoes(_sprite_padrao(), opcoes_atuais().hachuras, boil)
+            sprite = rotacoes[max(0, min(20, round(tilt * 2) + 10))]
+            tela.blit(sprite, sprite.get_rect(center=(x, y - 8)))
+            return
         sprite = _sprite_padrao_rotacionada(tilt)
         if sprite is None:
             self._desenhar_nave_base(tela, x, y, tilt)
@@ -294,7 +325,8 @@ class Jogador:
         self.skin = skin
 
     def atualizar(self, teclas: Sequence[bool],
-                  controles: Mapping[str, int] | None = None) -> None:
+                  controles: Mapping[str, int] | None = None,
+                  inverter_movimento: bool = False) -> None:
         controles = controles or {}
         dx = dy = 0
         esquerda = controles.get("esquerda")
@@ -313,6 +345,8 @@ class Jogador:
         if teclas[pygame.K_DOWN] or teclas[pygame.K_s] or \
                 (baixo and teclas[baixo]):
             dy += 1
+        if inverter_movimento:
+            dx, dy = -dx, -dy
         if dx and dy:
             dx *= 0.7071
             dy *= 0.7071

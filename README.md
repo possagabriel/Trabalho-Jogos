@@ -9,9 +9,9 @@ externos).
 
 Baixe a versão para Windows em [Releases](../../releases). Em cada versão,
 `VOID-SHIFT-Setup.exe` instala o jogo com atalho e desinstalador; `VOID-SHIFT.exe`
-é a opção portátil. Não é necessário abrir o GitHub Actions. Builds de teste continuam disponíveis como
-artefatos do workflow **Executáveis Desktop**. Veja as instruções de
-[distribuição para Windows](docs/distribuicao-windows.md).
+é a opção portátil. Não é necessário abrir o GitHub Actions. Builds de teste
+continuam disponíveis como artefatos do workflow **Executáveis Desktop**. Veja
+as instruções de [distribuição para Windows](docs/distribuicao-windows.md).
 
 No Linux, a mesma Release inclui `VOID-SHIFT-Linux-x86_64.tar.gz`. Extraia o
 arquivo e abra `VOID-SHIFT/VOID-SHIFT`. O formato de pasta autocontida reduz o
@@ -285,6 +285,13 @@ regressões severas na busca de colisões.
 
 ## Como estender
 
+### Minibosses aleatórios
+
+Sete protocolos corporativos podem aparecer a cada três ondas comuns, com
+sorteio ponderado, filtro por dimensão e sem repetição consecutiva. O sistema
+também aceita intervalo por segundos e seed. Veja [minibosses](docs/minibosses.md)
+para catálogo, testes, integração, persistência e parâmetros de balanceamento.
+
 ### Nova arma
 1. Adicione um dict em `ARMARIA` (`game/weapons.py`) com `nivel`, `cor`,
    `raio`, `vel`, `dano`, `cooldown`, `tipo`.
@@ -381,3 +388,12 @@ funciona isolado. Cobertura por módulo:
 
 O `smoke_test.py` faz um smoke test geral: inicialização, loop de combate
 avançando níveis, desenho dos 6 cenários e mapeamento nível→cenário.
+
+## Visual comic (1.1.0)
+
+O estilo comic inclui contornos em cache, tons chapados, hachuras, papel,
+retícula, bursts e UI angular. Em **Configurações → Estilo visual**, alterne
+entre **COMIC** e **ORIGINAL**. **Detalhe comic** oferece BAIXA/MEDIA/ALTA,
+com toggles para texturas e tremida.
+
+Veja [pipeline visual, screenshots, testes e custos medidos](docs/visual/README.md).

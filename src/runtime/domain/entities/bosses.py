@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 import random
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Mapping
 
 import pygame
 
@@ -45,14 +45,16 @@ class Boss:
 
     VELOCIDADE_TELEGUIADO = 4.2
 
-    def __init__(self, nivel: int, cenario: Cenario) -> None:
+    def __init__(self, nivel: int, cenario: Cenario,
+                 config: Mapping[str, Any] | None = None) -> None:
         self.nivel = nivel
         self.cenario_id = cenario.id
-        cfg = BOSSES_POR_CENARIO[cenario.id]
+        cfg = config if config is not None else BOSSES_POR_CENARIO[cenario.id]
         self.nome = cfg["nome"]
         self.cor = cfg["cor"]
         self.raio = cfg["raio"]
-        self.vida = cfg["vida"] * (1 + 0.15 * max(0, (nivel - cfg["nivel"])))
+        self.vida = cfg["vida"] * (
+            1 + cfg.get("escala_vida", 0.15) * max(0, nivel - cfg["nivel"]))
         self.vida_max = self.vida
         self.pontos = cfg["pontos"]
         self.mov = cfg["mov"]

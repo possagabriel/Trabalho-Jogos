@@ -13,6 +13,8 @@ O executável inclui imagens, fontes e o ícone de Windows. Progresso e
 configurações ficam em `%LOCALAPPDATA%\VoidShift`, fora da pasta do aplicativo.
 Antes de publicar os artefatos, o workflow inicia o executável, simula três
 quadros e confirma uma gravação em diretório temporário.
+A versão exibida pelo instalador vem da tag `vX.Y.Z`; em uma execução manual,
+ela vem do campo `project.version` do `pyproject.toml`.
 
 ## Download público por Release
 
@@ -26,13 +28,14 @@ O link de distribuição passa a ficar em **Releases** → versão mais recente 
 
 ## Gerar localmente no Windows
 
-Em um PowerShell, com Python 3.10 ou superior e o
+Em um PowerShell, com Python 3.11 ou superior e o
 [Inno Setup 6](https://jrsoftware.org/isinfo.php) instalados:
 
 ```powershell
 py -m pip install -e ".[desktop]"
 py tools/build_desktop.py
-& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\void-shift.iss
+$AppVersion = py -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$AppVersion" installer\void-shift.iss
 Get-FileHash dist/VOID-SHIFT.exe, dist/VOID-SHIFT-Setup.exe -Algorithm SHA256
 ```
 

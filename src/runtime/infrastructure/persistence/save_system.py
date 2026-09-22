@@ -39,6 +39,7 @@ class SistemaProgressao:
                 "skin_atual": "padrao",
                 "total_pontos": 0,
                 "bosses_derrotados": 0,
+                "minibosses_derrotados": 0,
                 "nivel_maximo": 1,
                 "cenarios_desbloqueados": [1],
                 "progresso_campanha": {
@@ -50,6 +51,8 @@ class SistemaProgressao:
                 },
             },
             "estatisticas": {
+                "minibosses_derrotados": 0,
+                "minibosses_por_tipo": {},
                 "inimigos_derrotados": 0,
                 "bosses_derrotados": 0,
                 "tiros_disparados": 0,
@@ -103,6 +106,14 @@ class SistemaProgressao:
     def registrar_boss(self):
         self.jogador["bosses_derrotados"] += 1
         self.dados["estatisticas"]["bosses_derrotados"] += 1
+
+    def registrar_miniboss(self, chave: str) -> None:
+        """Registra derrota separada dos bosses e da progressão de dimensões."""
+        self.jogador["minibosses_derrotados"] += 1
+        estatisticas = self.dados["estatisticas"]
+        estatisticas["minibosses_derrotados"] += 1
+        contagens = estatisticas["minibosses_por_tipo"]
+        contagens[chave] = contagens.get(chave, 0) + 1
 
     def resetar_fases(self):
         """Inicia uma campanha sem apagar moedas, skins ou melhorias."""

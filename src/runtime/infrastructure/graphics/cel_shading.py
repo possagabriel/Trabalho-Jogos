@@ -9,6 +9,15 @@ import random
 
 import pygame
 
+from src.infrastructure.graphics.comic_pipeline import contornar
+from src.infrastructure.graphics.comic_render import (
+    burst,
+    circulo_tinta,
+    poligono_tinta,
+    texto_tinta,
+)
+from src.infrastructure.graphics.comic_theme import opcoes_atuais
+
 ESPRESSURA_CONTORNO_PADRAO = 3
 
 
@@ -100,6 +109,9 @@ def poligono_com_contorno(tela, cor, pontos, espessura_contorno=3,
     """
     if len(pontos) < 3:
         return
+    if opcoes_atuais().ativo:
+        poligono_tinta(tela, cor, pontos, espessura_contorno)
+        return
     contorno_poligono(tela, pontos, espessura_contorno, cor_contorno)
     pygame.draw.polygon(tela, cor, pontos)
     if desenhar_borda_interna:
@@ -111,6 +123,9 @@ def circulo_com_contorno(tela, cor, centro, raio, espessura_contorno=3,
                          cor_contorno=(0, 0, 0), brilho_sombra=0.7,
                          desenhar_borda_interna=True):
     """Desenha circulo preenchido com contorno grosso e sombra interna."""
+    if opcoes_atuais().ativo:
+        circulo_tinta(tela, cor, centro, raio)
+        return
     contorno_circulo(tela, centro, raio, espessura_contorno, cor_contorno)
     pygame.draw.circle(tela, cor, (int(centro[0]), int(centro[1])), int(raio))
     if desenhar_borda_interna:
@@ -122,6 +137,9 @@ def circulo_com_contorno(tela, cor, centro, raio, espessura_contorno=3,
 def estrela_com_contorno(tela, cor, pontos, espessura_contorno=3,
                          cor_contorno=(0, 0, 0)):
     """Desenha estrela preenchida com contorno grosso."""
+    if opcoes_atuais().ativo:
+        poligono_tinta(tela, cor, pontos, espessura_contorno)
+        return
     contorno_poligono(tela, pontos, espessura_contorno, cor_contorno)
     pygame.draw.polygon(tela, cor, pontos)
 
@@ -136,6 +154,8 @@ def desenhar_sombra_chapada(tela, pontos, cor_sombra=(0, 0, 0, 80),
 
     A sombra e uma copia deslocada e escurecida do poligono.
     """
+    if opcoes_atuais().ativo:
+        return
     dx, dy = deslocamento
     pontos_sombra = [(p[0] + dx, p[1] + dy) for p in pontos]
     if len(pontos_sombra) >= 3:
@@ -147,6 +167,8 @@ def desenhar_sombra_chapada(tela, pontos, cor_sombra=(0, 0, 0, 80),
 def sombra_circulo(tela, centro, raio, cor_sombra=(0, 0, 0, 80),
                    deslocamento=(4, 6)):
     """Desenha sombra projetada circular estilo cartoon."""
+    if opcoes_atuais().ativo:
+        return
     dx, dy = deslocamento
     surf = pygame.Surface(tela.get_size(), pygame.SRCALPHA)
     pygame.draw.circle(surf, cor_sombra,
@@ -164,6 +186,8 @@ def desenhar_highlight(tela, centro, raio, cor=(255, 255, 255),
 
     Posiciona o destaque no canto superior-esquerdo do objeto.
     """
+    if opcoes_atuais().ativo:
+        return
     hx = int(centro[0] - raio * 0.3)
     hy = int(centro[1] - raio * 0.3)
     hr = max(1, int(raio * 0.35))
@@ -280,6 +304,12 @@ class TextoAcao:
     def desenhar(self, tela):
         if not self.ativo:
             return
+        if opcoes_atuais().ativo:
+            explosao = burst(self.tamanho + 12, tuple(self.cor))
+            tela.blit(explosao, explosao.get_rect(center=(int(self.x), int(self.y))))
+            surf = texto_tinta(self.texto, self.tamanho, tuple(self.cor))
+            tela.blit(surf, surf.get_rect(center=(int(self.x), int(self.y))))
+            return
         alfa = int(255 * min(1.0, self.vida / 15))
         tam = int(self.tamanho * self.escala)
         fonte = pygame.font.Font(None, tam)
@@ -325,19 +355,7 @@ def sprite_com_contorno(tela, sprite, pos, espessura=3,
     """
     if sprite is None:
         return
-    sx, sy = sprite.get_width(), sprite.get_height()
-    pad = espessura
-    contour_surf = pygame.Surface((sx + pad * 2, sy + pad * 2), pygame.SRCALPHA)
-    mask_surf = sprite if sprite.get_flags() & pygame.SRCALPHA else sprite.copy()
-    direcoes = [
-        (-pad, -pad), (0, -pad), (pad, -pad),
-        (-pad, 0), (pad, 0),
-        (-pad, pad), (0, pad), (pad, pad),
-    ]
-    for dx, dy in direcoes:
-        contour_surf.blit(mask_surf, (dx + pad, dy + pad))
-    contour_surf.fill(cor_contorno + (255,), None, pygame.BLEND_RGBA_MULT)
-    contour_surf.blit(sprite, (pad, pad))
+    contour_surf = contornar(sprite, espessura, cor_contorno)
     rect = contour_surf.get_rect(center=(int(pos[0]), int(pos[1])))
     tela.blit(contour_surf, rect)
 

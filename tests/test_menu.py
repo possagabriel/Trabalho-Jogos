@@ -58,6 +58,16 @@ def test_construcao_subestado_e_opcoes():
     assert menu.x_opcoes <= menu.layout.largura
 
 
+def test_opcoes_principais_tem_tamanho_uniforme_e_nao_usam_indicador_antigo():
+    """Todos os painéis compartilham a área; seleção não cria bloco extra."""
+    _, menu = novo_menu()
+    rects = [opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
+             for opcao in menu.opcoes]
+    assert {rect.size for rect in rects} == {rects[0].size}
+    assert all(b.top - a.bottom > 0 for a, b in zip(rects, rects[1:]))
+    assert menu.destaque.y == menu.opcoes[0].y  # estado mantido para compatibilidade
+
+
 def test_menu_widescreen_separa_titulo_da_coluna_de_opcoes():
     _, menu = novo_menu()
 
