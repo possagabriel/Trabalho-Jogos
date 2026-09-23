@@ -1,4 +1,4 @@
-# VOID//SHIFT - Entre na Fenda
+# INCARNATE 
 
 Shoot 'em up vertical em **Pygame** com progressão, personalização de nave,
 6 dimensões, inimigos especiais e entidades RIFT (bosses). O código é 100%
