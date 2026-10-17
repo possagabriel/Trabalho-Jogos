@@ -23,6 +23,8 @@ from src.runtime.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
 from src.runtime.presentation.hud import HudJogo
 from src.runtime.presentation.equipment_overlay import desenhar_menu_equipamento
 from src.runtime.presentation.menu import Dialogo, MenuPrincipal
+from src.runtime.presentation.crosshair import Mira
+from src.runtime.presentation.debug_overlay import OverlayDebug
 from src.runtime.presentation.screens.upgrade_screen import TelaMelhorias
 from src.runtime.domain.world.particles import MensagemFlutuante, SistemaParticulas
 from src.runtime.domain.entities.player import Jogador
@@ -153,6 +155,9 @@ class Jogo:
         self._pausa_dialogo = None
         self._pausa_mouse = (0, 0)
         self.menu_equipamento = False
+        self.mira = Mira()
+        self.overlay_debug = OverlayDebug()
+        self.debug_ativo = False
         self.linha_equipamento = 0
         self.indice_equipamento = 0
         self.progressao_controller = ControladorProgressao(self)
@@ -552,6 +557,22 @@ class Jogo:
 
     # ----- atualizacao da partida -----
 
+    def posicao_mira(self) -> tuple[int, int] | None:
+        """Converte o mouse para a cena, somente durante combate com mira ativa."""
+        if (self.estado is not EstadoJogo.JOGANDO or self.menu_equipamento
+                or not self.config["mira_ativa"]):
+            return None
+        posicao = self.menu._pos_logica(pygame.mouse.get_pos())
+        if 0 <= posicao[0] < LARGURA and 0 <= posicao[1] < ALTURA:
+            return posicao
+        return None
+
+    def mira_sobre_inimigo(self, posicao: tuple[int, int]) -> bool:
+        """Informa se a mira cobre uma hitbox hostil do combate."""
+        return (any(inimigo.rect.collidepoint(posicao) for inimigo in self.inimigos)
+                or any(entidade is not None and entidade.rect.collidepoint(posicao)
+                       for entidade in (self.boss, self.miniboss)))
+
     def _atualizar_jogando(self):
         if self.menu_equipamento:
             return
@@ -581,9 +602,17 @@ class Jogo:
             inverter_movimento=bool(self.miniboss and self.miniboss.inverte_controles),
         )
         tecla_atirar = self.controles.get("atirar", 0)
-        if teclas[pygame.K_SPACE] or teclas[pygame.K_z] or teclas[tecla_atirar]:
-            novos = self.jogador.atirar()
+        alvo = self.posicao_mira()
+        mouse_atirando = alvo is not None and pygame.mouse.get_pressed()[0]
+        if teclas[pygame.K_SPACE] or teclas[pygame.K_z] or teclas[tecla_atirar] or mouse_atirando:
+            novos = self.jogador.atirar(
+                alvo=alvo,
+                dispersao_duplo_graus=self.config["dispersao_duplo_graus"],
+                dispersao_espiral_graus=self.config["dispersao_espiral_graus"],
+            )
             if novos:
+                if alvo is not None:
+                    self.mira.ativar_pulso()
                 self.projeteis.extend(novos)
                 if self.miniboss:
                     self.miniboss.observar_tiros(novos)

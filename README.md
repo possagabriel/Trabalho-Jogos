@@ -58,6 +58,27 @@ Sem áudio/vídeo (CI, servidores, debugging):
 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python main.py
 ```
 
+### Mira e disparos (1.2.0)
+
+Durante a partida, o cursor do sistema dá lugar à mira da dimensão atual.
+Mova o mouse para apontar e segure o botão esquerdo para atirar. Espaço, Z e a
+tecla configurada continuam disparando. Com **Configurações → Mira customizada**
+desligada, ou com o mouse fora da área do jogo, o teclado mantém o disparo
+vertical anterior. Menus, pausa e seleção de equipamento usam o cursor normal.
+
+A mira pulsa quando ocorre um disparo e fica vermelha sobre a hitbox de um
+inimigo. **F3** alterna FPS, camadas de parallax ativas, posição da mira e
+hitboxes durante a partida. Na fase 1 ainda há zero camadas de parallax.
+
+Disparos direcionais saem da nave na direção exata da mira. **Duplo** e
+**Espiral** orientam sua dispersão ao redor dessa direção, então os projéteis
+individuais se afastam do ponto central. **Limitação conhecida:** o **Íon**
+continua sendo uma coluna vertical fixa na posição da nave; apontar a mira
+não altera sua trajetória. Ajuste `dispersao_duplo_graus` (padrão `4.5`) e
+`dispersao_espiral_graus` (padrão `15.0`) no `settings.json` do diretório de
+dados do usuário para balancear o leque. `mira_ativa` é salva no mesmo JSON;
+configurações antigas recebem `true` como padrão.
+
 ### Backup e transferência de progresso
 
 Cada gravação substitui o arquivo de forma atômica e mantém uma cópia `.bak`.

@@ -17,6 +17,14 @@ ALTURA: int = 720
 FPS: int = 60
 """Taxa de quadros por segundo alvo."""
 
+DISPERSAO_DUPLO_GRAUS: float = 4.5
+DISPERSAO_ESPIRAL_GRAUS: float = 15.0
+PULSO_MIRA_QUADROS: int = 5
+RAIO_MIRA: int = 13
+RAIO_PULSO_MIRA: int = 18
+ESPESSURA_CONTORNO_MIRA: int = 6
+ESPESSURA_COR_MIRA: int = 3
+
 TITULO: str = "INCARNATE - Entre na Fenda"
 """Titulo exibido na barra da janela."""
 

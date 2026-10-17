@@ -1149,6 +1149,7 @@ class MenuPrincipal:
             ("Flashes", "intensidade_flash"),
             ("Tremor de tela", "intensidade_tremor"),
             ("Mostrar hitbox", "mostrar_hitbox"),
+            ("Mira customizada", "mira_ativa"),
         ]
 
     _CONFIG_VISIVEIS = 6

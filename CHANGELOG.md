@@ -7,17 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Gameplay e acessibilidade
+## [1.2.0] - 2026-10-17
+
+### Added
 - Combo por acertos com expiração temporal; Íon e Gauss atingem cada alvo uma
   vez por projétil.
 - Transição dimensional atualizada pelo loop principal, com eventos responsivos.
 - Tutorial contextual da primeira partida e módulos entre setores com custos.
 - Controles de flash, tremor e hitbox; projéteis hostis destacados e fundo
   escurecido em encontros intensos.
-
-Versão sugerida para os minibosses: **1.2.0** (nova funcionalidade compatível).
-
-### Added
+- Mira cartoon por dimensão com pulso de disparo, feedback sobre inimigos,
+  toggle persistente e controle de tiro pelo mouse com fallback de teclado.
+- Overlay F3 com FPS, posição da mira, hitboxes e contagem de camadas ativas.
 - Sete minibosses corporativos: Bastião, Espectro, Matriz, Censor, Cartógrafo,
   Eco e Cronista, com escudo por núcleos, teleporte, lacaios, inversão de
   movimento, zonas de perigo, cópia de disparos e ciclos de invulnerabilidade.
@@ -53,6 +54,8 @@ Versão sugerida para os minibosses: **1.2.0** (nova funcionalidade compatível)
 ### Changed
 - Catálogo e efeitos dos módulos movidos para o domínio; animação dimensional
   isolada na apresentação e escalas visuais compartilhadas pela configuração.
+- Disparos direcionais apontam para a mira; Duplo e Espiral mantêm dispersão
+  configurável em `settings.json`. O Íon conserva a coluna vertical.
 - O workflow do instalador Windows agora usa a versão da tag ou do projeto,
   valida os binários e publica somas SHA-256 junto dos artefatos.
 - Menus secundários e telas de confirmação passaram a usar o mesmo painel
