@@ -10,6 +10,7 @@ from src.infrastructure.graphics.comic_render import desenhar_fundo
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.runtime.infrastructure.assets import carregar_imagem
 from src.runtime.infrastructure.graphics.geometry import cruz, losango
+from src.runtime.infrastructure.graphics.parallax import ParallaxBackground
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_circulo,
     desenhar_glow,
@@ -179,9 +180,17 @@ class Cenario:
         self.efeitos = []
         self.fundo_imagem = _imagem_fundo(self.id)
         self.fundo_estatico = self._criar_fundo_estatico()
+        self.nebulosas.clear()  # Ja compostas; libera as surfaces grandes.
         self.luzes_ambiente = self._criar_luzes_ambiente()
         self._efeitos_alpha = {}
+        self.parallax: ParallaxBackground | None = None
         self.configurar_qualidade("ALTA")
+
+    def configurar_avanco(self, qualidade: str,
+                          direcao: tuple[float, float], linhas: bool,
+                          camadas: bool = True) -> None:
+        """Prepara as camadas móveis sem tocar nas entidades da dimensão."""
+        self.parallax = ParallaxBackground(self, qualidade, direcao, linhas, camadas)
 
     def configurar_qualidade(self, qualidade: str) -> None:
         """Define o detalhe visual do fundo sem alterar inimigos ou colisao."""
@@ -310,6 +319,8 @@ class Cenario:
 
     def atualizar(self):
         self.tempo += 1
+        if self.parallax is not None:
+            return
         for estrela in self.estrelas[::self._passo_estrelas]:
             estrela.atualizar()
         if self._desenhar_efeitos:
@@ -350,6 +361,9 @@ class Cenario:
     # ----- desenho -----
 
     def desenhar(self, tela):
+        if self.parallax is not None:
+            self.parallax.desenhar(tela)
+            return
         if opcoes_atuais().ativo:
             desenhar_fundo(tela, self.id)
             return
