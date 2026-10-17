@@ -51,6 +51,7 @@ from src.runtime.infrastructure.graphics.smooth import (
     desenhar_circulo,
     desenhar_glow,
     desenhar_poligono,
+    linha_suave,
 )
 from src.runtime.infrastructure.graphics.ship_sprites import gerar_quadros_direcionais
 
@@ -157,20 +158,31 @@ class Skin:
         self._perfil_atlas: OpcoesVisuais | None = None
 
     def desenhar(self, tela: pygame.Surface, jogador: Jogador,
-                 particulas: SistemaParticulas | None = None) -> None:
+                 particulas: SistemaParticulas | None = None,
+                 intensidade_propulsor: float = 1.0) -> None:
         """Desenha a nave do jogador com a skin aplicada."""
         x, y = int(jogador.x), int(jogador.y)
         t = pygame.time.get_ticks() * 0.001
         direcional = jogador.angulo_mira is not None
+        intensidade = max(0.0, min(1.5, intensidade_propulsor))
+        if intensidade > 0.05:
+            angulo = math.radians(jogador.angulo_mira or 0.0)
+            traseira = self._traseira(x, y, jogador.angulo_mira or 0.0)
+            alcance = 8 + 16 * intensidade
+            ponta = (traseira[0] - math.sin(angulo) * alcance,
+                     traseira[1] + math.cos(angulo) * alcance)
+            desenhar_glow(tela, LARANJA, traseira, 5 + 7 * intensidade,
+                          0.2 + 0.35 * min(1, intensidade))
+            linha_suave(tela, LARANJA, traseira, ponta, 2)
         if direcional:
             self._desenhar_direcional(tela, x, y, jogador.angulo_mira + jogador.tilt)
         else:
             self._desenhar_corpo(tela, x, y, jogador.tilt, t)
 
         traseira_x, traseira_y = self._traseira(x, y, jogador.angulo_mira or 0)
-        if self.efeito == "chamas" and particulas:
+        if self.efeito == "chamas" and particulas and intensidade > 0.2:
             particulas.chamas(traseira_x, traseira_y, LARANJA, 2)
-        elif self.efeito == "chamas_escuras" and particulas:
+        elif self.efeito == "chamas_escuras" and particulas and intensidade > 0.2:
             particulas.chamas(traseira_x, traseira_y, VERMELHO, 2)
         elif self.efeito == "relampago" and not direcional:
             self._desenhar_relampago(tela, x, y, t)
@@ -552,7 +564,8 @@ class Jogador:
         return True
 
     def desenhar(self, tela: pygame.Surface,
-                 particulas: SistemaParticulas | None = None) -> None:
+                 particulas: SistemaParticulas | None = None,
+                 intensidade_propulsor: float = 1.0) -> None:
         if self.invencivel > 0 and (self.invencivel // 4) % 2 == 0:
             return
         if self.tempo_esquiva > 0:
@@ -562,7 +575,7 @@ class Jogador:
                 tela, AZUL_CLARO, (self.x - dx * 24, self.y - dy * 24),
                 self.raio + 8, 0.45,
             )
-        self.skin.desenhar(tela, self, particulas)
+        self.skin.desenhar(tela, self, particulas, intensidade_propulsor)
         if self.escudo:
             pulso = 1 + 0.15 * math.sin(pygame.time.get_ticks() * 0.008)
             desenhar_glow(tela, (50, 150, 255), (self.x, self.y),

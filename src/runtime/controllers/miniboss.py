@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from src.core.constants import ALTURA, FPS
+from src.core.event_bus import GameEventType, publicar_evento
 from src.runtime.domain.entities.minibosses.config import SPAWN
 from src.runtime.domain.entities.powerups import PowerUp
 from src.runtime.domain.entities.weapons import Projetil
@@ -28,7 +29,7 @@ class ControladorMiniboss:
         self.jogo.miniboss_spawner = MinibossSpawner(**SPAWN)
         self.jogo.ondas_miniboss = 0
 
-    def cancelar(self) -> None:
+    def cancelar(self, publicar: bool = True) -> None:
         """Remove efeitos e lacaios sem conceder recompensa de derrota."""
         jogo = self.jogo
         boss = getattr(jogo, "miniboss", None)
@@ -40,6 +41,9 @@ class ControladorMiniboss:
         jogo.miniboss = None
         if boss is not None and hasattr(jogo, "miniboss_spawner"):
             jogo.miniboss_spawner.liberar()
+        if boss is not None and publicar:
+            publicar_evento(GameEventType.MINIBOSS_REMOVED, sessao=jogo,
+                            boss=boss, chave=boss.chave)
 
     def atualizar(self, dt: float = 1 / FPS) -> None:
         """Executa apenas durante gameplay; bosses principais têm prioridade."""
@@ -53,6 +57,8 @@ class ControladorMiniboss:
             jogo.mensagens.append(MensagemFlutuante(
                 novo.nome, novo.x, novo.alvo_y, novo.cor, 150))
             jogo.sons.tocar("boss")
+            publicar_evento(GameEventType.MINIBOSS_SPAWNED, sessao=jogo,
+                            boss=novo, chave=novo.chave)
         boss = jogo.miniboss
         if boss is None:
             return
@@ -104,7 +110,7 @@ class ControladorMiniboss:
         jogo, boss = self.jogo, self.jogo.miniboss
         if boss is None or boss.vida > 0:
             return
-        self.cancelar()
+        self.cancelar(publicar=False)
         total = int(boss.pontos * jogo.jogador.combo.get_bonus())
         jogo.jogador.pontuacao += total
         jogo.loja.moedas += boss.cfg["moedas"]
@@ -119,3 +125,5 @@ class ControladorMiniboss:
         jogo.sons.tocar("explosao")
         jogo.adicionar_trauma(0.4)
         jogo.congelar(2)
+        publicar_evento(GameEventType.MINIBOSS_DEFEATED, sessao=jogo,
+                        boss=boss, chave=boss.chave)

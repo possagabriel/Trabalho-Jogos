@@ -9,6 +9,7 @@ from typing import Callable, Protocol
 import pygame
 
 from src.core.constants import ALTURA, LARANJA, EstadoJogo
+from src.core.event_bus import GameEventType, publicar_evento
 from src.runtime.controllers.session import SessaoCombate
 from src.runtime.domain.entities.enemies import Inimigo, InimigoEspecial
 from src.runtime.domain.entities.powerups import PowerUp, sortear_tipo
@@ -240,6 +241,8 @@ class ControladorCombate:
         for _ in range(3):
             sessao.powerups.append(
                 PowerUp(sortear_tipo(), boss.x, boss.y + random.randint(-20, 20)))
+        publicar_evento(GameEventType.BOSS_DEFEATED, sessao=sessao,
+                        boss=boss, nivel=boss.nivel, cenario_id=boss.cenario_id)
 
     def atualizar_projeteis(self) -> None:
         """Atualiza movimento, colisao e remocao de todos os projeteis."""

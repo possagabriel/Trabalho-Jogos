@@ -19,20 +19,28 @@ class OverlayDebug:
     def __init__(self) -> None:
         self._fonte = fonte_texto(18)
         self._glifos: dict[str, pygame.Surface] = {}
-        self._fundo = pygame.Surface((260, 104), pygame.SRCALPHA)
+        self._fundo = pygame.Surface((350, 166), pygame.SRCALPHA)
         self._fundo.fill((*VOID_BLACK, 215))
 
     def desenhar(self, tela: pygame.Surface, jogo: Jogo, mira: tuple[int, int] | None) -> None:
-        """Desenha FPS, camadas, mira e hitboxes sem criar surfaces por frame."""
+        """Desenha desempenho e avanço sem criar superfícies por quadro."""
         tela.blit(self._fundo, (12, 12))
+        avanco = jogo.avanco_controller.modelo
+        fundo = getattr(jogo.cenario, "parallax", None)
+        particulas = len(jogo.particulas.particulas)
+        if fundo is not None:
+            particulas += fundo.particulas_ativas
         linhas = (
             f"FPS: {jogo.fps_atual:.0f}",
-            "CAMADAS: 0",
+            f"AVANÇO: {avanco.estado.value}",
+            f"VELOCIDADE: {avanco.velocidade:.1f} px/s",
+            f"CAMADAS: {fundo.numero_camadas if fundo else 0}",
+            f"PARTÍCULAS: {particulas}",
             f"MIRA: {mira[0]}, {mira[1]}" if mira else "MIRA: --",
             f"ENTIDADES: {len(jogo.inimigos) + int(bool(jogo.boss)) + int(bool(jogo.miniboss))}",
         )
         for indice, linha in enumerate(linhas):
-            x, y = 22, 20 + indice * 23
+            x, y = 22, 20 + indice * 21
             for caractere in linha:
                 if caractere not in self._glifos:
                     self._glifos[caractere] = self._fonte.render(caractere, True, QUANTUM_CYAN)

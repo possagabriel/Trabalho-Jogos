@@ -45,6 +45,8 @@ class ControladorLoop:
                 and jogo.progressao_controller.transicao is None):
             jogo.particulas.atualizar()
             jogo.cenario.atualizar()
+            if jogo.estado is EstadoJogo.JOGANDO:
+                jogo.avanco_controller.atualizar(jogo.cenario, PASSO_FIXO)
         self._atualizar_textos_e_mensagens()
         jogo.fade = max(0, jogo.fade - 18) if jogo.fade > 0 else jogo.fade
         jogo.flash = max(0, jogo.flash - 1) if jogo.flash > 0 else jogo.flash

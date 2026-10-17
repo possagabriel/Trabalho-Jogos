@@ -6,7 +6,9 @@ import random
 from typing import TYPE_CHECKING
 
 from src.core.constants import ALTURA, CIANO, DIMENSION_GOLD, LARGURA, EstadoJogo
+from src.core.event_bus import GameEventType, publicar_evento
 from src.core.settings import escala_visual
+from src.runtime.application.timing import PASSO_FIXO
 from src.runtime.domain.entities.bosses import Boss
 from src.runtime.domain.entities.enemies import composicao_onda
 from src.runtime.domain.entities.player import Jogador
@@ -14,7 +16,9 @@ from src.runtime.domain.entities.weapons import ARMARIA
 from src.runtime.domain.systems.upgrades import MELHORIAS, aplicar_melhoria, sortear_melhorias
 from src.runtime.domain.world.particles import MensagemFlutuante
 from src.runtime.domain.world.scenarios import CENARIOS, Cenario, cenario_do_nivel
-from src.runtime.presentation.dimension_transition import TransicaoDimensional
+from src.runtime.presentation.dimension_transition import (
+    INICIO_REVELACAO, TransicaoDimensional,
+)
 
 if TYPE_CHECKING:
     from src.runtime.application.core import Jogo
@@ -57,6 +61,7 @@ class ControladorProgressao:
         jogo.nivel_pendente = 1
         jogo.cenario = Cenario(1)
         jogo._aplicar_qualidade_grafica()
+        jogo.avanco_controller.reiniciar(jogo.cenario)
         self.iniciar_nivel(1)
         jogo.mensagens.append(MensagemFlutuante(
             f"Bem-vindo, {nome}!", LARGURA // 2, ALTURA // 2 + 20, CIANO, 110))
@@ -97,6 +102,8 @@ class ControladorProgressao:
                 f"ENTIDADE DA FENDA // {jogo.boss.nome}", LARGURA // 2,
                 ALTURA // 2 + 40, DIMENSION_GOLD, 130))
             jogo.sons.tocar("boss")
+            publicar_evento(GameEventType.BOSS_SPAWNED, sessao=jogo,
+                            boss=jogo.boss, nivel=nivel, cenario_id=jogo.cenario.id)
             return
         jogo.boss = None
         jogo.ondas_miniboss += 1
@@ -165,6 +172,7 @@ class ControladorProgressao:
         self.transicao = TransicaoDimensional(jogo.cenario, cor)
         jogo.cenario = Cenario(novo_id)
         jogo._aplicar_qualidade_grafica()
+        jogo.avanco_controller.trocar_dimensao(jogo.cenario)
         jogo.progresso.desbloquear_cenario(novo_id)
 
     def atualizar_transicao(self) -> None:
@@ -172,6 +180,9 @@ class ControladorProgressao:
         transicao = self.transicao
         if transicao is None:
             return
+        cenario_visivel = (transicao.cenario_anterior if transicao.quadro < INICIO_REVELACAO
+                           else self.jogo.cenario)
+        self.jogo.avanco_controller.atualizar(cenario_visivel, PASSO_FIXO)
         if transicao.atualizar(self.jogo.cenario, self.jogo.particulas):
             self.transicao = None
 

@@ -45,6 +45,7 @@ from src.infrastructure.ui.layout import Layout
 from src.runtime.controllers.loop import ControladorLoop
 from src.runtime.controllers.pause import ControladorPausa
 from src.runtime.controllers.render import ControladorRenderizacao
+from src.runtime.controllers.scroll import ControladorAvanco
 from src.runtime.diagnostics.frame_metrics import MetricasQuadro
 from src.runtime.presentation.ui import desenhar_barra, desenhar_cantos, desenhar_texto, \
     desenhar_titulo
@@ -124,6 +125,7 @@ class Jogo:
         self.fade = 0
         self.flash = 0
         self.cenario = Cenario(1)
+        self.avanco_controller = ControladorAvanco(self)
         self.particulas = SistemaParticulas()
         self.fps_atual = float(FPS)
         self.tempo_quadro_ms = 1000 / FPS
@@ -769,7 +771,10 @@ class Jogo:
             self.miniboss.desenhar(self.tela)
         for proj in self.projeteis:
             proj.desenhar(self.tela)
-        self.jogador.desenhar(self.tela, self.particulas)
+        avanco = self.avanco_controller.modelo
+        intensidade = (avanco.velocidade / avanco.velocidade_base
+                       if avanco.velocidade_base else 0.0)
+        self.jogador.desenhar(self.tela, self.particulas, intensidade)
         if (self.config["mostrar_hitbox"] or pygame.key.get_pressed()[pygame.K_LALT]
                 or pygame.key.get_pressed()[pygame.K_RALT]):
             retangulo_suave(self.tela, CIANO, self.jogador.rect, 4, 2)

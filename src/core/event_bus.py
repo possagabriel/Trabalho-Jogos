@@ -44,6 +44,9 @@ class GameEventType(Enum):
     ENEMY_DEFEATED = auto()
     BOSS_SPAWNED = auto()
     BOSS_DEFEATED = auto()
+    MINIBOSS_SPAWNED = auto()
+    MINIBOSS_DEFEATED = auto()
+    MINIBOSS_REMOVED = auto()
 
     # Score / progression
     SCORE_CHANGED = auto()
@@ -131,7 +134,7 @@ class EventBus:
         dos listeners seguintes.
         """
         listeners = self._listeners.get(event.type, [])
-        for listener in listeners:
+        for listener in tuple(listeners):
             try:
                 listener(event)
             except Exception:
@@ -142,3 +145,8 @@ class EventBus:
     def clear(self) -> None:
         """Remove todos os listeners (util em testes ou reset)."""
         self._listeners.clear()
+
+
+def publicar_evento(tipo: GameEventType, **dados: Any) -> None:
+    """Publica qualquer evento do jogo com metadados para observadores futuros."""
+    EventBus().publish(GameEvent(tipo, dados))
