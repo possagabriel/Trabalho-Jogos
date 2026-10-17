@@ -1,5 +1,27 @@
 # Registro de uso de IA
 
+## Fase 2 — Avanço da nave (1.3.0)
+
+- **Pedido:** sensação contínua de avanço por rolagem 2D, parallax, linhas de
+  velocidade, frenagem em bosses, retomada na derrota, salto dimensional,
+  opções persistentes, F3, TDD e medição com mais de 50 entidades.
+- **Implementação da IA:** modelo puro de quatro estados, fundos espelhados sem
+  emenda, 3 a 5 camadas pré-renderizadas, pool limitado de linhas, integração
+  com boss/miniboss e a transição de 64 quadros, configurações retrocompatíveis,
+  brilho do propulsor, testes, benchmark e documentação.
+- **Ajustes manuais do usuário:** nenhum informado.
+- **Decisões:** direção fixa `[0, 1]` independente da mira; miniboss a 50% por
+  padrão, com percentuais de 0% a 100% e exceções por tipo; desvio residual
+  de 4% nas camadas distantes durante `PARADO`; eventos genéricos
+  `BOSS_SPAWNED` e `BOSS_DEFEATED` publicados após os pontos já existentes
+  de entrada e derrota, para reutilização na Fase 3.
+- **Verificação:** baseline de 157 testes relacionados passou; a suíte completa
+  passou com 481 testes após a integração. Benchmark do desenho e atualização visual do mundo
+  com 60 inimigos e a nave em 1280×720, COMIC/MEDIA, Linux x86_64,
+  Python 3.14.8, pygame-ce 2.5.8, SDL dummy: mediana de três médias de
+  2,063 ms antes e 3,751 ms com avanço; p95 de 2,881 ms e 5,009 ms.
+  A medição não inclui apresentação da janela nem garante 60 FPS.
+
 ## Fase 1 — Mira customizada (1.2.0)
 
 - **Pedido:** criar a mira cartoon por dimensão, orientar disparos para o mouse,

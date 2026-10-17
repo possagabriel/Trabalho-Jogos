@@ -7,9 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-17
+
 ### Added
 - Sprites direcionais em cache para as dez skins; a nave acompanha a mira sem
   alterar a hitbox, preservando poses e efeitos visuais.
+- Rolagem contínua 2D com fundos sem emenda, parallax de 3 a 5 camadas e linhas
+  de velocidade para as seis dimensões nos estilos ORIGINAL e COMIC.
+- Frenagem ao entrar um boss, avanço residual distante durante a luta,
+  aceleração após a derrota e impulso durante o salto dimensional existente.
+- Desaceleração de minibosses a 50% por padrão, com ajuste geral e por tipo.
+- Configurações persistidas de direção, velocidades, qualidade, camadas,
+  linhas, intensidade e duração; overlay F3 com estado e velocidade do avanço.
+- Eventos genéricos publicados na entrada e derrota de bosses para reutilização
+  futura por outros sistemas.
+- Testes da máquina de estados e integração e benchmark de 61 entidades.
+
+### Changed
+- O brilho do propulsor acompanha a velocidade visual do cenário.
+- Versão do projeto elevada de 1.2.0 para 1.3.0.
 
 ## [1.2.0] - 2026-10-17
 

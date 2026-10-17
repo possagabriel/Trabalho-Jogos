@@ -67,8 +67,8 @@ desligada, ou com o mouse fora da área do jogo, o teclado mantém o disparo
 vertical anterior. Menus, pausa e seleção de equipamento usam o cursor normal.
 
 A mira pulsa quando ocorre um disparo e fica vermelha sobre a hitbox de um
-inimigo. **F3** alterna FPS, camadas de parallax ativas, posição da mira e
-hitboxes durante a partida. Na fase 1 ainda há zero camadas de parallax.
+inimigo. **F3** alterna FPS, estado e velocidade do avanço, camadas e partículas
+ativas, posição da mira e hitboxes durante a partida.
 
 A nave equipada também gira para acompanhar a mira. Cada uma das dez skins
 gera 48 sprites direcionais a partir da própria arte, mantidas em cache; as
@@ -87,6 +87,46 @@ não altera sua trajetória. Ajuste `dispersao_duplo_graus` (padrão `4.5`) e
 `dispersao_espiral_graus` (padrão `15.0`) no `settings.json` do diretório de
 dados do usuário para balancear o leque. `mira_ativa` é salva no mesmo JSON;
 configurações antigas recebem `true` como padrão.
+
+### Avanço da nave e parallax (1.3.0)
+
+O cenário rola continuamente para baixo, com velocidade própria para cada uma
+das seis dimensões. A direção não acompanha o mouse: a mira gira apenas a nave
+e os disparos. O fundo ORIGINAL e o COMIC usam tiles repetidos sem emenda, com
+três a cinco camadas 2D de velocidades, tamanhos e brilho diferentes. As linhas
+de velocidade encurtam durante a frenagem e desaparecem no combate contra um
+boss principal. A derrota acelera o cenário de volta e produz um impulso curto.
+Minibosses reduzem a velocidade para 50% por padrão. Pausa, melhorias e game
+over congelam o avanço; no boss, só as camadas distantes mantêm um desvio leve.
+
+As opções abaixo podem ser editadas no `settings.json` do diretório de dados do
+usuário. Configurações antigas recebem os padrões automaticamente:
+
+| Opção | Padrão | Efeito |
+| --- | --- | --- |
+| `avanco_direcao` | `[0, 1]` | Vetor fixo de rolagem; `[0, 1]` é para baixo. |
+| `avanco_velocidades` | `{"1": 120, "2": 135, "3": 105, "4": 115, "5": 145, "6": 125}` | Velocidade base em pixels por segundo. |
+| `avanco_qualidade` | `"MEDIA"` | `BAIXA`, `MEDIA` ou `ALTA`: 3, 4 ou 5 camadas. |
+| `avanco_camadas`, `avanco_linhas` | `true`, `true` | Liga planos extras e linhas independentemente. |
+| `avanco_parada_boss`, `avanco_pico` | `true`, `true` | Liga parada em boss e impulsos de arrancada/salto. |
+| `avanco_intensidade`, `avanco_linhas_intensidade` | `1.0`, `1.0` | Escala velocidade e quantidade de linhas. |
+| `avanco_freada_s`, `avanco_aceleracao_s` | `1.5`, `1.2` | Duração das curvas em segundos. |
+| `avanco_pico_s`, `avanco_pico_intensidade` | `0.3`, `0.25` | Duração e força da arrancada. |
+| `avanco_salto_s`, `avanco_salto_intensidade` | `1.0`, `0.5` | Duração e força do salto dimensional. |
+| `avanco_desvio_parado` | `0.04` | Fração lenta aplicada às camadas distantes no boss. |
+| `avanco_miniboss_percentual` | `0.5` | Velocidade no miniboss: de `0` a `1`. |
+| `avanco_miniboss_tipos` | `{}` | Exceções por chave, por exemplo `{"eco": 0.25}`. |
+
+Para observar a parada sem avançar cinco níveis, inicie uma partida de teste
+diretamente no boss do nível 5:
+
+```bash
+python -c 'from src.runtime.application.core import Jogo; jogo = Jogo(); jogo._novo_jogo("Teste"); jogo._iniciar_nivel(5); jogo.loop_controller.executar()'
+```
+
+Pressione **F3** para conferir `FREANDO` → `PARADO`. Ao derrotá-lo, o estado
+passa por `ACELERANDO` e retorna a `AVANCANDO`. A medição reproduzível do mundo
+visual com 60 inimigos está em `python -m tools.benchmark_scroll --quadros 120`.
 
 ### Backup e transferência de progresso
 
