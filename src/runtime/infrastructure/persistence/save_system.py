@@ -47,7 +47,7 @@ class SistemaProgressao:
                     "bosses_derrotados": [], "fragmentos": [],
                     "indice_fases": {}, "decisao_final": None,
                     "ending": None, "fase_atual": "lealdade",
-                    "nivel_atual": 1,
+                    "nivel_atual": 1, "cenas_vistas": [],
                 },
             },
             "estatisticas": {
@@ -68,6 +68,22 @@ class SistemaProgressao:
     def campanha(self):
         """Estado persistente da campanha, incluindo fases e codex."""
         return self.jogador.setdefault("progresso_campanha", {})
+
+    @property
+    def cenas_vistas(self) -> list[str]:
+        """IDs únicos de cenas concluídas ou puladas em save antigo ou atual."""
+        atual = self.campanha.get("cenas_vistas", [])
+        if not isinstance(atual, list):
+            atual = []
+        atual = list(dict.fromkeys(item for item in atual if isinstance(item, str)))
+        self.campanha["cenas_vistas"] = atual
+        return atual
+
+    def marcar_cena_vista(self, identificador: str) -> None:
+        """Persiste uma cena apenas após conclusão explícita."""
+        if identificador not in self.cenas_vistas:
+            self.campanha["cenas_vistas"].append(identificador)
+            self.salvar_arquivo()
 
     @staticmethod
     def _mesclar_padrao(padrao, salvo):
@@ -121,7 +137,7 @@ class SistemaProgressao:
             "fases_concluidas": [], "subbosses_derrotados": [],
             "bosses_derrotados": [], "fragmentos": [], "indice_fases": {},
             "decisao_final": None, "ending": None, "fase_atual": "lealdade",
-            "nivel_atual": 1,
+            "nivel_atual": 1, "cenas_vistas": [],
         }
         self.jogador["nivel_maximo"] = 1
         self.jogador["cenarios_desbloqueados"] = [1]
