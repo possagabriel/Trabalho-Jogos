@@ -102,6 +102,10 @@ def test_boss_publica_eventos_sem_alterar_vida_ataques_e_recompensas(
             GameEventType.BOSS_SPAWNED, GameEventType.BOSS_DEFEATED]
         assert eventos[-1].data["boss"] is boss
         assert jogo.boss is None
+        assert jogo.cutscene_controller.ativo
+        assert jogo.avanco_controller.modelo.estado is EstadoAvanco.FREANDO
+        while jogo.cutscene_controller.ativo:
+            jogo.cutscene_controller.pular_direto()
         assert jogo.avanco_controller.modelo.estado is EstadoAvanco.ACELERANDO
         assert jogo.jogador.pontuacao == vida_antes + int(
             boss.pontos * jogo.jogador.combo.get_bonus())

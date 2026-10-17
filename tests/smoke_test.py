@@ -53,8 +53,10 @@ def test_loop_combate_avanca_niveis():
     jogo = novo_jogo()
     random.seed(7)
     frames = 0
-    while jogo.estado in ("PREPARANDO", "JOGANDO") and frames < MAX_FRAMES:
+    while jogo.estado in ("PREPARANDO", "JOGANDO", "CUTSCENE") and frames < MAX_FRAMES:
         jogo._atualizar()
+        if jogo.estado == "CUTSCENE":
+            jogo.cutscene_controller.pular_direto()
         if jogo.estado == "JOGANDO":
             # Simula o jogador acompanhando horizontalmente o primeiro alvo;
             # a arena widescreen nao garante mais um inimigo no centro.

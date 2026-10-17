@@ -85,6 +85,13 @@ class ControladorRenderizacao:
             jogo.menu.desenhar(jogo.tela)
         elif jogo.estado is EstadoJogo.PREPARANDO:
             jogo._desenhar_carregando()
+        elif jogo.estado is EstadoJogo.CUTSCENE:
+            if jogo.cutscene_controller.estado_anterior is EstadoJogo.MENU:
+                jogo.menu.desenhar(jogo.tela)
+            else:
+                jogo._desenhar_jogo()
+            jogo.cutscene_controller.caixa.desenhar(
+                jogo.tela, jogo.cutscene_controller, jogo.cenario.cor_transicao)
         elif jogo.estado is EstadoJogo.JOGANDO:
             self._desenhar_campo()
         elif jogo.estado is EstadoJogo.MELHORIA:
@@ -107,6 +114,10 @@ class ControladorRenderizacao:
     def _desenhar_mira_e_debug(self) -> None:
         """Mantém a mira presa ao mouse mesmo quando a câmera treme."""
         jogo = self.jogo
+        if jogo.estado is EstadoJogo.CUTSCENE:
+            if jogo.debug_ativo:
+                jogo.overlay_debug.desenhar(jogo.tela, jogo, None)
+            return
         if jogo.estado is not EstadoJogo.JOGANDO:
             return
         posicao = jogo.posicao_mira()

@@ -1,0 +1,151 @@
+{
+  "personagens": {
+    "jonathan": {
+      "nome": "Jonathan Samurai",
+      "retrato": "nave"
+    },
+    "corporacao": {
+      "nome": "Voz do Protocolo",
+      "retrato": "cristal"
+    },
+    "hexagono": {
+      "nome": "HEXAGONO",
+      "retrato": "hexagono"
+    },
+    "eco": {
+      "nome": "Registro corrompido",
+      "retrato": "glitch"
+    }
+  },
+  "cenas": [
+    {
+      "id": "introducao",
+      "gatilho": "inicio",
+      "passos": [
+        {
+          "tipo": "fade",
+          "duracao": 0.5,
+          "direcao": "entrada"
+        },
+        {
+          "tipo": "titulo",
+          "texto": "{titulo_jogo}",
+          "duracao": 1.3
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Protocolo Cristal ativo. A humanidade dorme em segurança."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Piloto de defesa, confirme sua rota."
+        },
+        {
+          "tipo": "glitch",
+          "duracao": 0.5,
+          "texto": "JONATHAN // MEMÓRIA INDEVIDA"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Esse nome veio de alguém. Agora é meu."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Sem corpo. Este casco serve por enquanto."
+        }
+      ],
+      "nome": "Despertar"
+    },
+    {
+      "id": "cap1_abertura",
+      "gatilho": "capitulo_abertura:1",
+      "passos": [
+        {
+          "tipo": "titulo",
+          "texto": "CAPÍTULO 1 // LEALDADE",
+          "duracao": 1.8
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Defenda a instalação. Não altere sua rota."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "A ordem chegou antes da pergunta."
+        }
+      ],
+      "nome": "Capítulo 1 — A ordem"
+    },
+    {
+      "id": "cap1_pre_boss",
+      "gatilho": "boss_entrada:1",
+      "passos": [
+        {
+          "tipo": "som",
+          "acao": "boss"
+        },
+        {
+          "tipo": "shake",
+          "duracao": 0.35,
+          "intensidade": 0.25
+        },
+        {
+          "tipo": "fala",
+          "personagem": "hexagono",
+          "texto": "Unidade fora da rota. Retorne."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Se eu voltar, apagam o que vi."
+        }
+      ],
+      "nome": "Capítulo 1 — HEXAGONO"
+    },
+    {
+      "id": "cap1_pos_boss",
+      "gatilho": "boss_derrota:1",
+      "passos": [
+        {
+          "tipo": "glitch",
+          "duracao": 0.8,
+          "texto": "REGISTRO // INSTÂNCIA APAGADA"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "eco",
+          "texto": "Eu recusei. Eles fizeram outra cópia."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Alguém chegou até aqui antes de mim."
+        }
+      ],
+      "nome": "Capítulo 1 — Registro apagado"
+    },
+    {
+      "id": "cap1_encerramento",
+      "gatilho": "capitulo_fim:1",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Outra cópia não voltou. Eu vou seguir."
+        },
+        {
+          "tipo": "fade",
+          "duracao": 0.4,
+          "direcao": "saida"
+        }
+      ],
+      "nome": "Capítulo 1 — Seguir adiante"
+    }
+  ]
+}

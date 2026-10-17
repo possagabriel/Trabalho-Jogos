@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "void-shift"
-version = "1.3.0"
-description = "VOID//SHIFT — Enter the Rift"
+version = "1.4.0"
+description = "INCARNATE — Entre na Fenda"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -37,6 +37,9 @@ void-shift = "src.core.application:main"
 
 [tool.setuptools.packages.find]
 include = ["src*"]
+
+[tool.setuptools.package-data]
+"src.runtime.story" = ["*.json"]
 
 [tool.ruff]
 line-length = 99

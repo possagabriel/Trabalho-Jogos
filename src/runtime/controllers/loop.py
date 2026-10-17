@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.core.constants import EstadoJogo, FPS, INCREMENTO_CARREGAMENTO
+from src.core.event_bus import GameEventType, publicar_evento
 from src.runtime.application.timing import PASSO_FIXO, RelogioSimulacao
 
 if TYPE_CHECKING:
@@ -29,11 +30,15 @@ class ControladorLoop:
             else:
                 jogo.tempo_partida += PASSO_FIXO
                 jogo._atualizar_jogando()
+        elif jogo.estado is EstadoJogo.CUTSCENE:
+            jogo.cutscene_controller.atualizar(PASSO_FIXO)
+            return
         elif jogo.estado is EstadoJogo.PREPARANDO:
             jogo.carregamento += INCREMENTO_CARREGAMENTO
             if jogo.carregamento >= 100:
                 jogo.carregamento = 100
                 jogo.estado = EstadoJogo.JOGANDO
+                publicar_evento(GameEventType.GAME_START, sessao=jogo)
         elif jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
             jogo.menu.atualizar()
         # O fundo de combate e suas partículas não são visíveis no menu.
@@ -84,6 +89,9 @@ class ControladorLoop:
                 jogo.menu.cancelar_confirmacao_resolucao()
                 jogo._salvar_tudo()
                 return False
+            if jogo.estado is EstadoJogo.CUTSCENE:
+                jogo.cutscene_controller.tratar_evento(evento)
+                continue
             if jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
                 if not jogo.menu.tratar_eventos(evento):
                     return False
@@ -94,6 +102,8 @@ class ControladorLoop:
                 tecla_pausar = jogo.controles.get("pausar", 0)
                 if evento.key == pygame.K_F3:
                     jogo.debug_ativo = not jogo.debug_ativo
+                elif evento.key == pygame.K_F8 and jogo.debug_ativo:
+                    jogo.cutscene_controller.abrir_seletor_debug()
                 elif jogo.progressao_controller.transicao is not None:
                     if evento.key in (pygame.K_p, pygame.K_ESCAPE, tecla_pausar):
                         jogo.estado = EstadoJogo.PAUSA

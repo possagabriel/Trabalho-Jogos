@@ -185,6 +185,8 @@ class ControladorProgressao:
         self.jogo.avanco_controller.atualizar(cenario_visivel, PASSO_FIXO)
         if transicao.atualizar(self.jogo.cenario, self.jogo.particulas):
             self.transicao = None
+            publicar_evento(GameEventType.DIMENSION_CHANGED, sessao=self.jogo,
+                            cenario_id=self.jogo.cenario.id)
 
     def frame_transicao(self) -> None:
         """Desenha o quadro atual da transição na superfície lógica."""

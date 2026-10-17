@@ -22,6 +22,7 @@ class Cena:
     id: str
     gatilho: str
     passos: tuple[dict[str, Any], ...]
+    nome: str = ""
 
 
 @dataclass(frozen=True)
@@ -90,7 +91,11 @@ def carregar_catalogo(dados: Any) -> CatalogoCenas:
             LOGGER.warning("Cena %s ignorada: passo ou personagem ausente %r",
                            identificador, invalidos[0])
             continue
-        cenas[identificador] = Cena(identificador, gatilho, tuple(passos))
+        nome = bruto.get("nome", identificador)
+        cenas[identificador] = Cena(
+            identificador, gatilho, tuple(passos),
+            nome if isinstance(nome, str) else identificador,
+        )
     return CatalogoCenas(cenas, personagens)
 
 
@@ -153,7 +158,10 @@ class SequenciadorCena:
                 self.ao_entrar(passo)
             if passo["tipo"] not in ("retrato", "som", "musica"):
                 break
+            atual = self.cena
             self._proximo()
+            if self.cena is not atual:
+                return
 
     def _proximo(self) -> None:
         if self.cena is None:
@@ -170,8 +178,10 @@ class SequenciadorCena:
         passo = self.passo
         self.tempo += dt
         if passo["tipo"] in TIPOS_TEMPORIZADOS and self.tempo >= passo["duracao"]:
+            atual = self.cena
             self._proximo()
-            self._entrar()
+            if self.cena is atual:
+                self._entrar()
 
     def confirmar(self) -> None:
         """Completa a fala atual ou segue ao próximo passo."""
@@ -181,8 +191,10 @@ class SequenciadorCena:
         if passo["tipo"] == "fala" and self.texto_visivel != passo["texto"]:
             self.tempo = len(passo["texto"]) / self.velocidade
             return
+        atual = self.cena
         self._proximo()
-        self._entrar()
+        if self.cena is atual:
+            self._entrar()
 
     def pular(self) -> None:
         """Encerra intencionalmente e registra a cena como vista."""

@@ -42,6 +42,7 @@ _DEFAULT: dict[str, Any] = {
     "ajuste_off_x": 0, "ajuste_off_y": 0, "qualidade_grafica": "ALTA",
     "mostrar_desempenho": False,
     "mira_ativa": True,
+    "velocidade_dialogo": 42,
     "dispersao_duplo_graus": DISPERSAO_DUPLO_GRAUS,
     "dispersao_espiral_graus": DISPERSAO_ESPIRAL_GRAUS,
     "estilo_visual": "COMIC", "qualidade_comic": "MEDIA",
@@ -142,11 +143,15 @@ class Configuracoes:
             controles.update(valores.get("controles", {}))
             valores["controles"] = controles
             _normalizar_avanco(valores)
+            valores["velocidade_dialogo"] = _limitar_numero(
+                valores.get("velocidade_dialogo"), 42, 10, 120)
             return valores
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             valores = {chave: dict(valor) if isinstance(valor, dict) else valor
                        for chave, valor in _DEFAULT.items()}
             _normalizar_avanco(valores)
+            valores["velocidade_dialogo"] = _limitar_numero(
+                valores.get("velocidade_dialogo"), 42, 10, 120)
             return valores
 
     def salvar(self) -> bool:

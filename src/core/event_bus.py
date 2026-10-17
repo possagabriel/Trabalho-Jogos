@@ -32,6 +32,7 @@ class GameEventType(Enum):
     GAME_START = auto()
     GAME_OVER = auto()
     LEVEL_UP = auto()
+    DIMENSION_CHANGED = auto()
     PAUSE_TOGGLE = auto()
 
     # Player

@@ -132,12 +132,13 @@ class SistemaProgressao:
         contagens[chave] = contagens.get(chave, 0) + 1
 
     def resetar_fases(self):
-        """Inicia uma campanha sem apagar moedas, skins ou melhorias."""
+        """Inicia campanha preservando memórias já desbloqueadas no perfil."""
+        vistas = list(self.cenas_vistas)
         self.jogador["progresso_campanha"] = {
             "fases_concluidas": [], "subbosses_derrotados": [],
             "bosses_derrotados": [], "fragmentos": [], "indice_fases": {},
             "decisao_final": None, "ending": None, "fase_atual": "lealdade",
-            "nivel_atual": 1, "cenas_vistas": [],
+            "nivel_atual": 1, "cenas_vistas": vistas,
         }
         self.jogador["nivel_maximo"] = 1
         self.jogador["cenarios_desbloqueados"] = [1]

@@ -10,7 +10,7 @@ from src.core.constants import ALTURA, AMARELO, BRANCO, CIANO, DIMENSION_GOLD, \
     DIVISOR_NIVEL_INTERVALO_SPAWN, DOURADO, EstadoJogo, FPS, \
     INCREMENTO_CARREGAMENTO, INTERVALO_SPAWN_BASE, \
     INTERVALO_SPAWN_MINIMO, LARGURA, LARANJA, NEGRO, QUANTUM_CYAN, \
-    RIFT_MAGENTA, TITULO, VERDE, VOID_BLACK
+    RIFT_MAGENTA, NOME_JOGO, TITULO, VERDE, VOID_BLACK
 from src.runtime.domain.entities.bosses import Boss
 from src.runtime.infrastructure.assets import carregar_imagem_alpha
 from src.runtime.infrastructure.graphics.cel_shading import TextoAcao
@@ -46,6 +46,7 @@ from src.runtime.controllers.loop import ControladorLoop
 from src.runtime.controllers.pause import ControladorPausa
 from src.runtime.controllers.render import ControladorRenderizacao
 from src.runtime.controllers.scroll import ControladorAvanco
+from src.runtime.controllers.cutscene import ControladorCutscene
 from src.runtime.diagnostics.frame_metrics import MetricasQuadro
 from src.runtime.presentation.ui import desenhar_barra, desenhar_cantos, desenhar_texto, \
     desenhar_titulo
@@ -159,6 +160,7 @@ class Jogo:
         self.menu_equipamento = False
         self.mira = Mira()
         self.overlay_debug = OverlayDebug()
+        self.cutscene_controller = ControladorCutscene(self)
         self.debug_ativo = False
         self.linha_equipamento = 0
         self.indice_equipamento = 0
@@ -580,6 +582,8 @@ class Jogo:
             return
         self.jogador.combo.atualizar()
         self.miniboss_controller.atualizar(1 / FPS)
+        if self.cutscene_controller.ativo:
+            return
         teclas = pygame.key.get_pressed()
         usando_boost = (teclas[pygame.K_LSHIFT] or teclas[pygame.K_RSHIFT]
                         or teclas[pygame.K_LCTRL] or teclas[pygame.K_RCTRL])
@@ -664,6 +668,8 @@ class Jogo:
             self.projeteis.extend(novos)
 
         self._atualizar_projeteis()
+        if self.cutscene_controller.ativo:
+            return
         self._atualizar_powerups()
 
         for inimigo in self.inimigos[:]:
@@ -1327,7 +1333,7 @@ class Jogo:
         desenhar_vignette(self.tela, intensidade=0.7, raio_interno=0.45)
         tema = tema_atual(self.config["tema"])
 
-        desenhar_titulo(self.tela, "VOID//SHIFT",
+        desenhar_titulo(self.tela, NOME_JOGO,
                         (LARGURA // 2, ALTURA // 2 - 130), RIFT_MAGENTA, 44)
         desenhar_texto(self.tela, "TRÂNSITO DIMENSIONAL",
                        (LARGURA // 2, ALTURA // 2 - 92), QUANTUM_CYAN, 22,

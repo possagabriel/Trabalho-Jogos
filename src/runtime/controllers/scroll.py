@@ -34,6 +34,7 @@ class ControladorAvanco:
         self.config = jogo.config
         self.direcao = self._direcao()
         self.modelo = self._novo_modelo(1)
+        self._retomada_pendente = False
         self._bus = EventBus()
         referencia = weakref.ref(self)
         bus = self._bus
@@ -94,6 +95,7 @@ class ControladorAvanco:
         """Recomeça na velocidade normal da primeira dimensão."""
         self.direcao = self._direcao()
         self.modelo = self._novo_modelo(cenario.id)
+        self._retomada_pendente = False
         self._configurar_cenario(cenario)
 
     def trocar_dimensao(self, cenario: Any) -> None:
@@ -115,7 +117,12 @@ class ControladorAvanco:
             if bool(_ler(self.config, "avanco_parada_boss", True)):
                 self.modelo.boss_entrou()
         elif tipo is GameEventType.BOSS_DEFEATED:
-            self.modelo.boss_derrotado()
+            jogo = self._jogo()
+            narrativa = getattr(jogo, "cutscene_controller", None)
+            if narrativa is not None and narrativa.tem_pos_boss(evento.data.get("cenario_id", 0)):
+                self._retomada_pendente = True
+            else:
+                self.modelo.boss_derrotado()
         elif tipo is GameEventType.MINIBOSS_SPAWNED:
             mapa = _ler(self.config, "avanco_miniboss_tipos", {})
             chave = evento.data.get("chave", "")
@@ -126,8 +133,18 @@ class ControladorAvanco:
         elif tipo in (GameEventType.MINIBOSS_DEFEATED, GameEventType.MINIBOSS_REMOVED):
             self.modelo.miniboss_derrotado()
 
+    def liberar_retomada(self) -> None:
+        """Acelera após a última cena ligada à derrota do boss."""
+        if self._retomada_pendente:
+            self._retomada_pendente = False
+            self.modelo.boss_derrotado()
+
     def atualizar(self, cenario: Any, dt: float) -> None:
         """Avança uma etapa fixa e aplica a velocidade ao cenário visível."""
+        if self._retomada_pendente:
+            narrativa = getattr(self._jogo(), "cutscene_controller", None)
+            if narrativa is None or (not narrativa.ativo and not narrativa.fila):
+                self.liberar_retomada()
         self.modelo.atualizar(dt)
         fundo = getattr(cenario, "parallax", None)
         if fundo is not None:

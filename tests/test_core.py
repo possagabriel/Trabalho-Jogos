@@ -88,6 +88,9 @@ def test_carregamento_transiciona_para_jogando():
     jogo._preparar_jogo()
     jogo.carregamento = 99
     jogo._atualizar()
+    assert jogo.estado == "CUTSCENE"
+    while jogo.cutscene_controller.ativo:
+        jogo.cutscene_controller.pular_direto()
     assert jogo.estado == "JOGANDO"
     assert jogo.carregamento == 100
 

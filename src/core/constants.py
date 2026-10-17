@@ -28,7 +28,8 @@ QUADROS_NAVE_DIRECIONAL: int = 48
 TAMANHO_BASE_SPRITE_NAVE: int = 96
 INTERVALO_POSE_NAVE_MS: int = 180
 
-TITULO: str = "INCARNATE - Entre na Fenda"
+NOME_JOGO: str = "INCARNATE"
+TITULO: str = f"{NOME_JOGO} - Entre na Fenda"
 """Titulo exibido na barra da janela."""
 
 # ---------------------------------------------------------------------------
@@ -94,6 +95,7 @@ class EstadoJogo(str, Enum):
     MELHORIA = "MELHORIA"
     PAUSA = "PAUSA"
     GAME_OVER = "GAME_OVER"
+    CUTSCENE = "CUTSCENE"
 
 
 # Regras de gameplay compartilhadas por entidades e controladores.

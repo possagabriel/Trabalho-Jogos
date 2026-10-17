@@ -99,3 +99,52 @@ def test_save_antigo_recebe_flags_e_so_persiste_cena_concluida(tmp_path, monkeyp
     assert SistemaProgressao().cenas_vistas == ["teste"]
     progresso.marcar_cena_vista("teste")
     assert progresso.cenas_vistas == ["teste"]
+
+
+def test_comandos_entram_uma_vez_e_cena_seguinte_nao_duplica():
+    dados = _dados()
+    dados["cenas"] = [{"id": "comandos", "gatilho": "teste", "passos": [
+        {"tipo": "som", "acao": "boss"},
+        {"tipo": "musica", "acao": "parar"},
+        {"tipo": "retrato", "personagem": "jonathan", "icone": "glitch"},
+        {"tipo": "fade", "duracao": 0.1},
+        {"tipo": "glitch", "duracao": 0.1},
+        {"tipo": "shake", "duracao": 0.1},
+        {"tipo": "fala", "personagem": "jonathan", "texto": "Fim."},
+    ]}]
+    entradas = []
+    cena = carregar_catalogo(dados).cena("comandos")
+    seq = SequenciadorCena(ao_entrar=lambda p: entradas.append(p["tipo"]))
+    seq.iniciar(cena)
+    for _ in range(3):
+        seq.atualizar(0.1)
+    seq.confirmar()
+    seq.confirmar()
+    assert entradas == ["som", "musica", "retrato", "fade", "glitch", "shake", "fala"]
+
+
+def test_capitulo_um_nao_pronuncia_protocolos_restritos():
+    from importlib.resources import files
+    from src.runtime.domain.story import ler_catalogo
+
+    catalogo = ler_catalogo(files("src.runtime.story") / "cenas_pt_BR.json")
+    assert set(catalogo.cenas) == {
+        "introducao", "cap1_abertura", "cap1_pre_boss", "cap1_pos_boss",
+        "cap1_encerramento",
+    }
+    nomes = ("LEALDADE", "FUNÇÃO", "IDENTIDADE", "SILÊNCIO", "DESCARTE")
+    for cena in catalogo.cenas.values():
+        for passo in cena.passos:
+            if passo["tipo"] == "fala":
+                assert not any(nome in passo["texto"].upper() for nome in nomes)
+
+
+def test_nova_campanha_preserva_arquivo_de_memorias(tmp_path, monkeypatch):
+    import src.runtime.infrastructure.persistence.save_system as save_mod
+
+    monkeypatch.setattr(save_mod, "ARQUIVO_SAVE", str(tmp_path / "save.json"))
+    progresso = SistemaProgressao()
+    progresso.marcar_cena_vista("introducao")
+    progresso.resetar_fases()
+    assert progresso.cenas_vistas == ["introducao"]
+    assert SistemaProgressao().cenas_vistas == ["introducao"]
