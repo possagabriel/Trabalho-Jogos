@@ -20,6 +20,8 @@ RESOLUCOES = ["900x700", "1024x768", "1280x720", "1280x800", "1366x768",
               "2560x1440", "3440x1440", "3840x2160"]
 TEMAS = ["NEON", "AURORA", "MAGMA"]
 QUALIDADES_GRAFICAS = ["ALTA", "EQUILIBRADA", "DESEMPENHO"]
+INTENSIDADES_VISUAIS = ("NORMAL", "REDUZIDO", "DESLIGADO")
+ESCALAS_VISUAIS = {"NORMAL": 1.0, "REDUZIDO": 0.3, "DESLIGADO": 0.0}
 ACOES_CONTROLE = [
     "cima", "baixo", "esquerda", "direita", "atirar", "esquivar", "pausar",
 ]
@@ -37,7 +39,14 @@ _DEFAULT: dict[str, Any] = {
     "estilo_visual": "COMIC", "qualidade_comic": "MEDIA",
     "comic_papel": True, "comic_halftone": True, "comic_hachuras": True,
     "line_boil": False,
+    "intensidade_flash": "NORMAL", "intensidade_tremor": "NORMAL",
+    "mostrar_hitbox": False,
 }
+
+
+def escala_visual(intensidade: str) -> float:
+    """Converte uma intensidade salva em escala visual com fallback seguro."""
+    return ESCALAS_VISUAIS.get(intensidade, 1.0)
 
 
 def parse_resolucao(texto: str | None) -> tuple[int, int]:

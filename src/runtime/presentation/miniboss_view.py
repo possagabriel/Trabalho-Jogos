@@ -67,5 +67,3 @@ def desenhar_miniboss(tela: pygame.Surface, boss: Miniboss) -> None:
         aviso = "CONTROLES INVERTIDOS"
     texto = f"{aviso}  {boss.estado.restante:.1f}s"
     desenhar_texto(tela, texto, (layout.x(0.5), layout.y(0.13)), boss.cor, layout.px(16))
-    desenhar_texto(tela, boss.cfg["dica"], (layout.x(0.5), layout.y(0.17)),
-                   BRANCO, layout.px(15))

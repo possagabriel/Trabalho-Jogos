@@ -79,6 +79,8 @@ class ControladorMiniboss:
             return False
         antes = boss.vida
         acertou = boss.receber_tiro(proj)
+        if boss.vida < antes:
+            self.jogo.jogador.combo.registrar_acerto()
         registrar_impacto(self.jogo, boss, proj, antes)
         if boss.vida <= 0:
             self.derrotar()
@@ -91,6 +93,8 @@ class ControladorMiniboss:
             return
         antes = boss.vida
         boss.receber_area(proj.dano if dano is None else dano, proj.x, proj.y, raio)
+        if boss.vida < antes:
+            self.jogo.jogador.combo.registrar_acerto()
         registrar_impacto(self.jogo, boss, proj, antes)
         if boss.vida <= 0:
             self.derrotar()

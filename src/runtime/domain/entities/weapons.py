@@ -79,6 +79,7 @@ class Projetil:
         self.refletor = refletor
         self.tempo = 0
         self.speed = math.hypot(vel_x, vel_y) or 1
+        self.alvos_atingidos: set[int] = set()
 
     @property
     def rect(self) -> pygame.Rect:
@@ -214,3 +215,5 @@ class Projetil:
                          max(1, larg // 2 - 1))
             desenhar_circulo(tela, BRANCO, (x, y), max(1, larg // 2 - 1),
                              brilho=1.6)
+        if self.origem == "inimigo":
+            desenhar_circulo(tela, LARANJA, (x, y), max(7, int(self.raio) + 4), 2)

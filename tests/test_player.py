@@ -111,20 +111,22 @@ def test_skin_padrao_fallback_sem_sprite():
 
 def test_combo_incrementa_e_maximo():
     combo = SistemaCombo()
-    combo.adicionar_tiro()
+    combo.registrar_acerto()
     assert combo.combo_atual == 1
-    combo.ultimo_tiro = pygame.time.get_ticks()
-    combo.adicionar_tiro()
+    combo.atualizar()
+    combo.registrar_acerto()
     assert combo.combo_atual == 2
-    combo.adicionar_tiro()
+    combo.registrar_acerto()
     assert combo.combo_maximo == 3
 
 
-def test_combo_reseta_sem_tempo():
+def test_combo_expira_sem_acertos():
     combo = SistemaCombo()
-    combo.adicionar_tiro()
-    combo.ultimo_tiro = -999999
-    combo.adicionar_tiro()
+    combo.registrar_acerto()
+    for _ in range(combo.janela_acertos):
+        combo.atualizar()
+    assert combo.combo_atual == 0
+    combo.registrar_acerto()
     assert combo.combo_atual == 1
 
 
@@ -142,6 +144,13 @@ def test_combo_zerar():
     c.combo_atual = 5
     c.zerar()
     assert c.combo_atual == 0
+
+
+def test_tempo_de_recarga_da_esquiva_respeita_modulos():
+    jog = Jogador()
+    jog.multiplicador_recarga_esquiva = 1.3
+    jog.atualizar(_teclas(pygame.K_x))
+    assert jog.cooldown_esquiva == 117
 
 
 # ---------------------------------------------------------------------------

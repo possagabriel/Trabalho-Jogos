@@ -616,6 +616,7 @@ class TransicaoMissao:
         self.inicio = 0
         self.acao = None
         self.tempo = 0.0
+        self._flash = None
 
     def iniciar(self, acao):
         self.ativo = True
@@ -642,7 +643,7 @@ class TransicaoMissao:
             return True
         return False
 
-    def desenhar(self, tela, tema):
+    def desenhar(self, tela, tema, intensidade_flash=1.0, intensidade_tremor=1.0):
         l = self._layout
         p = self.progresso()
         if p <= 0:
@@ -652,7 +653,7 @@ class TransicaoMissao:
             larg, alt = tela.get_size()
             nova = pygame.transform.smoothscale(
                 tela, (int(larg * zoom), int(alt * zoom)))
-            tremida = int(math.sin(self.tempo * 55) * 5 * p)
+            tremida = int(math.sin(self.tempo * 55) * 5 * p * intensidade_tremor)
             tela.fill(NEGRO)
             tela.blit(nova, nova.get_rect(center=(larg // 2 + tremida,
                                                   alt // 2)))
@@ -675,9 +676,10 @@ class TransicaoMissao:
                       max(8, raio // 6), 0.4 + 0.5 * p)
 
         # flash final
-        if p > 0.8:
-            alfa = int(255 * (p - 0.8) / 0.2)
-            surf = pygame.Surface(tela.get_size())
-            surf.fill((255, 255, 255))
-            surf.set_alpha(alfa)
-            tela.blit(surf, (0, 0))
+        if p > 0.8 and intensidade_flash:
+            alfa = int(255 * (p - 0.8) / 0.2 * intensidade_flash)
+            if self._flash is None or self._flash.get_size() != tela.get_size():
+                self._flash = pygame.Surface(tela.get_size())
+                self._flash.fill((255, 255, 255))
+            self._flash.set_alpha(alfa)
+            tela.blit(self._flash, (0, 0))

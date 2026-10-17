@@ -21,7 +21,10 @@ import pygame
 
 from game.phase_select import PhaseSelectScreen
 from src.core.constants import BRANCO, CIANO, DOURADO, QUANTUM_CYAN, VERDE
-from src.core.settings import ACOES_CONTROLE, QUALIDADES_GRAFICAS, RESOLUCOES, TEMAS
+from src.core.settings import (
+    ACOES_CONTROLE, INTENSIDADES_VISUAIS, QUALIDADES_GRAFICAS, RESOLUCOES,
+    TEMAS, escala_visual,
+)
 from src.infrastructure.graphics.comic_render import painel_tinta, texto_tinta
 from src.infrastructure.graphics.comic_theme import LARANJA, PAPEL, opcoes_atuais
 from src.infrastructure.graphics.theme import tema_atual
@@ -133,14 +136,15 @@ class OpcaoMenu:
         cor = BRANCO if selecionado else (172, 182, 222)
         xf = x + deslocamento
         y = self.y
+        rect = self.get_rect(xf, fonte, layout)
         if selecionado:
-            surf = texto_suave(fonte_ativa, self.texto, secundaria, primaria,
-                               6, True)
-            self._blit(tela, surf, xf + layout.px(4), y + layout.px(2), alfa)
+            painel = painel_glass(secundaria, rect, tema["fundo_painel"],
+                                 layout.px(10), 220, layout.px(8))
+            self._blit(tela, painel, rect.centerx, rect.centery, alfa,
+                       centrado=True)
         surf = texto_suave(fonte_ativa, self.texto, cor,
                            primaria if selecionado else None,
                            5 if selecionado else 0, True)
-        rect = self.get_rect(xf, fonte, layout)
         self._blit(tela, surf, rect.x + layout.px(28), y, alfa)
         if selecionado and alfa >= 255:
             larg = fonte_ativa.size(self.texto)[0]
@@ -1142,6 +1146,9 @@ class MenuPrincipal:
             ("Reticula", "comic_halftone"),
             ("Hachuras", "comic_hachuras"),
             ("Tremida (alta)", "line_boil"),
+            ("Flashes", "intensidade_flash"),
+            ("Tremor de tela", "intensidade_tremor"),
+            ("Mostrar hitbox", "mostrar_hitbox"),
         ]
 
     _CONFIG_VISIVEIS = 6
@@ -1321,6 +1328,8 @@ class MenuPrincipal:
             escolhas = {
                 "estilo_visual": ("COMIC", "ORIGINAL"),
                 "qualidade_comic": ("BAIXA", "MEDIA", "ALTA"),
+                "intensidade_flash": INTENSIDADES_VISUAIS,
+                "intensidade_tremor": INTENSIDADES_VISUAIS,
             }
             if chave in escolhas:
                 valores = escolhas[chave]
@@ -2284,7 +2293,11 @@ class MenuPrincipal:
         if self._resolucao_pendente is not None:
             self._desenhar_confirmacao_resolucao(tela, tema)
         self.transicao.desenhar(tela)
-        self.transicao_missao.desenhar(tela, tema)
+        self.transicao_missao.desenhar(
+            tela, tema,
+            escala_visual(self.jogo.config["intensidade_flash"]),
+            escala_visual(self.jogo.config["intensidade_tremor"]),
+        )
         if self.alpha_entrada < 255:
             overlay = pygame.Surface((l.largura, l.altura))
             overlay.fill(NEGRO)

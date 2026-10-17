@@ -248,23 +248,27 @@ class Skin:
 # ---------------------------------------------------------------------------
 
 class SistemaCombo:
-    """Controla o multiplicador de pontos baseado em tiros consecutivos."""
+    """Controla o multiplicador por acertos dentro de uma janela de tempo."""
 
     def __init__(self) -> None:
         self.combo_atual = 0
         self.combo_maximo = 0
-        self.ultimo_tiro = -99999
-        self.tempo_maximo_entre_tiros = 500
+        self.quadros_restantes = 0
+        self.janela_acertos = 45
 
-    def adicionar_tiro(self) -> None:
-        agora = pygame.time.get_ticks()
-        if agora - self.ultimo_tiro < self.tempo_maximo_entre_tiros:
-            self.combo_atual += 1
-        else:
-            self.combo_atual = 1
-        self.ultimo_tiro = agora
+    def registrar_acerto(self) -> None:
+        """Aumenta o combo quando um alvo recebe dano direto."""
+        self.combo_atual = self.combo_atual + 1 if self.quadros_restantes > 0 else 1
+        self.quadros_restantes = self.janela_acertos
         if self.combo_atual > self.combo_maximo:
             self.combo_maximo = self.combo_atual
+
+    def atualizar(self) -> None:
+        """Expira o combo após 45 passos de simulação sem acertos."""
+        if self.quadros_restantes > 0:
+            self.quadros_restantes -= 1
+            if self.quadros_restantes == 0:
+                self.combo_atual = 0
 
     def get_bonus(self) -> float:
         if self.combo_atual > COMBO_MULTIPLICADOR_ALTO:
@@ -275,6 +279,7 @@ class SistemaCombo:
 
     def zerar(self) -> None:
         self.combo_atual = 0
+        self.quadros_restantes = 0
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +312,7 @@ class Jogador:
         self._direcao_esquiva = (0.0, -1.0)
         self.multiplicador_velocidade = 1.0
         self.multiplicador_cadencia = 1.0
+        self.multiplicador_recarga_esquiva = 1.0
         self.bonus_dano = 0
         self.multiplicador_especial = 1.0
         self.melhorias: dict[str, int] = {}
@@ -360,7 +366,8 @@ class Jogador:
             direcao = (dx, dy) if dx or dy else (0.0, -1.0)
             self._direcao_esquiva = direcao
             self.tempo_esquiva = 9
-            self.cooldown_esquiva = 90
+            self.cooldown_esquiva = max(
+                30, round(90 * self.multiplicador_recarga_esquiva))
             self.esquiva_iniciada = True
         self._esquiva_pressionada = esquiva_pressionada
         if self.tempo_esquiva > 0:
@@ -384,7 +391,6 @@ class Jogador:
         arma = ARMARIA[self.arma_atual]
         if self.cooldown_tiro > 0 or not self.vivo:
             return []
-        self.combo.adicionar_tiro()
         x, y = self.x, self.y - 20
         tipo = arma["tipo"]
         dano = arma["dano"] + self.bonus_dano

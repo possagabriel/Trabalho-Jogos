@@ -33,10 +33,12 @@ from game.game_over_controller import ControladorGameOver  # noqa: E402
 from game.loop_controller import ControladorLoop  # noqa: E402
 from game.pause_controller import ControladorPausa  # noqa: E402
 from game.render_controller import ControladorRenderizacao  # noqa: E402
+from game.theme import tema_atual  # noqa: E402
 from game.enemies import Inimigo, InimigoEspecial  # noqa: E402
 from game.powerups import PowerUp  # noqa: E402
 from game.weapons import ARMARIA, Projetil  # noqa: E402
 from src.core.settings import Configuracoes  # noqa: E402
+from src.runtime.domain.entities.player import Jogador  # noqa: E402
 
 
 def _patch_recordes():
@@ -160,6 +162,16 @@ def test_pausa_config_renderiza_volume_zero():
     }, 0.0)
 
 
+def test_pausa_mostra_nome_da_skin_sem_representacao_python():
+    jogo = novo_jogo()
+    jogo.jogador.skin = jogo.loja.pegar_skin("fenix")
+    with mock.patch("src.runtime.application.core.desenhar_texto") as texto:
+        jogo._desenhar_pausa_principal(tema_atual("NEON"), 0.0)
+    linhas = [chamada.args[1] for chamada in texto.call_args_list]
+    assert any("VISUAL FENIX" in linha for linha in linhas)
+    assert all("src.runtime" not in linha for linha in linhas)
+
+
 # ---------------------------------------------------------------------------
 # Niveis, boss e armas
 # ---------------------------------------------------------------------------
@@ -228,6 +240,95 @@ def test_escolha_de_melhoria_aplica_efeito_e_inicia_proximo_nivel():
     assert jogo.estado is EstadoJogo.JOGANDO
 
 
+def test_escolhas_oferecem_modulo_com_custo_e_aplicam_consequencias():
+    from src.runtime.domain.systems.upgrades import MELHORIAS_COM_CUSTO
+
+    jogo = novo_jogo()
+    jogo.progressao_controller.oferecer_melhorias(2)
+    assert any(opcao["id"] in MELHORIAS_COM_CUSTO and opcao["custo"]
+               for opcao in jogo.melhorias_oferecidas)
+
+    jogo.melhorias_oferecidas = [{"id": "reator_instavel"}]
+    vida_max = jogo.jogador.max_vida
+    jogo.progressao_controller.selecionar_melhoria(0)
+    assert jogo.jogador.bonus_dano == 2
+    assert jogo.jogador.max_vida == vida_max - 1
+
+    jogo.nivel_pendente = 3
+    jogo.melhorias_oferecidas = [{"id": "blindagem_pesada"}]
+    jogo.progressao_controller.selecionar_melhoria(0)
+    assert jogo.jogador.max_vida == vida_max + 1
+    assert jogo.jogador.multiplicador_recarga_esquiva > 1
+
+    jogo.nivel_pendente = 4
+    jogo.melhorias_oferecidas = [{"id": "motor_emergencia"}]
+    jogo.progressao_controller.selecionar_melhoria(0)
+    assert jogo.jogador.multiplicador_cadencia > 1
+    assert jogo.jogador.multiplicador_recarga_esquiva < 1
+    jogo.jogador.cooldown_tiro = 0
+    assert jogo.jogador.atirar()
+    arma = ARMARIA[jogo.jogador.arma_atual]
+    assert jogo.jogador.cooldown_tiro == round(
+        arma["cooldown"] * jogo.jogador.multiplicador_cadencia)
+
+
+def test_modulo_de_risco_respeita_limite_sem_mutar_jogador():
+    from src.runtime.domain.systems.upgrades import aplicar_melhoria, sortear_melhorias
+
+    jogador = Jogador()
+    assert aplicar_melhoria(jogador, "reator_instavel")
+    assert aplicar_melhoria(jogador, "reator_instavel")
+    dano, vida = jogador.bonus_dano, jogador.max_vida
+    assert aplicar_melhoria(jogador, "reator_instavel") is False
+    assert (jogador.bonus_dano, jogador.max_vida) == (dano, vida)
+    for chave in ("blindagem_pesada", "motor_emergencia"):
+        assert aplicar_melhoria(jogador, chave)
+        assert aplicar_melhoria(jogador, chave)
+    assert all(chave not in {"reator_instavel", "blindagem_pesada",
+                             "motor_emergencia"} for chave in sortear_melhorias(jogador))
+
+
+def test_transicao_dimensional_avanca_sem_bloquear_eventos():
+    jogo = novo_jogo()
+    with mock.patch.object(jogo, "_apresentar") as apresentar:
+        jogo._iniciar_nivel(6)
+    apresentar.assert_not_called()
+    assert jogo.progressao_controller.transicao is not None
+    pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_p}))
+    assert jogo._tratar_eventos() is True
+    assert jogo.estado is EstadoJogo.PAUSA
+    jogo.estado = EstadoJogo.JOGANDO
+    for _ in range(64):
+        jogo._atualizar()
+    assert jogo.progressao_controller.transicao is None
+
+
+def test_acessibilidade_pode_desligar_flash_e_tremor():
+    jogo = novo_jogo()
+    jogo.config["intensidade_flash"] = "DESLIGADO"
+    jogo.config["intensidade_tremor"] = "DESLIGADO"
+    jogo.flash, jogo.fade, jogo.trauma = 10, 0, 1.0
+    jogo.tela.fill((20, 30, 40))
+
+    jogo.render_controller._desenhar_overlays_logicos()
+    jogo.render_controller.aplicar_shake()
+
+    assert jogo.tela.get_at((10, 10))[:3] == (20, 30, 40)
+    assert jogo.trauma < 1.0
+
+
+def test_configuracoes_expoem_opcoes_de_acessibilidade():
+    jogo = novo_jogo()
+    menu = jogo.menu
+    tipos = [tipo for _, tipo in menu._linhas_config()]
+    assert {"intensidade_flash", "intensidade_tremor", "mostrar_hitbox"}.issubset(tipos)
+    assert "tutorial_ativo" not in tipos
+    menu.config_selecao = tipos.index("intensidade_flash")
+    with mock.patch.object(jogo.config, "salvar"):
+        menu._ajustar_config(1)
+    assert jogo.config["intensidade_flash"] == "REDUZIDO"
+
+
 # ---------------------------------------------------------------------------
 # Combate
 # ---------------------------------------------------------------------------
@@ -267,6 +368,32 @@ def test_ion_atravessa_inimigos_na_coluna():
     jogo._atualizar_projeteis()
     assert not jogo.inimigos
     assert ion in jogo.projeteis
+
+
+def test_combo_so_aumenta_apos_acertar_alvo():
+    jogo = novo_jogo()
+    _limpar_campo(jogo)
+    assert jogo.jogador.atirar()
+    assert jogo.jogador.combo.combo_atual == 0
+    inimigo = Inimigo("forja", 1, x=450, y=170)
+    jogo.inimigos = [inimigo]
+    proj = Projetil(450, 170, 0, -1, 1, (255, 255, 255), 4)
+    assert jogo._projetil_jogador_atinge(proj)
+    assert jogo.jogador.combo.combo_atual == 1
+
+
+def test_ion_atinge_cada_alvo_uma_vez_por_projetil():
+    jogo = novo_jogo()
+    _limpar_campo(jogo)
+    inimigo = Inimigo("forja", 1, x=450, y=170)
+    jogo.inimigos = [inimigo]
+    ion = Projetil(450, 300, 0, 0, 1, (200, 220, 255), 6, tipo="ion")
+    jogo.projeteis = [ion]
+    vida_antes = inimigo.vida
+    for _ in range(5):
+        jogo._atualizar_projeteis()
+    assert inimigo.vida == vida_antes - 1
+    assert jogo.jogador.combo.combo_atual == 1
 
 
 def test_gauss_atravessa_mas_danifica():

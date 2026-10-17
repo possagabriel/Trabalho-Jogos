@@ -24,8 +24,11 @@ class ControladorLoop:
         """Atualiza o estado ativo e os efeitos que independem da tela."""
         jogo = self.jogo
         if jogo.estado is EstadoJogo.JOGANDO:
-            jogo.tempo_partida += PASSO_FIXO
-            jogo._atualizar_jogando()
+            if jogo.progressao_controller.transicao is not None:
+                jogo.progressao_controller.atualizar_transicao()
+            else:
+                jogo.tempo_partida += PASSO_FIXO
+                jogo._atualizar_jogando()
         elif jogo.estado is EstadoJogo.PREPARANDO:
             jogo.carregamento += INCREMENTO_CARREGAMENTO
             if jogo.carregamento >= 100:
@@ -38,7 +41,8 @@ class ControladorLoop:
         mundo_visivel = jogo.estado in (
             EstadoJogo.JOGANDO, EstadoJogo.MELHORIA,
             EstadoJogo.PAUSA, EstadoJogo.GAME_OVER)
-        if mundo_visivel and not jogo.menu_equipamento:
+        if (mundo_visivel and not jogo.menu_equipamento
+                and jogo.progressao_controller.transicao is None):
             jogo.particulas.atualizar()
             jogo.cenario.atualizar()
         self._atualizar_textos_e_mensagens()
@@ -86,6 +90,10 @@ class ControladorLoop:
                 continue
             if jogo.estado is EstadoJogo.JOGANDO:
                 tecla_pausar = jogo.controles.get("pausar", 0)
+                if jogo.progressao_controller.transicao is not None:
+                    if evento.key in (pygame.K_p, pygame.K_ESCAPE, tecla_pausar):
+                        jogo.estado = EstadoJogo.PAUSA
+                    continue
                 if evento.key == pygame.K_TAB:
                     jogo.menu_equipamento = not jogo.menu_equipamento
                 elif jogo.menu_equipamento:

@@ -5,26 +5,19 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING
 
-from src.core.constants import CIANO, DIMENSION_GOLD, EstadoJogo, FPS, LARGURA, ALTURA
+from src.core.constants import ALTURA, CIANO, DIMENSION_GOLD, LARGURA, EstadoJogo
+from src.core.settings import escala_visual
 from src.runtime.domain.entities.bosses import Boss
 from src.runtime.domain.entities.enemies import composicao_onda
-from src.runtime.domain.world.particles import MensagemFlutuante
 from src.runtime.domain.entities.player import Jogador
-from src.runtime.domain.world.scenarios import CENARIOS, Cenario, cenario_do_nivel
 from src.runtime.domain.entities.weapons import ARMARIA
+from src.runtime.domain.systems.upgrades import MELHORIAS, aplicar_melhoria, sortear_melhorias
+from src.runtime.domain.world.particles import MensagemFlutuante
+from src.runtime.domain.world.scenarios import CENARIOS, Cenario, cenario_do_nivel
+from src.runtime.presentation.dimension_transition import TransicaoDimensional
 
 if TYPE_CHECKING:
     from src.runtime.application.core import Jogo
-
-
-MELHORIAS = {
-    "potencia": ("MUNIÇÃO PESADA", "+1 de dano em todos os disparos"),
-    "cadencia": ("CICLO ACELERADO", "12% menos intervalo entre tiros"),
-    "motor": ("MOTOR VETORIAL", "+8% de velocidade de movimento"),
-    "blindagem": ("BLINDAGEM", "+1 de vida máxima e reparo imediato"),
-    "escudo": ("ESCUDO DE FENDA", "Recebe um escudo protetor"),
-    "especial": ("REATOR VORTEX", "+25% de carga especial por abate"),
-}
 
 
 class ControladorProgressao:
@@ -32,10 +25,12 @@ class ControladorProgressao:
 
     def __init__(self, jogo: Jogo) -> None:
         self.jogo = jogo
+        self.transicao: TransicaoDimensional | None = None
 
     def novo_jogo(self, nome: str, zerar_estado: bool = True) -> None:
         """Reinicia o estado efemero e prepara o primeiro nivel."""
         jogo = self.jogo
+        self.transicao = None
         nome = nome.strip() or "Jogador"
         skin = jogo.loja.pegar_skin(jogo.loja.skin_atual)
         jogo.jogador = Jogador(nome, skin=skin)
@@ -116,12 +111,13 @@ class ControladorProgressao:
         # O setor já foi conquistado; refletir o avanço imediatamente também
         # mantém checkpoint, telemetria e integrações externas consistentes.
         jogo.jogador.nivel = proximo_nivel
-        chaves = random.sample(list(MELHORIAS), 3)
+        chaves = sortear_melhorias(jogo.jogador)
         jogo.melhorias_oferecidas = [
             {
                 "id": chave,
-                "nome": MELHORIAS[chave][0],
-                "descricao": MELHORIAS[chave][1],
+                "nome": MELHORIAS[chave].nome,
+                "descricao": MELHORIAS[chave].descricao,
+                "custo": MELHORIAS[chave].custo,
                 "nivel": jogo.jogador.melhorias.get(chave, 0),
             }
             for chave in chaves
@@ -135,23 +131,8 @@ class ControladorProgressao:
         if not 0 <= indice < len(jogo.melhorias_oferecidas):
             return False
         chave = jogo.melhorias_oferecidas[indice]["id"]
-        jogador = jogo.jogador
-        jogador.melhorias[chave] = jogador.melhorias.get(chave, 0) + 1
-        if chave == "potencia":
-            jogador.bonus_dano += 1
-        elif chave == "cadencia":
-            jogador.multiplicador_cadencia = max(
-                0.55, jogador.multiplicador_cadencia * 0.88,
-            )
-        elif chave == "motor":
-            jogador.multiplicador_velocidade *= 1.08
-        elif chave == "blindagem":
-            jogador.max_vida += 1
-            jogador.vida = min(jogador.max_vida, jogador.vida + 1)
-        elif chave == "escudo":
-            jogador.escudo = True
-        elif chave == "especial":
-            jogador.multiplicador_especial *= 1.25
+        if not aplicar_melhoria(jogo.jogador, chave):
+            return False
         nivel = jogo.nivel_pendente
         jogo.melhorias_oferecidas = []
         jogo.estado = EstadoJogo.JOGANDO
@@ -162,7 +143,8 @@ class ControladorProgressao:
         """Libera armas disponiveis para o nivel atual."""
         jogo = self.jogo
         for indice, arma in enumerate(ARMARIA):
-            if arma["nivel"] <= jogo.jogador.nivel and indice not in jogo.jogador.armas_desbloqueadas:
+            if (arma["nivel"] <= jogo.jogador.nivel
+                    and indice not in jogo.jogador.armas_desbloqueadas):
                 jogo.jogador.armas_desbloqueadas.append(indice)
                 jogo.jogador.arma_atual = indice
                 jogo.mensagens.append(MensagemFlutuante(
@@ -171,7 +153,7 @@ class ControladorProgressao:
                 jogo.sons.tocar("arma")
 
     def transicao_cenario(self, novo_id: int) -> None:
-        """Executa o salto visual e troca o cenario ativo."""
+        """Agenda o salto visual sem interromper a fila de eventos."""
         jogo = self.jogo
         jogo.sons.tocar("transicao")
         cfg = CENARIOS[novo_id - 1]
@@ -180,29 +162,26 @@ class ControladorProgressao:
             f"DIMENSÃO 0{novo_id} // {cfg['nome']}", LARGURA // 2,
             ALTURA // 2, cor, 140))
         jogo.particulas.salto_dimensional(LARGURA // 2, ALTURA // 2, cor)
-        for _ in range(24):
-            jogo.particulas.atualizar()
-            self.frame_transicao()
-            jogo.relogio.tick(FPS)
-        for alpha in range(0, 255, 12):
-            jogo._tela_fade.fill((255, 255, 255))
-            jogo._tela_fade.set_alpha(alpha)
-            jogo.tela.blit(jogo._tela_fade, (0, 0))
-            jogo._apresentar()
-            jogo.relogio.tick(FPS)
+        self.transicao = TransicaoDimensional(jogo.cenario, cor)
         jogo.cenario = Cenario(novo_id)
         jogo._aplicar_qualidade_grafica()
         jogo.progresso.desbloquear_cenario(novo_id)
-        jogo.particulas.limpar()
-        jogo.particulas.espiral_revelacao(LARGURA // 2, ALTURA // 2, cor)
-        for _ in range(18):
-            jogo.particulas.atualizar()
-            self.frame_transicao()
-            jogo.relogio.tick(FPS)
+
+    def atualizar_transicao(self) -> None:
+        """Avança uma etapa do salto por passo fixo de simulação."""
+        transicao = self.transicao
+        if transicao is None:
+            return
+        if transicao.atualizar(self.jogo.cenario, self.jogo.particulas):
+            self.transicao = None
 
     def frame_transicao(self) -> None:
-        """Desenha um quadro intermediario da transicao dimensional."""
+        """Desenha o quadro atual da transição na superfície lógica."""
         jogo = self.jogo
-        jogo.cenario.desenhar(jogo.tela)
-        jogo.particulas.desenhar(jogo.tela)
-        jogo._apresentar()
+        transicao = self.transicao
+        if transicao is None:
+            return
+        transicao.desenhar(
+            jogo.tela, jogo.cenario, jogo.particulas, jogo._tela_fade,
+            escala_visual(jogo.config["intensidade_flash"]),
+        )

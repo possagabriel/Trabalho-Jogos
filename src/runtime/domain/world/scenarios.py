@@ -33,21 +33,17 @@ def _superficie_alpha(raio, cor):
 # Imagens de fundo por cenario (na pasta images/)
 # ---------------------------------------------------------------------------
 
-# Arquivo padrao usado quando o cenario nao tem imagem propria.
+# Base pictorica de cada dimensao no visual original. O oceano recebe uma
+# colorizacao e formas proprias sobre a imagem azul; nenhum fundo e repetido
+# sem tratamento visual especifico.
 _FUNDO_PADRAO = "imagem-fundo.png"
-
-# Mapeamento cenario -> arquivo de fundo (por cor dominante da imagem):
-#   1 Deep Space   -> imagem-fundo.png   (azul escuro)
-#   2 Flame Nebula -> imagem-fundo4.png  (laranja/vermelho)
-#   3 Cosmic Ocean -> padrao
-#   4 Crystal Forest -> imagem-fundo3.png (verde)
-#   5 Null Space   -> imagens-fundo2.png  (violeta)
-#   6 Divine Plane -> padrao
 _FUNDO_POR_CENARIO = {
-    1: "Fundo-roxo.png",
-    2: "imagem-fundo4.png",
+    1: "imagem-fundo.png",
+    2: "fundo-vermelho.png",
+    3: "imagem-fundo.png",
     4: "imagem-fundo3.png",
     5: "imagens-fundo2.png",
+    6: "imagem-fundo4.png",
 }
 
 _CACHE_FUNDO = {"imagens": {}, "carregada": False}
@@ -224,13 +220,80 @@ class Cenario:
         return estrelas
 
     def _criar_fundo_estatico(self):
-        """Combina imagem, gradiente e nebulosas uma unica vez por cenario."""
+        """Compoe a paisagem unica de cada dimensao uma vez por cenario."""
         fundo = pygame.Surface((LARGURA, ALTURA))
-        fundo.blit(self.fundo_imagem if self.fundo_imagem is not None
-                   else self.gradiente, (0, 0))
+        if self.fundo_imagem is None:
+            fundo.blit(self.gradiente, (0, 0))
+        elif self.id == 3:
+            oceano = pygame.transform.flip(self.fundo_imagem, True, False)
+            oceano.fill((68, 210, 216), special_flags=pygame.BLEND_RGB_MULT)
+            fundo.blit(oceano, (0, 0))
+        else:
+            fundo.blit(self.fundo_imagem, (0, 0))
         for nebulosa in self.nebulosas:
             fundo.blit(nebulosa, (0, 0))
+        self._desenhar_paisagem_original(fundo)
         return fundo
+
+    def _desenhar_paisagem_original(self, fundo):
+        """Acrescenta silhuetas e linhas proprias sem custo por quadro."""
+        camada = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+        cor = self.cores_principais[0]
+        if self.id == 1:
+            # Rotas orbitais e fragmentos em torno do planeta distante.
+            for raio in (190, 255, 325):
+                arco = pygame.Rect(880 - raio, 230 - raio // 2, raio * 2, raio)
+                pygame.draw.arc(camada, cor + (90,), arco, 0.2, 2.8, 2)
+            for x, y in ((175, 105), (480, 530), (1060, 145)):
+                pygame.draw.circle(camada, cor + (80,), (x, y), 22, 1)
+                pygame.draw.line(camada, cor + (110,), (x - 30, y), (x + 30, y), 1)
+        elif self.id == 2:
+            # Fissuras de lava que nascem nas bordas inferiores.
+            for origem in (80, 340, 810, 1160):
+                pontos = [(origem + int(math.sin(i * 0.9 + origem) * 24),
+                           ALTURA - i * 33) for i in range(9)]
+                pygame.draw.lines(camada, cor + (120,), False, pontos, 3)
+                pygame.draw.aalines(camada, (255, 224, 145, 170), False, pontos)
+        elif self.id == 3:
+            # Ondas luminosas e recifes escuros tornam o oceano reconhecivel.
+            for faixa in range(5):
+                y_base = 420 + faixa * 58
+                pontos = [(x, y_base + int(math.sin(x * 0.012 + faixa) * 18))
+                          for x in range(0, LARGURA + 24, 24)]
+                pygame.draw.aalines(camada, cor + (110,), False, pontos)
+            for x, altura in ((60, 145), (195, 110), (950, 165), (1150, 125)):
+                pygame.draw.polygon(camada, (8, 52, 67, 175),
+                                    [(x - 46, ALTURA), (x, ALTURA - altura),
+                                     (x + 38, ALTURA)])
+                pygame.draw.line(camada, cor + (130,),
+                                 (x, ALTURA - altura), (x + 38, ALTURA), 2)
+        elif self.id == 4:
+            # Cristais gigantes em primeiro plano, deixando o centro livre.
+            for x, altura, largura in ((35, 240, 90), (180, 135, 70),
+                                       (1080, 175, 85), (1230, 270, 95)):
+                pontos = [(x, ALTURA - altura), (x + largura // 2, ALTURA - 18),
+                          (x, ALTURA), (x - largura // 2, ALTURA - 18)]
+                pygame.draw.polygon(camada, cor + (65,), pontos)
+                pygame.draw.lines(camada, cor + (165,), True, pontos, 2)
+                pygame.draw.line(camada, (220, 255, 235, 120),
+                                 pontos[0], pontos[2], 1)
+        elif self.id == 5:
+            # O vazio corta o campo em fendas horizontais interrompidas.
+            for y_base in (150, 340, 560):
+                pontos = [(x, y_base + int(math.sin(x * 0.018 + y_base) * 24))
+                          for x in range(0, LARGURA + 32, 32)]
+                pygame.draw.aalines(camada, cor + (125,), False, pontos)
+            for raio in (75, 110, 150):
+                pygame.draw.circle(camada, cor + (75,), (1050, 185), raio, 2)
+        else:
+            # Raios e anel ritual do plano divino.
+            centro = (LARGURA // 2, 115)
+            for x in range(-200, LARGURA + 200, 170):
+                pygame.draw.polygon(camada, cor + (28,),
+                                    [centro, (x, ALTURA), (x + 42, ALTURA)])
+            for raio in (95, 150, 205):
+                pygame.draw.circle(camada, cor + (95,), centro, raio, 2)
+        fundo.blit(camada, (0, 0))
 
     def _criar_luzes_ambiente(self):
         """Prepara halos coloridos para dar profundidade ao plano de fundo."""

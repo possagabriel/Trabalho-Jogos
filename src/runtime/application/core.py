@@ -33,9 +33,11 @@ from src.runtime.domain.world.scenarios import CENARIOS, Cenario, cenario_do_niv
 from src.core.settings import Configuracoes, TEMAS
 from src.runtime.infrastructure.persistence.shop import LojaSkins
 from src.runtime.infrastructure.audio.sounds import Sons
-from src.runtime.infrastructure.graphics.smooth import desenhar_glow, desenhar_painel, desenhar_poligono, \
-    desenhar_vignette, retangulo_suave, \
-    desenhar_painel_cartoon, desenhar_botao_cartoon, desenhar_estrela
+from src.runtime.infrastructure.graphics.smooth import (
+    desenhar_botao_cartoon, desenhar_circulo, desenhar_estrela, desenhar_glow,
+    desenhar_painel, desenhar_painel_cartoon, desenhar_poligono,
+    desenhar_vignette, retangulo_suave,
+)
 from src.infrastructure.graphics.theme import tema_atual
 from src.infrastructure.ui.layout import Layout
 from src.runtime.controllers.loop import ControladorLoop
@@ -553,6 +555,7 @@ class Jogo:
     def _atualizar_jogando(self):
         if self.menu_equipamento:
             return
+        self.jogador.combo.atualizar()
         self.miniboss_controller.atualizar(1 / FPS)
         teclas = pygame.key.get_pressed()
         usando_boost = (teclas[pygame.K_LSHIFT] or teclas[pygame.K_RSHIFT]
@@ -722,6 +725,10 @@ class Jogo:
 
     def _desenhar_jogo(self):
         self.cenario.desenhar(self.tela)
+        perigos = sum(proj.origem == "inimigo" for proj in self.projeteis)
+        if perigos >= 12 or self.miniboss:
+            self._tela_sombra.fill((4, 6, 18, 42))
+            self.tela.blit(self._tela_sombra, (0, 0))
         for powerup in self.powerups:
             powerup.desenhar(self.tela)
         for inimigo in self.inimigos:
@@ -733,6 +740,10 @@ class Jogo:
         for proj in self.projeteis:
             proj.desenhar(self.tela)
         self.jogador.desenhar(self.tela, self.particulas)
+        if (self.config["mostrar_hitbox"] or pygame.key.get_pressed()[pygame.K_LALT]
+                or pygame.key.get_pressed()[pygame.K_RALT]):
+            retangulo_suave(self.tela, CIANO, self.jogador.rect, 4, 2)
+            desenhar_circulo(self.tela, BRANCO, (self.jogador.x, self.jogador.y), 3)
         for mensagem in self.mensagens:
             mensagem.desenhar(self.tela)
         for texto in self.textos_acao:
@@ -892,7 +903,7 @@ class Jogo:
 
         info_texto = (f"NIVEL {self.jogador.nivel}   |   "
                       f"{self.jogador.pontuacao} PTS   |   "
-                      f"VISUAL {self.jogador.skin}")
+                      f"VISUAL {self.jogador.skin.nome.upper()}")
         desenhar_texto(self.tela, info_texto,
                        (LARGURA // 2, info_y + 24), DOURADO, 18, "centro",
                        self.fontes)

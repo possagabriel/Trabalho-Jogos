@@ -47,7 +47,7 @@ def test_entidades_de_gameplay_expoem_contratos_tipados():
 def test_jogador_e_componentes_expoem_contratos_tipados():
     _assert_api_anotada(Skin, ("__init__", "desenhar"))
     _assert_api_anotada(SistemaCombo, (
-        "__init__", "adicionar_tiro", "get_bonus", "zerar"))
+        "__init__", "registrar_acerto", "atualizar", "get_bonus", "zerar"))
     _assert_api_anotada(Jogador, (
         "__init__", "equipar_skin", "atualizar", "atirar",
         "selecionar_arma", "sofrer_dano", "desenhar"))

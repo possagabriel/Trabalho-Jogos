@@ -236,9 +236,11 @@ class TelaConfiguracoesJogo:
                 "desempenho": ("LIGADO" if menu.jogo.config["mostrar_desempenho"]
                                 else "DESLIGADO"),
             }
-            for chave in ("estilo_visual", "qualidade_comic"):
+            for chave in ("estilo_visual", "qualidade_comic",
+                          "intensidade_flash", "intensidade_tremor"):
                 valores[chave] = menu.jogo.config[chave]
-            for chave in ("comic_papel", "comic_halftone", "comic_hachuras", "line_boil"):
+            for chave in ("comic_papel", "comic_halftone", "comic_hachuras",
+                          "line_boil", "mostrar_hitbox"):
                 valores[chave] = "LIGADO" if menu.jogo.config[chave] else "DESLIGADO"
             if menu.jogo.config["qualidade_comic"] == "BAIXA":
                 for chave in ("comic_papel", "comic_halftone", "comic_hachuras"):

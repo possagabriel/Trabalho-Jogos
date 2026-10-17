@@ -76,6 +76,13 @@ def test_cenario_compoe_fundo_estatico_uma_vez():
     assert cenario.fundo_estatico is fundo
 
 
+def test_fundos_originais_das_seis_dimensoes_sao_distintos():
+    """Cada fase conserva uma paisagem propria antes dos efeitos animados."""
+    medias = [pygame.transform.average_color(Cenario(cid).fundo_estatico)[:3]
+              for cid in range(1, 7)]
+    assert len(set(medias)) == 6
+
+
 def test_cenario_tem_luzes_ambiente_preaquecidas():
     """Halos do cenario sao preparados antes do primeiro quadro visivel."""
     cenario = Cenario(1)

@@ -158,6 +158,9 @@ sprites de naves (`naves.png`). A nave padrão do jogador é um recorte da folha
 (`nave-padrao.png`, extraído com fundo transparente) e é carregada por
 `src/runtime/domain/entities/player.py` com fallback para a nave procedural
 caso o arquivo falte.
+No estilo **ORIGINAL**, as seis dimensões combinam as imagens existentes com
+formas próprias pré-renderizadas; o Oceano Cósmico também recebe uma tonalidade
+azul própria. O estilo **COMIC** continua usando seu fundo separado.
 
 ### Responsabilidades por camada
 
@@ -203,7 +206,8 @@ A cada quadro renderizado, na ordem:
 - `cenario_do_nivel(nivel)` → `min((nivel-1)//5 + 1, 6)`.
 - A cada `5` níveis nasce uma **entidade RIFT** (boss) da dimensão atual.
 - `_transicao_cenario()` executa o "salto dimensional": partículas em
-  espiral → flash branco → troca da `Dimensao` → revelação.
+  espiral → flash branco → troca da `Dimensao` → revelação. O estado da animação
+  fica em `src/runtime/presentation/dimension_transition.py` e avança pelo loop.
 
 ### Fim de jogo (`_fim_de_jogo`)
 
@@ -349,6 +353,24 @@ SHIFT/LCTRL turbina (drena boost e energia), abates carregam o especial.
 `X` executa uma esquiva curta com invulnerabilidade e recarga; a tecla pode
 ser remapeada em Configurações. Entre níveis, três módulos aleatórios permitem
 especializar dano, cadência, motor, blindagem, escudo ou carga do especial.
+Enquanto houver opções disponíveis, cada oferta inclui um módulo de risco com
+benefício e custo explícitos: Reator Instável, Blindagem Pesada ou Motor de
+Emergência. Cada um pode ser instalado até duas vezes por partida.
+O catálogo, o sorteio e a aplicação dos módulos ficam em
+`src/runtime/domain/systems/upgrades.py`.
+
+O combo cresce apenas quando um alvo perde vida por um acerto; disparos no vazio
+não aumentam o multiplicador. Ele expira após 45 passos de simulação sem acertos
+e é zerado ao receber dano. Cada projétil Íon ou Gauss pode atingir cada alvo
+uma vez, mesmo se permanecer sobre a hitbox por vários quadros.
+
+**Flashes** e **Tremor de tela** aceitam NORMAL, REDUZIDO ou DESLIGADO;
+**Mostrar hitbox** deixa visível o retângulo real de colisão. Também é possível
+ver a hitbox temporariamente segurando Alt. Quando há muitos projéteis hostis,
+o fundo escurece para destacar os perigos.
+
+O salto entre dimensões agora avança dentro do loop principal: pausa, eventos da
+janela e renderização continuam responsivos durante a animação.
 
 Para ver todos os componentes sobre um fundo neutro em 1920x1080:
 

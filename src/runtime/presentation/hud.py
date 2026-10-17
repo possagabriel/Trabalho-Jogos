@@ -406,7 +406,9 @@ class HudJogo:
             "especial": max(0.0, min(1.0, getattr(jogo, "especial", 0.0))),
             "energia": max(0.0, min(100.0, getattr(jogo, "energia", 100.0))),
             "vel": getattr(jog, "velocidade", 5.0),
-            "esquiva": max(0.0, 1 - getattr(jog, "cooldown_esquiva", 0) / 90),
+            "esquiva": max(0.0, 1 - getattr(jog, "cooldown_esquiva", 0) /
+                           max(30, round(90 * getattr(
+                               jog, "multiplicador_recarga_esquiva", 1.0)))),
             "boss": jogo.boss or getattr(jogo, "miniboss", None),
         }
 

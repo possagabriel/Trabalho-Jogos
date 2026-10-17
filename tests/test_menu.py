@@ -28,6 +28,8 @@ from game.core import Jogo  # noqa: E402
 from game.layout import Layout  # noqa: E402
 from game.menu import MenuPrincipal  # noqa: E402
 from game.phase_select import PhaseStatus  # noqa: E402
+from game.theme import tema_atual  # noqa: E402
+from src.infrastructure.graphics.comic_theme import usar_visual  # noqa: E402
 
 ROTULOS_ESPERADOS = [
     "01 // CONTINUAR",
@@ -66,6 +68,25 @@ def test_opcoes_principais_tem_tamanho_uniforme_e_nao_usam_indicador_antigo():
     assert {rect.size for rect in rects} == {rects[0].size}
     assert all(b.top - a.bottom > 0 for a, b in zip(rects, rects[1:]))
     assert menu.destaque.y == menu.opcoes[0].y  # estado mantido para compatibilidade
+
+
+def test_opcao_selecionada_no_estilo_original_tem_fundo_visivel():
+    """O fundo de selecao ocupa a area clicavel e nao aparece nas demais opcoes."""
+    jogo, menu = novo_menu()
+    opcao = menu.opcoes[0]
+    rect = opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
+    amostra = (rect.x + menu.layout.px(12), rect.centery)
+    sem_selecao = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
+    com_selecao = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
+
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        tema = tema_atual(jogo.config["tema"])
+        for tela, selecionado in ((sem_selecao, False), (com_selecao, True)):
+            opcao.desenhar(tela, menu.fonte_opcao, menu.fonte_opcao_sel, tema,
+                           menu.x_opcoes, selecionado, 0, 255, menu.layout)
+
+    assert sem_selecao.get_at(amostra).a == 0
+    assert com_selecao.get_at(amostra).a > 0
 
 
 def test_menu_widescreen_separa_titulo_da_coluna_de_opcoes():

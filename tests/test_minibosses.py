@@ -4,6 +4,7 @@ import json
 import random
 from collections import Counter
 from types import SimpleNamespace
+from unittest import mock
 
 import pygame
 import pytest
@@ -16,6 +17,7 @@ from src.runtime.domain.entities.player import Jogador
 from src.runtime.domain.entities.weapons import Projetil
 from src.runtime.domain.systems.miniboss_spawner import MinibossSpawner
 from src.runtime.infrastructure.persistence import save_system
+from src.runtime.presentation.miniboss_view import desenhar_miniboss
 
 
 def criar(chave: str):
@@ -29,6 +31,15 @@ def criar(chave: str):
 def tiro(x: float, y: float, dano: int = 10, tipo: str = "padrao"):
     """Cria um disparo real do runtime."""
     return Projetil(x, y, 0, -6, dano, CIANO, 5, tipo=tipo)
+
+
+def test_miniboss_nao_exibe_mensagem_de_dica() -> None:
+    boss = criar("bastiao")
+    tela = pygame.Surface((LARGURA, ALTURA))
+    with mock.patch("src.runtime.presentation.miniboss_view.desenhar_texto") as texto:
+        desenhar_miniboss(tela, boss)
+    assert all(chamada.args[1] != boss.cfg["dica"]
+               for chamada in texto.call_args_list)
 
 
 def test_seed_pesos_e_nao_repeticao() -> None:

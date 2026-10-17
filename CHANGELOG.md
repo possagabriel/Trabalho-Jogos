@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Gameplay e acessibilidade
+- Combo por acertos com expiração temporal; Íon e Gauss atingem cada alvo uma
+  vez por projétil.
+- Transição dimensional atualizada pelo loop principal, com eventos responsivos.
+- Tutorial contextual da primeira partida e módulos entre setores com custos.
+- Controles de flash, tremor e hitbox; projéteis hostis destacados e fundo
+  escurecido em encontros intensos.
+
 Versão sugerida para os minibosses: **1.2.0** (nova funcionalidade compatível).
 
 ### Added
@@ -43,6 +51,8 @@ Versão sugerida para os minibosses: **1.2.0** (nova funcionalidade compatível)
 - Save/records persistence in JSON
 
 ### Changed
+- Catálogo e efeitos dos módulos movidos para o domínio; animação dimensional
+  isolada na apresentação e escalas visuais compartilhadas pela configuração.
 - O workflow do instalador Windows agora usa a versão da tag ou do projeto,
   valida os binários e publica somas SHA-256 junto dos artefatos.
 - Menus secundários e telas de confirmação passaram a usar o mesmo painel

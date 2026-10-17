@@ -22,6 +22,7 @@ class TelaMelhorias:
         self.layout = layout
         self.fonte_titulo = fonte_titulo(42)
         self.fonte_nome = fonte_titulo(25)
+        self.fonte_nome_longo = fonte_titulo(21)
         self.fonte_texto = fonte_texto(19)
         self.fonte_tecla = fonte_titulo(18)
 
@@ -69,13 +70,19 @@ class TelaMelhorias:
                 tela, self.fonte_tecla, str(indice + 1), badge.center, VOID_BLACK,
             )
             self._texto_centralizado(
-                tela, self.fonte_nome, melhoria["nome"],
+                tela, (self.fonte_nome if self.fonte_nome.size(melhoria["nome"])[0]
+                       <= rect.width - 20 else self.fonte_nome_longo), melhoria["nome"],
                 (rect.centerx, rect.y + 105), BRANCO,
             )
             self._texto_centralizado(
                 tela, self.fonte_texto, melhoria["descricao"],
                 (rect.centerx, rect.y + 160), CIANO if ativa else (165, 175, 205),
             )
+            if melhoria.get("custo"):
+                self._texto_centralizado(
+                    tela, self.fonte_texto, melhoria["custo"],
+                    (rect.centerx, rect.y + 205), RIFT_MAGENTA,
+                )
             nivel = melhoria.get("nivel", 0)
             self._texto_centralizado(
                 tela, self.fonte_texto, f"NÍVEL ATUAL {nivel}",

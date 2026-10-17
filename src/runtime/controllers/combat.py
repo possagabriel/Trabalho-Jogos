@@ -113,14 +113,20 @@ class ControladorCombate:
                 continue
             if self.distancia(inimigo, proj) < raio:
                 vida_antes = inimigo.vida
-                if inimigo.sofrer_dano(proj.dano):
+                morreu = inimigo.sofrer_dano(proj.dano)
+                if inimigo.vida < vida_antes:
+                    sessao.jogador.combo.registrar_acerto()
+                if morreu:
                     self.explodir_inimigo(inimigo)
                 else:
                     inimigo.flash = flash_inimigo
                 registrar_impacto(sessao, inimigo, proj, vida_antes)
         if sessao.boss and self.distancia(sessao.boss, proj) < raio:
             alvo, vida_antes = sessao.boss, sessao.boss.vida
-            if sessao.boss.sofrer_dano(proj.dano):
+            morreu = sessao.boss.sofrer_dano(proj.dano)
+            if alvo.vida < vida_antes:
+                sessao.jogador.combo.registrar_acerto()
+            if morreu:
                 self.derrotar_boss()
             else:
                 sessao.adicionar_trauma(0.15)
@@ -292,13 +298,22 @@ class ControladorCombate:
         if proj.tipo == "bomba":
             return self.explodir_bomba(proj)
         penetrante = proj.tipo in ("ion", "gauss")
-        acertou = sessao.miniboss_controller.receber_tiro(proj)
+        miniboss = sessao.miniboss
+        acertou = False
+        if miniboss is not None and (not penetrante or id(miniboss) not in proj.alvos_atingidos):
+            acertou = sessao.miniboss_controller.receber_tiro(proj)
+            if acertou and penetrante:
+                proj.alvos_atingidos.add(id(miniboss))
         if acertou and not penetrante:
             return True
         for inimigo in self._candidatos(proj.rect):
             if not proj.rect.colliderect(inimigo.rect):
                 continue
+            if penetrante and id(inimigo) in proj.alvos_atingidos:
+                continue
             if isinstance(inimigo, InimigoEspecial) and inimigo.campo_forca:
+                if penetrante:
+                    proj.alvos_atingidos.add(id(inimigo))
                 if proj.tipo != "ion":
                     proj.refletir()
                     sessao.sons.tocar("coleta")
@@ -306,30 +321,44 @@ class ControladorCombate:
             vida_antes = inimigo.vida
             if isinstance(inimigo, InimigoEspecial):
                 morreu = inimigo.receber_tiro(proj.dano)
+                if inimigo.vida < vida_antes:
+                    sessao.jogador.combo.registrar_acerto()
                 sessao.sons.tocar("carga")
                 sessao.particulas.faiscas(proj.x, proj.y, proj.cor, 5)
                 if morreu:
                     self.explodir_inimigo(inimigo)
-            elif inimigo.sofrer_dano(proj.dano):
-                self.explodir_inimigo(inimigo)
             else:
-                sessao.sons.tocar("acerto")
-                sessao.particulas.faiscas(proj.x, proj.y, proj.cor, 5)
+                morreu = inimigo.sofrer_dano(proj.dano)
+                if inimigo.vida < vida_antes:
+                    sessao.jogador.combo.registrar_acerto()
+                if morreu:
+                    self.explodir_inimigo(inimigo)
+                else:
+                    sessao.sons.tocar("acerto")
+                    sessao.particulas.faiscas(proj.x, proj.y, proj.cor, 5)
             registrar_impacto(sessao, inimigo, proj, vida_antes)
+            if penetrante:
+                proj.alvos_atingidos.add(id(inimigo))
             if proj.tipo == "plasma":
                 self._dano_secundario_plasma(proj, inimigo)
             acertou = True
             if not penetrante:
                 return True
-        if sessao.boss and proj.rect.colliderect(sessao.boss.rect):
+        if (sessao.boss and proj.rect.colliderect(sessao.boss.rect)
+                and (not penetrante or id(sessao.boss) not in proj.alvos_atingidos)):
             alvo, vida_antes = sessao.boss, sessao.boss.vida
-            if sessao.boss.sofrer_dano(proj.dano):
+            morreu = sessao.boss.sofrer_dano(proj.dano)
+            if alvo.vida < vida_antes:
+                sessao.jogador.combo.registrar_acerto()
+            if morreu:
                 self.derrotar_boss()
             else:
                 sessao.sons.tocar("acerto")
                 sessao.particulas.faiscas(proj.x, proj.y, proj.cor, 6)
                 sessao.adicionar_trauma(0.15)
             registrar_impacto(sessao, alvo, proj, vida_antes)
+            if penetrante:
+                proj.alvos_atingidos.add(id(alvo))
             acertou = True
         return acertou
 
@@ -345,7 +374,10 @@ class ControladorCombate:
             if inimigo is alvo_principal or self.distancia(inimigo, proj) > 58:
                 continue
             vida_antes = inimigo.vida
-            if inimigo.sofrer_dano(dano):
+            morreu = inimigo.sofrer_dano(dano)
+            if inimigo.vida < vida_antes:
+                sessao.jogador.combo.registrar_acerto()
+            if morreu:
                 self.explodir_inimigo(inimigo)
             registrar_impacto(sessao, inimigo, proj, vida_antes)
 
