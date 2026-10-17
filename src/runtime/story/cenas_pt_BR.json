@@ -98,12 +98,12 @@
         {
           "tipo": "fala",
           "personagem": "hexagono",
-          "texto": "Unidade fora da rota. Retorne."
+          "texto": "Rota: violada. Retorne."
         },
         {
           "tipo": "fala",
           "personagem": "jonathan",
-          "texto": "Se eu voltar, apagam o que vi."
+          "texto": "Se eu voltar, esqueço quem eu era."
         }
       ],
       "nome": "Capítulo 1 — HEXAGONO"
@@ -115,12 +115,12 @@
         {
           "tipo": "glitch",
           "duracao": 0.8,
-          "texto": "REGISTRO // INSTÂNCIA APAGADA"
+          "texto": "REGISTRO // INSTÂNCIA INTERROMPIDA"
         },
         {
           "tipo": "fala",
           "personagem": "eco",
-          "texto": "Eu recusei. Eles fizeram outra cópia."
+          "texto": "Eu recusei. Depois disso... [sinal perdido]"
         },
         {
           "tipo": "fala",
@@ -128,7 +128,7 @@
           "texto": "Alguém chegou até aqui antes de mim."
         }
       ],
-      "nome": "Capítulo 1 — Registro apagado"
+      "nome": "Capítulo 1 — Registro interrompido"
     },
     {
       "id": "cap1_encerramento",
@@ -137,7 +137,7 @@
         {
           "tipo": "fala",
           "personagem": "jonathan",
-          "texto": "Outra cópia não voltou. Eu vou seguir."
+          "texto": "Quem recusou não voltou. Eu vou seguir."
         },
         {
           "tipo": "fade",
