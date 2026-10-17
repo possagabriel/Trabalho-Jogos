@@ -70,6 +70,15 @@ A mira pulsa quando ocorre um disparo e fica vermelha sobre a hitbox de um
 inimigo. **F3** alterna FPS, camadas de parallax ativas, posição da mira e
 hitboxes durante a partida. Na fase 1 ainda há zero camadas de parallax.
 
+A nave equipada também gira para acompanhar a mira. Cada uma das dez skins
+gera 48 sprites direcionais a partir da própria arte, mantidas em cache; as
+animações de transparência, cristal, asas e relâmpagos preservam seus quadros.
+O tilt de movimento se soma à direção. A hitbox permanece fixa e, com a mira
+desligada ou fora da área do jogo, o desenho original volta a ser usado.
+[Prévia das dez skins em quatro direções](images/preview_naves_mira.png).
+Para regenerá-la: `python -m tools.preview_naves_mira` (use `--estilo COMIC`
+para uma prévia do outro perfil).
+
 Disparos direcionais saem da nave na direção exata da mira. **Duplo** e
 **Espiral** orientam sua dispersão ao redor dessa direção, então os projéteis
 individuais se afastam do ponto central. **Limitação conhecida:** o **Íon**

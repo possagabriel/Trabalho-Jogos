@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Sprites direcionais em cache para as dez skins; a nave acompanha a mira sem
+  alterar a hitbox, preservando poses e efeitos visuais.
+
 ## [1.2.0] - 2026-10-17
 
 ### Added

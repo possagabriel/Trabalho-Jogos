@@ -21,3 +21,16 @@
 - **Verificação:** baseline da `main` limpa: 434 testes passaram, 0 falharam.
   Depois da implementação: 446 testes passaram, 0 falharam. Medição isolada
   da mira com 50 hitboxes em SDL dummy: 0,0043 ms por quadro em 1.200 quadros.
+
+## Atualização da fase 1 — sprites direcionais
+
+- **Pedido:** fazer a nave mudar conforme a mira e criar as sprites necessárias.
+- **Implementação da IA:** orientação calculada pelo alvo do tiro, 48 quadros
+  gerados e cacheados por skin e perfil visual, com poses para transparência,
+  cristal, asas e relâmpagos; partículas de chamas seguem a traseira da nave.
+- **Ajustes manuais do usuário:** nenhum informado nesta atualização.
+- **Decisões:** todas as dez skins acompanham a mira; a hitbox não gira. Com a
+  mira desligada ou fora da área de jogo, mantém-se o desenho anterior.
+- **Verificação:** 462 testes passaram, 0 falharam. Prévia das dez skins nos
+  perfis ORIGINAL e COMIC; primeira geração da skin padrão em SDL dummy:
+  6,56 ms, quadros cacheados: 0,006 ms por desenho (1.200 repetições).
