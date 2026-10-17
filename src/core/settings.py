@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 from typing import Any
 
@@ -32,6 +33,8 @@ DEFAULT_CONTROLES = {
     "direita": pygame.K_RIGHT, "atirar": pygame.K_SPACE,
     "esquivar": pygame.K_x, "pausar": pygame.K_p,
 }
+VELOCIDADES_AVANCO_PADRAO = {"1": 120, "2": 135, "3": 105,
+                             "4": 115, "5": 145, "6": 125}
 _DEFAULT: dict[str, Any] = {
     "musica_volume": 0.8, "efeitos_volume": 0.8, "resolucao": "1920x1080",
     "tela_cheia": False, "sensibilidade": 1.0, "controles": DEFAULT_CONTROLES,
@@ -46,12 +49,73 @@ _DEFAULT: dict[str, Any] = {
     "line_boil": False,
     "intensidade_flash": "NORMAL", "intensidade_tremor": "NORMAL",
     "mostrar_hitbox": False,
+    "avanco_camadas": True, "avanco_linhas": True,
+    "avanco_pico": True, "avanco_parada_boss": True,
+    "avanco_qualidade": "MEDIA", "avanco_intensidade": 1.0,
+    "avanco_direcao": [0, 1],
+    "avanco_freada_s": 1.5, "avanco_aceleracao_s": 1.2,
+    "avanco_pico_s": 0.3, "avanco_pico_intensidade": 0.25,
+    "avanco_salto_s": 1.0, "avanco_salto_intensidade": 0.5,
+    "avanco_linhas_intensidade": 1.0,
+    "avanco_desvio_parado": 0.04,
+    "avanco_miniboss_percentual": 0.5,
+    "avanco_miniboss_tipos": {},
+    "avanco_velocidades": VELOCIDADES_AVANCO_PADRAO,
 }
 
 
 def escala_visual(intensidade: str) -> float:
     """Converte uma intensidade salva em escala visual com fallback seguro."""
     return ESCALAS_VISUAIS.get(intensidade, 1.0)
+
+
+def _limitar_numero(valor: Any, padrao: float, minimo: float, maximo: float) -> float:
+    """Lê um número de JSON com limites seguros para a simulação."""
+    try:
+        numero = float(valor)
+    except (TypeError, ValueError):
+        return padrao
+    return max(minimo, min(maximo, numero)) if math.isfinite(numero) else padrao
+
+
+def _normalizar_avanco(valores: dict[str, Any]) -> None:
+    """Mescla e valida parâmetros de avanço sem perder opções de saves antigos."""
+    qualidade = str(valores.get("avanco_qualidade", "MEDIA")).upper()
+    valores["avanco_qualidade"] = qualidade if qualidade in ("BAIXA", "MEDIA", "ALTA") \
+        else "MEDIA"
+    direcao = valores.get("avanco_direcao", [0, 1])
+    try:
+        x, y = float(direcao[0]), float(direcao[1])
+        if not (math.isfinite(x) and math.isfinite(y) and (x or y)):
+            raise ValueError
+        valores["avanco_direcao"] = [x, y]
+    except (IndexError, KeyError, TypeError, ValueError):
+        valores["avanco_direcao"] = [0, 1]
+    limites = {
+        "avanco_intensidade": (1, 0, 2),
+        "avanco_freada_s": (1.5, 0.1, 5),
+        "avanco_aceleracao_s": (1.2, 0.1, 5),
+        "avanco_pico_s": (0.3, 0, 2),
+        "avanco_pico_intensidade": (0.25, 0, 1),
+        "avanco_salto_s": (1, 0, 3),
+        "avanco_salto_intensidade": (0.5, 0, 2),
+        "avanco_linhas_intensidade": (1, 0, 2),
+        "avanco_desvio_parado": (0.04, 0, 0.1),
+        "avanco_miniboss_percentual": (0.5, 0, 1),
+    }
+    for chave, (padrao, minimo, maximo) in limites.items():
+        valores[chave] = _limitar_numero(valores.get(chave), padrao, minimo, maximo)
+    velocidades = valores.get("avanco_velocidades", {})
+    velocidades = velocidades if isinstance(velocidades, dict) else {}
+    valores["avanco_velocidades"] = {
+        chave: _limitar_numero(velocidades.get(chave), padrao, 0, 500)
+        for chave, padrao in VELOCIDADES_AVANCO_PADRAO.items()
+    }
+    tipos = valores.get("avanco_miniboss_tipos", {})
+    valores["avanco_miniboss_tipos"] = (
+        {str(chave): _limitar_numero(valor, 0.5, 0, 1)
+         for chave, valor in tipos.items()} if isinstance(tipos, dict) else {}
+    )
 
 
 def parse_resolucao(texto: str | None) -> tuple[int, int]:
@@ -77,10 +141,13 @@ class Configuracoes:
             controles = dict(DEFAULT_CONTROLES)
             controles.update(valores.get("controles", {}))
             valores["controles"] = controles
+            _normalizar_avanco(valores)
             return valores
         except (FileNotFoundError, json.JSONDecodeError, OSError):
-            return {chave: dict(valor) if isinstance(valor, dict) else valor
-                    for chave, valor in _DEFAULT.items()}
+            valores = {chave: dict(valor) if isinstance(valor, dict) else valor
+                       for chave, valor in _DEFAULT.items()}
+            _normalizar_avanco(valores)
+            return valores
 
     def salvar(self) -> bool:
         """Persiste as configuracoes e informa se a gravacao foi concluida."""
