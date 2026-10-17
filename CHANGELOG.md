@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-17
+
+### Added
+- Motor de cutscenes em JSON com diálogo progressivo, fades, glitch, shake,
+  retratos cacheados, áudio e títulos; capítulo 1 e introdução para revisão.
+- Arquivo de Memórias para rever cenas vistas e seletor F3 + F8 para depuração.
+- `cenas_vistas` retrocompatível no save e velocidade do diálogo no settings.
+
+### Changed
+- Combate congela durante cenas; avanço aguarda o pós-boss antes de acelerar.
+- Aberturas de dimensão começam após a transição visual existente.
+- Versão do projeto elevada de 1.3.0 para 1.4.0.
+
 ## [1.3.0] - 2026-10-17
 
 ### Added

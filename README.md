@@ -88,6 +88,32 @@ não altera sua trajetória. Ajuste `dispersao_duplo_graus` (padrão `4.5`) e
 dados do usuário para balancear o leque. `mira_ativa` é salva no mesmo JSON;
 configurações antigas recebem `true` como padrão.
 
+### História e cutscenes (1.4.0)
+
+A introdução e o capítulo 1 são reproduzidos durante a partida. O roteiro
+pt-BR fica em `src/runtime/story/cenas_pt_BR.json`; o motor lê gatilhos e
+passos sem manter falas no código. Os capítulos seguintes aguardam revisão do
+capítulo 1. O nome mostrado nas cenas vem de `NOME_JOGO` em
+`src/core/constants.py` e atualmente é **INCARNATE**.
+
+A tecla remapeada de **atirar**, Enter ou clique avança a fala; o primeiro toque
+completa o texto instantaneamente. **P** ou Esc pausa e retoma a cena.
+**Backspace** segurado por 0,65 s ou o botão **Pular cena** abre confirmação.
+Cenas já vistas podem ser puladas com um toque. O progresso só é salvo ao
+concluir ou pular; fechar no meio mantém a cena inédita.
+
+Para testar, inicie uma partida: a introdução e a abertura aparecem após o
+carregamento. O pré-boss toca quando o HEXAGONO surge no nível 5; o pós-boss e
+o encerramento aparecem após sua derrota, antes da retomada do cenário. Em
+uma partida de depuração, pressione **F3** e depois **F8** para abrir a lista de
+IDs de cenas; setas escolhem e Enter reproduz qualquer uma diretamente. O F3
+mostra cena, passo e quantidade de flags vistas. Após desbloquear uma cena,
+abra **Arquivo de Memórias** no menu principal para revê-la.
+
+No `settings.json`, `velocidade_dialogo` define os caracteres por segundo:
+padrão `42`, aceitando valores de `10` a `120`. Saves antigos recebem
+`cenas_vistas: []` em `progresso_campanha` sem perder outros dados.
+
 ### Avanço da nave e parallax (1.3.0)
 
 O cenário rola continuamente para baixo, com velocidade própria para cada uma

@@ -1,5 +1,22 @@
 # Registro de uso de IA
 
+## Fase 3 — História e cutscenes (1.4.0, capítulo 1 para revisão)
+
+- **Pedido:** motor de cenas e diálogos em JSON, integração com eventos de
+  boss e avanço, persistência, Arquivo de Memórias, F3 e roteiro pt-BR entregue
+  um capítulo por vez.
+- **Implementação da IA:** catálogo validado, sequenciador testado, entrada de
+  diálogo, efeitos, controles, gate de retomada após boss, save retrocompatível,
+  menu de replay, depuração e introdução/capítulo 1 em arquivo de roteiro.
+- **Decisões:** nomes dos Protocolos Restritos aparecem só em títulos ou texto
+  de glitch, nunca em falas. O capítulo 6 será a origem do Protocolo Cristal;
+  seu final narrativo não encerrará a partida. Sem finais alternativos nesta fase.
+  Os demais capítulos e falas de miniboss aguardam a revisão do capítulo 1.
+- **Ajustes manuais:** nenhum informado.
+- **Verificação:** 500 testes passaram na suíte completa; pulo, pausa,
+  ausência de cena pós-boss, JSON inválido e fechamento no meio de uma cena
+  foram cobertos. O wheel 1.4.0 inclui o JSON do roteiro.
+
 ## Fase 2 — Avanço da nave (1.3.0)
 
 - **Pedido:** sensação contínua de avanço por rolagem 2D, parallax, linhas de
