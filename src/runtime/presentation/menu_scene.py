@@ -20,7 +20,7 @@ import random
 
 import pygame
 
-from src.core.constants import NEGRO
+from src.core.constants import NEGRO, NOME_JOGO
 from src.infrastructure.graphics.comic_render import desenhar_fundo
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.infrastructure.ui.layout import Layout
@@ -420,7 +420,7 @@ class HudMenu:
                         tamanho=l.px(8), espessura=l.px(2))
 
         # canto superior esquerdo: logo + missao
-        self._desenhar_texto(tela, "logo", l.fonte_titulo(16), "VOID//SHIFT",
+        self._desenhar_texto(tela, "logo", l.fonte_titulo(16), NOME_JOGO,
                              (l.px(32), l.px(20)), primaria, 4)
         self._desenhar_texto(tela, "sistema", l.fonte_texto(12),
                              "// SISTEMA DIMENSIONAL", (l.px(34), l.px(42)),

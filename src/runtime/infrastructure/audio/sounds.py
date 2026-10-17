@@ -166,3 +166,18 @@ class Sons:
                     som.set_volume(volume)
                 except pygame.error:
                     pass
+    def pausar_musica(self) -> None:
+        """Suspende a trilha procedural durante uma cena."""
+        if self.habilitado:
+            try:
+                pygame.mixer.music.pause()
+            except pygame.error:
+                pass
+
+    def retomar_musica(self) -> None:
+        """Retoma a trilha procedural já carregada."""
+        if self.habilitado:
+            try:
+                pygame.mixer.music.unpause()
+            except pygame.error:
+                pass

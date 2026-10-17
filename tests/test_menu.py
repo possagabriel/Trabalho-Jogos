@@ -37,7 +37,8 @@ ROTULOS_ESPERADOS = [
     "03 // HANGAR",
     "04 // RECORDES",
     "05 // CONFIGURAÇÕES",
-    "06 // SAIR",
+    "06 // ARQUIVO DE MEMÓRIAS",
+    "07 // SAIR",
 ]
 
 
@@ -55,7 +56,7 @@ def novo_menu():
 def test_construcao_subestado_e_opcoes():
     _, menu = novo_menu()
     assert menu.subestado == "MENU"
-    assert len(menu.opcoes) == 6
+    assert len(menu.opcoes) == 7
     assert [o.texto for o in menu.opcoes] == ROTULOS_ESPERADOS
     assert menu.x_opcoes <= menu.layout.largura
 

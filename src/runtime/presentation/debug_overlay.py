@@ -19,7 +19,7 @@ class OverlayDebug:
     def __init__(self) -> None:
         self._fonte = fonte_texto(18)
         self._glifos: dict[str, pygame.Surface] = {}
-        self._fundo = pygame.Surface((350, 166), pygame.SRCALPHA)
+        self._fundo = pygame.Surface((440, 244), pygame.SRCALPHA)
         self._fundo.fill((*VOID_BLACK, 215))
 
     def desenhar(self, tela: pygame.Surface, jogo: Jogo, mira: tuple[int, int] | None) -> None:
@@ -30,6 +30,10 @@ class OverlayDebug:
         particulas = len(jogo.particulas.particulas)
         if fundo is not None:
             particulas += fundo.particulas_ativas
+        narrativa = jogo.cutscene_controller.sequenciador
+        cena_id = narrativa.cena.id if narrativa.cena else "--"
+        vistas = jogo.progresso.cenas_vistas
+        flags = ", ".join(vistas[-2:]) or "--"
         linhas = (
             f"FPS: {jogo.fps_atual:.0f}",
             f"AVANÇO: {avanco.estado.value}",
@@ -38,6 +42,9 @@ class OverlayDebug:
             f"PARTÍCULAS: {particulas}",
             f"MIRA: {mira[0]}, {mira[1]}" if mira else "MIRA: --",
             f"ENTIDADES: {len(jogo.inimigos) + int(bool(jogo.boss)) + int(bool(jogo.miniboss))}",
+            f"CENA: {cena_id} / PASSO: {narrativa.indice if narrativa.ativo else '--'}",
+            f"CENAS VISTAS: {len(vistas)} | F8: SELETOR",
+            f"FLAGS: {flags}",
         )
         for indice, linha in enumerate(linhas):
             x, y = 22, 20 + indice * 21

@@ -20,7 +20,7 @@ import os
 import pygame
 
 from game.phase_select import PhaseSelectScreen
-from src.core.constants import BRANCO, CIANO, DOURADO, QUANTUM_CYAN, VERDE
+from src.core.constants import BRANCO, CIANO, DOURADO, QUANTUM_CYAN, NOME_JOGO, VERDE
 from src.core.settings import (
     ACOES_CONTROLE, INTENSIDADES_VISUAIS, QUALIDADES_GRAFICAS, RESOLUCOES,
     TEMAS, escala_visual,
@@ -72,6 +72,7 @@ from src.runtime.presentation.screens.menu_screens import (
     TelaRecordes,
 )
 from src.runtime.presentation.screens.records_screen import TelaRecordesJogo
+from src.runtime.presentation.screens.memory_archive_screen import TelaArquivoMemorias
 from src.runtime.presentation.screens.settings_screen import TelaConfiguracoesJogo
 from src.runtime.presentation.screens.store_screen import TelaLojaJogo
 from src.runtime.presentation.ui import BotaoNeon
@@ -548,6 +549,7 @@ class MenuPrincipal:
             "LOJA": TelaLoja(self),
             "RECORDES": TelaRecordes(self),
             "CONFIG": TelaConfiguracoes(self),
+            "ARQUIVO": TelaArquivoMemorias(self),
         }
         self.phase_screen = PhaseSelectScreen(jogo, layout=self.layout)
 
@@ -584,7 +586,8 @@ class MenuPrincipal:
             ("03 // HANGAR", self._abrir_loja),
             ("04 // RECORDES", self._abrir_recordes),
             ("05 // CONFIGURAÇÕES", self._abrir_config),
-            ("06 // SAIR", self._sair),
+            ("06 // ARQUIVO DE MEMÓRIAS", self._abrir_arquivo),
+            ("07 // SAIR", self._sair),
         ]
         # ancora a coluna alinhada a esquerda: nunca deixa o texto mais longo
         # estourar a borda direita da tela (usa a fonte da opcao selecionada)
@@ -595,7 +598,7 @@ class MenuPrincipal:
         self.opcoes = []
         for texto, funcao in itens:
             self.opcoes.append(OpcaoMenu(texto, y, funcao))
-            y += self.layout.px(74)
+            y += self.layout.px(65)
         self.opcao_selecionada = 0
         self.destaque.y = self.opcoes[0].y
         self.destaque.alvo = self.opcoes[0].y
@@ -619,6 +622,13 @@ class MenuPrincipal:
         self.continuar_selecao = 0
         self.sub_anim = 0.0
         self.subestado = "CONTINUAR"
+        self.transicao.iniciar()
+
+    def _abrir_arquivo(self):
+        """Abre apenas as cenas já vistas."""
+        self._som("navegar")
+        self.sub_anim = 0.0
+        self.subestado = "ARQUIVO"
         self.transicao.iniciar()
 
     def _abrir_lobby(self):
@@ -2093,9 +2103,9 @@ class MenuPrincipal:
     def _titulo_surfaces(self, tema):
         nome = (self.jogo.config["tema"], opcoes_atuais().estilo)
         if nome not in self._titulo_cache:
-            titulo = texto_suave(self.fonte_logo, "INCARNATE", BRANCO,
+            titulo = texto_suave(self.fonte_logo, NOME_JOGO, BRANCO,
                                  tema["primaria"], 16, True)
-            titulo_eco = texto_suave(self.fonte_logo, "INCARNATE",
+            titulo_eco = texto_suave(self.fonte_logo, NOME_JOGO,
                                      tema["primaria"], None, 0, False)
             sub = self._espacado(self.fonte_legenda, "ENTRE NA FENDA.", 4,
                                  tema["primaria"])
