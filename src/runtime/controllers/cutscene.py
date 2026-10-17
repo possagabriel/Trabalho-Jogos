@@ -233,9 +233,9 @@ class ControladorCutscene:
                 else:
                     self.confirmacao_pulo = True
             elif self.confirmacao_pulo:
-                if 330 <= pos[0] <= 950 and 255 <= pos[1] <= 435:
+                if self.caixa.BOTAO_CONFIRMAR.collidepoint(pos):
                     self.pular_direto()
-                else:
+                elif self.caixa.BOTAO_CANCELAR.collidepoint(pos):
                     self.confirmacao_pulo = False
             elif not self.pausado:
                 self.sequenciador.confirmar()

@@ -20,6 +20,8 @@ class DialogueBox:
     """Desenha a narrativa sobre a superfície lógica sem alocar retratos por quadro."""
 
     BOTAO_PULAR = pygame.Rect(1050, 20, 200, 46)
+    BOTAO_CONFIRMAR = pygame.Rect(385, 350, 220, 55)
+    BOTAO_CANCELAR = pygame.Rect(675, 350, 220, 55)
 
     def __init__(self, personagens: dict[str, dict[str, str]]) -> None:
         self._fonte = fonte_texto(27)
@@ -157,8 +159,11 @@ class DialogueBox:
             desenhar_painel_cartoon(tela, cor_dimensao, caixa)
             texto = self._fonte_nome.render("Pular esta cena?", True, (244, 244, 247))
             tela.blit(texto, texto.get_rect(center=(640, 312)))
-            dica = self._fonte_auxiliar.render("CONFIRMAR / ESC CANCELA", True, cor_dimensao)
-            tela.blit(dica, dica.get_rect(center=(640, 374)))
+            for rect, rotulo in ((self.BOTAO_CONFIRMAR, "PULAR"),
+                                 (self.BOTAO_CANCELAR, "CANCELAR")):
+                desenhar_painel_cartoon(tela, cor_dimensao, rect, glow_raio=2)
+                texto_botao = self._fonte_auxiliar.render(rotulo, True, (244, 244, 247))
+                tela.blit(texto_botao, texto_botao.get_rect(center=rect.center))
 
     def _titulo(self, tela: pygame.Surface, texto: str,
                 cor: tuple[int, int, int]) -> None:

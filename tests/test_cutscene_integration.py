@@ -138,3 +138,26 @@ def test_miniboss_reproduz_somente_primeiro_encontro_do_tipo(tmp_path, monkeypat
     jogo.cutscene_controller.pular_direto()
     publicar_evento(GameEventType.MINIBOSS_SPAWNED, sessao=jogo, chave="eco")
     assert not jogo.cutscene_controller.ativo
+
+
+def test_botao_pular_exige_clique_de_confirmacao(tmp_path, monkeypatch):
+    import pygame
+
+    jogo = _jogo(tmp_path, monkeypatch)
+    jogo.cutscene_controller.iniciar_gatilho("inicio")
+
+    def clique(x, y):
+        escala, off_x, off_y = jogo._transformacao_janela()
+        jogo.cutscene_controller.tratar_evento(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, {"button": 1,
+                                     "pos": (int(x * escala + off_x),
+                                             int(y * escala + off_y))}))
+
+    clique(1100, 40)
+    assert jogo.cutscene_controller.confirmacao_pulo
+    assert jogo.progresso.cenas_vistas == []
+    clique(760, 375)
+    assert jogo.cutscene_controller.ativo
+    clique(1100, 40)
+    clique(480, 375)
+    assert jogo.progresso.cenas_vistas == ["introducao"]
