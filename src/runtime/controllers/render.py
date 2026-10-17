@@ -44,7 +44,7 @@ class ControladorRenderizacao:
 
     def desenhar_hud(self) -> None:
         """Desenha o HUD na superficie logica de jogo."""
-        self.jogo.hud.desenhar(self.jogo.tela, self.jogo)
+        self.jogo.hud.desenhar(self.jogo.tela_ui, self.jogo)
 
     def _desenhar_campo(self) -> None:
         """Mostra o combate ou a animação dimensional, com HUD quando aplicável."""
@@ -74,17 +74,22 @@ class ControladorRenderizacao:
 
     def desenhar(self) -> None:
         """Compoe a tela conforme o estado ativo e apresenta o quadro."""
-        with usar_visual(self.jogo.config):
-            self._compor()
+        self._compor()
 
     def _compor(self) -> None:
         jogo = self.jogo
         self.sincronizar_cursor()
+        jogo.tela_ui.fill((0, 0, 0, 0))
         if jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
             jogo.tela.fill(VOID_BLACK)
-            jogo.menu.desenhar(jogo.tela)
+            with usar_visual(jogo.config):
+                jogo.menu.desenhar(jogo.tela_ui)
         elif jogo.estado is EstadoJogo.PREPARANDO:
-            jogo._desenhar_carregando()
+            with usar_visual(
+                    jogo.config, acabamento_gpu=jogo.shader_comic_ativo()):
+                jogo.cenario.desenhar(jogo.tela)
+            with usar_visual(jogo.config), jogo._desenhar_na_interface():
+                jogo._desenhar_carregando(incluir_cenario=False)
         elif jogo.estado is EstadoJogo.CUTSCENE:
             if jogo.cutscene_controller.estado_anterior is EstadoJogo.MENU:
                 jogo.menu.desenhar(jogo.tela)
@@ -93,26 +98,27 @@ class ControladorRenderizacao:
             jogo.cutscene_controller.caixa.desenhar(
                 jogo.tela, jogo.cutscene_controller, jogo.cenario.cor_transicao)
         elif jogo.estado is EstadoJogo.JOGANDO:
-            self._desenhar_campo()
+            self._desenhar_partida()
         elif jogo.estado is EstadoJogo.MELHORIA:
-            jogo._desenhar_jogo()
-            self.desenhar_hud()
-            jogo.tela_melhorias.desenhar(jogo.tela, jogo)
+            self._desenhar_partida()
+            with usar_visual(jogo.config):
+                jogo.tela_melhorias.desenhar(jogo.tela_ui, jogo)
         elif jogo.estado is EstadoJogo.PAUSA:
-            self._desenhar_campo()
-            jogo._desenhar_pausa()
+            self._desenhar_partida()
+            with usar_visual(jogo.config), jogo._desenhar_na_interface():
+                jogo._desenhar_pausa()
         elif jogo.estado is EstadoJogo.GAME_OVER:
-            jogo._desenhar_jogo()
-            self.desenhar_hud()
-            jogo._desenhar_game_over()
-        self._desenhar_overlays_logicos()
+            self._desenhar_partida()
+            with usar_visual(jogo.config), jogo._desenhar_na_interface():
+                jogo._desenhar_game_over()
         self.aplicar_shake()
+        self._desenhar_overlays_logicos()
         self._desenhar_mira_e_debug()
         jogo._apresentar()
         pygame.display.flip()
 
     def _desenhar_mira_e_debug(self) -> None:
-        """Mantém a mira presa ao mouse mesmo quando a câmera treme."""
+        """Mantém mira e depuração sobre a interface, sem tremor de câmera."""
         jogo = self.jogo
         if jogo.estado is EstadoJogo.CUTSCENE:
             if jogo.debug_ativo:
@@ -123,11 +129,20 @@ class ControladorRenderizacao:
         posicao = jogo.posicao_mira()
         if posicao is not None:
             jogo.mira.desenhar(
-                jogo.tela, posicao, jogo.cenario.cor_transicao,
+                jogo.tela_ui, posicao, jogo.cenario.cor_transicao,
                 jogo.mira_sobre_inimigo(posicao),
             )
         if jogo.debug_ativo:
-            jogo.overlay_debug.desenhar(jogo.tela, jogo, posicao)
+            jogo.overlay_debug.desenhar(jogo.tela_ui, jogo, posicao)
+
+    def _desenhar_partida(self) -> None:
+        jogo = self.jogo
+        with usar_visual(
+                jogo.config, acabamento_gpu=jogo.shader_comic_ativo()):
+            jogo._desenhar_jogo()
+        with usar_visual(jogo.config):
+            jogo._desenhar_interface_jogo()
+            self.desenhar_hud()
 
     def _desenhar_overlays_logicos(self) -> None:
         jogo = self.jogo
@@ -135,8 +150,8 @@ class ControladorRenderizacao:
             escala = escala_visual(jogo.config["intensidade_flash"])
             if escala:
                 jogo._tela_flash.fill((255, 0, 0, int(jogo.flash * 15 * escala)))
-                jogo.tela.blit(jogo._tela_flash, (0, 0))
+                jogo.tela_ui.blit(jogo._tela_flash, (0, 0))
         if jogo.fade > 0:
             jogo._tela_fade.fill(NEGRO)
             jogo._tela_fade.set_alpha(jogo.fade)
-            jogo.tela.blit(jogo._tela_fade, (0, 0))
+            jogo.tela_ui.blit(jogo._tela_fade, (0, 0))

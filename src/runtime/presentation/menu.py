@@ -1137,30 +1137,62 @@ class MenuPrincipal:
 
     # ------------------------------------------------------------ configuracoes
 
+    _LINHAS_CONFIG = (
+        ("Musica", "slider"),
+        ("Efeitos", "slider"),
+        ("Resolucao", "resolucao"),
+        ("Tela Cheia", "toggle"),
+        ("Sensibilidade", "slider"),
+        ("Controles", "controles"),
+        ("Tema", "tema"),
+        ("Aspecto", "aspecto"),
+        ("Ajustar Tela", "ajuste"),
+        ("Qualidade Visual", "qualidade"),
+        ("Monitor de FPS", "desempenho"),
+        ("Estilo visual", "estilo_visual"),
+        ("Shader GPU", "shader_comic"),
+        ("Intensidade shader", "intensidade_shader"),
+        ("Contorno shader", "contorno_shader"),
+        ("Tons de cor", "tons_shader"),
+        ("Hachuras GPU", "hachuras_shader"),
+        ("Grao shader", "grao_shader"),
+        ("Saturacao shader", "saturacao_shader"),
+        ("Preservar HUD/UI", "preservar_interface"),
+        ("Detalhe comic", "qualidade_comic"),
+        ("Textura de papel", "comic_papel"),
+        ("Reticula", "comic_halftone"),
+        ("Hachuras", "comic_hachuras"),
+        ("Tremida (alta)", "line_boil"),
+        ("Flashes", "intensidade_flash"),
+        ("Tremor de tela", "intensidade_tremor"),
+        ("Mostrar hitbox", "mostrar_hitbox"),
+        ("Mira customizada", "mira_ativa"),
+    )
+    _LIMITES_SLIDER_SHADER = {
+        "intensidade_shader": (0.0, 1.0),
+        "contorno_shader": (0.0, 1.0),
+        "grao_shader": (0.0, 1.0),
+        "saturacao_shader": (0.5, 1.5),
+    }
+    _ESCOLHAS_CONFIG = {
+        "estilo_visual": ("COMIC", "ORIGINAL"),
+        "qualidade_comic": ("BAIXA", "MEDIA", "ALTA"),
+        "tons_shader": (3, 4, 6),
+        "intensidade_flash": INTENSIDADES_VISUAIS,
+        "intensidade_tremor": INTENSIDADES_VISUAIS,
+    }
+
     def _linhas_config(self):
-        return [
-            ("Musica", "slider"),
-            ("Efeitos", "slider"),
-            ("Resolucao", "resolucao"),
-            ("Tela Cheia", "toggle"),
-            ("Sensibilidade", "slider"),
-            ("Controles", "controles"),
-            ("Tema", "tema"),
-            ("Aspecto", "aspecto"),
-            ("Ajustar Tela", "ajuste"),
-            ("Qualidade Visual", "qualidade"),
-            ("Monitor de FPS", "desempenho"),
-            ("Estilo visual", "estilo_visual"),
-            ("Detalhe comic", "qualidade_comic"),
-            ("Textura de papel", "comic_papel"),
-            ("Reticula", "comic_halftone"),
-            ("Hachuras", "comic_hachuras"),
-            ("Tremida (alta)", "line_boil"),
-            ("Flashes", "intensidade_flash"),
-            ("Tremor de tela", "intensidade_tremor"),
-            ("Mostrar hitbox", "mostrar_hitbox"),
-            ("Mira customizada", "mira_ativa"),
-        ]
+        """Retorna o catálogo imutável de controles de configuração."""
+        return self._LINHAS_CONFIG
+
+    def _eh_slider_config(self, tipo: str) -> bool:
+        """Indica se uma linha aceita posição contínua do mouse."""
+        return tipo == "slider" or self._eh_slider_shader(tipo)
+
+    def _eh_slider_shader(self, tipo: str) -> bool:
+        """Indica se o controle contínuo pertence ao acabamento GPU."""
+        return tipo in self._LIMITES_SLIDER_SHADER
 
     _CONFIG_VISIVEIS = 6
 
@@ -1248,6 +1280,20 @@ class MenuPrincipal:
         self.jogo.config["sensibilidade"] = round(valor, 2)
         self.jogo.config.salvar()
 
+    def _set_controle_shader(self, chave: str, valor: float) -> None:
+        """Persiste um controle continuo do acabamento GPU."""
+        minimo, maximo = self._LIMITES_SLIDER_SHADER[chave]
+        fracao = max(0.0, min(1.0, valor))
+        self.jogo.config[chave] = round(
+            minimo + fracao * (maximo - minimo), 2)
+        self.jogo.config.salvar()
+
+    def _fracao_controle_shader(self, chave: str) -> float:
+        """Converte um valor real do shader para a fração exibida no slider."""
+        minimo, maximo = self._LIMITES_SLIDER_SHADER[chave]
+        valor = self.jogo.config[chave]
+        return max(0.0, min(1.0, (valor - minimo) / (maximo - minimo)))
+
     def _ciclar_resolucao(self, delta=1):
         atual = self.jogo.config["resolucao"]
         indice = RESOLUCOES.index(atual) if atual in RESOLUCOES else 0
@@ -1299,12 +1345,15 @@ class MenuPrincipal:
         self.notificacoes.adicionar(f"Monitor de FPS {estado}", "info")
 
     def _aplicar_slider(self, indice, fracao):
+        tipo = self._linhas_config()[indice][1]
         if indice == 0:
             self._set_musica(fracao)
         elif indice == 1:
             self._set_efeitos(fracao)
         elif indice == 4:
             self._set_sensibilidade(0.5 + fracao)
+        elif self._eh_slider_shader(tipo):
+            self._set_controle_shader(tipo, fracao)
         self._som("navegar")
 
     def _ajustar_config(self, delta):
@@ -1336,20 +1385,20 @@ class MenuPrincipal:
             self._toggle_monitor_desempenho()
         elif indice >= 11:
             chave = self._linhas_config()[indice][1]
-            escolhas = {
-                "estilo_visual": ("COMIC", "ORIGINAL"),
-                "qualidade_comic": ("BAIXA", "MEDIA", "ALTA"),
-                "intensidade_flash": INTENSIDADES_VISUAIS,
-                "intensidade_tremor": INTENSIDADES_VISUAIS,
-            }
-            if chave in escolhas:
-                valores = escolhas[chave]
+            if self._eh_slider_shader(chave):
+                minimo, maximo = self._LIMITES_SLIDER_SHADER[chave]
+                valor = self.jogo.config[chave] + delta * 0.05
+                fracao = (valor - minimo) / (maximo - minimo)
+                self._set_controle_shader(chave, fracao)
+            elif chave in self._ESCOLHAS_CONFIG:
+                valores = self._ESCOLHAS_CONFIG[chave]
                 atual = self.jogo.config[chave]
                 i = valores.index(atual) if atual in valores else 0
                 self.jogo.config[chave] = valores[(i + delta) % len(valores)]
+                self.jogo.config.salvar()
             else:
                 self.jogo.config[chave] = not self.jogo.config[chave]
-            self.jogo.config.salvar()
+                self.jogo.config.salvar()
         self._som("navegar")
 
     def _painel_controles(self):
@@ -1408,7 +1457,7 @@ class MenuPrincipal:
                     self._ciclar_qualidade_grafica()
                 elif i == 10:
                     self._toggle_monitor_desempenho()
-                elif linhas[i][1] == "slider":
+                elif self._eh_slider_config(linhas[i][1]):
                     self._aplicar_slider(i, self._slider_fracao(pos[0]))
                 return
 
