@@ -11,7 +11,9 @@ import pygame
 from src.shared.persistence import carregar_json_resiliente, salvar_json_atomico
 from src.shared.user_data import diretorio_dados
 
-from .constants import ALTURA, LARGURA
+from .constants import (
+    ALTURA, DISPERSAO_DUPLO_GRAUS, DISPERSAO_ESPIRAL_GRAUS, LARGURA,
+)
 
 PASTA_DADOS = diretorio_dados()
 ARQUIVO_CONFIG = os.path.join(PASTA_DADOS, "settings.json")
@@ -34,6 +36,9 @@ _DEFAULT: dict[str, Any] = {
     "tema": "NEON", "aspecto": "AJUSTAR", "ajuste_escala": 1.0,
     "ajuste_off_x": 0, "ajuste_off_y": 0, "qualidade_grafica": "ALTA",
     "mostrar_desempenho": False,
+    "mira_ativa": True,
+    "dispersao_duplo_graus": DISPERSAO_DUPLO_GRAUS,
+    "dispersao_espiral_graus": DISPERSAO_ESPIRAL_GRAUS,
     "estilo_visual": "COMIC", "qualidade_comic": "MEDIA",
     "comic_papel": True, "comic_halftone": True, "comic_hachuras": True,
     "line_boil": False,

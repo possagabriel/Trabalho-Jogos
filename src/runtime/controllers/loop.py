@@ -86,7 +86,9 @@ class ControladorLoop:
                 continue
             if jogo.estado is EstadoJogo.JOGANDO:
                 tecla_pausar = jogo.controles.get("pausar", 0)
-                if evento.key == pygame.K_TAB:
+                if evento.key == pygame.K_F3:
+                    jogo.debug_ativo = not jogo.debug_ativo
+                elif evento.key == pygame.K_TAB:
                     jogo.menu_equipamento = not jogo.menu_equipamento
                 elif jogo.menu_equipamento:
                     jogo._tratar_menu_equipamento(evento)
@@ -137,5 +139,6 @@ class ControladorLoop:
             jogo.p95_quadro_ms = jogo.metricas_quadro.p95_ms
             jogo.fps_1_baixo = jogo.metricas_quadro.fps_1_baixo
             jogo._atualizar_modo_desempenho(jogo.relogio.get_rawtime())
+        pygame.mouse.set_visible(True)
         pygame.quit()
         sys.exit(0)

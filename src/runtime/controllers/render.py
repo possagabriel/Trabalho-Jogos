@@ -19,7 +19,17 @@ class ControladorRenderizacao:
 
     def __init__(self, jogo: Jogo) -> None:
         self.jogo = jogo
+        self._cursor_visivel: bool | None = None
         self._preparar_sprites()
+
+    def sincronizar_cursor(self) -> None:
+        """Mostra o cursor SDL fora do combate com mira ativa."""
+        jogo = self.jogo
+        visivel = (jogo.estado is not EstadoJogo.JOGANDO
+                   or jogo.menu_equipamento or not jogo.config["mira_ativa"])
+        if visivel != self._cursor_visivel:
+            pygame.mouse.set_visible(visivel)
+            self._cursor_visivel = visivel
 
     def _preparar_sprites(self) -> None:
         from src.infrastructure.graphics.comic_pipeline import preparar_rotacoes
@@ -55,6 +65,7 @@ class ControladorRenderizacao:
 
     def _compor(self) -> None:
         jogo = self.jogo
+        self.sincronizar_cursor()
         if jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
             jogo.tela.fill(VOID_BLACK)
             jogo.menu.desenhar(jogo.tela)
@@ -77,8 +88,23 @@ class ControladorRenderizacao:
             jogo._desenhar_game_over()
         self._desenhar_overlays_logicos()
         self.aplicar_shake()
+        self._desenhar_mira_e_debug()
         jogo._apresentar()
         pygame.display.flip()
+
+    def _desenhar_mira_e_debug(self) -> None:
+        """Mantém a mira presa ao mouse mesmo quando a câmera treme."""
+        jogo = self.jogo
+        if jogo.estado is not EstadoJogo.JOGANDO:
+            return
+        posicao = jogo.posicao_mira()
+        if posicao is not None:
+            jogo.mira.desenhar(
+                jogo.tela, posicao, jogo.cenario.cor_transicao,
+                jogo.mira_sobre_inimigo(posicao),
+            )
+        if jogo.debug_ativo:
+            jogo.overlay_debug.desenhar(jogo.tela, jogo, posicao)
 
     def _desenhar_overlays_logicos(self) -> None:
         jogo = self.jogo

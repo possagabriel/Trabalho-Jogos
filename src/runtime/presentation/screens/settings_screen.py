@@ -238,7 +238,9 @@ class TelaConfiguracoesJogo:
             }
             for chave in ("estilo_visual", "qualidade_comic"):
                 valores[chave] = menu.jogo.config[chave]
-            for chave in ("comic_papel", "comic_halftone", "comic_hachuras", "line_boil"):
+            for chave in (
+                "comic_papel", "comic_halftone", "comic_hachuras", "line_boil", "mira_ativa",
+            ):
                 valores[chave] = "LIGADO" if menu.jogo.config[chave] else "DESLIGADO"
             if menu.jogo.config["qualidade_comic"] == "BAIXA":
                 for chave in ("comic_papel", "comic_halftone", "comic_hachuras"):

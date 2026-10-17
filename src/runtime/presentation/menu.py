@@ -1142,6 +1142,7 @@ class MenuPrincipal:
             ("Reticula", "comic_halftone"),
             ("Hachuras", "comic_hachuras"),
             ("Tremida (alta)", "line_boil"),
+            ("Mira customizada", "mira_ativa"),
         ]
 
     _CONFIG_VISIVEIS = 6

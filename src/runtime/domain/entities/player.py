@@ -17,6 +17,8 @@ from src.core.constants import (
     CIANO,
     COMBO_MULTIPLICADOR_ALTO,
     COMBO_MULTIPLICADOR_MEDIO,
+    DISPERSAO_DUPLO_GRAUS,
+    DISPERSAO_ESPIRAL_GRAUS,
     DOURADO,
     INDIGO,
     LARANJA,
@@ -28,6 +30,9 @@ from src.core.constants import (
 from src.infrastructure.graphics.comic_pipeline import preparar_rotacoes
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.runtime.domain.entities.weapons import ARMARIA, Projetil
+from src.runtime.domain.systems.aiming import (
+    direcao_para_alvo, dispersar_direcao,
+)
 from src.runtime.infrastructure.assets import carregar_imagem_alpha
 from src.runtime.infrastructure.graphics.cel_shading import (
     circulo_com_contorno,
@@ -380,7 +385,12 @@ class Jogador:
         if self.invencivel > 0:
             self.invencivel -= 1
 
-    def atirar(self) -> list[Projetil]:
+    def atirar(
+        self, alvo: tuple[float, float] | None = None,
+        dispersao_duplo_graus: float = DISPERSAO_DUPLO_GRAUS,
+        dispersao_espiral_graus: float = DISPERSAO_ESPIRAL_GRAUS,
+    ) -> list[Projetil]:
+        """Dispara com a arma atual, orientando projéteis para a mira opcional."""
         arma = ARMARIA[self.arma_atual]
         if self.cooldown_tiro > 0 or not self.vivo:
             return []
@@ -388,6 +398,21 @@ class Jogador:
         x, y = self.x, self.y - 20
         tipo = arma["tipo"]
         dano = arma["dano"] + self.bonus_dano
+
+        def mirar(projeteis: list[Projetil]) -> list[Projetil]:
+            if alvo is None or tipo == "ion":
+                return projeteis
+            direcao = direcao_para_alvo((x, y), alvo, arma["vel"])
+            for indice, proj in enumerate(projeteis):
+                if tipo == "duplo":
+                    angulo = (-1 if indice == 0 else 1) * dispersao_duplo_graus
+                elif tipo == "espiral":
+                    angulo = proj.vel_x / 2.2 * dispersao_espiral_graus
+                else:
+                    angulo = 0.0
+                proj.vel_x, proj.vel_y = dispersar_direcao(direcao, angulo)
+                proj.speed = math.hypot(proj.vel_x, proj.vel_y)
+            return projeteis
 
         if tipo == "padrao":
             self.tiros_padrao += 1
@@ -402,18 +427,18 @@ class Jogador:
                 self.burst_left = arma["qtd"]
             self.burst_left -= 1
             self.cooldown_tiro = cooldown(4 if self.burst_left > 0 else arma["cooldown"])
-            return [Projetil(x, y, 0, -arma["vel"], dano, arma["cor"],
-                             arma["raio"], tipo=tipo)]
+            return mirar([Projetil(x, y, 0, -arma["vel"], dano, arma["cor"],
+                                  arma["raio"], tipo=tipo)])
 
         self.cooldown_tiro = cooldown(arma["cooldown"])
 
         if tipo == "duplo":
-            return [
+            return mirar([
                 Projetil(x - 9, y, -0.7, -arma["vel"], dano, arma["cor"],
                          arma["raio"], tipo=tipo),
                 Projetil(x + 9, y, 0.7, -arma["vel"], dano, arma["cor"],
                          arma["raio"], tipo=tipo),
-            ]
+            ])
         if tipo == "espiral":
             self.angulo_arma += 0.45
             projs = []
@@ -422,19 +447,19 @@ class Jogador:
                 projs.append(Projetil(x, y, math.sin(a) * 2.2, -arma["vel"],
                                       dano, arma["cor"], arma["raio"],
                                       tipo=tipo))
-            return projs
+            return mirar(projs)
         if tipo == "ion":
-            return [Projetil(x, y, 0, 0, dano, arma["cor"],
-                             arma["raio"], tipo=tipo)]
+            return mirar([Projetil(x, y, 0, 0, dano, arma["cor"],
+                                  arma["raio"], tipo=tipo)])
         if tipo == "gauss":
-            return [Projetil(x, y, 0, -arma["vel"], dano, arma["cor"],
-                             arma["raio"], tipo=tipo)]
+            return mirar([Projetil(x, y, 0, -arma["vel"], dano, arma["cor"],
+                                  arma["raio"], tipo=tipo)])
         if tipo == "nova":
-            return [Projetil(x, y, 0, -arma["vel"], dano, arma["cor"],
-                             arma["raio"], tipo=tipo)]
+            return mirar([Projetil(x, y, 0, -arma["vel"], dano, arma["cor"],
+                                  arma["raio"], tipo=tipo)])
 
-        return [Projetil(x, y, 0, -arma["vel"], dano, arma["cor"],
-                         arma["raio"], tipo=tipo)]
+        return mirar([Projetil(x, y, 0, -arma["vel"], dano, arma["cor"],
+                              arma["raio"], tipo=tipo)])
 
     def selecionar_arma(self, indice: int) -> None:
         if indice in self.armas_desbloqueadas:
