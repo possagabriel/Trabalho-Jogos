@@ -10,7 +10,9 @@ from src.core.constants import EstadoJogo
 from src.core import settings
 from src.runtime.application.core import Jogo
 from src.runtime.domain.entities.player import Jogador
-from src.runtime.domain.systems.aiming import direcao_para_alvo
+from src.runtime.domain.systems.aiming import (
+    angulo_para_alvo, direcao_para_alvo, indice_sprite_direcional,
+)
 
 
 def test_direcao_normalizada_atinge_o_alvo() -> None:
@@ -22,6 +24,32 @@ def test_direcao_normalizada_atinge_o_alvo() -> None:
 
 def test_alvo_sobre_a_origem_mantem_disparo_vertical() -> None:
     assert direcao_para_alvo((50, 50), (50, 50), 8) == (0, -8)
+
+
+def test_angulo_da_nave_aponta_para_os_quatro_lados() -> None:
+    """O nariz da sprite segue a mesma direção do disparo."""
+    origem = (100, 100)
+    assert angulo_para_alvo(origem, (100, 0)) == 0
+    assert angulo_para_alvo(origem, (200, 100)) == 90
+    assert angulo_para_alvo(origem, (100, 200)) == 180
+    assert angulo_para_alvo(origem, (0, 100)) == 270
+
+
+def test_indice_direcional_arredonda_e_fecha_o_circulo() -> None:
+    assert indice_sprite_direcional(0) == 0
+    assert indice_sprite_direcional(90) == 12
+    assert indice_sprite_direcional(359) == 0
+    assert indice_sprite_direcional(-90) == 36
+
+
+def test_jogador_guarda_direcao_sem_mudar_hitbox() -> None:
+    jogador = Jogador()
+    retangulo = jogador.rect.copy()
+    jogador.atualizar_mira((jogador.x + 100, jogador.y - 20))
+    assert jogador.angulo_mira == 90
+    assert jogador.rect == retangulo
+    jogador.atualizar_mira(None)
+    assert jogador.angulo_mira is None
 
 
 def test_arma_direcional_mira_no_mouse_e_fallback_vertical() -> None:
@@ -126,6 +154,7 @@ def test_clique_atira_na_posicao_da_mira_e_aciona_pulso() -> None:
     assert tiros
     assert tiros[0].vel_x > 0
     assert tiros[0].vel_y == 0
+    assert jogo.jogador.angulo_mira == 90
     assert jogo.mira.pulso > 0
 
 

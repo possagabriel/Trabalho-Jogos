@@ -31,6 +31,7 @@ from game.player import (  # noqa: E402
     Jogador, SKINS, Skin, SistemaCombo, _sprite_padrao,
     _sprite_padrao_rotacionada)
 from game.weapons import ARMARIA  # noqa: E402
+from src.infrastructure.graphics.comic_theme import usar_visual  # noqa: E402
 
 
 class _Teclas:
@@ -103,6 +104,27 @@ def test_skin_padrao_fallback_sem_sprite():
         tela = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
         jog = novo_jogador()
         Skin(SKINS[0]).desenhar(tela, jog)
+
+
+def test_sprites_direcionais_preservam_skins_e_reutilizam_cache():
+    pygame.init()
+    jogador = novo_jogador()
+    jogador.angulo_mira = 90
+    tela = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+    with mock.patch("pygame.time.get_ticks", return_value=0):
+        for estilo in ("ORIGINAL", "COMIC"):
+            with usar_visual({"estilo_visual": estilo}):
+                for config in SKINS:
+                    tela.fill((0, 0, 0, 0))
+                    skin = Skin(config)
+                    jogador.skin = skin
+                    skin.desenhar(tela, jogador)
+                    quantidade = len(skin._atlas_direcional)
+                    assert quantidade >= 1
+                    assert any(tela.get_at((jogador.x + dx, jogador.y))[3]
+                               for dx in range(-20, 21))
+                    skin.desenhar(tela, jogador)
+                    assert len(skin._atlas_direcional) == quantidade
 
 
 # ---------------------------------------------------------------------------

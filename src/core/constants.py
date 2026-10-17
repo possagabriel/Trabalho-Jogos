@@ -24,6 +24,9 @@ RAIO_MIRA: int = 13
 RAIO_PULSO_MIRA: int = 18
 ESPESSURA_CONTORNO_MIRA: int = 6
 ESPESSURA_COR_MIRA: int = 3
+QUADROS_NAVE_DIRECIONAL: int = 48
+TAMANHO_BASE_SPRITE_NAVE: int = 96
+INTERVALO_POSE_NAVE_MS: int = 180
 
 TITULO: str = "INCARNATE - Entre na Fenda"
 """Titulo exibido na barra da janela."""

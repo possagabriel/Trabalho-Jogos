@@ -4,6 +4,28 @@ from __future__ import annotations
 
 import math
 
+from src.core.constants import QUADROS_NAVE_DIRECIONAL
+
+
+def angulo_para_alvo(
+    origem: tuple[float, float], alvo: tuple[float, float],
+) -> float:
+    """Calcula o ângulo visual da nave, com zero apontando para cima."""
+    dx, dy = alvo[0] - origem[0], alvo[1] - origem[1]
+    if dx == 0 and dy == 0:
+        return 0.0
+    return math.degrees(math.atan2(dx, -dy)) % 360
+
+
+def indice_sprite_direcional(
+    angulo: float, quantidade: int = QUADROS_NAVE_DIRECIONAL,
+) -> int:
+    """Escolhe a sprite pré-renderizada mais próxima, incluindo o wrap 360°."""
+    if quantidade <= 0:
+        raise ValueError("A quantidade de sprites direcionais deve ser positiva")
+    passo = 360 / quantidade
+    return int(((angulo % 360) + passo / 2) // passo) % quantidade
+
 def direcao_para_alvo(
     origem: tuple[float, float], alvo: tuple[float, float], velocidade: float,
 ) -> tuple[float, float]:

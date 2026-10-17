@@ -603,6 +603,7 @@ class Jogo:
         )
         tecla_atirar = self.controles.get("atirar", 0)
         alvo = self.posicao_mira()
+        self.jogador.atualizar_mira(alvo)
         mouse_atirando = alvo is not None and pygame.mouse.get_pressed()[0]
         if teclas[pygame.K_SPACE] or teclas[pygame.K_z] or teclas[tecla_atirar] or mouse_atirando:
             novos = self.jogador.atirar(

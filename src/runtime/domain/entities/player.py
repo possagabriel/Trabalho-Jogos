@@ -21,17 +21,19 @@ from src.core.constants import (
     DISPERSAO_ESPIRAL_GRAUS,
     DOURADO,
     INDIGO,
+    INTERVALO_POSE_NAVE_MS,
     LARANJA,
     LARGURA,
     ROXO,
+    TAMANHO_BASE_SPRITE_NAVE,
     VERDE,
     VERMELHO,
 )
 from src.infrastructure.graphics.comic_pipeline import preparar_rotacoes
-from src.infrastructure.graphics.comic_theme import opcoes_atuais
+from src.infrastructure.graphics.comic_theme import OpcoesVisuais, opcoes_atuais
 from src.runtime.domain.entities.weapons import ARMARIA, Projetil
 from src.runtime.domain.systems.aiming import (
-    direcao_para_alvo, dispersar_direcao,
+    angulo_para_alvo, direcao_para_alvo, dispersar_direcao, indice_sprite_direcional,
 )
 from src.runtime.infrastructure.assets import carregar_imagem_alpha
 from src.runtime.infrastructure.graphics.cel_shading import (
@@ -50,6 +52,7 @@ from src.runtime.infrastructure.graphics.smooth import (
     desenhar_glow,
     desenhar_poligono,
 )
+from src.runtime.infrastructure.graphics.ship_sprites import gerar_quadros_direcionais
 
 if TYPE_CHECKING:
     from src.runtime.domain.world.particles import SistemaParticulas
@@ -63,6 +66,7 @@ _ALTURA_SPRITE = 52  # altura exibida em pixels (proporcao preservada)
 
 _SPRITE_PADRAO = None
 _ROTACOES_SPRITE = {}
+_FREQUENCIAS_POSE = {"transparencia": 3, "diamante": 2, "asas": 5}
 
 
 def _sprite_padrao():
@@ -147,28 +151,28 @@ class Skin:
         self.efeito = config["efeito"]
         self.descricao = config["descricao"]
         self.desbloqueada = config["preco"] == 0
+        self._atlas_direcional: dict[
+            tuple[OpcoesVisuais, int, int], tuple[pygame.Surface, ...]
+        ] = {}
+        self._perfil_atlas: OpcoesVisuais | None = None
 
     def desenhar(self, tela: pygame.Surface, jogador: Jogador,
                  particulas: SistemaParticulas | None = None) -> None:
         """Desenha a nave do jogador com a skin aplicada."""
         x, y = int(jogador.x), int(jogador.y)
         t = pygame.time.get_ticks() * 0.001
-        if self.id == "padrao":
-            self._desenhar_sprite(tela, x, y, jogador.tilt)
-        elif self.efeito == "transparencia":
-            self._desenhar_transparente(tela, x, y, jogador.tilt, t)
-        elif self.efeito == "diamante":
-            self._desenhar_diamante(tela, x, y, jogador.tilt, t)
-        elif self.efeito == "asas":
-            self._desenhar_asas(tela, x, y, jogador.tilt, t)
+        direcional = jogador.angulo_mira is not None
+        if direcional:
+            self._desenhar_direcional(tela, x, y, jogador.angulo_mira + jogador.tilt)
         else:
-            self._desenhar_nave_base(tela, x, y, jogador.tilt)
+            self._desenhar_corpo(tela, x, y, jogador.tilt, t)
 
+        traseira_x, traseira_y = self._traseira(x, y, jogador.angulo_mira or 0)
         if self.efeito == "chamas" and particulas:
-            particulas.chamas(x, y + 14, LARANJA, 2)
+            particulas.chamas(traseira_x, traseira_y, LARANJA, 2)
         elif self.efeito == "chamas_escuras" and particulas:
-            particulas.chamas(x, y + 14, VERMELHO, 2)
-        elif self.efeito == "relampago":
+            particulas.chamas(traseira_x, traseira_y, VERMELHO, 2)
+        elif self.efeito == "relampago" and not direcional:
             self._desenhar_relampago(tela, x, y, t)
         elif self.efeito == "brilho":
             self._desenhar_brilho(tela, x, y, t)
@@ -178,6 +182,55 @@ class Skin:
                                   (200, 220, 255), 1.0)
         elif self.efeito == "buraco_negro" and particulas:
             particulas.buraco_negro(x, y)
+
+    def _desenhar_corpo(self, tela, x, y, tilt, t):
+        """Mantém o desenho original da skin antes da orientação visual."""
+        if self.id == "padrao":
+            self._desenhar_sprite(tela, x, y, tilt)
+        elif self.efeito == "transparencia":
+            self._desenhar_transparente(tela, x, y, tilt, t)
+        elif self.efeito == "diamante":
+            self._desenhar_diamante(tela, x, y, tilt, t)
+        elif self.efeito == "asas":
+            self._desenhar_asas(tela, x, y, tilt, t)
+        else:
+            self._desenhar_nave_base(tela, x, y, tilt)
+
+    @staticmethod
+    def _traseira(x: int, y: int, angulo: float) -> tuple[float, float]:
+        radianos = math.radians(angulo)
+        return x - math.sin(radianos) * 14, y + math.cos(radianos) * 14
+
+    def _desenhar_direcional(
+        self, tela: pygame.Surface, x: int, y: int, angulo: float,
+    ) -> None:
+        """Usa uma sprite pré-renderizada da skin para a direção da mira."""
+        opcoes = opcoes_atuais()
+        if opcoes != self._perfil_atlas:
+            self._atlas_direcional.clear()
+            self._perfil_atlas = opcoes
+        if self.efeito in _FREQUENCIAS_POSE:
+            fase = (pygame.time.get_ticks() // INTERVALO_POSE_NAVE_MS) % 4
+            frequencia = _FREQUENCIAS_POSE[self.efeito]
+            tempo_pose = fase * math.pi / (2 * frequencia)
+        elif self.efeito == "relampago":
+            fase = (pygame.time.get_ticks() // INTERVALO_POSE_NAVE_MS) % 2
+            tempo_pose = fase * 0.25
+        else:
+            fase, tempo_pose = 0, 0.0
+        boil = (pygame.time.get_ticks() // 120) % 2 if opcoes.line_boil else 0
+        chave = (opcoes, fase, boil)
+        if chave not in self._atlas_direcional:
+            base = pygame.Surface(
+                (TAMANHO_BASE_SPRITE_NAVE, TAMANHO_BASE_SPRITE_NAVE), pygame.SRCALPHA,
+            )
+            centro = TAMANHO_BASE_SPRITE_NAVE // 2
+            self._desenhar_corpo(base, centro, centro, 0, tempo_pose)
+            if self.efeito == "relampago":
+                self._desenhar_relampago(base, centro, centro, tempo_pose)
+            self._atlas_direcional[chave] = gerar_quadros_direcionais(base)
+        sprite = self._atlas_direcional[chave][indice_sprite_direcional(angulo)]
+        tela.blit(sprite, sprite.get_rect(center=(x, y)))
 
     def _pontos_nave(self, x, y, tilt):
         return [(x, y - 20), (x - 15, y + 16), (x, y + 7), (x + 15, y + 16)]
@@ -218,6 +271,10 @@ class Skin:
         desenhar_glow(tela, self.cor, (x, y), 20, 0.5)
         poligono_com_contorno(tela, self.cor, pts, espessura_contorno=3)
         desenhar_poligono(tela, self.cor2, pts, 2)
+        desenhar_poligono(tela, self.cor2,
+                          [(x, y - 19), (x - 5, y - 5), (x + 5, y - 5)])
+        desenhar_poligono(tela, escurecer_cor(self.cor, 0.5),
+                          [(x, y + 18), (x - 4, y + 6), (x + 4, y + 6)])
         desenhar_highlight(tela, (x, y), 14, intensidade=0.6)
 
     def _desenhar_asas(self, tela, x, y, tilt, t):
@@ -323,6 +380,7 @@ class Jogador:
         self.melhorias: dict[str, int] = {}
         self.tiros_padrao = 0
         self.tilt = 0.0
+        self.angulo_mira: float | None = None
         self.vivo = True
         self.skin = skin or Skin(SKINS[0])
         self.combo = SistemaCombo()
@@ -334,6 +392,13 @@ class Jogador:
 
     def equipar_skin(self, skin: Skin) -> None:
         self.skin = skin
+
+    def atualizar_mira(self, alvo: tuple[float, float] | None) -> None:
+        """Orienta só a sprite; colisão e posição da nave não mudam."""
+        if alvo is None:
+            self.angulo_mira = None
+            return
+        self.angulo_mira = angulo_para_alvo((self.x, self.y - 20), alvo)
 
     def atualizar(self, teclas: Sequence[bool],
                   controles: Mapping[str, int] | None = None,
