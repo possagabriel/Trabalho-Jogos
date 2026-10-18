@@ -680,7 +680,7 @@ def test_apresentador_gpu_recebe_mundo_interface_e_destino_fisico():
         OpcoesShaderComic.de_config(jogo.config))
     jogo._apresentador_gpu.apresentar.assert_called_once_with(
         jogo.tela, (0, 0, 1920, 1080), (1920, 1080), (8, 8, 13),
-        interface=jogo.tela_ui)
+        interface=jogo.tela_ui, fundo=None)
 
 
 def test_fallback_cpu_compoe_interface_sobre_o_mundo():
@@ -731,6 +731,23 @@ def test_canvas_logico_16_por_9_preenche_full_hd_sem_barras():
     assert escala == 1.5
     assert off_x == 0
     assert off_y == 0
+
+
+def test_mira_alinha_com_mouse_nos_dois_modos_e_resolucoes_alvo():
+    jogo = Jogo()
+    jogo.estado = EstadoJogo.JOGANDO
+    jogo.config["mira_ativa"] = True
+    ponto_logico = (640, 360)
+
+    for tamanho in ((900, 700), (1280, 720), (1920, 1080), (2560, 1080)):
+        jogo.janela = pygame.Surface(tamanho)
+        for modo in ("AJUSTAR", "PREENCHE"):
+            jogo.config["aspecto"] = modo
+            escala, off_x, off_y = jogo._transformacao_janela()
+            ponto_janela = (round(ponto_logico[0] * escala + off_x),
+                            round(ponto_logico[1] * escala + off_y))
+            with mock.patch("pygame.mouse.get_pos", return_value=ponto_janela):
+                assert jogo.posicao_mira() == ponto_logico
 
 
 def test_modo_desempenho_troca_escala_somente_apos_atraso_sustentado():

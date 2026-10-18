@@ -392,13 +392,17 @@ class ApresentadorGPU:
 
     def apresentar(
         self, superficie, destino, tamanho_janela, cor_fundo,
-        interface=None,
+        interface=None, fundo=None,
     ):
-        """Apresenta a cena e, opcionalmente, a interface sem filtra-la."""
+        """Apresenta fundo decorativo, cena 16:9 e interface opcional."""
         largura, altura = tamanho_janela
         glViewport(0, 0, largura, altura)
         glClearColor(*(canal / 255 for canal in cor_fundo), 1.0)
         glClear(GL_COLOR_BUFFER_BIT)
+        if fundo is not None:
+            self._enviar_textura(self.textura, fundo)
+            glViewport(0, 0, largura, altura)
+            self._desenhar_textura(self.textura, intensidade=0.0)
         self._enviar_textura(self.textura, superficie)
         if interface is not None:
             self._enviar_textura(self.textura_interface, interface)

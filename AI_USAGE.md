@@ -1,5 +1,25 @@
 # Registro de uso de IA
 
+## Fase 5 — Polimento visual, etapa 1: PREENCHE
+
+- **Pedido:** preservar a área jogável 16:9 em todas as telas e usar as faixas
+  externas apenas para fundo decorativo, mantendo mira alinhada e círculos sem distorção.
+- **Implementação da IA:** unificação da transformação de apresentação e mouse,
+  fundo decorativo em cache para CPU/OpenGL, descrição em Config e README,
+  teste de escala/mira em dois modos e quatro resoluções, e screenshot ultrawide.
+- **Ajustes manuais do usuário:** nenhum informado.
+- **Decisões:** `AJUSTAR` mantém letterbox; `PREENCHE` cobre as bordas com o fundo,
+  sem mudar a área de combate. Nem o cenário nem o HUD são ampliados lateralmente.
+- **Verificação:** 557 testes passaram e 1 foi ignorado. No benchmark de rolagem
+  (120 quadros × 3 repetições, Linux x86_64, Python 3.14.8, pygame 2.5.8,
+  SDL dummy, COMIC/MEDIA), média/p95 foram 1,733/2,014 ms no mundo sem avanço
+  e 3,284/3,461 ms com avanço; a baseline era 1,884/2,211 ms e 3,831/4,836 ms.
+  O benchmark mede mundo e entidades, não a apresentação; as médias variaram
+  para baixo e não indicam custo do novo preenchimento decorativo.
+  Ruff completo apontou 275 problemas já presentes no repositório (130 F401,
+  72 E741, 54 I001, 8 E501, 6 F841, 5 W292). Nos seis arquivos tocados, as
+  regras restantes após excluir esses padrões legados passaram sem ocorrências.
+
 ## Fase 4 — Perfis de jogador (1.5.0)
 
 - **Pedido:** múltiplos perfis locais com CRUD, progresso individual, migração do save único,

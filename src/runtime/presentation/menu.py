@@ -1773,24 +1773,6 @@ class MenuPrincipal:
         a moldura de calibracao no local exato das bordas da imagem.
         """
         w, h = self.jogo.janela.get_size()
-        cfg = self.jogo.config
-        if cfg["aspecto"] == "PREENCHE":
-            e = max(0.5, cfg["ajuste_escala"])
-            sw = w * e
-            sh = h * e
-            vx0 = max(0, cfg["ajuste_off_x"])
-            vx1 = min(sw, cfg["ajuste_off_x"] + w)
-            vy0 = max(0, cfg["ajuste_off_y"])
-            vy1 = min(sh, cfg["ajuste_off_y"] + h)
-            if vx1 <= vx0 or vy1 <= vy0:
-                return pygame.Rect(0, 0, self.layout.largura,
-                                   self.layout.altura)
-            return pygame.Rect(int(vx0 / sw * self.layout.largura),
-                               int(vy0 / sh * self.layout.altura),
-                               max(1, int((vx1 - vx0) / sw *
-                                          self.layout.largura)),
-                               max(1, int((vy1 - vy0) / sh *
-                                          self.layout.altura)))
         escala, off_x, off_y = self.jogo._transformacao_janela()
         vw = w / escala
         vh = h / escala
@@ -1981,7 +1963,7 @@ class MenuPrincipal:
                 self._blit_alfa(tela, surface, surface.get_rect(
                     midleft=(l.px(420) + dx, y)), int(255 * alfa))
                 dica = ("ÁREAS SEGURAS" if self.jogo.config["aspecto"] ==
-                        "AJUSTAR" else "ESTICA A TELA")
+                        "AJUSTAR" else "FUNDO NAS BORDAS")
                 surface = self.fonte_pequena.render(dica, True,
                                                     (150, 155, 200))
                 self._blit_alfa(tela, surface, surface.get_rect(
@@ -2433,19 +2415,10 @@ class MenuPrincipal:
     def _pos_logica(self, pos):
         """Converte coordenadas da janela para a superficie logica.
 
-        Aplica a transformacao vigente somada aos ajustes manuais de "Ajustar
-        Tela". No AJUSTAR usa o scale-to-fit; no PREENCHE considera a
-        proporcao da janela. O clique continua alinhado a imagem mesmo apos
-        calibrar a tela.
+        Aplica a transformacao uniforme vigente e os ajustes manuais de
+        "Ajustar Tela". Nos dois modos, a area jogavel mantem a proporcao 16:9.
         """
         try:
-            if self.jogo.config["aspecto"] == "PREENCHE":
-                w, h = self.jogo.janela.get_size()
-                e = self.jogo.config["ajuste_escala"]
-                return (int((pos[0] - self.jogo.config["ajuste_off_x"]) *
-                            self.layout.largura / (w * e)),
-                        int((pos[1] - self.jogo.config["ajuste_off_y"]) *
-                            self.layout.altura / (h * e)))
             escala, off_x, off_y = self.jogo._transformacao_janela()
         except (AttributeError, TypeError):
             return pos

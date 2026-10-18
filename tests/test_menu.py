@@ -544,6 +544,56 @@ def test_pos_mouse_usa_a_mesma_transformacao_do_gameplay():
     assert rect.collidepoint(pos_logica)
 
 
+@pytest.mark.parametrize("modo", ["AJUSTAR", "PREENCHE"])
+@pytest.mark.parametrize("tamanho", [
+    (900, 700), (1280, 720), (1920, 1080), (2560, 1080),
+])
+def test_mouse_mira_e_transformacao_preservam_16_por_9(modo, tamanho):
+    """A conversão de mouse é a inversa da mesma escala uniforme da cena."""
+    jogo, menu = novo_menu()
+    jogo.janela = pygame.Surface(tamanho)
+    jogo.config["aspecto"] = modo
+    escala, off_x, off_y = jogo._transformacao_janela()
+
+    assert escala == pytest.approx(min(tamanho[0] / LARGURA,
+                                       tamanho[1] / ALTURA))
+    largura_destino = LARGURA * escala
+    altura_destino = ALTURA * escala
+    assert largura_destino / altura_destino == pytest.approx(16 / 9)
+
+    ponto_logico = (LARGURA * 0.73, ALTURA * 0.61)
+    ponto_janela = (ponto_logico[0] * escala + off_x,
+                    ponto_logico[1] * escala + off_y)
+    ponto_revertido = menu._pos_logica(ponto_janela)
+    assert ponto_revertido == pytest.approx(ponto_logico, abs=1)
+
+
+@pytest.mark.parametrize("tamanho", [
+    (900, 700), (1280, 720), (1920, 1080), (2560, 1080),
+])
+def test_preenche_estende_fundo_sem_ampliar_cena_jogavel(tamanho):
+    jogo = Jogo()
+    jogo.janela = pygame.Surface(tamanho)
+    jogo.config["aspecto"] = "PREENCHE"
+    jogo.tela.fill((220, 30, 40))
+    jogo.tela_ui.fill((0, 0, 0, 0))
+    jogo._obter_fundo_preenche = mock.Mock(
+        return_value=pygame.Surface(tamanho))
+    jogo._obter_fundo_preenche.return_value.fill((20, 170, 60))
+
+    jogo._apresentar()
+
+    escala, off_x, off_y = jogo._transformacao_janela()
+    caixa = pygame.Rect(round(off_x), round(off_y),
+                        round(LARGURA * escala), round(ALTURA * escala))
+    centro = jogo.janela.get_at(caixa.center)[:3]
+    assert all(abs(valor - esperado) <= 4
+               for valor, esperado in zip(centro, (220, 30, 40)))
+    borda = (0, tamanho[1] // 2)
+    if not caixa.collidepoint(borda):
+        assert jogo.janela.get_at(borda)[:3] == (20, 170, 60)
+
+
 def test_selecao_fases_responsiva_e_cacheada():
     jogo, _ = novo_menu()
     layout = Layout(1920, 1080)

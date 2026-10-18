@@ -232,9 +232,15 @@ recompõe automaticamente.
 - **Modo de aspecto** (configuração `aspecto`, disponível em Settings):
   - `AJUSTAR` (padrão): *scale-to-fit* com **safe areas** (letterbox) em
     `VOID_BLACK`, mantendo proporções iguais em qualquer formato de tela.
-  - `PREENCHE`: estica a cena para preencher a janela inteira.
-- **Tela cheia:** usa exatamente a resolução escolhida no menu (sem `SCALED`,
-  sem esticar). Alterar a resolução mantém a tela cheia ligada; se o monitor
+  - `PREENCHE`: mantém a área jogável em 16:9, com nave, HUD, mira e textos
+    na proporção correta; somente o fundo decorativo se estende pelas bordas.
+    Em telas ultrawide, as laterais extras não ampliam o campo de jogo.
+
+Prévia do modo `PREENCHE` em ultrawide:
+
+![Modo PREENCHE mantém a cena jogável em 16:9 e estende o fundo](docs/screenshots/preenche-ultrawide.jpg)
+- **Tela cheia:** usa exatamente a resolução escolhida no menu (sem `SCALED`;
+  a área jogável continua sem distorção). Alterar a resolução mantém a tela cheia ligada; se o monitor
   não suportar o modo selecionado, o jogo restaura a configuração anterior.
 - **Qualidade visual:** em **Config → Qualidade Visual**, escolha `ALTA`,
   `EQUILIBRADA` ou `DESEMPENHO`. `ALTA` preserva o redimensionamento suave em
@@ -253,9 +259,9 @@ recompõe automaticamente.
   (ou `Esc` cancela). Persistido em `ajuste_escala`, `ajuste_off_x` e
   `ajuste_off_y`; vale tanto no modo `AJUSTAR` quanto no `PREENCHE`.
 - **Conversão do mouse:** `MenuPrincipal._pos_logica` converte coordenadas da
-  janela para a superfície interna aplicando a transformação vigente (escala +
-  offsets do letterbox e os ajustes manuais de Ajustar Tela; proporção direta
-  com escala no modo `PREENCHE`).
+  janela para a superfície interna usando a mesma escala uniforme e os mesmos
+  offsets da cena. A mira permanece alinhada nos dois modos; as faixas externas
+  decorativas não fazem parte da área jogável.
 - **Layout responsivo:** `game/layout.py` define `Layout`, com `x()/y()`
   (frações da superfície), `px()` (escala da base de design), `rect(ancora, …)`
   (containers), `ponto(ancora, …)` e `fonte(...)` (fontes escaladas). Todas as
