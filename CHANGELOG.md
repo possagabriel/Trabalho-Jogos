@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- README reorganizado em guia para jogadores e documentação técnica, com descrição
+  correta dos assets, resolução interna, controles, fases e cobertura de testes.
+- Ruff centralizado em `pyproject.toml`; scripts de dados usam o caminho canônico
+  `INCARNATE_DATA_DIR` e preservam `SPACEFURY_DATA_DIR` como fallback legado.
+- Preview do HUD movido para `tools/`; CI de qualidade dispara em qualquer push e PR.
+- Guia de migração atualizado com os módulos pendentes e critérios para remover `game/`.
+
 ## [1.5.0] - 2026-10-18
 
 ### Added
