@@ -2,15 +2,16 @@
 
 Referência inicial da main: `4e496edf8b1be74c5a20a59f2d2b6004fbeef361`.
 O polimento do repositório (PR #26) foi integrado como `4f87f73`; a renomeação
-final está nesta branch e será proposta em PR separado.
+final (PR #27) foi integrada como `f383926`. A candidata `v1.8.0-rc1` foi
+gerada com builds Windows/Linux bem-sucedidos.
 As branches antigas e `revert/revert-pr-13` ficam fora.
 
 ## Segurança
 
 - `chore/polir-repo` foi publicada sem alterações em `6b32915`.
 - A tag anotada `pre-integracao-2026-10-18` foi publicada sobre `4e496ed`.
-- Antes do merge de renomeação, será publicada nova tag de segurança sobre a main
-  que contém o PR #26; a tag inicial não será movida.
+- Antes do merge de renomeação, a tag `pre-rename-2026-10-18` foi publicada
+  sobre a main que contém o PR #26; a tag inicial não foi movida.
 - `1539f68` (`/tmp/incarnate-main-integration`) e `9d09ffc`
   (`/tmp/incarnate-stage5-baseline`) estão contidos em `main`, `origin/main`,
   `feature/polimento-visual` e `integrate/polimento-visual`.
@@ -112,7 +113,7 @@ todas as variantes visuais históricas pixel a pixel.
 O benchmark agrega as repetições pela mediana das métricas de cada repetição.
 As faixas com avanço se sobrepõem; o desenho do mundo não foi modificado.
 
-## Renomeação final: validação pré-PR
+## Renomeação final: validação, integração e candidata
 
 - `chore/rename-incarnate-final` parte de `4f87f73` (#26). A versão continua
   1.8.0; o AppId Inno Setup não mudou e `UsePreviousAppDir=yes` mantém a pasta
@@ -130,3 +131,6 @@ As faixas com avanço se sobrepõem; o desenho do mundo não foi modificado.
   entre as três amostras se sobrepõem; a mudança foi de identidade/empacotamento.
 - Memória cacheada de marcos, igual nas duas versões: 435.000 bytes (BAIXA),
   610.092 bytes (MEDIA), 753.200 bytes (ALTA).
+- O PR #27 passou nos checks Linux/Windows, Ruff/mypy, OpenGL e empacotamento.
+  A tag `v1.8.0-rc1` aponta para `f383926`; ambos os workflows publicaram os
+  executáveis/instalador e somas SHA-256 como pré-release.

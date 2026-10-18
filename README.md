@@ -21,9 +21,9 @@ cria atalhos; o pacote Linux é uma pasta autocontida. Os artefatos novos usam
 o nome INCARNATE; instalações antigas são atualizadas pelo mesmo AppId do
 Inno Setup. Consulte os guias
 de [Windows](docs/distribuicao-windows.md) e [Linux](docs/distribuicao-linux.md).
-O código está na versão 1.8.0. A candidata `v1.8.0-rc1` será publicada depois
-da integração desta branch; a release oficial depende da validação manual no
-Windows descrita no [roadmap](ROADMAP.md).
+O código está na versão 1.8.0. A candidata `v1.8.0-rc1` está disponível em
+[Releases](../../releases/tag/v1.8.0-rc1); a release oficial depende da
+validação manual no Windows descrita no [roadmap](ROADMAP.md).
 
 Para jogar a partir do código-fonte, instale Python 3.10 ou superior e Pygame:
 

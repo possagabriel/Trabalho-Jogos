@@ -309,5 +309,6 @@ preserva 1.8.0 e adia a renomeação do pacote/comando para a branch própria.
   61 entidades, 120 quadros, 3 repetições) marcou média/p95 de 4,771/6,366 ms
   na main e 4,873/6,629 ms nesta branch, com sobreposição de amostras e sem
   alterações no mundo. O cache de marcos ficou em 435.000/610.092/753.200 bytes
-  nas qualidades BAIXA/MEDIA/ALTA.
+  nas qualidades BAIXA/MEDIA/ALTA. PR #27 foi integrado; `v1.8.0-rc1` foi
+  publicada como pré-release, e os builds Windows e Linux passaram.
 - **Ajustes manuais do usuário:** nenhum informado.
