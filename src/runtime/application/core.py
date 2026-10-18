@@ -1,5 +1,6 @@
 """Classe principal do jogo: estados, loop, transicoes e gerenciamento."""
 
+import logging
 import math
 import random
 from contextlib import contextmanager
@@ -95,6 +96,8 @@ try:
 except ImportError:  # pragma: no cover - PyOpenGL e opcional
     ApresentadorGPU = None
     GPU_DISPONIVEL = False
+
+LOGGER = logging.getLogger(__name__)
 
 __all__ = [
     "INCREMENTO_CARREGAMENTO",
@@ -363,8 +366,17 @@ class Jogo:
                 self._apresentador_gpu = ApresentadorGPU((LARGURA, ALTURA))
                 self._configurar_shader_gpu()
                 return janela
-            except Exception:  # driver, contexto ou PyOpenGL indisponivel
+            except Exception as erro:  # driver, contexto ou PyOpenGL indisponivel
+                LOGGER.warning(
+                    "Falha ao iniciar a apresentacao GPU; usando fallback CPU: %s",
+                    erro,
+                )
                 self._apresentador_gpu = None
+                # Um set_mode OpenGL pode ter criado um contexto antes da falha
+                # do apresentador. Destruí-lo antes da nova janela evita deixar
+                # o SDL com um contexto parcial durante a troca para render CPU.
+                pygame.display.quit()
+                pygame.display.init()
         janela = pygame.display.set_mode(tamanho, flags)
         if flags & pygame.FULLSCREEN and janela.get_size() != tamanho:
             raise pygame.error("O driver nao aplicou a resolucao solicitada")
