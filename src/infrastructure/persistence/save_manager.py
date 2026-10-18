@@ -9,13 +9,12 @@ progression and records system.
 
 import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-# Data directory -- can be overridden via env var for testing.
-PASTA_DADOS = (os.environ.get("INCARNATE_DATA_DIR")
-               or os.environ.get("SPACE" + "FURY_DATA_DIR")
-               or os.path.join(os.path.dirname(os.path.dirname(
-                   os.path.abspath(__file__))), "data"))
+from src.shared.user_data import diretorio_dados
+
+# `SPACEFURY_DATA_DIR` permanece aceito como fallback em `diretorio_dados()`.
+PASTA_DADOS = diretorio_dados()
 ARQUIVO_SAVE = os.path.join(PASTA_DADOS, "save.json")
 ARQUIVO_RECORDES = os.path.join(PASTA_DADOS, "records.json")
 

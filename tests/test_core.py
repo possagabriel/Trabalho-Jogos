@@ -16,30 +16,31 @@ import tempfile
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
-os.environ["SPACEFURY_DATA_DIR"] = tempfile.mkdtemp(prefix="spacefury_test_")
+os.environ["INCARNATE_DATA_DIR"] = tempfile.mkdtemp(prefix="incarnate_test_")
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
 
-import random  # noqa: E402
 from unittest import mock  # noqa: E402
 
 import pygame  # noqa: E402
 
-from game.config import ALTURA, EstadoJogo, LARGURA  # noqa: E402
 from game.combat_session import SessaoCombate  # noqa: E402
+from game.config import ALTURA, LARGURA, EstadoJogo  # noqa: E402
 from game.core import Jogo  # noqa: E402
+from game.enemies import Inimigo, InimigoEspecial  # noqa: E402
 from game.game_over_controller import ControladorGameOver  # noqa: E402
 from game.loop_controller import ControladorLoop  # noqa: E402
 from game.pause_controller import ControladorPausa  # noqa: E402
+from game.powerups import PowerUp  # noqa: E402
 from game.render_controller import ControladorRenderizacao  # noqa: E402
 from game.theme import tema_atual  # noqa: E402
-from game.enemies import Inimigo, InimigoEspecial  # noqa: E402
-from game.powerups import PowerUp  # noqa: E402
 from game.weapons import ARMARIA, Projetil  # noqa: E402
-from src.core.settings import Configuracoes  # noqa: E402
+from src.core.settings import (  # noqa: E402
+    Configuracoes,  # noqa: E402
+    OpcoesShaderComic,  # noqa: E402
+)
 from src.runtime.domain.entities.player import Jogador  # noqa: E402
-from src.core.settings import OpcoesShaderComic  # noqa: E402
 
 
 def _patch_recordes():
