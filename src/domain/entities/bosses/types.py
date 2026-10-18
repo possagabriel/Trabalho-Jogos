@@ -268,7 +268,6 @@ class Boss(Entity):
         return self.ataques
 
     def _atacar(self, jogador) -> list:
-        from src.domain.entities.projectiles.factory import ProjectileFactory
 
         x, y = self.x, self.y
         disponiveis = self._ataques_por_fase()

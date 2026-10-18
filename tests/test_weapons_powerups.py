@@ -29,7 +29,6 @@ from game.config import ALTURA, LARGURA  # noqa: E402
 from game.powerups import PowerUp, sortear_tipo  # noqa: E402
 from game.weapons import ARMARIA, CORES_ARCO_IRIS, Projetil  # noqa: E402
 
-
 # ---------------------------------------------------------------------------
 # ARMARIA
 # ---------------------------------------------------------------------------

@@ -33,6 +33,7 @@ Type: files; Name: "{autodesktop}\VOID\SHIFT.lnk"
 
 [Files]
 Source: "..\dist\INCARNATE.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\data\fonts\OFL.txt"; DestDir: "{app}\licenses"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\INCARNATE"; Filename: "{app}\INCARNATE.exe"

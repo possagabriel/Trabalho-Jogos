@@ -9,7 +9,7 @@ logic.
 """
 
 import math
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, Tuple, Union
 
 import pygame
 

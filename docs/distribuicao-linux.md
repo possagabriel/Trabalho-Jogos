@@ -7,6 +7,8 @@ No Linux, o jogo é distribuído como uma pasta autocontida para iniciar mais
 rápido e evitar a extração temporária feita por executáveis de arquivo único.
 O arquivo `BUILD-COMMIT-Linux.txt` identifica a revisão usada no build e deve
 ser igual ao `BUILD-COMMIT-Windows.txt` da mesma execução.
+O pacote inclui `INCARNATE/licenses/OFL.txt`, com os avisos de copyright e o
+texto SIL Open Font License 1.1 das fontes Orbitron e Rajdhani.
 
 Configurações e progresso ficam em `$XDG_DATA_HOME/void-shift` ou, quando a
 variável não existe, em `~/.local/share/void-shift`.

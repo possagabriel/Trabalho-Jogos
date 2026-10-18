@@ -8,19 +8,48 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.runtime.infrastructure.graphics.cel_shading import (barra_vida_cartoon, circulo_com_contorno,
-                          contorno_circulo, contorno_poligono,
-                          desenhar_brilho_contorno, desenhar_highlight,
-                          desenhar_sombra_chapada, escurecer_cor,
-                          estrela_com_contorno, poligono_com_contorno)
-from src.core.constants import AMARELO, AZUL, BRANCO, CIANO, \
-    COOLDOWN_ATAQUE_INIMIGO_MAXIMO, COOLDOWN_ATAQUE_INIMIGO_MINIMO, \
-    DOURADO, INVISIBILIDADE_QUADROS, LARGURA, LARANJA, \
-    PISCAR_INVISIBILIDADE_QUADROS, ROXO, VERDE, VERMELHO
-from src.runtime.infrastructure.graphics.geometry import estrela, losango, pentagono, poligono, quadrado, triangulo
-from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, desenhar_glow, desenhar_poligono, \
-    linha_suave
+from src.core.constants import (
+    AMARELO,
+    AZUL,
+    BRANCO,
+    CIANO,
+    COOLDOWN_ATAQUE_INIMIGO_MAXIMO,
+    COOLDOWN_ATAQUE_INIMIGO_MINIMO,
+    DOURADO,
+    INVISIBILIDADE_QUADROS,
+    LARANJA,
+    LARGURA,
+    PISCAR_INVISIBILIDADE_QUADROS,
+    ROXO,
+    VERDE,
+    VERMELHO,
+)
 from src.runtime.domain.entities.weapons import Projetil
+from src.runtime.infrastructure.graphics.cel_shading import (
+    barra_vida_cartoon,
+    circulo_com_contorno,
+    contorno_circulo,
+    contorno_poligono,
+    desenhar_highlight,
+    desenhar_sombra_chapada,
+    escurecer_cor,
+    estrela_com_contorno,
+    poligono_com_contorno,
+)
+from src.runtime.infrastructure.graphics.geometry import (
+    estrela,
+    losango,
+    pentagono,
+    poligono,
+    quadrado,
+    triangulo,
+)
+from src.runtime.infrastructure.graphics.smooth import (
+    desenhar_circulo,
+    desenhar_glow,
+    desenhar_poligono,
+    linha_suave,
+)
 
 if TYPE_CHECKING:
     from src.runtime.domain.entities.player import Jogador

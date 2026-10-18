@@ -231,8 +231,8 @@ class Player(Entity):
     def atirar(self) -> list:
         """Fire the current weapon. Returns a list of Projectile instances."""
         from src.domain.entities.projectiles.factory import (
-            ProjectileFactory,
             ARMARIA,
+            ProjectileFactory,
         )
 
         arma = ARMARIA[self.arma_atual]
@@ -372,7 +372,6 @@ class Player(Entity):
     def _desenhar_nave_base(self, tela, x, y, tilt, t) -> None:
         cor = self.skin.cor
         cor2 = self.skin.cor2
-        from src.domain.systems.particle_system import ParticleSystem
         pts = self._pontos_nave(x, y, tilt)
         # Simplified rendering - full visual requires cel_shading/smooth modules
         pygame.draw.polygon(tela, cor, pts)

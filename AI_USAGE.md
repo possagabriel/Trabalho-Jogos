@@ -7,8 +7,9 @@
 - **Implementação da IA:** ao falhar a criação do apresentador OpenGL, registra
   o erro, encerra e reinicia o subsistema de vídeo antes de tentar a janela CPU.
 - **Verificação:** teste unitário confirma a ordem OpenGL → quit → init → CPU;
-  603 testes passaram e 1 teste OpenGL foi ignorado. Ruff passou nos dois
-  arquivos Python alterados; `main.py --smoke-test` será conferido antes do push.
+  após atualizar com `origin/main`, 603 testes passaram e 1 teste OpenGL foi
+  ignorado. Ruff passou nos dois arquivos Python alterados e
+  `main.py --smoke-test` passou.
 - **Ajustes manuais do usuário:** nenhum informado.
 
 ## Fase 1 — Mira customizada (1.2.0)

@@ -211,8 +211,8 @@ class ProfileService:
         self._save()
 
     def _validate_catalogs(self, profile: Profile) -> None:
-        from src.runtime.domain.entities.player import SKINS
         from src.runtime.domain.entities.bosses import BOSSES_POR_CENARIO
+        from src.runtime.domain.entities.player import SKINS
         from src.runtime.domain.entities.weapons import ARMARIA
         from src.runtime.domain.systems.upgrades import MELHORIAS
 

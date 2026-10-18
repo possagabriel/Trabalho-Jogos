@@ -44,11 +44,26 @@ certificado configurado no GitHub, a cópia instalada também carrega a
 assinatura. Compare o hash exibido com `SHA256SUMS.txt` antes de distribuir um
 build manual.
 
+Para verificar um download no PowerShell, execute:
+
+```powershell
+Get-FileHash .\INCARNATE-Setup.exe -Algorithm SHA256
+```
+
+Compare o valor `Hash` com a linha `INCARNATE-Setup.exe` de `SHA256SUMS.txt`.
+O arquivo `licenses\OFL.txt` instalado junto ao jogo contém a licença e os
+avisos de copyright das fontes.
+
 ## Assinatura e aviso do SmartScreen
 
 O aviso de arquivo potencialmente perigoso não pode ser removido por código.
 Ele é decidido pelo Microsoft SmartScreen a partir da assinatura digital e da
 reputação do arquivo.
+
+Um build sem certificado confiável pode gerar um alerta do SmartScreen ou do
+antivírus. Confirme que o download veio da Release oficial e valide seu SHA-256
+com as instruções acima antes de executá-lo. A verificação do hash confirma a
+integridade em relação ao valor publicado, não substitui a origem confiável.
 
 Para assinar os builds, configure estes segredos no repositório:
 

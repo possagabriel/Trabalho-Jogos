@@ -21,10 +21,10 @@ os.environ["INCARNATE_DATA_DIR"] = tempfile.mkdtemp(prefix="incarnate_test_")
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
 
-import pygame  # noqa: E402
 from unittest import mock  # noqa: E402
 
-from game.config import ALTURA, LARGURA  # noqa: E402
+import pygame  # noqa: E402
+
 from game.core import Jogo  # noqa: E402
 from game.menu import ACOES_CONTROLE  # noqa: E402
 
