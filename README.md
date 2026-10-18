@@ -9,6 +9,8 @@ cenários, efeitos, interface, sons e música gerados pelo jogo.
 
 ### Imagens do jogo
 
+![Menu ORIGINAL com hierarquia de navegação neon em 1920×1080](docs/screenshots/menu-original-1920.jpg)
+![Menu ORIGINAL em PREENCHE ultrawide 2560×1080](docs/screenshots/menu-original-ultrawide.jpg)
 ![Percurso 2D e HUD em PREENCHE](docs/screenshots/preenche-ultrawide.jpg)
 ![Seis dimensões com composições próprias](docs/screenshots/dimensoes-composicao.jpg)
 

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- O menu ORIGINAL agora agrupa Continuar, Lobby e Hangar como ações principais,
+  mantendo os itens 01–08 e a ordem de navegação; opções secundárias usam texto
+  menor, espaçamento próprio e uma linha divisória.
+- A nave foi reposicionada para equilibrar o título e a coluna de ações. O marcador
+  de seleção e os painéis estáticos usam superfícies em cache.
+- O título recebe pulsos cromáticos breves em vez de glitch contínuo; a opção de
+  intensidade de flashes reduz ou desliga esses pulsos.
+- O README inclui capturas otimizadas do menu ORIGINAL em 1920×1080 e ultrawide.
+
 ### Fixed
 - Menu lê sua versão de `project.version` no `pyproject.toml`.
 - Menu ORIGINAL mantém títulos, botões e textos de rodapé dentro das margens,

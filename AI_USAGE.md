@@ -1,5 +1,35 @@
 # Registro de uso de IA
 
+## Menu ORIGINAL — etapa 2: hierarquia e animação
+
+- **Pedido:** organizar Continuar, Lobby e Hangar como ações principais e agrupar
+  os itens secundários, preservando numeração, navegação e callbacks; mostrar a
+  comparação em quatro resoluções e nos modos AJUSTAR e PREENCHE.
+- **Implementação da IA:** tamanhos e posições por grupo foram centralizados nos
+  tokens de `theme.py`; indicador de foco, faixa selecionada, textos estáticos e
+  título usam cache. A nave ocupa o espaço livre à esquerda. O título recebe
+  glitch cromático breve limitado a 42 ms a cada 650 ms (menos de 3 pulsos/s),
+  respeitando `intensidade_flash` NORMAL, REDUZIDO e DESLIGADO. O estilo COMIC
+  mantém seu layout e seu HUD anteriores.
+- **Decisões:** a seleção segue contínua entre os grupos e continua começando em
+  Continuar com save ou Lobby sem save. Continuar sem save mantém o visual
+  desabilitado e o aviso existente ao ativar. A validação do `ProfileService`
+  rejeita apóstrofo em novos nomes; perfis antigos não são alterados. A tela
+  trata nomes longos com reticências e caracteres acentuados.
+- **Comparação visual:** imagens ANTES/DEPOIS das quatro resoluções e dos dois
+  modos, além do mockup 1920×1080, estão em
+  `/tmp/incarnate-menu-audit-2026-10-18/etapa2`; esses arquivos não são incluídos
+  no repositório. Duas capturas JPEG otimizadas foram adicionadas ao README.
+- **Benchmark do menu:** SDL dummy, estilo ORIGINAL, resolução lógica 1280×720,
+  30 quadros de aquecimento e 8 rodadas de 100 quadros. Na main anterior: média
+  7,589 ms, p95 10,335 ms e desvio das médias por rodada 0,315 ms. Após a etapa
+  2: média 7,608 ms, p95 9,632 ms e desvio 0,360 ms; a média variou 0,25%, dentro
+  da variação entre rodadas.
+- **Verificação:** suíte completa: 622 passaram e 1 foi ignorado. Os testes
+  direcionados do menu/perfis/layout somaram 127 aprovações. Ruff passou nos seis
+  arquivos Python alterados.
+- **Ajustes manuais do usuário:** nenhum informado.
+
 ## Menu ORIGINAL — etapa 1: correções visuais
 
 - **Pedido:** corrigir cortes, sobreposições, contraste e margens do menu neon;

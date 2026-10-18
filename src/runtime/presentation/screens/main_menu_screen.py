@@ -6,7 +6,12 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.infrastructure.graphics.theme import tema_atual
+from src.infrastructure.graphics.theme import (
+    MENU_COR_DIVISOR,
+    MENU_LARGURA_COLUNA,
+    MENU_Y_DIVISOR,
+    tema_atual,
+)
 from src.runtime.infrastructure.graphics.smooth import ease_out
 
 if TYPE_CHECKING:
@@ -23,6 +28,9 @@ class TelaPrincipalJogo:
         """Desenha titulo, opcoes e rodape da tela inicial."""
         menu = self.menu
         tema = tema_atual(menu.jogo.config["tema"])
+        if menu.jogo.config["estilo_visual"] != "ORIGINAL":
+            self._desenhar_comic(tela, menu, tema)
+            return
         menu._desenhar_linhas_diagonais(tela, tema)
         menu._desenhar_bloco_titulo(tela, tema)
         progresso = menu._frac(0.28, 0.3)
@@ -31,12 +39,45 @@ class TelaPrincipalJogo:
                                     tema["secundaria"])
             menu._blit_alfa(tela, rotulo, (menu.x_opcoes, menu.layout.px(48)),
                             int(255 * ease_out(progresso)))
+        y_divisor = menu.layout.y(MENU_Y_DIVISOR)
+        pygame.draw.line(tela, MENU_COR_DIVISOR,
+                         (menu.x_opcoes, y_divisor),
+                         (menu.x_opcoes + menu.layout.px(MENU_LARGURA_COLUNA),
+                          y_divisor),
+                         max(1, menu.layout.px(1)))
         for indice, opcao in enumerate(menu.opcoes):
             progresso = menu._frac(0.34 + indice * 0.07, 0.42)
             deslocamento = -int((1 - ease_out(progresso)) * min(
                 menu.layout.px(150),
                 menu.x_opcoes - menu.layout.margem(18)))
             opcao.desabilitado = indice == 0 and not menu._tem_save()
+            fonte = (menu.fonte_principal if opcao.principal
+                     else menu.fonte_secundaria)
+            fonte_sel = (menu.fonte_principal_sel if opcao.principal
+                         else menu.fonte_secundaria_sel)
+            opcao.desenhar(tela, fonte, fonte_sel, tema,
+                           menu.x_opcoes, indice == menu.opcao_selecionada,
+                           deslocamento, int(255 * ease_out(progresso)), menu.layout)
+        menu._desenhar_seta(tela, tema)
+        menu._desenhar_rodape(tela, tema)
+
+    @staticmethod
+    def _desenhar_comic(tela, menu, tema) -> None:
+        """Mantém a composição COMIC anterior à alteração do menu ORIGINAL."""
+        menu._desenhar_linhas_diagonais(tela, tema)
+        menu._desenhar_bloco_titulo(tela, tema)
+        progresso = menu._frac(0.28, 0.3)
+        if progresso > 0:
+            rotulo = menu._espacado(menu.fonte_pequena, "// COMANDO DE VOO", 2,
+                                    tema["secundaria"])
+            menu._blit_alfa(tela, rotulo, (menu.x_opcoes, menu.layout.px(132)),
+                            int(255 * ease_out(progresso)))
+        for indice, opcao in enumerate(menu.opcoes):
+            progresso = menu._frac(0.34 + indice * 0.07, 0.42)
+            deslocamento = int((1 - ease_out(progresso)) * min(
+                menu.layout.px(150), menu.layout.largura - menu.x_opcoes
+                - menu.layout.px(opcao.largura_painel)
+                - menu.layout.margem(18)))
             opcao.desenhar(tela, menu.fonte_opcao, menu.fonte_opcao_sel, tema,
                            menu.x_opcoes, indice == menu.opcao_selecionada,
                            deslocamento, int(255 * ease_out(progresso)), menu.layout)

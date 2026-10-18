@@ -62,6 +62,13 @@ def novo_menu():
     return jogo, menu
 
 
+def configurar_menu_original(jogo, menu):
+    """Ativa o layout ORIGINAL sem afetar os testes de compatibilidade COMIC."""
+    jogo.config["estilo_visual"] = "ORIGINAL"
+    menu._estilo_layout_opcoes = None
+    menu._aplicar_layout_opcoes()
+
+
 # ---------------------------------------------------------------------------
 # Construcao e opcoes
 # ---------------------------------------------------------------------------
@@ -74,19 +81,24 @@ def test_construcao_subestado_e_opcoes():
     assert menu.x_opcoes <= menu.layout.largura
 
 
-def test_opcoes_principais_tem_tamanho_uniforme_e_nao_usam_indicador_antigo():
-    """Todos os painéis compartilham a área; seleção não cria bloco extra."""
-    _, menu = novo_menu()
+def test_hierarquia_visual_mantem_tres_acoes_maiores_que_as_secundarias():
+    """As três ações principais mantêm botões maiores sem mudar a ordem."""
+    jogo, menu = novo_menu()
+    configurar_menu_original(jogo, menu)
     rects = [opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
              for opcao in menu.opcoes]
-    assert {rect.size for rect in rects} == {rects[0].size}
+    assert len({rect.width for rect in rects}) == 1
+    assert all(rects[index].height > rects[index + 3].height
+               for index in range(3))
     assert all(b.top - a.bottom > 0 for a, b in zip(rects, rects[1:]))
-    assert menu.destaque.y == menu.opcoes[0].y  # estado mantido para compatibilidade
+    assert menu.destaque.y == menu.opcoes[0].y
+    assert [option.texto for option in menu.opcoes] == ROTULOS_ESPERADOS
 
 
 def test_opcoes_originais_têm_painel_e_selecao_destacada_na_area_clicavel():
     """O painel desenhado coincide com a mesma área usada para clique."""
     jogo, menu = novo_menu()
+    configurar_menu_original(jogo, menu)
     opcao = menu.opcoes[0]
     rect = opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
     amostra = (rect.x + menu.layout.px(12), rect.centery)
@@ -110,10 +122,13 @@ def test_opcoes_originais_têm_painel_e_selecao_destacada_na_area_clicavel():
 def test_retangulo_clicavel_coincide_com_botao_em_todas_as_apresentacoes(
         resolucao, aspecto):
     jogo, menu = novo_menu()
+    configurar_menu_original(jogo, menu)
     largura, altura = resolucao
     jogo.config["aspecto"] = aspecto
     jogo.config["resolucao"] = f"{largura}x{altura}"
     jogo.janela = pygame.display.set_mode(resolucao)
+    escala_janela = jogo._transformacao_janela()[0]
+    assert menu.fonte_secundaria.get_height() * escala_janela >= 14
     opcao = menu.opcoes[5]
     esperado = opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
     tela = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
@@ -150,15 +165,20 @@ def test_rotulos_cabem_no_botao_e_nome_longo_do_perfil_usa_reticencias():
     for opcao in menu.opcoes:
         fonte_ajustada, rotulo = opcao._ajustar_rotulo(
             menu.fonte_opcao, opcao.texto,
-            menu.layout.px(type(opcao).LARGURA_PAINEL - 52), menu.layout)
+            menu.layout.px(opcao.largura_painel - 52), menu.layout)
         assert fonte_ajustada.size(rotulo)[0] <= menu.layout.px(
-            type(opcao).LARGURA_PAINEL - 52)
+            opcao.largura_painel - 52)
 
     fonte = menu.fonte_pequena
     linha = menu._linha_perfil_rodape(fonte, "PILOTO-" + "X" * 80, "123", 300)
     assert linha.endswith("   |   MOEDAS: 123")
     assert "…" in linha
     assert menu._medir_espacado(fonte, linha, 1) <= 300
+    linha_especial = menu._linha_perfil_rodape(
+        fonte, "ÁUREA_Ω-EXPEDIÇÃO" * 4, "123", 300)
+    assert linha_especial.startswith("PILOTO: ÁURE")
+    assert "…" in linha_especial
+    assert menu._medir_espacado(fonte, linha_especial, 1) <= 300
 
 
 def test_selecao_inicial_respeita_existencia_de_save():
@@ -172,6 +192,82 @@ def test_selecao_inicial_respeita_existencia_de_save():
         menu.opcoes[0].desabilitado = not menu._tem_save()
         assert menu.opcao_selecionada == 1
         assert menu.opcoes[0].desabilitado is True
+
+
+def test_ativar_perfil_seleciona_lobby_sem_save_e_continuar_com_save():
+    jogo, menu = novo_menu()
+    perfil_id = jogo.profile_service.active.id
+    with mock.patch.object(jogo.progresso, "existe_save", return_value=False):
+        jogo.ativar_perfil(perfil_id)
+    assert menu.subestado == "MENU"
+    assert menu.opcao_selecionada == 1
+    assert menu.opcoes[0].desabilitado is True
+    with mock.patch.object(jogo.progresso, "existe_save", return_value=True):
+        jogo.ativar_perfil(perfil_id)
+    assert menu.opcao_selecionada == 0
+    assert menu.opcoes[0].desabilitado is False
+
+
+def test_foco_de_teclado_percorre_grupos_sem_interrupcao_e_clique_coincide():
+    jogo, menu = novo_menu()
+    configurar_menu_original(jogo, menu)
+    menu.opcao_selecionada = 2
+    evento = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN, unicode="")
+    menu.tela_principal.tratar_tecla(evento)
+    assert menu.opcao_selecionada == 3
+    evento = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_UP, unicode="")
+    menu.tela_principal.tratar_tecla(evento)
+    assert menu.opcao_selecionada == 2
+    for indice, opcao in enumerate(menu.opcoes):
+        callback = mock.Mock()
+        opcao.funcao = callback
+        rect = opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
+        menu.tela_principal.tratar_clique(rect.center)
+        assert menu.opcao_selecionada == indice
+        callback.assert_called_once_with()
+
+
+def test_glitch_desligado_na_reducao_de_efeitos_e_titulo_em_cache():
+    jogo, menu = novo_menu()
+    configurar_menu_original(jogo, menu)
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        tema = tema_atual(jogo.config["tema"])
+        superficies = menu._titulo_surfaces(tema)
+    tela = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
+    jogo.config["intensidade_flash"] = "DESLIGADO"
+    with mock.patch("pygame.time.get_ticks", return_value=0):
+        menu._desenhar_glitch_titulo(tela, superficies, 0)
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        superficies_segunda_leitura = menu._titulo_surfaces(tema)
+    assert tela.get_bounding_rect() == pygame.Rect(0, 0, 0, 0)
+    assert superficies_segunda_leitura is superficies
+
+
+def test_glitch_tem_pulsos_curto_com_frequencia_inferior_a_tres_por_segundo():
+    jogo, menu = novo_menu()
+    superf = {"incarnate_eco": pygame.Surface((4, 4), pygame.SRCALPHA),
+              "incarnate_glitch_ciano": pygame.Surface((4, 4), pygame.SRCALPHA)}
+    tela = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
+    with mock.patch.object(menu, "_blit_alfa") as desenhar:
+        for instante, chamadas in ((0, 2), (41, 2), (42, 0), (649, 0),
+                                   (650, 2)):
+            desenhar.reset_mock()
+            with mock.patch("pygame.time.get_ticks", return_value=instante):
+                menu._desenhar_glitch_titulo(tela, superf, 0)
+            assert desenhar.call_count == chamadas
+
+
+def test_continuar_sem_save_fica_visualmente_desabilitado_no_menu_original():
+    jogo, menu = novo_menu()
+    configurar_menu_original(jogo, menu)
+    superficie = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
+    menu.opcoes[0]._SUPERFICIES_BOTAO.clear()
+    with mock.patch.object(menu, "_tem_save", return_value=False):
+        menu._construir_opcoes_menu()
+        menu.tela_principal.desenhar(superficie)
+    assert menu.opcoes[0].desabilitado is True
+    assert menu.opcao_selecionada == 1
+    assert any(chave[-1] is True for chave in menu.opcoes[0]._SUPERFICIES_BOTAO)
 
 
 def test_contraste_do_rodape_sobre_fundo_real_inclui_planeta():

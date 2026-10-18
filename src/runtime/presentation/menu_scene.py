@@ -411,7 +411,7 @@ class HudMenu:
 
     # ----- desenho -----
 
-    def desenhar(self, tela, tema):
+    def desenhar(self, tela, tema, estilo="COMIC"):
         layout = self._layout
         primaria = tema["primaria"]
         secundaria = tema["secundaria"]
@@ -472,12 +472,20 @@ class HudMenu:
         self._desenhar_texto(tela, "mis_valor", layout.fonte_texto(15),
                              "SALTO DIMENSIONAL", (layout.px(40), layout.altura - layout.px(34)),
                              texto_cor, 3)
-        fonte_sub = layout.fonte_texto(20)
-        y_sub = (layout.altura - layout.margem(MENU_MARGEM_SEGURANCA)
-                 - fonte_sub.get_height())
+        if estilo == "ORIGINAL":
+            fonte_sub = layout.fonte_texto(20)
+            y_sub = (layout.altura - layout.margem(MENU_MARGEM_SEGURANCA)
+                     - fonte_sub.get_height())
+            cor_sub = texto_cor
+            espacamento_sub = 1
+        else:
+            fonte_sub = layout.fonte_texto(11)
+            y_sub = layout.altura - layout.px(20)
+            cor_sub = secundaria
+            espacamento_sub = 3
         self._desenhar_texto(tela, "mis_sub", fonte_sub,
                              "ALVO // ENTRE NA FENDA", (layout.px(44), y_sub),
-                             texto_cor, 1)
+                             cor_sub, espacamento_sub)
 
         # velocidade + coordenadas
         self._desenhar_texto(tela, "vel_rotulo", layout.fonte_texto(12),
@@ -491,7 +499,7 @@ class HudMenu:
         self._desenhar_texto(tela, "vel_sub", fonte_sub,
                              "MODO NAVEGAÇÃO", (layout.largura - layout.px(44),
                                           y_sub),
-                             texto_cor, 1, "direita")
+                             cor_sub, espacamento_sub, "direita")
 
 
 # ---------------------------------------------------------------------------
