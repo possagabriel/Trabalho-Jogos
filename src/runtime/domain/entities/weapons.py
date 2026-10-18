@@ -12,9 +12,7 @@ from src.infrastructure.graphics.comic_render import trilha_tinta
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.runtime.infrastructure.graphics.cel_shading import (
     circulo_com_contorno,
-    contorno_circulo,
     contorno_retangulo,
-    escurecer_cor,
 )
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_circulo,
@@ -22,6 +20,10 @@ from src.runtime.infrastructure.graphics.smooth import (
     desenhar_poligono,
     linha_suave,
     retangulo_suave,
+)
+from src.runtime.infrastructure.graphics.style_tokens import (
+    CONTORNO_PROJETIL_CLARO,
+    CONTORNO_PROJETIL_ESCURO,
 )
 
 CORES_ARCO_IRIS = [(255, 60, 60), (255, 220, 60), (90, 255, 90),
@@ -217,3 +219,7 @@ class Projetil:
                              brilho=1.6)
         if self.origem == "inimigo":
             desenhar_circulo(tela, LARANJA, (x, y), max(7, int(self.raio) + 4), 2)
+            pygame.draw.circle(tela, CONTORNO_PROJETIL_ESCURO,
+                               (x, y), max(10, int(self.raio) + 7), 3)
+            pygame.draw.circle(tela, CONTORNO_PROJETIL_CLARO,
+                               (x, y), max(9, int(self.raio) + 5), 1)

@@ -208,6 +208,15 @@ a 1, 2 ou 3 em `BAIXA`, `MEDIA` e `ALTA`, com tamanhos máximos de 240, 360 e
 contorno grosso, cores menos saturadas e opacidade reduzida; são desenhados
 antes das entidades, projéteis, nave e mira.
 
+No visual COMIC, cada dimensão também tem uma composição própria: rotas orbitais,
+cristas vulcânicas, ondas e recifes, cristais laterais, fendas e anéis com raios.
+Os planos usam baixa saturação e contraste para deixar a ação em primeiro plano.
+Projéteis inimigos recebem contornos escuro e claro, com contraste mínimo de
+3:1 definido em `src/runtime/infrastructure/graphics/style_tokens.py`; o desenho
+não altera suas hitboxes.
+
+![Composições de fundo das seis dimensões](docs/screenshots/dimensoes-composicao.jpg)
+
 Para observar a parada sem avançar cinco níveis, inicie uma partida de teste
 diretamente no boss do nível 5:
 

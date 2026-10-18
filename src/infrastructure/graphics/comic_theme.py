@@ -40,6 +40,16 @@ PALETA_UI = {
 FUNDOS = ((65, 66, 65), (66, 68, 75), (75, 61, 52),
           (62, 72, 65), (73, 58, 69), (81, 61, 50))
 
+# Composições cromáticas de baixa saturação, próprias de cada dimensão.
+COMPOSICOES_FUNDO = (
+    "orbital", "vulcanica", "oceanica", "cristalina", "fenda", "divina",
+)
+CORES_COMPOSICAO = (
+    ((103, 98, 86), (121, 111, 91)), ((107, 77, 66), (133, 87, 65)),
+    ((63, 91, 99), (73, 111, 119)), ((74, 99, 79), (91, 117, 91)),
+    ((91, 72, 97), (111, 78, 110)), ((111, 99, 73), (133, 116, 80)),
+)
+
 
 @dataclass(frozen=True)
 class OpcoesVisuais:

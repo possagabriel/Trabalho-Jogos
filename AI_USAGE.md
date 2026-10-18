@@ -90,6 +90,28 @@
   geração, caindo a 0,0027 ms no acesso seguinte (3,52 MiB por surface de saída). Na
   sequência animada, o capítulo mantém o quadro de título, o texto se revela sem salto,
   e a fala de glitch alterna variantes curtas sem tremer a moldura ou borrar retratos.
+
+## Fase 5 — Polimento visual, etapa 4: fundos por dimensão
+
+- **Pedido:** diferenciar a composição dos seis fundos COMIC, preservar a leitura
+  dos projéteis e respeitar os marcos integrados na main, sem alterar gameplay.
+- **Implementação da IA:** composições procedurais com rotas orbitais, cristas
+  vulcânicas, ondas/recifes, cristais, fenda e raios/anéis; redução da densidade
+  de destroços; contorno escuro e claro nos projéteis inimigos. Hitboxes não mudam.
+- **Decisões:** superfícies do fundo continuam pré-renderizadas e cacheadas por
+  dimensão/qualidade. O par de contornos oferece ao menos 3:1 de contraste com
+  fundos claros ou escuros; o limite está centralizado nos tokens de estilo.
+- **Ajustes manuais do usuário:** nenhum informado.
+- **Verificação visual:** referências das seis dimensões, comparativo e GIF real
+  da troca de dimensão ficam em `/tmp/incarnate-visual-audit-20261018/etapa4`;
+  `docs/screenshots/dimensoes-composicao.jpg` é a imagem otimizada incluída no README.
+- **Benchmark:** preview COMIC/MEDIA, 30 inimigos, 80 projéteis e 180 partículas,
+  SDL dummy, 1280×720, 120 amostras. Quadro completo: antes 12,330/13,094 ms
+  (mediana/p95); depois 12,179/13,014 ms. Mundo: 1,698/1,814 → 1,645/2,003 ms.
+  Diferenças pequenas, sem regressão observada no quadro completo; fundos e
+  composições são preparados fora do caminho por quadro. A suíte completa passou
+  com 599 testes e 1 skip; Ruff passou nos arquivos Python alterados.
+
 ## Ajuste da Fase 2 — Fundo que evolui (1.6.0)
 
 - **Pedido:** dar sensação de percurso 2D com marcos por dimensão, evolução

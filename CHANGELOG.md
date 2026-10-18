@@ -32,6 +32,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   transição de combate existente.
 - Versão do projeto elevada de 1.5.0 para 1.6.0.
 
+## [1.7.0] - 2026-10-18
+
+### Changed
+- Fundos COMIC agora usam composição distinta para cada dimensão: rotas orbitais,
+  cristas vulcânicas, ondas e recifes, cristais, fendas e raios divinos.
+- Detalhes de fundo têm menos densidade, contraste e saturação para preservar a leitura
+  de inimigos, projéteis e marcos.
+- Projéteis inimigos usam contorno escuro e claro com contraste mínimo de 3:1; hitboxes
+  e lógica de combate não mudam.
+- Screenshot do README documenta as seis composições de cenário.
+- Versão do projeto elevada de 1.6.0 para 1.7.0.
+
 ## [1.5.0] - 2026-10-18
 
 ### Added
