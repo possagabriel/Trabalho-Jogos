@@ -32,11 +32,7 @@ def executar_smoke_test() -> int:
 
 def _transferir_save(argumentos: list[str]) -> int | None:
     """Exporta ou importa o progresso quando solicitado pela linha de comando."""
-    comandos = {
-        "--export-save": "exportar_progresso",
-        "--import-save": "importar_progresso",
-    }
-    for opcao, metodo in comandos.items():
+    for opcao in ("--export-save", "--import-save"):
         if opcao not in argumentos:
             continue
         indice = argumentos.index(opcao)
@@ -46,10 +42,25 @@ def _transferir_save(argumentos: list[str]) -> int | None:
             print(f"Informe um arquivo depois de {opcao}.", file=sys.stderr)
             return 2
 
-        from src.runtime.infrastructure.persistence.save_system import SistemaProgressao
+        from src.core.settings import Configuracoes
+        from src.domain.systems.profile_service import ProfileService
+        from src.infrastructure.persistence.profile_repository import JsonProfileRepository
 
-        sistema = SistemaProgressao()
-        concluido = getattr(sistema, metodo)(destino)
+        settings = Configuracoes()
+        service = ProfileService(JsonProfileRepository(), settings["limite_perfis"],
+                                 settings["limite_nome_perfil"])
+        service.migrate_legacy()
+        try:
+            if opcao == "--export-save":
+                if service.select_last() is None:
+                    raise ValueError("Selecione um perfil no jogo antes de exportar")
+                concluido = service.export_active(destino)
+            else:
+                service.import_file(destino)
+                concluido = True
+        except (OSError, ValueError, KeyError) as exc:
+            print(f"Não foi possível processar o progresso: {exc}", file=sys.stderr)
+            return 1
         if not concluido:
             print(f"Não foi possível processar o progresso em {destino}.", file=sys.stderr)
             return 1

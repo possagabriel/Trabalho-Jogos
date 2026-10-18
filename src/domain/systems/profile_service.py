@@ -12,7 +12,7 @@ from typing import Any
 
 from src.domain.profiles import MAX_MONEY, Profile, initial_progress, now_iso
 from src.domain.repository.profile_repository import ProfileRepository
-from src.shared.persistence import carregar_json_resiliente
+from src.shared.persistence import carregar_json_resiliente, salvar_json_atomico
 
 LOGGER = logging.getLogger(__name__)
 
@@ -31,8 +31,7 @@ class ProfileService:
         self.last_save: str | None = None
         self.save_error = False
         self.migration_error: str | None = None
-        if hasattr(repository, "clean_orphans"):
-            repository.clean_orphans({row["id"] for row in self.index["profiles"]})
+        repository.clean_orphans({row["id"] for row in self.index["profiles"]})
 
     def _name(self, value: str) -> str:
         if not isinstance(value, str):
@@ -316,8 +315,31 @@ class ProfileService:
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             self.migration_error = str(exc)
             return
+        try:
+            records = carregar_json_resiliente(Path(self.repository.data_dir) / "records.json")
+            records = records.get("recordes", []) if isinstance(records, dict) else []
+        except (OSError, ValueError, json.JSONDecodeError):
+            records = []
+        profile = self._from_legacy(legacy, "JOGADOR"[:self.max_name_length],
+                                    records, preferences)
+        if not self.repository.save(profile):
+            self.migration_error = "Falha ao gravar perfil importado"
+            return
+        self.index["profiles"].append({"id": profile.id, "name": profile.name})
+        if not self.repository.write_index(self.index):
+            self.index["profiles"].pop()
+            self.migration_error = "Falha ao atualizar índice importado"
+            return
+        if interrupt_after_profile:
+            return
+        self.index["migration_complete"] = True
+        self.repository.write_index(self.index)
+
+    def _from_legacy(self, legacy: dict[str, Any], name: str,
+                     records: list[dict], preferences: dict[str, Any] | None = None) -> Profile:
+        """Converte os campos de um save antigo sem modificar a origem."""
         old = legacy["jogador"]
-        profile = Profile.new("JOGADOR", deepcopy(preferences) if preferences else {})
+        profile = Profile.new(name, deepcopy(preferences) if preferences else {})
         progress = initial_progress()
         campaign = old.get("progresso_campanha")
         campaign = campaign if isinstance(campaign, dict) else {}
@@ -347,24 +369,49 @@ class ProfileService:
         statistics = statistics if isinstance(statistics, dict) else {}
         for key in ("tempo_total", "inimigos_derrotados"):
             progress[key] = statistics.get(key, 0)
-        try:
-            records = carregar_json_resiliente(Path(self.repository.data_dir) / "records.json")
-            progress["recordes"] = records.get("recordes", [])
-            progress["recorde_pontos"] = max(
-                (row.get("pontos", 0) for row in progress["recordes"]), default=0)
-        except (OSError, ValueError, json.JSONDecodeError):
-            pass
+        progress["recordes"] = records
+        progress["recorde_pontos"] = max(
+            (row["pontos"] for row in records if isinstance(row, dict)
+             and type(row.get("pontos")) is int and row["pontos"] >= 0), default=0)
         profile.progress = progress
         self._validate_catalogs(profile)
+        return profile
+
+    def export_active(self, path: str | Path) -> bool:
+        """Exporta uma cópia portátil do perfil selecionado."""
+        return salvar_json_atomico(path, self._active().to_dict(), criar_backup=False)
+
+    def import_file(self, path: str | Path) -> Profile:
+        """Importa perfil exportado ou save legado como novo UUID local."""
+        data = carregar_json_resiliente(path)
+        if not isinstance(data, dict):
+            raise ValueError("Arquivo de progresso inválido")
+        if "jogador" in data and isinstance(data["jogador"], dict):
+            name = self._available_import_name()
+            profile = self._from_legacy(data, name, [])
+        else:
+            source = Profile.from_dict(data)
+            profile = Profile.new(self._available_import_name(), deepcopy(source.preferences))
+            profile.progress = deepcopy(source.progress)
+            self._validate_catalogs(profile)
+        if len(self.index["profiles"]) >= self.max_profiles:
+            raise ValueError("Limite de perfis atingido")
         if not self.repository.save(profile):
-            self.migration_error = "Falha ao gravar perfil importado"
-            return
+            raise OSError("Não foi possível gravar o perfil importado")
         self.index["profiles"].append({"id": profile.id, "name": profile.name})
         if not self.repository.write_index(self.index):
             self.index["profiles"].pop()
-            self.migration_error = "Falha ao atualizar índice importado"
-            return
-        if interrupt_after_profile:
-            return
-        self.index["migration_complete"] = True
-        self.repository.write_index(self.index)
+            raise OSError("Não foi possível atualizar o índice")
+        return profile
+
+    def _available_import_name(self) -> str:
+        for number in range(1, self.max_profiles + 2):
+            suffix = "" if number == 1 else f" {number}"
+            if len(suffix) >= self.max_name_length:
+                name = str(number)[:self.max_name_length]
+            else:
+                name = "IMPORTADO"[:self.max_name_length - len(suffix)] + suffix
+            if all(row["name"].casefold() != name.casefold()
+                   for row in self.index["profiles"]):
+                return name
+        raise ValueError("Sem nome disponível para importação")
