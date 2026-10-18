@@ -21,15 +21,19 @@ os.environ["INCARNATE_DATA_DIR"] = tempfile.mkdtemp(prefix="incarnate_test_")
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
 
-import math  # noqa: E402
 from unittest import mock  # noqa: E402
 
 import pygame  # noqa: E402
 
 from game.config import ALTURA, LARGURA  # noqa: E402
 from game.player import (  # noqa: E402
-    Jogador, SKINS, Skin, SistemaCombo, _sprite_padrao,
-    _sprite_padrao_rotacionada)
+    SKINS,
+    Jogador,
+    SistemaCombo,
+    Skin,
+    _sprite_padrao,
+    _sprite_padrao_rotacionada,
+)
 from game.weapons import ARMARIA  # noqa: E402
 from src.infrastructure.graphics.comic_theme import usar_visual  # noqa: E402
 

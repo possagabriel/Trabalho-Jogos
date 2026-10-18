@@ -3,7 +3,7 @@
 import json
 import logging
 
-from src.runtime.domain.story import carregar_catalogo, SequenciadorCena
+from src.runtime.domain.story import SequenciadorCena, carregar_catalogo
 from src.runtime.infrastructure.persistence.save_system import SistemaProgressao
 
 
@@ -125,6 +125,7 @@ def test_comandos_entram_uma_vez_e_cena_seguinte_nao_duplica():
 
 def test_capitulo_um_nao_pronuncia_protocolos_restritos():
     from importlib.resources import files
+
     from src.runtime.domain.story import ler_catalogo
 
     catalogo = ler_catalogo(files("src.runtime.story") / "cenas_pt_BR.json")

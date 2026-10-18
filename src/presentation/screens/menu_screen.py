@@ -10,13 +10,13 @@ The screen manages its own sub-state and delegates rendering to
 from __future__ import annotations
 
 import math
-import os
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING
 
 import pygame
 
 from src.core.constants import (
-    BRANCO, CIANO, DOURADO, LARANJA, NEGRO, VERDE, VERMELHO,
+    BRANCO,
+    NEGRO,
 )
 
 if TYPE_CHECKING:

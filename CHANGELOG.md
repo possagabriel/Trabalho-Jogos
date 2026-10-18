@@ -36,6 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - O rodapé trunca nomes longos sem alterar perfis existentes; a validação atual
   continua rejeitando apóstrofos em nomes novos e renomeações.
 
+### Added
+- Licença MIT do projeto e avisos OFL 1.1 de Orbitron e Rajdhani nos pacotes.
+- README resume o aviso SmartScreen/antivírus e a verificação SHA-256.
+
 ## [1.8.0] - 2026-10-18
 
 ### Changed

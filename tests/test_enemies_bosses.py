@@ -29,8 +29,13 @@ import pygame  # noqa: E402
 from game.bosses import BOSSES_POR_CENARIO, Boss  # noqa: E402
 from game.config import ALTURA, LARGURA  # noqa: E402
 from game.enemies import (  # noqa: E402
-    FORMAS, Inimigo, InimigoEspecial, TIPOS, composicao_onda,
-    sortear_inimigo_especial)
+    FORMAS,
+    TIPOS,
+    Inimigo,
+    InimigoEspecial,
+    composicao_onda,
+    sortear_inimigo_especial,
+)
 from game.player import Jogador  # noqa: E402
 from game.scenarios import Cenario  # noqa: E402
 
@@ -214,7 +219,7 @@ def test_especial_acoes_mutante():
     e.carga = e.carga_maxima
     e.carregado = True
     vida = e.vida
-    acoes = e.acoes_carregado()
+    e.acoes_carregado()
     assert e.mini_boss is True
     assert e.vida == vida + 60
     assert e.raio == 36

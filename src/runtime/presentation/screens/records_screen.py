@@ -6,10 +6,14 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.core.constants import BRANCO, CIANO, DOURADO, VOID_BLACK
-from src.runtime.infrastructure.graphics.smooth import desenhar_cantos, desenhar_glow, \
-    linha_suave, retangulo_suave
+from src.core.constants import BRANCO, DOURADO, VOID_BLACK
 from src.infrastructure.graphics.theme import tema_atual
+from src.runtime.infrastructure.graphics.smooth import (
+    desenhar_cantos,
+    desenhar_glow,
+    linha_suave,
+    retangulo_suave,
+)
 from src.runtime.presentation.ui import BotaoNeon
 
 if TYPE_CHECKING:

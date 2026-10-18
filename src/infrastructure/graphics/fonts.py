@@ -7,7 +7,7 @@ Migrated from game/fonts.py -- every function preserved with full logic.
 """
 
 import os
-from typing import Dict, Optional
+from typing import Dict
 
 import pygame
 

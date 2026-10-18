@@ -4,8 +4,7 @@ from game import config as config_legado
 from game import layout as layout_legado
 from game import settings as settings_legado
 from game import theme as theme_legado
-from src.core import constants
-from src.core import settings
+from src.core import constants, settings
 from src.infrastructure.graphics import theme
 from src.infrastructure.ui import layout
 

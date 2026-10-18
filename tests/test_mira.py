@@ -6,12 +6,14 @@ from unittest.mock import MagicMock, patch
 
 import pygame
 
-from src.core.constants import EstadoJogo
 from src.core import settings
+from src.core.constants import EstadoJogo
 from src.runtime.application.core import Jogo
 from src.runtime.domain.entities.player import Jogador
 from src.runtime.domain.systems.aiming import (
-    angulo_para_alvo, direcao_para_alvo, indice_sprite_direcional,
+    angulo_para_alvo,
+    direcao_para_alvo,
+    indice_sprite_direcional,
 )
 
 

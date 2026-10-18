@@ -19,9 +19,8 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if RAIZ not in sys.path:
     sys.path.insert(0, RAIZ)
 
-import pytest  # noqa: E402
-
 import pygame  # noqa: E402
+import pytest  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

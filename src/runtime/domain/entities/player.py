@@ -33,12 +33,14 @@ from src.infrastructure.graphics.comic_pipeline import preparar_rotacoes
 from src.infrastructure.graphics.comic_theme import OpcoesVisuais, opcoes_atuais
 from src.runtime.domain.entities.weapons import ARMARIA, Projetil
 from src.runtime.domain.systems.aiming import (
-    angulo_para_alvo, direcao_para_alvo, dispersar_direcao, indice_sprite_direcional,
+    angulo_para_alvo,
+    direcao_para_alvo,
+    dispersar_direcao,
+    indice_sprite_direcional,
 )
 from src.runtime.infrastructure.assets import carregar_imagem_alpha
 from src.runtime.infrastructure.graphics.cel_shading import (
     circulo_com_contorno,
-    clarear_cor,
     contorno_poligono,
     desenhar_highlight,
     desenhar_sombra_chapada,
@@ -47,13 +49,13 @@ from src.runtime.infrastructure.graphics.cel_shading import (
     sprite_com_contorno,
 )
 from src.runtime.infrastructure.graphics.geometry import losango
+from src.runtime.infrastructure.graphics.ship_sprites import gerar_quadros_direcionais
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_circulo,
     desenhar_glow,
     desenhar_poligono,
     linha_suave,
 )
-from src.runtime.infrastructure.graphics.ship_sprites import gerar_quadros_direcionais
 
 if TYPE_CHECKING:
     from src.runtime.domain.world.particles import SistemaParticulas

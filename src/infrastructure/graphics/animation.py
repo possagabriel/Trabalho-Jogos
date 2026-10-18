@@ -5,7 +5,7 @@ without coupling to any specific rendering system.
 """
 
 import math
-from typing import Callable, Optional, Tuple
+from typing import Callable, Tuple
 
 
 def tween_linear(inicio: float, fim: float, progresso: float) -> float:
