@@ -52,6 +52,10 @@ python main.py
 Sem aceleração OpenGL, instale apenas com `python -m pip install -e .`; o jogo
 usa automaticamente o renderizador de CPU e os perfis de desempenho.
 
+Em **Configurações**, o acabamento comic da GPU permite ajustar intensidade,
+contorno, quantidade de tons, hachuras, grão e saturação. A opção **Preservar
+interface** mantém HUD e textos fora do filtro e vem ligada por padrão.
+
 Sem áudio/vídeo (CI, servidores, debugging):
 
 ```bash
@@ -512,6 +516,11 @@ avançando níveis, desenho dos 6 cenários e mapeamento nível→cenário.
 O estilo comic inclui contornos em cache, tons chapados, hachuras, papel,
 retícula, bursts e UI angular. Em **Configurações → Estilo visual**, alterne
 entre **COMIC** e **ORIGINAL**. **Detalhe comic** oferece BAIXA/MEDIA/ALTA,
-com toggles para texturas e tremida.
+com toggles para texturas e tremida. Quando a aceleração OpenGL está disponível,
+**Shader GPU** acrescenta posterização, contornos Sobel, hachuras e grão ao quadro
+final; **Intensidade shader** controla a força do efeito em tempo real. Se o driver
+não aceitar GLSL 1.20, a apresentação continua normalmente sem o filtro.
+O Lobby de fases também usa o fundo impresso, lettering com contorno, miniaturas
+posterizadas e painéis angulares do estilo comic.
 
 Veja [pipeline visual, screenshots, testes e custos medidos](docs/visual/README.md).

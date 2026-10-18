@@ -58,7 +58,10 @@ class OpcoesVisuais:
         return self.estilo == "COMIC"
 
 
-def carregar_opcoes(config: Mapping[str, Any] | Any) -> OpcoesVisuais:
+def carregar_opcoes(
+    config: Mapping[str, Any] | Any,
+    acabamento_gpu: bool = False,
+) -> OpcoesVisuais:
     """Valida valores sem modificar ou gravar a configuração recebida.
 
     Args:
@@ -77,11 +80,20 @@ def carregar_opcoes(config: Mapping[str, Any] | Any) -> OpcoesVisuais:
     if qualidade not in ("BAIXA", "MEDIA", "ALTA"):
         qualidade = "MEDIA"
     detalhes = qualidade != "BAIXA"
+    # O shader substitui papel/grao e hachuras no quadro final. Desliga-las
+    # aqui quando a GPU esta efetivamente ativa para evitar processar e
+    # escurecer o mesmo efeito duas vezes. Contornos locais e reticula dos
+    # sprites continuam no CPU porque fazem parte da direcao de arte.
+    papel = detalhes and ler("comic_papel", True) is True
+    hachuras = detalhes and ler("comic_hachuras", True) is True
+    if acabamento_gpu:
+        papel = papel and float(ler("grao_shader", 0.35) or 0) <= 0
+        hachuras = hachuras and ler("hachuras_shader", True) is not True
     return OpcoesVisuais(
         estilo, qualidade,
-        detalhes and ler("comic_papel", True) is True,
+        papel,
         detalhes and ler("comic_halftone", True) is True,
-        detalhes and ler("comic_hachuras", True) is True,
+        hachuras,
         qualidade == "ALTA" and ler("line_boil", False) is True,
     )
 
@@ -96,9 +108,12 @@ def opcoes_atuais() -> OpcoesVisuais:
 
 
 @contextmanager
-def usar_visual(config: Mapping[str, Any] | Any) -> Iterator[OpcoesVisuais]:
+def usar_visual(
+    config: Mapping[str, Any] | Any,
+    acabamento_gpu: bool = False,
+) -> Iterator[OpcoesVisuais]:
     """Ativa o estilo durante um desenho e restaura mesmo em caso de erro."""
-    opcoes = carregar_opcoes(config)
+    opcoes = carregar_opcoes(config, acabamento_gpu=acabamento_gpu)
     token = _OPCOES.set(opcoes)
     try:
         yield opcoes

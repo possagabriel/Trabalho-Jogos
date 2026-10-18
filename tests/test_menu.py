@@ -22,7 +22,9 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
 
 import pygame  # noqa: E402
+import pytest  # noqa: E402
 
+from game import phase_select  # noqa: E402
 from game.config import ALTURA, LARGURA  # noqa: E402
 from game.core import Jogo  # noqa: E402
 from game.layout import Layout  # noqa: E402
@@ -353,6 +355,65 @@ def test_lobby_retomar_fase_e_nivel_salvos():
     assert campanha["fase_atual"] == "identidade"
 
 
+def test_lobby_usa_carteira_viva_e_sincroniza_compra():
+    jogo, menu = novo_menu()
+    tela = menu.phase_screen
+    jogo.progresso.jogador["moedas"] = 25
+    jogo.loja.moedas = 600
+
+    assert tela._saldo_moedas() == 600
+    with mock.patch.object(jogo.progresso, "salvar_arquivo", return_value=True):
+        assert tela._buy_upgrade(0) is True
+
+    assert jogo.loja.moedas == 300
+    assert jogo.progresso.jogador["moedas"] == 300
+    assert jogo.progresso.jogador["melhorias"]["blindagem"] == 1
+
+
+def test_lobby_desfaz_compra_quando_save_falha():
+    jogo, menu = novo_menu()
+    tela = menu.phase_screen
+    jogo.loja.moedas = 500
+    jogo.progresso.sincronizar_loja(jogo.loja)
+
+    with mock.patch.object(jogo.progresso, "salvar_arquivo", return_value=False):
+        assert tela._buy_upgrade(1) is False
+
+    assert jogo.loja.moedas == 500
+    assert jogo.progresso.jogador["moedas"] == 500
+    assert jogo.progresso.jogador["melhorias"]["motor"] == 0
+
+
+def test_melhorias_compradas_no_lobby_afetam_nova_partida():
+    jogo, _ = novo_menu()
+    jogo.progresso.jogador["melhorias"] = {"blindagem": 2, "motor": 3}
+
+    jogo.progressao_controller.novo_jogo("Piloto", zerar_estado=False)
+
+    assert jogo.jogador.vida == 7
+    assert jogo.jogador.max_vida == 10
+    assert jogo.jogador.melhorias["blindagem"] == 2
+    assert jogo.jogador.melhorias["motor"] == 3
+    assert jogo.jogador.multiplicador_velocidade == pytest.approx(1.3)
+
+
+def test_lobby_comic_usa_fundo_lettering_e_paineis_de_tinta():
+    jogo, menu = novo_menu()
+    tela = pygame.Surface((LARGURA, ALTURA))
+    lobby = menu.phase_screen
+
+    with usar_visual({"estilo_visual": "COMIC", "qualidade_comic": "MEDIA"}):
+        with mock.patch.object(
+            phase_select, "desenhar_fundo", wraps=phase_select.desenhar_fundo,
+        ) as fundo, mock.patch.object(
+            phase_select, "painel_tinta", wraps=phase_select.painel_tinta,
+        ) as paineis:
+            lobby.draw(tela)
+
+    fundo.assert_called_once()
+    assert paineis.call_count >= len(lobby.phases) + 2
+
+
 def test_cancelar_novo_jogo_preserva_campanha():
     jogo, menu = novo_menu()
     campanha = jogo.progresso.jogador["progresso_campanha"]
@@ -524,7 +585,9 @@ def test_desenhar_todas_as_telas():
     jogo, menu = novo_menu()
     tela = pygame.Surface((LARGURA, ALTURA))
     jogo.recordes = []
-    for subestado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
+    for subestado in (
+        "MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG", "FASES",
+    ):
         menu.subestado = subestado
         menu.atualizar()
         menu.desenhar(tela)

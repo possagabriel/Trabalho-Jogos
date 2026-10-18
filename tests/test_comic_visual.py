@@ -148,6 +148,67 @@ def test_menu_alterna_visual_e_restauracao_sem_modificar_controles():
     assert jogo.config.controles == controles
 
 
+def test_menu_controla_shader_e_intensidade_em_tempo_real():
+    from src.runtime.application.core import Jogo
+
+    jogo = Jogo()
+    menu = jogo.menu
+    indice_shader = next(i for i, linha in enumerate(menu._linhas_config())
+                          if linha[1] == "shader_comic")
+    indice_intensidade = next(i for i, linha in enumerate(menu._linhas_config())
+                              if linha[1] == "intensidade_shader")
+    with patch.object(jogo.config, "salvar"):
+        menu.config_selecao = indice_shader
+        anterior = jogo.config["shader_comic"]
+        menu._ajustar_config(1)
+        assert jogo.config["shader_comic"] is not anterior
+
+        menu.config_selecao = indice_intensidade
+        jogo.config["intensidade_shader"] = 0.98
+        menu._ajustar_config(1)
+        assert jogo.config["intensidade_shader"] == 1.0
+        menu._aplicar_slider(indice_intensidade, 0.42)
+        assert jogo.config["intensidade_shader"] == 0.42
+
+
+def test_gpu_evitar_repetir_grao_e_hachura_do_cpu():
+    opcoes = carregar_opcoes({
+        "estilo_visual": "COMIC",
+        "qualidade_comic": "ALTA",
+        "comic_papel": True,
+        "comic_hachuras": True,
+        "grao_shader": 0.5,
+        "hachuras_shader": True,
+    }, acabamento_gpu=True)
+
+    assert opcoes.papel is False
+    assert opcoes.hachuras is False
+    assert opcoes.halftone is True
+
+
+def test_menu_controla_parametros_avancados_do_shader():
+    from src.runtime.application.core import Jogo
+
+    jogo = Jogo()
+    menu = jogo.menu
+    indices = {tipo: i for i, (_, tipo) in enumerate(menu._linhas_config())}
+    with patch.object(jogo.config, "salvar"):
+        menu.config_selecao = indices["tons_shader"]
+        menu._ajustar_config(1)
+        assert jogo.config["tons_shader"] == 4
+
+        menu.config_selecao = indices["preservar_interface"]
+        menu._ajustar_config(1)
+        assert jogo.config["preservar_interface"] is False
+
+        menu._aplicar_slider(indices["contorno_shader"], 0.25)
+        menu._aplicar_slider(indices["grao_shader"], 0.6)
+        menu._aplicar_slider(indices["saturacao_shader"], 0.8)
+        assert jogo.config["contorno_shader"] == 0.25
+        assert jogo.config["grao_shader"] == 0.6
+        assert jogo.config["saturacao_shader"] == 1.3
+
+
 def test_asset_ausente_tem_fallback_procedural():
     from src.runtime.domain.entities import player
 
