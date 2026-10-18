@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `PREENCHE` preserva a área jogável em 16:9 e estende somente o fundo decorativo.
 - Configurações e README explicam que as bordas adicionais não ampliam o campo de jogo.
+- Flash e fade de transição também cobrem as faixas decorativas; a apresentação reutiliza
+  buffers de escala e de fundo, e as bordas ficam fora do shake da câmera.
 
 ## [1.5.0] - 2026-10-18
 

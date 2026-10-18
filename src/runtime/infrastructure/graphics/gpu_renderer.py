@@ -33,6 +33,7 @@ try:
         GL_MODELVIEW,
         GL_ONE_MINUS_SRC_ALPHA,
         GL_PROJECTION,
+        GL_QUADS,
         GL_RGBA,
         GL_SRC_ALPHA,
         GL_STATIC_DRAW,
@@ -390,9 +391,51 @@ class ApresentadorGPU:
         if mistura:
             glDisable(GL_BLEND)
 
+    def _desenhar_efeito_borda(self, destino, tamanho_janela, efeito):
+        """Desenha um efeito translucido nas faixas externas da cena."""
+        if efeito is None:
+            return
+        largura, altura = tamanho_janela
+        x, y, w, h = destino
+        esquerda, topo = max(0, x), max(0, y)
+        direita, base = min(largura, x + w), min(altura, y + h)
+        retangulos = []
+        if topo > 0:
+            retangulos.append((0, 0, largura, topo))
+        if base < altura:
+            retangulos.append((0, base, largura, altura - base))
+        if esquerda > 0 and base > topo:
+            retangulos.append((0, topo, esquerda, base - topo))
+        if direita < largura and base > topo:
+            retangulos.append((direita, topo, largura - direita, base - topo))
+        if not retangulos:
+            retangulos.append((0, 0, largura, altura))
+
+        cor, alfa = efeito
+        glViewport(0, 0, largura, altura)
+        glUseProgram(0)
+        glDisable(GL_TEXTURE_2D)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glColor4f(*(canal / 255 for canal in cor), alfa / 255)
+        glBegin(GL_QUADS)
+        for rx, ry, rw, rh in retangulos:
+            esquerda_ndc = 2 * rx / largura - 1
+            direita_ndc = 2 * (rx + rw) / largura - 1
+            topo_ndc = 1 - 2 * ry / altura
+            base_ndc = 1 - 2 * (ry + rh) / altura
+            glVertex2f(esquerda_ndc, base_ndc)
+            glVertex2f(direita_ndc, base_ndc)
+            glVertex2f(direita_ndc, topo_ndc)
+            glVertex2f(esquerda_ndc, topo_ndc)
+        glEnd()
+        glDisable(GL_BLEND)
+        glEnable(GL_TEXTURE_2D)
+        glColor4f(1.0, 1.0, 1.0, 1.0)
+
     def apresentar(
         self, superficie, destino, tamanho_janela, cor_fundo,
-        interface=None, fundo=None,
+        interface=None, fundo=None, efeito_borda=None,
     ):
         """Apresenta fundo decorativo, cena 16:9 e interface opcional."""
         largura, altura = tamanho_janela
@@ -411,6 +454,7 @@ class ApresentadorGPU:
         if interface is not None and self.preservar_interface:
             self._desenhar_textura(
                 self.textura_interface, intensidade=0.0, mistura=True)
+        self._desenhar_efeito_borda(destino, tamanho_janela, efeito_borda)
 
     def liberar(self):
         """Libera objetos enquanto o contexto OpenGL ainda esta ativo."""

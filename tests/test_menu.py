@@ -25,7 +25,7 @@ import pygame  # noqa: E402
 import pytest  # noqa: E402
 
 from game import phase_select  # noqa: E402
-from game.config import ALTURA, LARGURA  # noqa: E402
+from game.config import ALTURA, LARGURA, EstadoJogo  # noqa: E402
 from game.core import Jogo  # noqa: E402
 from game.layout import Layout  # noqa: E402
 from game.menu import MenuPrincipal  # noqa: E402
@@ -575,6 +575,7 @@ def test_preenche_estende_fundo_sem_ampliar_cena_jogavel(tamanho):
     jogo = Jogo()
     jogo.janela = pygame.Surface(tamanho)
     jogo.config["aspecto"] = "PREENCHE"
+    jogo.fade = 0
     jogo.tela.fill((220, 30, 40))
     jogo.tela_ui.fill((0, 0, 0, 0))
     jogo._obter_fundo_preenche = mock.Mock(
@@ -592,6 +593,72 @@ def test_preenche_estende_fundo_sem_ampliar_cena_jogavel(tamanho):
     borda = (0, tamanho[1] // 2)
     if not caixa.collidepoint(borda):
         assert jogo.janela.get_at(borda)[:3] == (20, 170, 60)
+
+
+def test_clique_na_borda_decorativa_nao_aciona_opcao_do_menu():
+    jogo, menu = novo_menu()
+    jogo.janela = pygame.Surface((2560, 1080))
+    jogo.config["aspecto"] = "PREENCHE"
+    menu.subestado = "MENU"
+    menu.opcao_selecionada = 0
+    estado_anterior = menu.subestado
+
+    menu.tratar_eventos(pygame.event.Event(
+        pygame.MOUSEBUTTONDOWN, {"button": 1, "pos": (80, 540)}))
+
+    assert menu.subestado == estado_anterior
+    assert menu.opcao_selecionada == 0
+
+
+def test_ajuste_de_tela_aplica_zoom_e_offset_no_modo_preenche():
+    jogo, menu = novo_menu()
+    jogo.janela = pygame.Surface((2560, 1080))
+    jogo.config["aspecto"] = "PREENCHE"
+    jogo.config["ajuste_escala"] = 1.0
+    jogo.config["ajuste_off_x"] = 0
+    jogo.config["ajuste_off_y"] = 0
+
+    menu._tecla_ajuste(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_w}))
+    menu._tecla_ajuste(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RIGHT}))
+
+    escala, off_x, off_y = jogo._transformacao_janela()
+    assert escala == pytest.approx(1.5 * 1.01)
+    assert off_x == pytest.approx(324)
+    assert off_y == 0
+    ponto = (640, 360)
+    janela = (ponto[0] * escala + off_x, ponto[1] * escala + off_y)
+    assert menu._pos_logica(janela) == pytest.approx(ponto, abs=1)
+
+
+def test_preenche_900x700_usa_bordas_verticais_e_mira_fora_delimitada():
+    jogo, menu = novo_menu()
+    jogo.janela = pygame.Surface((900, 700))
+    jogo.config["aspecto"] = "PREENCHE"
+    jogo.config["mira_ativa"] = True
+    jogo.estado = EstadoJogo.JOGANDO
+    jogo.fade = 0
+    jogo.tela.fill((220, 30, 40))
+    jogo.tela_ui.fill((0, 0, 0, 0))
+    fundo = pygame.Surface((900, 700))
+    fundo.fill((20, 170, 60))
+    jogo._obter_fundo_preenche = mock.Mock(return_value=fundo)
+
+    jogo._apresentar()
+    escala, off_x, off_y = jogo._transformacao_janela()
+    destino = pygame.Rect(round(off_x), round(off_y),
+                          round(LARGURA * escala), round(ALTURA * escala))
+    assert destino.width / destino.height == pytest.approx(16 / 9, abs=0.002)
+    assert destino.left == 0 and destino.right == 900
+    assert destino.top > 0 and destino.bottom < 700
+    assert jogo.janela.get_at((450, 20))[:3] == (20, 170, 60)
+    assert all(abs(valor - esperado) <= 4 for valor, esperado in zip(
+        jogo.janela.get_at(destino.center)[:3], (220, 30, 40)))
+
+    with mock.patch("pygame.mouse.get_pos", return_value=(450, 20)):
+        assert jogo.posicao_mira() is None
+    with mock.patch("pygame.mouse.get_pos", return_value=destino.center):
+        assert jogo.posicao_mira() == (640, 360)
+    assert menu._pos_logica(destino.center) == pytest.approx((640, 360), abs=1)
 
 
 def test_selecao_fases_responsiva_e_cacheada():

@@ -16,9 +16,24 @@
   e 3,284/3,461 ms com avanço; a baseline era 1,884/2,211 ms e 3,831/4,836 ms.
   O benchmark mede mundo e entidades, não a apresentação; as médias variaram
   para baixo e não indicam custo do novo preenchimento decorativo.
-  Ruff completo apontou 275 problemas já presentes no repositório (130 F401,
-  72 E741, 54 I001, 8 E501, 6 F841, 5 W292). Nos seis arquivos tocados, as
-  regras restantes após excluir esses padrões legados passaram sem ocorrências.
+  Complemento: foram adicionados testes para clique nas bordas, flash/fade em
+  tela inteira, shake, Ajustar Tela em PREENCHE, redimensionamento/tela cheia e
+  a geometria em 900x700. A suíte passou com 564 testes e 1 skip. Os cinco
+  arquivos Python alterados passam em todas as regras configuradas do Ruff
+  (E, F, I, W), sem regras ignoradas nesses arquivos. A verificação global
+  encontrou 213 problemas preexistentes: 113 F401, 50 I001, 31 E741, 8 E501,
+  6 F841 e 5 W292. Recomendo limpá-los em `chore/ruff-baseline`, sem adicionar
+  exceções globais ao `pyproject.toml`.
+- **Apresentação:** em SDL dummy, 7 rodadas de 120 quadros, PREENCHE/COMIC/MEDIA;
+  2560x1080: média 8,221 ms, p95 9,500 ms, desvio das médias de rodada 0,160 ms
+  (faixa 8,009–8,448); 1920x1080: 7,475/8,694 ms, desvio 0,125 ms
+  (7,335–7,714); 900x700: 3,432/4,147 ms, desvio 0,087 ms (3,366–3,606).
+  A superfície de borda manteve a mesma identidade durante as rodadas; seus
+  pixels ocupam 10,55 MiB, 7,91 MiB e 2,40 MiB, respectivamente. O conteúdo é
+  repopulado quando muda a cena/estilo ou o tamanho, sem alocação por quadro.
+  O benchmark do mundo não foi afetado por esta etapa; a variação entre as
+  rodadas antes/depois foi 0,090/0,020 ms sem avanço e 0,059/0,088 ms com avanço
+  (desvio das médias, respectivamente), portanto a diferença observada é ruído.
 
 ## Fase 4 — Perfis de jogador (1.5.0)
 
