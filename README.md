@@ -182,6 +182,23 @@ usuário. Configurações antigas recebem os padrões automaticamente:
 | `avanco_desvio_parado` | `0.04` | Fração lenta aplicada às camadas distantes no boss. |
 | `avanco_miniboss_percentual` | `0.5` | Velocidade no miniboss: de `0` a `1`. |
 | `avanco_miniboss_tipos` | `{}` | Exceções por chave, por exemplo `{"eco": 0.25}`. |
+| `avanco_marcos` | `true` | Ativa marcos procedurais de cenário e o destino visual de boss. |
+| `avanco_evolucao_paleta` | `true` | Varia cor, brilho e densidade durante o nível. |
+| `avanco_ritmo_variavel` | `true` | Liga pequenas variações e passagens visuais. |
+| `avanco_marco_tamanho_max` | `420` | Maior lado de um marco em pixels; a qualidade também impõe um teto. |
+| `avanco_semente` | `null` | Sorteio por partida; use um inteiro para reproduzir testes. |
+| `avanco_ritmo_intervalo` | `8.0` | Intervalo das variações de velocidade, em segundos. |
+| `avanco_ritmo_variacao` | `0.08` | Limite da variação de velocidade: `0.08` representa 8%. |
+| `avanco_ritmo_passagem` | `2.5` | Duração máxima de uma passagem acelerada, em segundos. |
+| `avanco_destino_entrada_s`, `avanco_destino_saida_s` | `1.5`, `1.0` | Duração da aproximação e saída do destino de boss. |
+| `avanco_progresso_suavizacao` | `3.0` | Velocidade de interpolação do indicador, limitada de `0.1` a `8`. |
+
+Os catálogos de cada dimensão definem tipos, cores, profundidade, intervalos,
+curva, extremos de brilho e densidade. A qualidade limita os marcos simultâneos
+a 1, 2 ou 3 em `BAIXA`, `MEDIA` e `ALTA`, com tamanhos máximos de 240, 360 e
+480 pixels antes do limite global configurável. Os sprites cartoon usam
+contorno grosso, cores menos saturadas e opacidade reduzida; são desenhados
+antes das entidades, projéteis, nave e mira.
 
 Para observar a parada sem avançar cinco níveis, inicie uma partida de teste
 diretamente no boss do nível 5:
@@ -193,6 +210,16 @@ python -c 'from src.runtime.application.core import Jogo; jogo = Jogo(); jogo._n
 Pressione **F3** para conferir `FREANDO` → `PARADO`. Ao derrotá-lo, o estado
 passa por `ACELERANDO` e retorna a `AVANCANDO`. A medição reproduzível do mundo
 visual com 60 inimigos está em `python -m tools.benchmark_scroll --quadros 120`.
+O F3 também mostra progresso monotônico do nível, fator de evolução, marco
+atual, próximos sorteios e semente da partida. O benchmark informa média, p95 e
+memória de cache dos marcos nas três qualidades.
+
+Na medição anterior a esta alteração, o parallax com 60 inimigos marcou média
+de 4,819 ms e p95 de 6,372 ms. Após a alteração, com o mesmo Linux x86_64,
+Python 3.14.8, pygame-ce 2.5.8, SDL dummy, 1280×720, COMIC/MEDIA, 120 quadros e
+3 repetições, marcou média de 5,421 ms e p95 de 8,850 ms. O cache procedural
+mediu 435.000 bytes em `BAIXA`, 610.092 em `MEDIA` e 753.200 em `ALTA` para a
+dimensão 1. As superfícies são pré-renderizadas durante a preparação do fundo.
 
 ### Backup e transferência de progresso
 

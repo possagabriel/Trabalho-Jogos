@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-18
+
+### Added
+- Marcos procedurais de percurso por dimensão, com sorteio reproduzível, pool
+  limitado por qualidade, evolução visual e destino de chegada para bosses.
+- Progresso de nível suavizado, monotônico e visível no F3, junto da semente e
+  da agenda de marcos.
+- Opções globais para marcos, evolução visual e ritmo variável, compatíveis com
+  `settings.json` antigos.
+
+### Changed
+- A troca de dimensão faz fade dos marcos antigos e novos sem alterar a
+  transição de combate existente.
+- Versão do projeto elevada de 1.5.0 para 1.6.0.
+
 ## [1.5.0] - 2026-10-18
 
 ### Added
