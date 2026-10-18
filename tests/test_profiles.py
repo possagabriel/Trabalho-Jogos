@@ -103,11 +103,13 @@ def test_hangar_novelty_is_one_time_after_presentation_despite_balance_changes(
     service.select(profile.id)
     service.credit(500)
 
+    assert service.refresh_hangar_novelties() == ["fenix"]
+    service.spend(500)
     assert service.novelty_ids("hangar") == ["fenix"]
     assert service.acknowledge_novelties("hangar") == ["fenix"]
-    service.spend(500)
     service.credit(500)
     assert service.novelty_ids("hangar") == []
+    assert service.active.progress["novidades_pendentes"]["hangar"] == []
 
 
 def test_schema_v1_gets_novelty_defaults_and_transfer_preserves_state(
@@ -119,12 +121,19 @@ def test_schema_v1_gets_novelty_defaults_and_transfer_preserves_state(
         "progress": {"moedas": 12},
     })
     assert old.progress["novidades_vistas"] == {"memorias": [], "hangar": []}
+    assert old.progress["novidades_pendentes"] == {"hangar": []}
+    version_two = Profile.from_dict({
+        "schema_version": 2, "id": "old-v2", "name": "Antigo V2",
+        "progress": {"novidades_vistas": {"memorias": [], "hangar": ["fenix"]}},
+    })
+    assert version_two.progress["novidades_pendentes"] == {"hangar": []}
 
     profile = service.create("Transferência")
     service.select(profile.id)
     service.active.progress["novidades_vistas"] = {
         "memorias": ["introducao"], "hangar": ["fenix"],
     }
+    service.active.progress["novidades_pendentes"] = {"hangar": ["cristal"]}
     service.flush()
     exported = tmp_path / "transfer.json"
     assert service.export_active(exported)
@@ -133,6 +142,25 @@ def test_schema_v1_gets_novelty_defaults_and_transfer_preserves_state(
     result = imported.import_file(exported)
     assert result.progress["novidades_vistas"] == {
         "memorias": ["introducao"], "hangar": ["fenix"],
+    }
+    assert result.progress["novidades_pendentes"] == {"hangar": ["cristal"]}
+
+
+def test_menu_summaries_use_profile_service_and_continue_start_point(service):
+    assert service.menu_profile_summary() is None
+    assert service.continue_summary() is None
+    profile = service.create("Resumo")
+    service.select(profile.id)
+    service.update_progress(
+        dimensao_maxima=5, nivel_maximo=18, bosses_por_tipo={"HEXAGONO": 2},
+        moedas=420, tempo_total=7325,
+    )
+    assert service.menu_profile_summary() == {
+        "name": "Resumo", "skin_id": "padrao", "dimension": 5,
+        "bosses_defeated": 2, "coins": 420, "play_time": 7325,
+    }
+    assert service.continue_summary() == {
+        "dimension": 1, "level": 1, "total_play_time": 7325,
     }
 
 
