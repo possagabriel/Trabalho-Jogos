@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Protocol
 
 from src.domain.profiles import Profile
@@ -9,6 +10,8 @@ from src.domain.profiles import Profile
 
 class ProfileRepository(Protocol):
     """Contrato utilizado pelo serviço de perfis."""
+
+    data_dir: Path
 
     def load(self, profile_id: str) -> Profile: ...
 
@@ -19,3 +22,5 @@ class ProfileRepository(Protocol):
     def write_index(self, index: dict[str, Any]) -> bool: ...
 
     def delete(self, profile_id: str) -> None: ...
+
+    def clean_orphans(self, known_ids: set[str]) -> None: ...

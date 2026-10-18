@@ -207,3 +207,26 @@ def test_delete_damaged_profile_by_displayed_name(tmp_path):
     assert damaged.damaged
     service.delete(damaged.id, damaged.name)
     assert service.list_profiles() == []
+
+
+def test_cli_transfer_uses_profiles_without_legacy_writes(tmp_path, monkeypatch):
+    from main import cli
+
+    monkeypatch.setenv("INCARNATE_DATA_DIR", str(tmp_path))
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    service.migrate_legacy()
+    profile = service.create("Ana")
+    service.select(profile.id)
+    service.credit(8)
+    exported = tmp_path / "portable.json"
+    assert cli(["--export-save", str(exported)]) == 0
+    assert cli(["--import-save", str(exported)]) == 0
+    recovered = ProfileService(JsonProfileRepository(tmp_path))
+    assert [p.progress["moedas"] for p in recovered.list_profiles()] == [8, 8]
+    assert not (tmp_path / "save.json").exists()
+    assert not (tmp_path / "records.json").exists()
+    old_file = tmp_path / "old-save.json"
+    old_file.write_text('{"jogador":{"moedas":13}}', encoding="utf-8")
+    assert cli(["--import-save", str(old_file)]) == 0
+    assert old_file.read_text(encoding="utf-8") == '{"jogador":{"moedas":13}}'
+    assert not (tmp_path / "save.json").exists()
