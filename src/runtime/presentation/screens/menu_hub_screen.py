@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.infrastructure.graphics.theme import tema_atual
+from src.infrastructure.graphics.theme import MENU_RESUMO_CONTINUAR_FONT_SIZE, tema_atual
 
 if TYPE_CHECKING:
     from src.runtime.presentation.menu import MenuPrincipal
@@ -19,6 +19,7 @@ class MenuHubScreen:
         self.menu = menu
         self.kind = kind
         self.selection = 0
+        self._text_cache: dict[tuple, pygame.Surface] = {}
 
     @property
     def entries(self) -> tuple[tuple[str, str], ...]:
@@ -34,8 +35,11 @@ class MenuHubScreen:
 
     def _panel(self) -> pygame.Rect:
         layout = self.menu.layout
-        width = layout.px(700)
-        height = layout.px(355 if self.kind == "PERFIL" else 285)
+        narrow = self.menu._layout_4_3()
+        width = layout.px(620 if narrow else 700)
+        height = layout.px((350 if self.kind == "PERFIL" else 280)
+                           if narrow else
+                           (355 if self.kind == "PERFIL" else 285))
         return pygame.Rect(
             layout.x(0.5) - width // 2,
             layout.y(0.5) - height // 2,
@@ -46,10 +50,11 @@ class MenuHubScreen:
     def _rects(self) -> list[pygame.Rect]:
         panel = self._panel()
         layout = self.menu.layout
-        row_height = layout.px(62)
-        margin = layout.px(32)
-        gap = layout.px(14)
-        top = panel.y + layout.px(104)
+        narrow = self.menu._layout_4_3()
+        row_height = layout.px(58 if narrow else 62)
+        margin = layout.px(28 if narrow else 32)
+        gap = layout.px(10 if narrow else 14)
+        top = panel.y + layout.px(96 if narrow else 104)
         return [pygame.Rect(
             panel.x + margin,
             top + index * (row_height + gap),
@@ -85,7 +90,26 @@ class MenuHubScreen:
             pygame.draw.rect(surface, color, rect, 3 if selected else 1,
                              border_radius=10)
             text = menu.fonte_opcao.render(label, True, color)
-            surface.blit(text, text.get_rect(center=rect.center))
+            summary = (menu.jogo.profile_service.continue_summary()
+                       if action == "continuar" and not disabled and selected else None)
+            if summary:
+                surface.blit(text, text.get_rect(
+                    center=(rect.centerx, rect.centery - menu.layout.px(10))))
+                total = summary["total_play_time"]
+                hours, remainder = divmod(total, 3600)
+                minutes = remainder // 60
+                short = (f"Dimensão {summary['dimension']} · Nível {summary['level']}"
+                         f" · tempo total {hours:02d}h{minutes:02d}")
+                font = menu.layout.fonte_texto(MENU_RESUMO_CONTINUAR_FONT_SIZE)
+                key = (id(font), short, (210, 220, 240))
+                detail = self._text_cache.get(key)
+                if detail is None:
+                    detail = font.render(short, True, (210, 220, 240))
+                    self._text_cache[key] = detail
+                surface.blit(detail, detail.get_rect(
+                    center=(rect.centerx, rect.centery + menu.layout.px(15))))
+            else:
+                surface.blit(text, text.get_rect(center=rect.center))
             if self.kind == "PERFIL" and action == "memorias" \
                     and menu._novidades("memorias"):
                 self._badge(surface, rect, theme["terciaria"])

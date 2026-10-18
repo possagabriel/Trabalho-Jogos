@@ -1,5 +1,31 @@
 # Registro de uso de IA
 
+## Menu principal — etapa 3: cartão e layout responsivo
+
+- **Pedido:** adicionar cartão de perfil, resumo de Continuar, selos de novidade,
+  composição 4:3 e retirar telemetria decorativa sem dados; manter ORIGINAL e
+  COMIC com a mesma estrutura antes de apresentar capturas reais.
+- **Implementação da IA:** o cartão e os resumos consultam `ProfileService`; o
+  schema v3 guarda novidades pendentes do Hangar para não reaparecerem após
+  oscilação de moedas; perfis antigos recebem defaults e exportação/importação
+  preserva os campos. O HUD conserva molduras/cantos neon e remove rótulos falsos.
+- **Decisões:** Continuar mostra Dimensão 1 / Nível 1, que é o ponto iniciado
+  pelo callback atual, e o tempo total do perfil; Lobby continua retomando o
+  checkpoint. Layout 4:3 ajusta a apresentação sem ampliar a área jogável.
+- **Verificação:** testes direcionados de perfis/menu: 122 passaram. Suíte
+  completa: 639 passaram, 1 ignorado. Ruff limpo nos nove arquivos Python
+  alterados.
+- **Capturas reais:** antes/depois em ORIGINAL e COMIC, quatro resoluções,
+  AJUSTAR e PREENCHE, menu principal e hub Jogar, com e sem save estão em
+  `/tmp/incarnate-menu-stage3-audit/`.
+- **Benchmark:** SDL dummy, ORIGINAL, 1920×1080, 40 quadros de aquecimento,
+  12 rodadas de 100 quadros. Antes: média 7,750 ms, p95 12,664 ms, desvio das
+  médias por rodada 1,129 ms. Depois: média 8,539 ms, p95 12,234 ms, desvio
+  0,474 ms. A média aumentou 10,2% e o p95 caiu 3,4%; a dispersão entre
+  rodadas ficou menor que a da referência. O benchmark mede o desenho do menu,
+  não o passo de apresentação da janela.
+- **Ajustes manuais do usuário:** nenhum informado.
+
 ## Menu principal — estrutura e dados (1.8.0)
 
 - **Pedido:** reorganizar ORIGINAL e COMIC em Jogar, Hangar, Perfil,

@@ -605,6 +605,96 @@ def test_botao_voltar_do_hub_funciona_com_mouse():
     assert menu.opcao_selecionada == 0
 
 
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_menu_principal_compartilha_hierarquia_e_cartao_nos_dois_estilos(estilo):
+    jogo, menu = novo_menu()
+    jogo.config["estilo_visual"] = estilo
+    jogo.config["resolucao"] = "900x700"
+    menu._estilo_layout_opcoes = None
+    menu._aplicar_layout_opcoes()
+    jogo.profile_service.rename(jogo.profile_service.active.id, "Árvore Estelar 9")
+    jogo.profile_service.update_progress(
+        dimensao_maxima=4, nivel_maximo=8, moedas=1200, tempo_total=5400,
+        bosses_por_tipo={"HEXAGONO": 2}, partidas_jogadas=1,
+    )
+    surface = pygame.Surface(jogo.tela_ui.get_size(), pygame.SRCALPHA)
+    with usar_visual({"estilo_visual": estilo}):
+        menu.tela_principal.desenhar_fundo_cartao(
+            surface, jogo.profile_service.menu_profile_summary())
+        menu.tela_principal.desenhar(surface)
+    rects = [item.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
+             for item in menu.opcoes]
+    assert [item.texto for item in menu.opcoes] == ROTULOS_ESPERADOS
+    assert all(item.principal == (index < 3)
+               for index, item in enumerate(menu.opcoes))
+    assert rects[0].width < menu.layout.largura
+    font = menu.layout.fonte_titulo(20)
+    name = menu.tela_principal._truncar_nome(font, "Árvore Estelar 9",
+                                             menu.layout.px(120))
+    assert name.endswith("…")
+    assert font.size(name)[0] <= menu.layout.px(120)
+
+
+def test_cartao_de_perfil_tem_estado_vazio_sem_perfil_ativo():
+    jogo, menu = novo_menu()
+    jogo.profile_service.active = None
+    surface = pygame.Surface(jogo.tela_ui.get_size(), pygame.SRCALPHA)
+    menu._estilo_layout_opcoes = None
+    menu._aplicar_layout_opcoes()
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        menu.tela_principal.desenhar_fundo_cartao(surface, None)
+        menu.tela_principal.desenhar(surface)
+    rect = pygame.Rect(*menu.tela_principal.cartao_rect())
+    assert surface.get_at(rect.center).a > 0
+
+
+def test_selos_do_menu_respeitam_servico_e_hangar_nao_reaparece():
+    jogo, menu = novo_menu()
+    service = jogo.profile_service
+    service.update_progress(
+        memorias_desbloqueadas=["introducao"], moedas=500,
+        novidades_vistas={"memorias": [], "hangar": []},
+        novidades_pendentes={"hangar": []}, skins_desbloqueadas=["padrao"],
+    )
+    surface = pygame.Surface(jogo.tela_ui.get_size(), pygame.SRCALPHA)
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        menu.tela_principal.desenhar(surface)
+    assert menu.opcoes[1].novo is True
+    assert menu.opcoes[2].novo is True
+
+    menu._abrir_perfil_hub()
+    assert service.novelty_ids("memorias") == ["introducao"]
+    menu._abrir_arquivo()
+    assert service.novelty_ids("memorias") == []
+    service.spend(500)
+    assert "fenix" in service.novelty_ids("hangar")
+    menu._abrir_loja()
+    service.credit(500)
+    assert service.novelty_ids("hangar") == []
+
+
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_layout_4_3_e_hub_continuar_mostram_resumo_real(estilo):
+    jogo, menu = novo_menu()
+    jogo.config["estilo_visual"] = estilo
+    jogo.config["resolucao"] = "900x700"
+    menu._estilo_layout_opcoes = None
+    menu._aplicar_layout_opcoes()
+    jogo.profile_service.update_progress(
+        partidas_jogadas=1, dimensao_maxima=6, nivel_maximo=22, tempo_total=3661,
+    )
+    assert menu._layout_4_3() is True
+    menu.jogar_hub.abrir()
+    menu.jogar_hub.selection = 0
+    surface = pygame.Surface(jogo.tela_ui.get_size(), pygame.SRCALPHA)
+    with usar_visual({"estilo_visual": estilo}):
+        menu.jogar_hub.desenhar(surface)
+    assert jogo.profile_service.continue_summary() == {
+        "dimension": 1, "level": 1, "total_play_time": 3661,
+    }
+    assert menu.jogar_hub._panel().width == jogo.layout.px(620)
+
+
 # ---------------------------------------------------------------------------
 # Missao nova
 # ---------------------------------------------------------------------------

@@ -9,7 +9,9 @@ cenários, efeitos, interface, sons e música gerados pelo jogo.
 
 ### Imagens do jogo
 
-![Menu ORIGINAL com hierarquia de navegação neon em 1920×1080](docs/screenshots/menu-original-1920.jpg)
+![Menu ORIGINAL com cartão de perfil em 1920×1080](docs/screenshots/menu-perfil-1920.jpg)
+![Menu COMIC com a mesma navegação e cartão de perfil](docs/screenshots/menu-comic-perfil-1920.jpg)
+![Menu ORIGINAL adaptado à janela 900×700](docs/screenshots/menu-perfil-900x700.jpg)
 ![Menu ORIGINAL em PREENCHE ultrawide 2560×1080](docs/screenshots/menu-original-ultrawide.jpg)
 ![Percurso 2D e HUD em PREENCHE](docs/screenshots/preenche-ultrawide.jpg)
 ![Seis dimensões com composições próprias](docs/screenshots/dimensoes-composicao.jpg)
@@ -142,6 +144,13 @@ separada para comprar e equipar skins. Continuar carrega o progresso persistido
 para iniciar uma missão no início da campanha (Dimensão 1, Nível 1); o Lobby
 retoma o checkpoint salvo. O resumo de Continuar mostra o início efetivo da
 missão e o tempo total acumulado pelo perfil.
+
+O menu também mostra um cartão do perfil ativo com skin equipada, dimensão
+máxima, bosses derrotados, moedas e tempo total. O selo de Perfil acompanha
+Memórias novas e só é dispensado ao abrir essa aba; o selo do Hangar registra
+uma única vez os itens que se tornaram compráveis. A composição se ajusta para
+janelas próximas de 4:3 sem ampliar a área jogável. Os cantos e linhas do HUD
+continuam decorativos, mas rótulos de telemetria sem dados reais foram removidos.
 
 ### História e cutscenes (1.4.0)
 
@@ -610,7 +619,7 @@ antigos em módulos legados; a limpeza está planejada em branch separada.
 
 O `tests/conftest.py` configura SDL dummy e `INCARNATE_DATA_DIR` temporário
 antes de importar o jogo. `SPACEFURY_DATA_DIR` continua testado como fallback
-para scripts antigos. Nesta branch, a suíte contém **603 casos: 602 passam e 1
+para scripts antigos. Nesta branch, a suíte contém **640 casos: 639 passam e 1
 teste OpenGL real é ignorado** quando não há display/driver configurado.
 
 | Arquivo(s) | Cobertura |
