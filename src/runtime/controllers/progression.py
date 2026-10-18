@@ -14,10 +14,12 @@ from src.runtime.domain.entities.enemies import composicao_onda
 from src.runtime.domain.entities.player import Jogador
 from src.runtime.domain.entities.weapons import ARMARIA
 from src.runtime.domain.systems.upgrades import MELHORIAS, aplicar_melhoria, sortear_melhorias
+from src.runtime.domain.world.landmarks import ProgressTracker
 from src.runtime.domain.world.particles import MensagemFlutuante
 from src.runtime.domain.world.scenarios import CENARIOS, Cenario, cenario_do_nivel
 from src.runtime.presentation.dimension_transition import (
-    INICIO_REVELACAO, TransicaoDimensional,
+    INICIO_REVELACAO,
+    TransicaoDimensional,
 )
 
 if TYPE_CHECKING:
@@ -30,6 +32,17 @@ class ControladorProgressao:
     def __init__(self, jogo: Jogo) -> None:
         self.jogo = jogo
         self.transicao: TransicaoDimensional | None = None
+        self.progresso_visual = ProgressTracker(
+            float(jogo.config["avanco_progresso_suavizacao"]))
+
+    def atualizar_progresso_visual(self, dt: float, concluido: bool = False) -> float:
+        """Atualiza o indicador visual sem interferir na onda ou no combate."""
+        jogo = self.jogo
+        return self.progresso_visual.atualizar(
+            len(jogo.fila_onda), len(jogo.inimigos), dt,
+            chefe_ativo=jogo.boss is not None,
+            concluido=concluido,
+        )
 
     def novo_jogo(self, nome: str, zerar_estado: bool = True) -> None:
         """Reinicia o estado efemero e prepara o primeiro nivel."""
@@ -141,6 +154,7 @@ class ControladorProgressao:
             f"NIVEL {nivel}", LARGURA // 2, ALTURA // 2, CIANO, 80))
         self.verificar_desbloqueio_arma()
         if nivel % 5 == 0:
+            self.progresso_visual.reiniciar(unidades=0, nivel_de_boss=True)
             jogo.boss = Boss(nivel, jogo.cenario)
             jogo.boss_intro = 130
             jogo.mensagens.append(MensagemFlutuante(
@@ -153,6 +167,7 @@ class ControladorProgressao:
         jogo.boss = None
         jogo.ondas_miniboss += 1
         tipos, quantidade, xs = composicao_onda(nivel, jogo.cenario.inimigos)
+        self.progresso_visual.reiniciar(unidades=quantidade)
         jogo.fila_onda = [random.choice(tipos) for _ in range(quantidade)]
         jogo.xs_onda = list(xs)
 
@@ -214,13 +229,16 @@ class ControladorProgressao:
         """Agenda o salto visual sem interromper a fila de eventos."""
         jogo = self.jogo
         jogo.sons.tocar("transicao")
+        cenario_anterior = jogo.cenario
+        if cenario_anterior.parallax is not None:
+            cenario_anterior.parallax.iniciar_saida_dimensao()
         cfg = CENARIOS[novo_id - 1]
         cor = cfg["cor_transicao"]
         jogo.mensagens.append(MensagemFlutuante(
             f"DIMENSÃO 0{novo_id} // {cfg['nome']}", LARGURA // 2,
             ALTURA // 2, cor, 140))
         jogo.particulas.salto_dimensional(LARGURA // 2, ALTURA // 2, cor)
-        self.transicao = TransicaoDimensional(jogo.cenario, cor)
+        self.transicao = TransicaoDimensional(cenario_anterior, cor)
         jogo.cenario = Cenario(novo_id)
         jogo._aplicar_qualidade_grafica()
         jogo.avanco_controller.trocar_dimensao(jogo.cenario)

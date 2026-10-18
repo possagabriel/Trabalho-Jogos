@@ -1,4 +1,4 @@
-"""Mede o desenho do combate com 60 inimigos e avanço visual ativo."""
+"""Mede o percurso visual e o combate com 60 inimigos."""
 
 from __future__ import annotations
 
@@ -53,6 +53,8 @@ def main() -> None:
 
         jogo = Jogo(sons=Mock())
         jogo.estado = "JOGANDO"
+        jogo.config["avanco_semente"] = 2026
+        jogo.avanco_controller.reiniciar(jogo.cenario)
         jogo.inimigos = [
             Inimigo("soldado" if indice % 2 else "scout", 1,
                     x=30 + (indice % 12) * 102,
@@ -61,6 +63,16 @@ def main() -> None:
         ]
         jogo.fila_onda = []
         fundo = jogo.cenario.parallax
+        if fundo._marcos and fundo._marcos._ativos:
+            marco = fundo._marcos._ativos[0]
+        elif fundo._marcos and fundo._marcos._habilitado:
+            fundo._marcos._relogio = 0.0
+            fundo._marcos._spawn(jogo.avanco_controller.modelo.velocidade_base)
+            marco = fundo._marcos._ativos[0] if fundo._marcos._ativos else None
+        else:
+            marco = None
+        if marco is not None:
+            marco.x, marco.y = LARGURA // 2, ALTURA // 3
         antigo_amostras = []
         novo_amostras = []
         for repeticao in range(max(1, argumentos.repeticoes)):
@@ -73,6 +85,18 @@ def main() -> None:
                   for amostra in antigo_amostras), 3) for chave in antigo_amostras[0]}
         novo = {chave: round(statistics.median(amostra[chave]
                 for amostra in novo_amostras), 3) for chave in novo_amostras[0]}
+        memoria_marcos = {}
+        from src.runtime.domain.world.scenarios import Cenario
+
+        for qualidade in ("BAIXA", "MEDIA", "ALTA"):
+            cenario_memoria = Cenario(1)
+            cenario_memoria.configurar_avanco(
+                qualidade, (0, 1), True, True, jogo.config, 2026)
+            bytes_cache = cenario_memoria.parallax.memoria_marcos
+            memoria_marcos[qualidade] = {
+                "bytes": bytes_cache,
+                "mebibytes": round(bytes_cache / (1024 * 1024), 3),
+            }
         print(json.dumps({
             "ambiente": {
                 "sistema": platform.platform(),
@@ -89,6 +113,7 @@ def main() -> None:
             "repeticoes": max(1, argumentos.repeticoes),
             "mundo_anterior": antigo,
             "mundo_com_avanco": novo,
+            "memoria_cache_marcos": memoria_marcos,
             "amostras_medias_ms": {
                 "anterior": [amostra["media_ms"] for amostra in antigo_amostras],
                 "com_avanco": [amostra["media_ms"] for amostra in novo_amostras],

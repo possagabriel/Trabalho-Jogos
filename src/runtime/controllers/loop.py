@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.core.constants import EstadoJogo, FPS, INCREMENTO_CARREGAMENTO
+from src.core.constants import FPS, INCREMENTO_CARREGAMENTO, EstadoJogo
 from src.core.event_bus import GameEventType, publicar_evento
 from src.runtime.application.timing import PASSO_FIXO, RelogioSimulacao
 
@@ -35,6 +35,11 @@ class ControladorLoop:
             else:
                 jogo.tempo_partida += PASSO_FIXO
                 jogo._atualizar_jogando()
+                jogo.progressao_controller.atualizar_progresso_visual(
+                    PASSO_FIXO, concluido=jogo.estado is EstadoJogo.MELHORIA)
+        elif jogo.estado is EstadoJogo.MELHORIA:
+            jogo.progressao_controller.atualizar_progresso_visual(
+                PASSO_FIXO, concluido=True)
         elif jogo.estado is EstadoJogo.CUTSCENE:
             jogo.cutscene_controller.atualizar(PASSO_FIXO)
             return
