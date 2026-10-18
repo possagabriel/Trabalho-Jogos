@@ -6,7 +6,7 @@ import logging
 import weakref
 from collections import deque
 from importlib.resources import files
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pygame
 
@@ -66,7 +66,7 @@ class ControladorCutscene:
     @property
     def ativo(self) -> bool:
         """Indica se uma cena está visível."""
-        return self.sequenciador.ativo
+        return bool(self.sequenciador.ativo)
 
     def tem_pos_boss(self, cenario_id: int) -> bool:
         """Informa ao avanço se existe cena antes da retomada."""

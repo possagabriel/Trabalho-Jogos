@@ -69,6 +69,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mira cartoon por dimensão com pulso de disparo, feedback sobre inimigos,
   toggle persistente e controle de tiro pelo mouse com fallback de teclado.
 - Overlay F3 com FPS, posição da mira, hitboxes e contagem de camadas ativas.
+- Shader GPU opcional para o estilo comic, com posterização, detecção de bordas
+  Sobel, hachuras por perfil, grão e controle de intensidade em tempo real.
+- Estado e controles do shader no menu, com fallback automático para a
+  apresentação OpenGL sem filtro ou para o renderizador de CPU.
+- Caminho moderno GLSL 3.30 com VBO/VAO e fallback GLSL 1.20, posterização por
+  luminância, hachuras/grão estáveis e controles de contorno, tons e saturação.
+- Composição separada de mundo e interface para preservar HUD, menus e textos;
+  teste OpenGL real automatizado com Mesa no CI.
 - Sete minibosses corporativos: Bastião, Espectro, Matriz, Censor, Cartógrafo,
   Eco e Cronista, com escudo por núcleos, teleporte, lacaios, inversão de
   movimento, zonas de perigo, cópia de disparos e ciclos de invulnerabilidade.
@@ -106,6 +114,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   isolada na apresentação e escalas visuais compartilhadas pela configuração.
 - Disparos direcionais apontam para a mira; Duplo e Espiral mantêm dispersão
   configurável em `settings.json`. O Íon conserva a coluna vertical.
+- O shader foi refatorado em fontes GLSL isoladas, opções imutáveis e validadas,
+  catálogo único de controles e uma única rotina de composição GPU.
+- O Lobby de fases agora usa fundo, lettering, miniaturas e painéis do estilo
+  comic, mantendo o visual legado quando o jogador seleciona ORIGINAL.
 - O workflow do instalador Windows agora usa a versão da tag ou do projeto,
   valida os binários e publica somas SHA-256 junto dos artefatos.
 - Menus secundários e telas de confirmação passaram a usar o mesmo painel
@@ -120,6 +132,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved UI components to infrastructure/ui
 
 ### Fixed
+- A loja do Lobby passou a usar a mesma carteira do Hangar, reverte a cobrança
+  se o save falhar e aplica de fato blindagem e motor comprados à nova partida.
 - Derrotar a Matriz remove os lacaios das consultas de colisão no mesmo quadro,
   evitando recompensas indevidas e falha ao processar tiros ou explosões restantes.
 

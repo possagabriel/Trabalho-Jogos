@@ -39,6 +39,7 @@ from game.powerups import PowerUp  # noqa: E402
 from game.weapons import ARMARIA, Projetil  # noqa: E402
 from src.core.settings import Configuracoes  # noqa: E402
 from src.runtime.domain.entities.player import Jogador  # noqa: E402
+from src.core.settings import OpcoesShaderComic  # noqa: E402
 
 
 def _patch_recordes():
@@ -650,7 +651,9 @@ def test_adicionar_trauma_limita_a_1():
 
 def test_interface_usa_o_canvas_logico_em_vez_da_resolucao_da_janela():
     jogo = Jogo()
-    assert jogo.tela_ui is jogo.tela
+    assert jogo.tela_ui is not jogo.tela
+    assert jogo.tela_ui.get_flags() & pygame.SRCALPHA
+    assert jogo.tela_ui.get_size() == jogo.tela.get_size()
     assert (jogo.layout.largura, jogo.layout.altura) == (LARGURA, ALTURA)
 
 
@@ -662,19 +665,60 @@ def test_hud_e_composto_no_canvas_logico_antes_da_apresentacao():
 
     jogo.render_controller.desenhar()
 
-    jogo.hud.desenhar.assert_called_once_with(jogo.tela, jogo)
+    jogo.hud.desenhar.assert_called_once_with(jogo.tela_ui, jogo)
     jogo._apresentar.assert_called_once()
 
 
-def test_apresentador_gpu_recebe_um_unico_frame_logico_e_destino_fisico():
+def test_apresentador_gpu_recebe_mundo_interface_e_destino_fisico():
     jogo = Jogo()
     jogo.janela = pygame.Surface((1920, 1080))
     jogo._apresentador_gpu = mock.Mock()
 
     jogo._apresentar()
 
+    jogo._apresentador_gpu.aplicar_opcoes_shader.assert_called_once_with(
+        OpcoesShaderComic.de_config(jogo.config))
     jogo._apresentador_gpu.apresentar.assert_called_once_with(
-        jogo.tela, (0, 0, 1920, 1080), (1920, 1080), (8, 8, 13))
+        jogo.tela, (0, 0, 1920, 1080), (1920, 1080), (8, 8, 13),
+        interface=jogo.tela_ui)
+
+
+def test_fallback_cpu_compoe_interface_sobre_o_mundo():
+    jogo = Jogo()
+    jogo.tela.fill((200, 10, 10))
+    jogo.tela_ui.fill((0, 0, 0, 0))
+    jogo.tela_ui.set_at((10, 10), (10, 220, 20, 255))
+
+    composto = jogo._quadro_composto()
+
+    assert composto.get_at((0, 0))[:3] == (200, 10, 10)
+    assert composto.get_at((10, 10))[:3] == (10, 220, 20)
+
+
+def test_gpu_processa_interface_junto_quando_preservacao_esta_desligada():
+    jogo = Jogo()
+    jogo.janela = pygame.Surface((1920, 1080))
+    jogo.config["preservar_interface"] = False
+    jogo._apresentador_gpu = mock.Mock()
+
+    jogo._apresentar()
+
+    argumentos = jogo._apresentador_gpu.apresentar.call_args
+    assert argumentos.args[0] is jogo._tela_composta
+    assert argumentos.kwargs["interface"] is None
+
+
+def test_status_do_shader_distingue_configuracao_e_fallback():
+    jogo = Jogo()
+    jogo._apresentador_gpu = None
+    assert jogo.status_shader_comic() == "SEM GPU"
+
+    jogo.config["shader_comic"] = False
+    assert jogo.status_shader_comic() == "DESLIGADO"
+
+    jogo.config["shader_comic"] = True
+    jogo.config["estilo_visual"] = "ORIGINAL"
+    assert jogo.status_shader_comic() == "INATIVO (ORIGINAL)"
 
 
 def test_canvas_logico_16_por_9_preenche_full_hd_sem_barras():

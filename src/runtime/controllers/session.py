@@ -16,6 +16,7 @@ from src.runtime.infrastructure.audio.sounds import Sons
 from src.runtime.domain.entities.weapons import Projetil
 
 if TYPE_CHECKING:
+    from src.domain.systems.profile_service import ProfileService
     from src.runtime.controllers.miniboss import ControladorMiniboss
     from src.runtime.domain.entities.minibosses import Miniboss
 
@@ -46,6 +47,7 @@ class SessaoCombate(Protocol):
     sons: Sons
     particulas: SistemaParticulas
     progresso: SistemaProgressao
+    profile_service: ProfileService
 
     def adicionar_trauma(self, quantidade: float) -> None:
         """Acrescenta tremor de tela ao feedback de combate."""
