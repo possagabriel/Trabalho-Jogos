@@ -8,11 +8,9 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.core.constants import BRANCO
-from src.infrastructure.ui.layout import CENTRO, LARGURA_BASE, ALTURA_BASE
-from src.runtime.presentation.menu_scene import texto_espacado
-from src.runtime.infrastructure.persistence.shop import LojaSkins
-from src.runtime.infrastructure.graphics.smooth import ease_out
 from src.infrastructure.graphics.theme import tema_atual
+from src.infrastructure.ui.layout import ALTURA_BASE, CENTRO, LARGURA_BASE
+from src.runtime.infrastructure.persistence.shop import LojaSkins
 from src.runtime.presentation.ui import BotaoNeon
 
 if TYPE_CHECKING:

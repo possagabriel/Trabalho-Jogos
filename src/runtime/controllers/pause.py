@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.core.constants import ALTURA, LARGURA
-from src.runtime.presentation.menu import Dialogo
 from src.core.settings import TEMAS
+from src.runtime.presentation.menu import Dialogo
 
 if TYPE_CHECKING:
     from src.runtime.application.core import Jogo

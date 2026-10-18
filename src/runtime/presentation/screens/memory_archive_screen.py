@@ -29,8 +29,8 @@ class TelaArquivoMemorias:
     def desenhar(self, tela: pygame.Surface) -> None:
         """Desenha cenas desbloqueadas na área lógica do menu."""
         menu = self.menu
-        l = menu.layout
-        painel = pygame.Rect(l.x(0.14), l.y(0.10), l.px(650), l.px(515))
+        layout = menu.layout
+        painel = pygame.Rect(layout.x(0.14), layout.y(0.10), layout.px(650), layout.px(515))
         desenhar_painel_cartoon(tela, QUANTUM_CYAN, painel)
         cabecalho = menu.fonte_cabecalho.render("ARQUIVO DE MEMÓRIAS", True, QUANTUM_CYAN)
         tela.blit(cabecalho, (painel.x + 30, painel.y + 25))
@@ -63,8 +63,8 @@ class TelaArquivoMemorias:
     def tratar_clique(self, pos: tuple[int, int]) -> None:
         """Reproduz a linha clicada, se estiver desbloqueada."""
         ids = self._ids()
-        l = self.menu.layout
-        painel_y = l.y(0.10)
+        layout = self.menu.layout
+        painel_y = layout.y(0.10)
         indice = self.inicio + (pos[1] - painel_y - 105) // 46
         if 0 <= indice < len(ids) and 0 <= indice - self.inicio < 8:
             self.selecao = indice

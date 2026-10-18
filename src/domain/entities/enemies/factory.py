@@ -11,12 +11,11 @@ from typing import Optional
 
 from src.domain.entities.enemies.base import (
     Enemy,
-    TIPOS,
     composicao_onda,
     sortear_inimigo_especial,
 )
-from src.domain.entities.enemies.types.soldier import SoldierEnemy
 from src.domain.entities.enemies.types.shooter import ShooterEnemy
+from src.domain.entities.enemies.types.soldier import SoldierEnemy
 from src.domain.entities.enemies.types.tank import TankEnemy
 
 LARGURA = 900

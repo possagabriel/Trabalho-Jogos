@@ -7,7 +7,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional
 
-
 FASES = [
     {"id": 1, "nome": "PROTOCOLO 01", "fundo": "fundo-vermelho.png", "deterioracao": 1},
     {"id": 2, "nome": "PROTOCOLO 02", "fundo": "imagem-fundo3.png", "deterioracao": 2},

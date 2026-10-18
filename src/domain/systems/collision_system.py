@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     from src.domain.entities.base import Entity
     from src.domain.entities.bosses.types import Boss
     from src.domain.entities.enemies.base import Enemy
-    from src.domain.entities.enemies.factory import SpecialEnemy
     from src.domain.entities.player import Player
     from src.domain.entities.projectiles.factory import Projetil
 

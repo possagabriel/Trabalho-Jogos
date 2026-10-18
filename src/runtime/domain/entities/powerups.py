@@ -15,7 +15,7 @@ from src.runtime.infrastructure.graphics.cel_shading import (
     desenhar_highlight,
 )
 from src.runtime.infrastructure.graphics.fonts import fonte_padrao
-from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, desenhar_glow
+from src.runtime.infrastructure.graphics.smooth import desenhar_glow
 
 if TYPE_CHECKING:
     from src.runtime.domain.entities.player import Jogador

@@ -1,7 +1,7 @@
 """Utilitario para manter imports do pacote legado durante a migracao."""
 
-from importlib import import_module
 import sys
+from importlib import import_module
 
 
 def substituir_modulo(nome_fachada: str, nome_canonico: str) -> None:

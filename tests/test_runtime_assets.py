@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from src.infrastructure.graphics import fonts as fontes_layout
 from src.runtime.infrastructure import assets, paths
 from src.runtime.infrastructure.graphics import fonts
-from src.infrastructure.graphics import fonts as fontes_layout
 
 
 def test_recursos_do_runtime_continuam_na_raiz_do_projeto() -> None:

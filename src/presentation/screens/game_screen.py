@@ -7,14 +7,19 @@ HUD, and manages the in-game overlays (boss intro, vignette, flash).
 from __future__ import annotations
 
 import math
-import random
 from typing import Any
 
 import pygame
 
 from src.core.constants import (
-    ALTURA, BRANCO, CIANO, DIMENSION_GOLD, DOURADO, LARGURA, NEGRO,
-    QUANTUM_CYAN, RIFT_MAGENTA, VERDE,
+    ALTURA,
+    BRANCO,
+    DIMENSION_GOLD,
+    DOURADO,
+    LARGURA,
+    QUANTUM_CYAN,
+    RIFT_MAGENTA,
+    VERDE,
 )
 
 
@@ -108,7 +113,6 @@ class GameScreen:
         surface.blit(bg, painel.topleft)
         pygame.draw.rect(surface, tema["primaria"], painel, 6,
                          border_radius=28)
-        t = pygame.time.get_ticks() * 0.001
         ix, iy = LARGURA // 2, painel.y + 36
         for offset in (-16, 6):
             pygame.draw.rect(surface, tema["primaria"],

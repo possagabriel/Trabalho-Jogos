@@ -5,8 +5,14 @@ from __future__ import annotations
 import pygame
 
 from src.core.constants import (
-    ESPESSURA_CONTORNO_MIRA, ESPESSURA_COR_MIRA, PULSO_MIRA_QUADROS,
-    RAIO_MIRA, RAIO_PULSO_MIRA, SHIFT_WHITE, VERMELHO, VOID_BLACK,
+    ESPESSURA_CONTORNO_MIRA,
+    ESPESSURA_COR_MIRA,
+    PULSO_MIRA_QUADROS,
+    RAIO_MIRA,
+    RAIO_PULSO_MIRA,
+    SHIFT_WHITE,
+    VERMELHO,
+    VOID_BLACK,
 )
 
 

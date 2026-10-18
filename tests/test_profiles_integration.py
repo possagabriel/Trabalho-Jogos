@@ -7,8 +7,8 @@ from unittest.mock import Mock
 
 import pygame
 
-from src.core.settings import DEFAULT_CONTROLES
 from src.core import settings
+from src.core.settings import DEFAULT_CONTROLES
 from src.runtime.application.core import Jogo
 
 

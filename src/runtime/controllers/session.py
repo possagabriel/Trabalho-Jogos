@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
-from src.runtime.domain.entities.bosses import Boss
-from src.runtime.infrastructure.graphics.cel_shading import TextoAcao
 from src.core.constants import EstadoJogo
+from src.runtime.domain.entities.bosses import Boss
 from src.runtime.domain.entities.enemies import Inimigo
-from src.runtime.domain.world.particles import MensagemFlutuante, SistemaParticulas
 from src.runtime.domain.entities.player import Jogador
 from src.runtime.domain.entities.powerups import PowerUp
-from src.runtime.infrastructure.persistence.save_system import SistemaProgressao
-from src.runtime.infrastructure.audio.sounds import Sons
 from src.runtime.domain.entities.weapons import Projetil
+from src.runtime.domain.world.particles import MensagemFlutuante, SistemaParticulas
+from src.runtime.infrastructure.audio.sounds import Sons
+from src.runtime.infrastructure.graphics.cel_shading import TextoAcao
+from src.runtime.infrastructure.persistence.save_system import SistemaProgressao
 
 if TYPE_CHECKING:
     from src.domain.systems.profile_service import ProfileService
