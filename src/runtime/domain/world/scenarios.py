@@ -171,6 +171,12 @@ class Cenario:
         self.efeito = cfg["efeito"]
         self.cor_transicao = cfg["cor_transicao"]
         self.cores_principais = cfg["cores_principais"]
+        self.marcos = cfg["marcos"]
+        self.intervalo_marcos = cfg["intervalo_marcos"]
+        self.curva_evolucao = cfg["curva_evolucao"]
+        self.cor_evolucao = cfg["cor_evolucao"]
+        self.evolucao_brilho = cfg["evolucao_brilho"]
+        self.evolucao_densidade = cfg["evolucao_densidade"]
         self.inimigos = cfg["inimigos"]
         self.especiais = cfg["especiais"]
         self.tempo = 0
@@ -184,13 +190,17 @@ class Cenario:
         self.luzes_ambiente = self._criar_luzes_ambiente()
         self._efeitos_alpha = {}
         self.parallax: ParallaxBackground | None = None
+        self.direcao_avanco = (0.0, 1.0)
         self.configurar_qualidade("ALTA")
 
     def configurar_avanco(self, qualidade: str,
                           direcao: tuple[float, float], linhas: bool,
-                          camadas: bool = True) -> None:
+                          camadas: bool = True, config=None,
+                          semente: int = 0) -> None:
         """Prepara as camadas móveis sem tocar nas entidades da dimensão."""
+        self.direcao_avanco = direcao
         self.parallax = ParallaxBackground(self, qualidade, direcao, linhas, camadas)
+        self.parallax.configurar_percurso(config or {}, semente)
 
     def configurar_qualidade(self, qualidade: str) -> None:
         """Define o detalhe visual do fundo sem alterar inimigos ou colisao."""
@@ -459,6 +469,16 @@ CENARIOS = [
         "camadas_estrelas": [(50, 0.4, 1), (35, 1.0, 2), (20, 2.0, 3)],
         "efeito": "nenhum", "cor_transicao": (120, 160, 255),
         "cores_principais": [(120, 160, 255), (90, 120, 255), (255, 255, 255)],
+        "marcos": [
+            {"id": "planeta_azul", "forma": "planeta", "cor": (105, 145, 220),
+             "tamanho": 270, "velocidade": 0.52},
+            {"id": "estacao_antiga", "forma": "estacao", "cor": (155, 170, 205),
+             "tamanho": 230, "velocidade": 0.78},
+            {"id": "destrocos_azuis", "forma": "destrocos", "cor": (120, 145, 190),
+             "tamanho": 250, "velocidade": 0.9},
+        ], "intervalo_marcos": (5.0, 9.0), "curva_evolucao": "suave",
+        "cor_evolucao": (30, 20, 55), "evolucao_brilho": (1.0, 1.16),
+        "evolucao_densidade": (0.42, 0.78),
         "inimigos": ["scout", "soldado"],
         "especiais": ["acumulador", "esponja", "condutor"],
     },
@@ -470,6 +490,16 @@ CENARIOS = [
         "camadas_estrelas": [(50, 0.5, 2), (30, 1.1, 3), (15, 2.2, 4)],
         "efeito": "fogo", "cor_transicao": (255, 60, 120),
         "cores_principais": [(255, 150, 50), (255, 60, 120), (255, 220, 90)],
+        "marcos": [
+            {"id": "nebulosa_ardente", "forma": "nebulosa", "cor": (205, 80, 48),
+             "tamanho": 300, "velocidade": 0.45},
+            {"id": "anel_de_fogo", "forma": "anel", "cor": (230, 135, 70),
+             "tamanho": 280, "velocidade": 0.6},
+            {"id": "destrocos_chama", "forma": "destrocos", "cor": (190, 88, 55),
+             "tamanho": 260, "velocidade": 0.86},
+        ], "intervalo_marcos": (5.0, 8.5), "curva_evolucao": "inicial",
+        "cor_evolucao": (55, 18, 16), "evolucao_brilho": (1.0, 1.2),
+        "evolucao_densidade": (0.48, 0.85),
         "inimigos": ["flamifero", "forja", "artilheiro", "bomba"],
         "especiais": ["acumulador", "esponja", "condutor", "mutante",
                       "evocador"],
@@ -482,6 +512,16 @@ CENARIOS = [
         "camadas_estrelas": [(50, 0.5, 2), (30, 1.2, 3), (15, 2.4, 4)],
         "efeito": "bolhas", "cor_transicao": (100, 200, 220),
         "cores_principais": [(25, 217, 255), (80, 160, 255), (160, 220, 235)],
+        "marcos": [
+            {"id": "planeta_oceano", "forma": "planeta", "cor": (40, 150, 190),
+             "tamanho": 290, "velocidade": 0.5},
+            {"id": "anel_abissal", "forma": "anel", "cor": (80, 175, 205),
+             "tamanho": 320, "velocidade": 0.7},
+            {"id": "destrocos_abissais", "forma": "destrocos", "cor": (75, 125, 165),
+             "tamanho": 240, "velocidade": 0.92},
+        ], "intervalo_marcos": (5.5, 9.0), "curva_evolucao": "tardia",
+        "cor_evolucao": (12, 45, 65), "evolucao_brilho": (0.96, 1.14),
+        "evolucao_densidade": (0.36, 0.72),
         "inimigos": ["abissal", "estelar", "bomba"],
         "especiais": ["acumulador", "condutor", "mutante"],
     },
@@ -493,6 +533,16 @@ CENARIOS = [
         "camadas_estrelas": [(50, 0.5, 2), (30, 1.2, 3), (15, 2.4, 4)],
         "efeito": "cristais", "cor_transicao": (150, 255, 180),
         "cores_principais": [(120, 255, 160), (200, 160, 255), (150, 255, 180)],
+        "marcos": [
+            {"id": "cristal_colossal", "forma": "cristal", "cor": (95, 205, 150),
+             "tamanho": 280, "velocidade": 0.55},
+            {"id": "anel_cristalino", "forma": "anel", "cor": (145, 205, 165),
+             "tamanho": 300, "velocidade": 0.72},
+            {"id": "estacao_verde", "forma": "estacao", "cor": (145, 195, 160),
+             "tamanho": 230, "velocidade": 0.88},
+        ], "intervalo_marcos": (5.0, 8.0), "curva_evolucao": "suave",
+        "cor_evolucao": (20, 45, 28), "evolucao_brilho": (1.0, 1.18),
+        "evolucao_densidade": (0.4, 0.75),
         "inimigos": ["cristalino", "guardiao", "artilheiro", "bomba"],
         "especiais": ["cristalino", "acumulador", "esponja"],
     },
@@ -504,6 +554,16 @@ CENARIOS = [
         "camadas_estrelas": [(50, 0.6, 2), (30, 1.4, 3), (15, 2.6, 4)],
         "efeito": "distorcao", "cor_transicao": (170, 90, 255),
         "cores_principais": [(170, 90, 255), (120, 40, 200), (220, 160, 255)],
+        "marcos": [
+            {"id": "portal_nulo", "forma": "portal", "cor": (145, 85, 215),
+             "tamanho": 320, "velocidade": 0.48},
+            {"id": "nebulosa_nula", "forma": "nebulosa", "cor": (130, 65, 165),
+             "tamanho": 300, "velocidade": 0.66},
+            {"id": "destrocos_nulos", "forma": "destrocos", "cor": (95, 60, 140),
+             "tamanho": 250, "velocidade": 0.94},
+        ], "intervalo_marcos": (5.5, 9.5), "curva_evolucao": "tardia",
+        "cor_evolucao": (42, 16, 65), "evolucao_brilho": (0.92, 1.12),
+        "evolucao_densidade": (0.3, 0.65),
         "inimigos": ["espectro", "distorcao", "assombra"],
         "especiais": ["mutante", "condutor", "esponja", "evocador"],
     },
@@ -515,6 +575,16 @@ CENARIOS = [
         "camadas_estrelas": [(50, 0.5, 2), (30, 1.2, 3), (15, 2.4, 4)],
         "efeito": "raios", "cor_transicao": (255, 235, 160),
         "cores_principais": [(255, 235, 160), (240, 220, 190), (255, 255, 255)],
+        "marcos": [
+            {"id": "portal_dourado", "forma": "portal", "cor": (215, 185, 110),
+             "tamanho": 320, "velocidade": 0.48},
+            {"id": "anel_divino", "forma": "anel", "cor": (210, 195, 145),
+             "tamanho": 330, "velocidade": 0.68},
+            {"id": "cristal_celeste", "forma": "cristal", "cor": (205, 200, 175),
+             "tamanho": 260, "velocidade": 0.9},
+        ], "intervalo_marcos": (6.0, 10.0), "curva_evolucao": "inicial",
+        "cor_evolucao": (45, 34, 12), "evolucao_brilho": (1.0, 1.22),
+        "evolucao_densidade": (0.5, 0.9),
         "inimigos": ["celestial", "sentinela", "assombra"],
         "especiais": ["cristalino", "mutante", "acumulador", "condutor",
                       "evocador"],

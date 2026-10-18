@@ -7,7 +7,10 @@ import pytest
 
 from src.core import settings
 from src.runtime.domain.world.scroll import (
-    EstadoAvanco, ModeloAvanco, deslocamento_camada, faixas_repetidas,
+    EstadoAvanco,
+    ModeloAvanco,
+    deslocamento_camada,
+    faixas_repetidas,
 )
 
 
@@ -108,6 +111,11 @@ def test_config_antiga_recebe_padrao_e_preserva_valores(tmp_path) -> None:
         assert config["avanco_qualidade"] == "MEDIA"
         assert config["avanco_miniboss_percentual"] == pytest.approx(0.5)
         assert config["avanco_desvio_parado"] > 0
+        assert config["avanco_marcos"] is True
+        assert config["avanco_evolucao_paleta"] is True
+        assert config["avanco_ritmo_variavel"] is True
+        assert config["avanco_semente"] is None
+        assert config["avanco_marco_tamanho_max"] == 420
 
 
 def test_config_avanco_mescla_dimensoes_e_limita_valores(tmp_path) -> None:
@@ -127,3 +135,24 @@ def test_config_avanco_mescla_dimensoes_e_limita_valores(tmp_path) -> None:
     assert len(config["avanco_velocidades"]) == 6
     assert config["avanco_miniboss_percentual"] == 1
     assert config["avanco_miniboss_tipos"]["eco"] == 0
+
+
+def test_config_percurso_limita_tamanho_e_ritmo(tmp_path) -> None:
+    caminho = tmp_path / "settings.json"
+    caminho.write_text(json.dumps({
+        "avanco_marcos": False,
+        "avanco_evolucao_paleta": "false",
+        "avanco_ritmo_variavel": True,
+        "avanco_semente": 9.5,
+        "avanco_marco_tamanho_max": 5000,
+        "avanco_ritmo_variacao": 0.9,
+    }), encoding="utf-8")
+    with patch.object(settings, "ARQUIVO_CONFIG", str(caminho)):
+        config = settings.Configuracoes()
+
+    assert config["avanco_marcos"] is False
+    assert config["avanco_evolucao_paleta"] is False
+    assert config["avanco_ritmo_variavel"] is True
+    assert config["avanco_semente"] is None
+    assert config["avanco_marco_tamanho_max"] == 1024
+    assert config["avanco_ritmo_variacao"] == 0.2

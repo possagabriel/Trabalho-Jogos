@@ -12,10 +12,14 @@ from src.core.settings import Configuracoes
 from src.infrastructure.graphics.comic_theme import usar_visual
 from src.runtime.application.core import Jogo
 from src.runtime.domain.entities.bosses import Boss
+from src.runtime.domain.world.landmarks import EstadoDestino, EstadoMundoVisual
 from src.runtime.domain.world.scenarios import Cenario
 from src.runtime.domain.world.scroll import EstadoAvanco
 from src.runtime.infrastructure.graphics.parallax import (
-    ParallaxBackground, ScrollingLayer, SpeedLines, _espelhar,
+    ParallaxBackground,
+    ScrollingLayer,
+    SpeedLines,
+    _espelhar,
 )
 from src.runtime.infrastructure.persistence import save_system
 
@@ -38,11 +42,25 @@ def test_tile_espelhado_fecha_bordas_e_rola_sem_lacunas() -> None:
 
 def test_linhas_preparadas_crescem_com_a_velocidade_sem_corte() -> None:
     linhas = SpeedLines(12, (180, 210, 255), (0, 1), 42)
-    curta = linhas._sprites[2, 1]
-    longa = linhas._sprites[2, 4]
+    curta = linhas._sprites[2, 1, 0]
+    longa = linhas._sprites[2, 4, 0]
     assert longa.get_height() > curta.get_height()
     pontos = pygame.mask.from_surface(longa).get_bounding_rects()
     assert max(rect.bottom for rect in pontos) - min(rect.top for rect in pontos) > 30
+
+
+def test_paleta_de_linhas_usa_variantes_pre_renderizadas() -> None:
+    linhas = SpeedLines(12, (100, 120, 160), (0, 1), 42,
+                        ((100, 120, 160), (130, 120, 155), (160, 120, 150),
+                         (190, 120, 145), (220, 120, 140)))
+    linhas.atualizar(120, 120, 1 / 60, (0, 1), 1.0, evolucao=0.0)
+    paleta_inicial = linhas._paleta_nivel
+    linhas.atualizar(120, 120, 1 / 60, (0, 1), 1.0, evolucao=1.0)
+
+    assert paleta_inicial == 0
+    assert linhas._paleta_nivel == 4
+    assert linhas._sprites[0, 1, 0].get_at((2, 2)) != \
+        linhas._sprites[0, 1, 4].get_at((2, 2))
 
 
 @pytest.mark.parametrize("qualidade,esperado", [("BAIXA", 3), ("MEDIA", 4), ("ALTA", 5)])
@@ -155,3 +173,174 @@ def test_miniboss_usa_percentual_por_tipo_e_pausa_congela_avanco() -> None:
     publicar_evento(GameEventType.MINIBOSS_DEFEATED, sessao=jogo, chave="eco")
     jogo.avanco_controller.modelo.atualizar(1.2)
     assert jogo.avanco_controller.modelo.velocidade >= 120
+    assert jogo.avanco_controller.destino.estado is EstadoDestino.INATIVO
+
+
+def test_eventos_de_boss_controlam_destino_e_miniboss_nao_cria_portal() -> None:
+    jogo = Jogo(sons=Mock())
+    destino = jogo.avanco_controller.destino
+    publicar_evento(GameEventType.MINIBOSS_SPAWNED, sessao=jogo, chave="eco")
+    assert destino.estado is EstadoDestino.INATIVO
+
+    publicar_evento(GameEventType.BOSS_SPAWNED, sessao=jogo,
+                    boss=object(), nivel=5, cenario_id=1)
+
+    assert destino.estado is EstadoDestino.APROXIMANDO
+    assert jogo.cenario.parallax._destino is destino
+
+
+def test_destino_fica_pendente_ate_liberar_cutscene_pos_boss(monkeypatch) -> None:
+    jogo = Jogo(sons=Mock())
+    controlador = jogo.avanco_controller
+    monkeypatch.setattr(jogo.cutscene_controller, "tem_pos_boss", lambda _cenario: True)
+    publicar_evento(GameEventType.BOSS_SPAWNED, sessao=jogo,
+                    boss=object(), nivel=5, cenario_id=1)
+    publicar_evento(GameEventType.BOSS_DEFEATED, sessao=jogo,
+                    boss=object(), nivel=5, cenario_id=1)
+
+    assert controlador.destino.estado is EstadoDestino.AGUARDANDO_CUTSCENE
+    assert controlador._retomada_pendente is True
+
+    controlador.liberar_retomada()
+
+    assert controlador.destino.estado is EstadoDestino.SAINDO
+
+
+def test_evento_boss_derrotado_no_meio_da_frenagem_reverte_sem_pop(monkeypatch) -> None:
+    jogo = Jogo(sons=Mock())
+    controlador = jogo.avanco_controller
+    monkeypatch.setattr(jogo.cutscene_controller, "tem_pos_boss", lambda _cenario: False)
+    publicar_evento(GameEventType.BOSS_SPAWNED, sessao=jogo,
+                    boss=object(), nivel=5, cenario_id=1)
+    controlador.destino.atualizar(0.4, EstadoMundoVisual.FREANDO)
+    escala = controlador.destino.escala
+    opacidade = controlador.destino.opacidade
+
+    publicar_evento(GameEventType.BOSS_DEFEATED, sessao=jogo,
+                    boss=object(), nivel=5, cenario_id=1)
+    controlador.destino.atualizar(0.01, EstadoMundoVisual.ACELERANDO)
+
+    assert controlador.modelo.estado is EstadoAvanco.ACELERANDO
+    assert controlador.destino.estado is EstadoDestino.SAINDO
+    assert controlador.destino.escala == pytest.approx(escala, abs=0.01)
+    assert controlador.destino.opacidade == pytest.approx(opacidade, abs=0.01)
+
+
+def test_marcos_usam_pool_limitado_memoria_cache_e_fade_de_dimensao() -> None:
+    config = Configuracoes()
+    config["avanco_semente"] = 1234
+    cenario = Cenario(1)
+    cenario.configurar_avanco("BAIXA", (0, 1), True, True, config, 1234)
+    fundo = cenario.parallax
+    camada = fundo._marcos
+
+    for _ in range(50):
+        fundo.atualizar(120, 120, 0.25, EstadoAvanco.AVANCANDO,
+                        0.04, 1.0, 0.4, "JOGANDO")
+    fundo.desenhar(pygame.Surface((LARGURA, ALTURA)))
+    assert len(camada._ativos) <= 1
+    assert camada.memoria_cache > 0
+    assert max(surface.get_width() for surface in camada._cache.values()) <= 240
+
+    camada.iniciar_saida_dimensao()
+    opacidade_antiga = camada._fade.antiga
+    camada.atualizar(120, 0.25, EstadoMundoVisual.ACELERANDO,
+                      0.4, "JOGANDO")
+    assert camada._fade.antiga < opacidade_antiga
+    camada.atualizar(120, 1.0, EstadoMundoVisual.ACELERANDO, 0.4, "JOGANDO")
+    assert camada._fade.antiga == 0.0
+
+    novo = Cenario(2)
+    novo.configurar_avanco("BAIXA", (0, 1), True, True, config, 1234)
+    nova_camada = novo.parallax._marcos
+    nova_camada.iniciar_entrada_dimensao()
+    opacidade_nova = nova_camada._fade.nova
+    nova_camada.atualizar(120, 0.25, EstadoMundoVisual.ACELERANDO,
+                          0.4, "JOGANDO")
+    assert nova_camada._fade.nova > opacidade_nova
+    nova_camada.atualizar(120, 1.0, EstadoMundoVisual.ACELERANDO, 0.4, "JOGANDO")
+    assert nova_camada._fade.nova == 1.0
+
+
+def test_marcos_congelam_em_cutscene_e_config_desativa_o_cache() -> None:
+    config = Configuracoes()
+    config["avanco_semente"] = 55
+    cenario = Cenario(1)
+    cenario.configurar_avanco("MEDIA", (0, 1), True, True, config, 55)
+    camada = cenario.parallax._marcos
+    relogio = camada._relogio
+    ritmo = camada.ritmo_factor
+
+    camada.atualizar(120, 1.0, EstadoMundoVisual.FREANDO, 0.5, "CUTSCENE")
+
+    assert camada._relogio == relogio
+    assert camada.ritmo_factor == ritmo
+
+    config["avanco_marcos"] = False
+    desativado = Cenario(1)
+    desativado.configurar_avanco("ALTA", (0, 1), True, True, config, 55)
+    assert desativado.parallax.memoria_marcos == 0
+
+
+def test_memoria_de_cache_respeita_tamanho_maximo_por_qualidade() -> None:
+    config = Configuracoes()
+    tamanhos = []
+    memorias = []
+    for qualidade in ("BAIXA", "MEDIA", "ALTA"):
+        cenario = Cenario(1)
+        cenario.configurar_avanco(qualidade, (0, 1), True, True, config, 9)
+        camada = cenario.parallax._marcos
+        tamanhos.append(max(surface.get_width() for surface in camada._cache.values()))
+        memorias.append(camada.memoria_cache)
+
+    assert tamanhos == sorted(tamanhos)
+    assert memorias == sorted(memorias)
+
+
+def test_densidade_de_rastros_aumenta_com_evolucao_do_nivel() -> None:
+    config = Configuracoes()
+    cenario = Cenario(1)
+    cenario.configurar_avanco("MEDIA", (0, 1), True, True, config, 77)
+    fundo = cenario.parallax
+
+    fundo.atualizar(120, 120, 1 / 60, EstadoAvanco.AVANCANDO,
+                    0.04, 1.0, 0.0, "JOGANDO")
+    densidade_inicial = fundo.particulas_ativas
+    fundo.atualizar(120, 120, 1 / 60, EstadoAvanco.AVANCANDO,
+                    0.04, 1.0, 1.0, "JOGANDO")
+
+    assert fundo.particulas_ativas > densidade_inicial
+
+
+def test_semente_fixa_do_config_e_usada_em_cada_nova_partida() -> None:
+    jogo = Jogo(sons=Mock())
+    jogo.config["avanco_semente"] = 2026
+    jogo.progressao_controller.novo_jogo("Teste")
+    primeira = jogo.avanco_semente
+    jogo.progressao_controller.novo_jogo("Teste")
+
+    assert primeira == 2026
+    assert jogo.avanco_semente == 2026
+
+
+def test_troca_de_dimensao_durante_aceleracao_faz_fade_dos_marcos() -> None:
+    jogo = Jogo(sons=Mock())
+    jogo.config["avanco_semente"] = 123
+    jogo.progressao_controller.novo_jogo("Teste")
+    jogo.estado = "JOGANDO"
+    antigo = jogo.cenario.parallax._marcos
+    jogo.avanco_controller.modelo.boss_entrou()
+    jogo.avanco_controller.modelo.boss_derrotado()
+    assert jogo.avanco_controller.modelo.estado is EstadoAvanco.ACELERANDO
+
+    jogo.progressao_controller.transicao_cenario(2)
+    novo = jogo.cenario.parallax._marcos
+    assert jogo.avanco_controller.modelo.estado is EstadoAvanco.ACELERANDO
+    assert antigo._fade_direcao == -1
+    assert novo._fade_direcao == 1
+
+    for _ in range(64):
+        jogo.progressao_controller.atualizar_transicao()
+
+    assert jogo.progressao_controller.transicao is None
+    assert 0.0 < novo._fade.nova < 1.0

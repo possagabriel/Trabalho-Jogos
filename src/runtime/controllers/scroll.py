@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import math
+import random
 import weakref
 from typing import Any
 
 from src.core.event_bus import EventBus, GameEvent, GameEventType
 from src.core.settings import VELOCIDADES_AVANCO_PADRAO
+from src.runtime.domain.world.landmarks import TransicaoDestino
 from src.runtime.domain.world.scroll import ModeloAvanco
 
 
@@ -35,6 +37,11 @@ class ControladorAvanco:
         self.direcao = self._direcao()
         self.modelo = self._novo_modelo(1)
         self._retomada_pendente = False
+        self.semente = 0
+        self.destino = TransicaoDestino(
+            _numero(_ler(self.config, "avanco_destino_entrada_s", 1.5), 1.5, 0.1, 5),
+            _numero(_ler(self.config, "avanco_destino_saida_s", 1.0), 1.0, 0.1, 5),
+        )
         self._bus = EventBus()
         referencia = weakref.ref(self)
         bus = self._bus
@@ -88,19 +95,29 @@ class ControladorAvanco:
         cenario.configurar_avanco(
             str(_ler(self.config, "avanco_qualidade", "MEDIA")),
             self.direcao, bool(_ler(self.config, "avanco_linhas", True)),
-            bool(_ler(self.config, "avanco_camadas", True)),
+            bool(_ler(self.config, "avanco_camadas", True)), self.config, self.semente,
         )
+        cenario.parallax.destino_boss_iniciado(self.destino)
 
     def reiniciar(self, cenario: Any) -> None:
         """Recomeça na velocidade normal da primeira dimensão."""
         self.direcao = self._direcao()
+        semente = _ler(self.config, "avanco_semente", None)
+        self.semente = (semente if type(semente) is int
+                        else random.SystemRandom().randrange(0, 2**32))
+        self._jogo().avanco_semente = self.semente
         self.modelo = self._novo_modelo(cenario.id)
+        self.destino = TransicaoDestino(
+            _numero(_ler(self.config, "avanco_destino_entrada_s", 1.5), 1.5, 0.1, 5),
+            _numero(_ler(self.config, "avanco_destino_saida_s", 1.0), 1.0, 0.1, 5),
+        )
         self._retomada_pendente = False
         self._configurar_cenario(cenario)
 
     def trocar_dimensao(self, cenario: Any) -> None:
         """Conserva a aceleração vigente e aplica o impulso do salto."""
         self._configurar_cenario(cenario)
+        cenario.parallax.iniciar_entrada_dimensao()
         self.modelo.trocar_dimensao(
             self._velocidade(cenario.id),
             duracao_salto=_numero(_ler(self.config, "avanco_salto_s", 1), 1, 0, 3),
@@ -116,10 +133,18 @@ class ControladorAvanco:
         if tipo is GameEventType.BOSS_SPAWNED:
             if bool(_ler(self.config, "avanco_parada_boss", True)):
                 self.modelo.boss_entrou()
+                self.destino.iniciar_boss()
+                jogo = self._jogo()
+                cenario = getattr(jogo, "cenario", None)
+                if cenario is not None and cenario.parallax is not None:
+                    cenario.parallax.destino_boss_iniciado(self.destino)
         elif tipo is GameEventType.BOSS_DEFEATED:
             jogo = self._jogo()
             narrativa = getattr(jogo, "cutscene_controller", None)
-            if narrativa is not None and narrativa.tem_pos_boss(evento.data.get("cenario_id", 0)):
+            pendente = (narrativa is not None and
+                        narrativa.tem_pos_boss(evento.data.get("cenario_id", 0)))
+            self.destino.derrotar_boss(cutscene_pendente=pendente)
+            if pendente:
                 self._retomada_pendente = True
             else:
                 self.modelo.boss_derrotado()
@@ -138,6 +163,7 @@ class ControladorAvanco:
         if self._retomada_pendente:
             self._retomada_pendente = False
             self.modelo.boss_derrotado()
+            self.destino.liberar_cutscene()
 
     def atualizar(self, cenario: Any, dt: float) -> None:
         """Avança uma etapa fixa e aplica a velocidade ao cenário visível."""
@@ -148,10 +174,16 @@ class ControladorAvanco:
         self.modelo.atualizar(dt)
         fundo = getattr(cenario, "parallax", None)
         if fundo is not None:
+            jogo = self._jogo()
+            progresso = getattr(getattr(jogo, "progressao_controller", None),
+                                "progresso_visual", None)
+            estado_jogo = getattr(jogo, "estado", "JOGANDO")
             fundo.atualizar(
                 self.modelo.velocidade, self.modelo.velocidade_base, dt,
                 self.modelo.estado,
                 _numero(_ler(self.config, "avanco_desvio_parado", 0.04),
                         0.04, 0, 0.1),
                 _numero(_ler(self.config, "avanco_linhas_intensidade", 1), 1, 0, 2),
+                progresso.valor if progresso is not None else 0.0,
+                str(getattr(estado_jogo, "value", estado_jogo)),
             )
