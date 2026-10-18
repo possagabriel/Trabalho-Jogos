@@ -1,8 +1,9 @@
 # ROADMAP — INCARNATE
 
-Estado auditado em 18/10/2026. PR #26 (polimento do repositório) está integrado
-na main; PR #27 contém a renomeação final e aguarda validação/merge. Este arquivo
-distingue funcionalidades presentes das propostas de evolução.
+Estado auditado em 18/10/2026. PR #26 (polimento do repositório) e PR #27
+(renomeação final) estão integrados na main. A candidata `v1.8.0-rc1` foi
+publicada e seus builds Linux e Windows passaram. A release oficial depende do
+checklist manual no Windows.
 
 ## Integrado por versão
 
@@ -23,9 +24,10 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
-- Candidata `v1.8.0-rc1`: executar o checklist Windows antes da tag `v1.8.0`
-  e da release oficial. Instalação limpa, atualização, jogo, perfis e
-  desinstalação ainda precisam de validação manual no Windows.
+- Candidata `v1.8.0-rc1`: builds de instalador/executável Linux e Windows
+  passaram. Executar o checklist Windows antes da tag `v1.8.0` e da release
+  oficial. Instalação limpa, atualização, jogo, perfis e desinstalação ainda
+  precisam de validação manual no Windows.
 - Confirmar a aparência e o comportamento dos atalhos na atualização de uma
   instalação antiga. AppId e diretórios de dados são preservados.
 
