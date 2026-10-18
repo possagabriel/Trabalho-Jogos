@@ -9,9 +9,11 @@ Migrated from game/settings.py (``DEFAULT_CONTROLES``, ``Configuracoes``,
 
 import json
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import pygame
+
+from src.shared.user_data import diretorio_dados
 
 # Default key bindings (Pygame key constants).
 DEFAULT_CONTROLES: Dict[str, int] = {
@@ -38,11 +40,8 @@ RESOLUCOES = [
 
 TEMAS = ["NEON", "AURORA", "MAGMA"]
 
-# Data directory -- can be overridden via env var for testing.
-PASTA_DADOS = (os.environ.get("INCARNATE_DATA_DIR")
-               or os.environ.get("SPACE" + "FURY_DATA_DIR")
-               or os.path.join(os.path.dirname(os.path.dirname(
-                   os.path.abspath(__file__))), "data"))
+# `SPACEFURY_DATA_DIR` permanece aceito como fallback em `diretorio_dados()`.
+PASTA_DADOS = diretorio_dados()
 ARQUIVO_CONFIG = os.path.join(PASTA_DADOS, "settings.json")
 
 # Logical (design) resolution used as the base for scaling.
