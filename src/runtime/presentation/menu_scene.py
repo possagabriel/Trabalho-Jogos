@@ -20,7 +20,7 @@ import random
 
 import pygame
 
-from src.core.constants import NEGRO, NOME_JOGO
+from src.core.constants import NEGRO
 from src.infrastructure.graphics.comic_render import desenhar_fundo
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.infrastructure.ui.layout import Layout
@@ -322,7 +322,7 @@ class FundoCinematico:
 # ---------------------------------------------------------------------------
 
 class HudMenu:
-    """Elementos HUD de nave: molduras, radar, status e dados da missao."""
+    """Molduras neon do menu sem telemetria decorativa sem fonte de dados."""
 
     def __init__(self, layout=None):
         self._layout = layout or Layout()
@@ -410,13 +410,10 @@ class HudMenu:
 
     # ----- desenho -----
 
-    def desenhar(self, tela, tema):
+    def desenhar(self, tela, tema, estilo="COMIC"):
         layout = self._layout
         primaria = tema["primaria"]
-        secundaria = tema["secundaria"]
         borda = tema["borda_forte"]
-        texto_cor = (205, 215, 240)
-        dim = (140, 152, 190)
 
         desenhar_cantos(tela, borda,
                         pygame.Rect(layout.px(12), layout.px(12),
@@ -427,68 +424,6 @@ class HudMenu:
                                     layout.largura - layout.px(40), layout.altura - layout.px(40)),
                         tamanho=layout.px(8), espessura=layout.px(2))
 
-        # canto superior esquerdo: logo + missao
-        self._desenhar_texto(tela, "logo", layout.fonte_titulo(16), NOME_JOGO,
-                             (layout.px(32), layout.px(20)), primaria, 4)
-        self._desenhar_texto(tela, "sistema", layout.fonte_texto(12),
-                             "// SISTEMA DIMENSIONAL", (layout.px(34), layout.px(42)),
-                             dim, 3)
-
-        # canto superior direito: status + coordenadas
-        pisca = 0.5 + 0.5 * math.sin(self.tempo * 3.2)
-        cor_sys = (0, 255, 150) if pisca > 0.1 else (80, 255, 170)
-        self._desenhar_texto(tela, "sys_rotulo", layout.fonte_texto(12), "SYS",
-                             (layout.largura - layout.px(36), layout.px(20)), dim, 2, "direita")
-        self._desenhar_texto(tela, "sys_valor", layout.fonte_texto(12), "ATIVO",
-                             (layout.largura - layout.px(34), layout.px(40)), cor_sys, 2,
-                             "direita")
-        coord_txt = "GRID %.0f.%.0f" % (self._coord % 1000,
-                                        self._coord * 3 % 1000)
-        self._desenhar_texto(tela, "coord", layout.fonte_texto(11), coord_txt,
-                             (layout.largura - layout.px(34), layout.px(58)), dim, 2,
-                             "direita")
-
-        # radar inferior esquerdo
-        cx, cy = layout.px(74), layout.px(588)
-        tela.blit(self.radar, self.radar.get_rect(center=(cx, cy)))
-        a = self.radar_angulo
-        r1 = layout.px(26)
-        pygame.draw.aaline(tela, primaria + (200,), (cx, cy),
-                           (cx + math.cos(a) * r1, cy + math.sin(a) * r1), 2)
-        pygame.draw.aaline(tela, (200, 220, 255, 140), (cx, cy),
-                           (cx + math.cos(a + 2.2) * r1 * 0.7,
-                            cy + math.sin(a + 2.2) * r1 * 0.7), 1)
-        for fase, raio in self.blips:
-            bx = cx + math.cos(fase + self.tempo * 0.4) * r1 * 0.5
-            by = cy + math.sin(fase + self.tempo * 0.4) * r1 * 0.5
-            desenhar_circulo(tela, secundaria, (bx, by), layout.px(2), brilho=1.2)
-
-
-
-        # missao
-        self._desenhar_texto(tela, "mis_rotulo", layout.fonte_texto(12), "MISSAO",
-                             (layout.px(40), layout.altura - layout.px(54)), dim, 3)
-        self._desenhar_texto(tela, "mis_valor", layout.fonte_texto(15),
-                             "SALTO DIMENSIONAL", (layout.px(40), layout.altura - layout.px(34)),
-                             texto_cor, 3)
-        self._desenhar_texto(tela, "mis_sub", layout.fonte_texto(11),
-                             "ALVO // ENTRE NA FENDA", (layout.px(44),
-                                                          layout.altura - layout.px(20)),
-                             primaria, 2)
-
-        # velocidade + coordenadas
-        self._desenhar_texto(tela, "vel_rotulo", layout.fonte_texto(12),
-                             "VELOCIDADE", (layout.largura - layout.px(40),
-                                            layout.altura - layout.px(56)),
-                             dim, 3, "direita")
-        self._desenhar_texto(tela, "vel_valor", layout.fonte_texto(15),
-                             "%.0f KC" % self._vel, (layout.largura - layout.px(40),
-                                                     layout.altura - layout.px(36)),
-                             (255, 200, 120), 3, "direita")
-        self._desenhar_texto(tela, "vel_sub", layout.fonte_texto(11),
-                             "MODO NAVEGAÇÃO", (layout.largura - layout.px(44),
-                                          layout.altura - layout.px(22)),
-                             borda, 2, "direita")
 
 
 # ---------------------------------------------------------------------------

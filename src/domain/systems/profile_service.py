@@ -210,6 +210,112 @@ class ProfileService:
         counts[key] = counts.get(key, 0) + 1
         self._save()
 
+    def novelty_ids(self, category: str) -> list[str]:
+        """Retorna novidades elegíveis ainda não apresentadas nesta categoria."""
+        if category == "memorias":
+            progress = self._active().progress
+            unlocked = progress.get("memorias_desbloqueadas", [])
+            return self._novelties("memorias", unlocked)
+        if category == "hangar":
+            progress = self._active().progress
+            pending = progress.setdefault("novidades_pendentes", {}).setdefault(
+                "hangar", [])
+            return list(pending)
+        raise ValueError(f"Categoria de novidade desconhecida: {category}")
+
+    def refresh_hangar_novelties(self) -> list[str]:
+        """Registra uma única vez os itens que ficaram compráveis no Hangar."""
+        from src.runtime.domain.entities.player import SKINS
+
+        progress = self._active().progress
+        unlocked = set(progress.get("skins_desbloqueadas", []))
+        acknowledged = set(progress.setdefault("novidades_vistas", {}).setdefault(
+            "hangar", []))
+        pending = progress.setdefault("novidades_pendentes", {}).setdefault(
+            "hangar", [])
+        pending_set = set(pending)
+        balance = progress.get("moedas", 0)
+        changed = False
+        for row in SKINS:
+            identifier = row["id"]
+            price = row.get("preco")
+            if (identifier not in unlocked and identifier not in acknowledged
+                    and identifier not in pending_set and type(price) is int
+                    and price <= balance):
+                pending.append(identifier)
+                pending_set.add(identifier)
+                changed = True
+        if changed:
+            self._save()
+        return list(pending)
+
+    def acknowledge_novelties(self, category: str) -> list[str]:
+        """Registra itens elegíveis exibidos ao abrir sua tela correspondente."""
+        current = (self.refresh_hangar_novelties() if category == "hangar"
+                   else self.novelty_ids(category))
+        if not current:
+            return []
+        progress = self._active().progress
+        state = progress["novidades_vistas"]
+        acknowledged = state[category]
+        for identifier in current:
+            if identifier not in acknowledged:
+                acknowledged.append(identifier)
+        if category == "hangar":
+            progress.setdefault("novidades_pendentes", {})["hangar"] = []
+        self._save()
+        return current
+
+    def menu_profile_summary(self) -> dict[str, Any] | None:
+        """Retorna dados para o cartão do menu sem expor detalhes do repositório."""
+        if self.active is None:
+            return None
+        progress = self.active.progress
+        bosses = progress.get("bosses_por_tipo", {})
+        dimension = progress.get("dimensao_maxima", 1)
+        coins = progress.get("moedas", 0)
+        play_time = progress.get("tempo_total", 0)
+        return {
+            "name": self.active.name,
+            "skin_id": progress.get("skin_atual", "padrao"),
+            "dimension": dimension if type(dimension) is int and dimension > 0 else 1,
+            "bosses_defeated": sum(
+                value for value in bosses.values()
+                if type(value) is int and value > 0
+            ) if isinstance(bosses, dict) else 0,
+            "coins": coins if type(coins) is int and coins >= 0 else 0,
+            "play_time": (play_time if type(play_time) is int and play_time >= 0
+                          else 0),
+        }
+
+    def continue_summary(self) -> dict[str, int] | None:
+        """Descreve o ponto carregado pelo callback Continuar (missão inicial)."""
+        if self.active is None:
+            return None
+        play_time = self.active.progress.get("tempo_total", 0)
+        return {
+            "dimension": 1,
+            "level": 1,
+            "total_play_time": (play_time if type(play_time) is int and play_time >= 0
+                                 else 0),
+        }
+
+    def _novelties(self, category: str, eligible: object) -> list[str]:
+        """Filtra IDs elegíveis pelo registro persistente de apresentação."""
+        progress = self._active().progress
+        state = progress.setdefault("novidades_vistas", {})
+        if not isinstance(state, dict):
+            state = {}
+            progress["novidades_vistas"] = state
+        seen = state.setdefault(category, [])
+        if not isinstance(seen, list):
+            seen = []
+            state[category] = seen
+        if not isinstance(eligible, (list, tuple, set)):
+            return []
+        return [identifier for identifier in eligible
+                if isinstance(identifier, str) and identifier not in seen]
+
     def _validate_catalogs(self, profile: Profile) -> None:
         from src.runtime.domain.entities.bosses import BOSSES_POR_CENARIO
         from src.runtime.domain.entities.player import SKINS
@@ -217,6 +323,25 @@ class ProfileService:
         from src.runtime.domain.systems.upgrades import MELHORIAS
 
         progress = profile.progress
+        novelty_state = progress.get("novidades_vistas", {})
+        if not isinstance(novelty_state, dict):
+            novelty_state = {}
+        progress["novidades_vistas"] = {
+            category: list(dict.fromkeys(
+                item for item in novelty_state.get(category, [])
+                if isinstance(item, str)
+            )) if isinstance(novelty_state.get(category, []), list) else []
+            for category in ("memorias", "hangar")
+        }
+        pending_state = progress.get("novidades_pendentes", {})
+        if not isinstance(pending_state, dict):
+            pending_state = {}
+        pending_hangar = pending_state.get("hangar", [])
+        progress["novidades_pendentes"] = {
+            "hangar": list(dict.fromkeys(
+                item for item in pending_hangar if isinstance(item, str)
+            )) if isinstance(pending_hangar, list) else [],
+        }
         skins = {row["id"] for row in SKINS}
         weapons = set(range(len(ARMARIA)))
         for field, valid, default in (
@@ -269,6 +394,17 @@ class ProfileService:
         story = json.loads((files("src.runtime.story") / "cenas_pt_BR.json").read_text(
             encoding="utf-8"))
         scene_ids = {row["id"] for row in story["cenas"]}
+        novelty = progress["novidades_vistas"]
+        novelty["memorias"] = [
+            item for item in novelty["memorias"] if item in scene_ids
+        ]
+        novelty["hangar"] = [
+            item for item in novelty["hangar"] if item in skins
+        ]
+        progress["novidades_pendentes"]["hangar"] = [
+            item for item in progress["novidades_pendentes"]["hangar"]
+            if item in skins and item not in novelty["hangar"]
+        ]
         for field in ("cenas_vistas", "memorias_desbloqueadas"):
             source = progress.get(field, [])
             if not isinstance(source, list):

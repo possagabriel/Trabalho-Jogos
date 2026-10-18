@@ -317,8 +317,14 @@ class ProgressoPerfil(SistemaProgressao):
         return self.service._save()
 
     def existe_save(self) -> bool:
-        """Perfil ativo equivale ao save selecionado."""
-        return self.service.active is not None
+        """Informa se o perfil tem progresso de partida que pode continuar."""
+        profile = self.service.active
+        if profile is None:
+            return False
+        progress = profile.progress
+        partidas = progress.get("partidas_jogadas", 0)
+        return bool((type(partidas) is int and partidas > 0)
+                    or progress.get("legacy"))
 
     def registrar_recorde(self, nome: str, pontos: int, nivel: int,
                          skin: str) -> list[dict]:

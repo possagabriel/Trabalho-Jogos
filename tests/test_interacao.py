@@ -352,14 +352,14 @@ def test_mouse_motion_atualiza_posicao_logica():
     assert abs(my - 300) <= 1
 
 
-def test_clique_em_opcao_abre_continuar():
+def test_clique_em_jogar_abre_hub_de_destinos():
     jogo = novo_jogo_estado()
     menu = jogo.menu
     rect = menu.opcoes[0].get_rect(menu.x_opcoes, menu.fonte_opcao,
                                    menu.layout)
     mouse(pygame.MOUSEBUTTONDOWN, janela(jogo, rect.centerx, rect.centery))
     jogo._tratar_eventos()
-    assert menu.subestado == "CONTINUAR"
+    assert menu.subestado == "JOGAR"
 
 
 def test_clique_em_botao_continuar_sem_save_avisa():

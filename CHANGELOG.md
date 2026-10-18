@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- O menu ganhou cartão de perfil alimentado pelo `ProfileService`, resumo real
+  do ponto inicial de Continuar e selos persistentes para Memórias e itens do
+  Hangar que ficaram compráveis. O schema de perfil migra automaticamente para v3.
+- ORIGINAL e COMIC usam a mesma hierarquia e uma composição própria para janelas
+  próximas de 4:3. Rótulos de telemetria sem dados reais saíram do HUD decorativo.
+- O saldo do rodapé agora vem do perfil ativo, igual ao cartão de perfil.
+- Menu ORIGINAL e COMIC compartilham cinco destinos: Jogar, Hangar, Perfil,
+  Configurações e Sair; os hubs de Jogar e Perfil preservam os callbacks atuais
+  e deixam cada tela anterior acessível em até duas ações.
+- O perfil versionado guarda os IDs de novidades reconhecidas no Arquivo e no
+  Hangar, com defaults para perfis antigos e transferência preservada.
+- Um perfil recém-criado sem partidas não é tratado como save continuável; o
+  resumo de Continuar mostra a partida iniciada na Dimensão 1 / Nível 1.
+- README documenta a navegação nova, os destinos de Lobby/Hangar e a ausência
+  de retomada por checkpoint.
+- A nave foi reposicionada para equilibrar o título e a coluna de ações. O marcador
+  de seleção e os painéis estáticos usam superfícies em cache.
+- O título recebe pulsos cromáticos breves em vez de glitch contínuo; a opção de
+  intensidade de flashes reduz ou desliga esses pulsos.
+- O README inclui capturas otimizadas do menu ORIGINAL em 1920×1080 e ultrawide.
+
+### Fixed
+- Menu lê sua versão de `project.version` no `pyproject.toml`.
+- Menu ORIGINAL mantém títulos, botões e textos de rodapé dentro das margens,
+  com contraste reforçado, rótulos ajustáveis e Continue desabilitado sem save.
+- O rodapé trunca nomes longos sem alterar perfis existentes; a validação atual
+  continua rejeitando apóstrofos em nomes novos e renomeações.
+
 ### Added
 - Licença MIT do projeto e avisos OFL 1.1 de Orbitron e Rajdhani nos pacotes.
 - README resume o aviso SmartScreen/antivírus e a verificação SHA-256.

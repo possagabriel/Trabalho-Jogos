@@ -55,6 +55,8 @@ def test_build_desktop_usa_separador_correto_por_sistema(tmp_path) -> None:
 
     assert f"{tmp_path / 'images'};images" in windows
     assert f"{tmp_path / 'images'}:images" in linux
+    assert f"{tmp_path / 'pyproject.toml'};." in windows
+    assert f"{tmp_path / 'pyproject.toml'}:." in linux
     assert "--icon" in windows
     assert "--icon" not in linux
     assert "--onefile" in windows

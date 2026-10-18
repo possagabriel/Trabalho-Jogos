@@ -31,6 +31,8 @@ def argumentos_distribuicao(
         f"{raiz / 'images'}{separador}images",
         "--add-data",
         f"{raiz / 'data' / 'fonts'}{separador}data/fonts",
+        "--add-data",
+        f"{raiz / 'pyproject.toml'}{separador}.",
         "--collect-submodules",
         "src",
         "--collect-submodules",

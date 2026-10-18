@@ -28,9 +28,51 @@ from src.core.settings import (
     TEMAS,
     escala_visual,
 )
+from src.core.version import versao_projeto
 from src.infrastructure.graphics.comic_render import painel_tinta, texto_tinta
 from src.infrastructure.graphics.comic_theme import LARANJA, PAPEL, opcoes_atuais
-from src.infrastructure.graphics.theme import tema_atual
+from src.infrastructure.graphics.theme import (
+    MENU_4_3_LARGURA_COLUNA,
+    MENU_4_3_X_COLUNA_FRACAO,
+    MENU_4_3_Y_PRINCIPAIS,
+    MENU_4_3_Y_SECUNDARIOS,
+    MENU_ALPHA_BOTAO_NORMAL,
+    MENU_ALPHA_BOTAO_SELECIONADO,
+    MENU_ALPHA_PAINEL_RODAPE,
+    MENU_ALTURA_PRINCIPAL,
+    MENU_ALTURA_SECUNDARIA,
+    MENU_COR_PAINEL_RODAPE,
+    MENU_COR_TEXTO,
+    MENU_COR_TEXTO_DESABILITADO,
+    MENU_COR_TEXTO_SECUNDARIO,
+    MENU_ESPESSURA_BOTAO,
+    MENU_FONTE_MINIMA_ROTULO,
+    MENU_FONTE_PRINCIPAL,
+    MENU_FONTE_PRINCIPAL_SELECIONADA,
+    MENU_FONTE_SECUNDARIA,
+    MENU_FONTE_SECUNDARIA_SELECIONADA,
+    MENU_GLITCH_AJUSTE_NORMAL,
+    MENU_GLITCH_ALPHA_NORMAL,
+    MENU_GLITCH_ALPHA_REDUZIDO,
+    MENU_GLITCH_DURACAO_MS,
+    MENU_GLITCH_INTERVALO_MS,
+    MENU_GLITCH_INTERVALO_REDUZIDO_MS,
+    MENU_GLITCH_OFFSET,
+    MENU_LARGURA_COLUNA,
+    MENU_LAYOUT_4_3_MAX_RAZAO,
+    MENU_MARCADOR_LADO,
+    MENU_MARCADOR_RECUO,
+    MENU_MARGEM_SEGURANCA,
+    MENU_SELO_ALTURA,
+    MENU_SELO_FONT_SIZE,
+    MENU_SELO_LARGURA,
+    MENU_X_COLUNA_FRACAO,
+    MENU_X_NAVE,
+    MENU_Y_NAVE,
+    MENU_Y_PRINCIPAIS,
+    MENU_Y_SECUNDARIOS,
+    tema_atual,
+)
 from src.infrastructure.ui.layout import (
     ALTURA_BASE,
     CENTRO,
@@ -68,6 +110,7 @@ from src.runtime.presentation.menu_scene import (
 from src.runtime.presentation.screens.continue_screen import TelaContinuarJogo
 from src.runtime.presentation.screens.main_menu_screen import TelaPrincipalJogo
 from src.runtime.presentation.screens.memory_archive_screen import TelaArquivoMemorias
+from src.runtime.presentation.screens.menu_hub_screen import MenuHubScreen
 from src.runtime.presentation.screens.menu_screens import (
     TelaConfiguracoes,
     TelaContinuar,
@@ -98,18 +141,28 @@ class OpcaoMenu:
 
     LARGURA_PAINEL = 420
     ALTURA_PAINEL = 60
+    _SUPERFICIES_BOTAO = {}
+    _SUPERFICIES_SELO = {}
 
     def __init__(self, texto, y, funcao):
         self.texto = texto
         self.y = y
         self.funcao = funcao
         self.hover = False
+        self.desabilitado = False
+        self.deslocamento_visual = 0
+        self._texto_cache = {}
+        self.largura_painel = self.LARGURA_PAINEL
+        self.altura_painel = self.ALTURA_PAINEL
+        self.principal = False
+        self.novo = False
 
     def get_rect(self, x, fonte, layout):
         """Retorna a mesma área de interação para todas as opções."""
-        largura = layout.px(self.LARGURA_PAINEL)
-        altura = layout.px(self.ALTURA_PAINEL)
-        return pygame.Rect(x, self.y - altura // 2, largura, altura)
+        largura = layout.px(self.largura_painel)
+        altura = layout.px(self.altura_painel)
+        return pygame.Rect(x + self.deslocamento_visual, self.y - altura // 2,
+                           largura, altura)
 
     def atualizar(self, mouse_pos, x, fonte, layout):
         self.hover = self.get_rect(x, fonte, layout).collidepoint(mouse_pos)
@@ -129,37 +182,94 @@ class OpcaoMenu:
 
     def desenhar(self, tela, fonte, fonte_sel, tema, x, selecionado,
                  deslocamento, alfa, layout):
+        self.deslocamento_visual = int(deslocamento)
+        rect = self.get_rect(x, fonte, layout)
         if opcoes_atuais().ativo:
-            rect = self.get_rect(x, fonte, layout).move(deslocamento, 0)
             painel = painel_tinta(rect.size, LARANJA if selecionado else PAPEL)
             self._blit(tela, painel, rect.centerx, rect.centery, alfa, centrado=True)
             surf = texto_tinta(self.texto, max(12, int(fonte.get_height() * .65)),
                               LARANJA if selecionado else PAPEL)
             self._blit(tela, surf, rect.x + layout.px(28), self.y, alfa)
+            if self.novo:
+                self._desenhar_selo(tela, rect, tema, alfa, layout)
             return
         primaria = tema["primaria"]
         secundaria = tema["secundaria"]
-        fonte_ativa = fonte_sel if selecionado else fonte
-        cor = BRANCO if selecionado else (172, 182, 222)
-        xf = x + deslocamento
-        y = self.y
-        rect = self.get_rect(xf, fonte, layout)
-        if selecionado:
-            painel = painel_glass(secundaria, rect, tema["fundo_painel"],
-                                 layout.px(10), 220, layout.px(8))
-            self._blit(tela, painel, rect.centerx, rect.centery, alfa,
-                       centrado=True)
-        surf = texto_suave(fonte_ativa, self.texto, cor,
-                           primaria if selecionado else None,
-                           5 if selecionado else 0, True)
-        self._blit(tela, surf, rect.x + layout.px(28), y, alfa)
-        if selecionado and alfa >= 255:
-            larg = fonte_ativa.size(self.texto)[0]
-            linha_suave(tela, primaria,
-                         (rect.x + layout.px(28),
-                          y + fonte_ativa.get_height() // 2 + layout.px(4)),
-                         (rect.x + layout.px(28) + larg,
-                          y + fonte_ativa.get_height() // 2 + layout.px(4)), 3)
+        chave = (rect.size, tuple(primaria), tuple(secundaria), selecionado,
+                 self.desabilitado)
+        painel = self._SUPERFICIES_BOTAO.get(chave)
+        if painel is None:
+            painel = pygame.Surface(rect.size, pygame.SRCALPHA)
+            fundo = (5, 10, 28, MENU_ALPHA_BOTAO_SELECIONADO if selecionado
+                     else MENU_ALPHA_BOTAO_NORMAL)
+            cor_borda = secundaria if selecionado else tema["borda_fraco"]
+            if self.desabilitado:
+                fundo = (8, 10, 20, MENU_ALPHA_BOTAO_NORMAL)
+                cor_borda = MENU_COR_TEXTO_DESABILITADO
+            pygame.draw.rect(painel, fundo, painel.get_rect(), border_radius=8)
+            pygame.draw.rect(
+                painel, cor_borda + (235 if selecionado else 150,),
+                painel.get_rect(), MENU_ESPESSURA_BOTAO, border_radius=8,
+            )
+            if selecionado:
+                pygame.draw.line(painel, primaria + (230,),
+                                 (layout.px(14), layout.px(7)),
+                                 (rect.width - layout.px(14), layout.px(7)),
+                                 max(1, layout.px(2)))
+            self._SUPERFICIES_BOTAO[chave] = painel
+        self._blit(tela, painel, rect.centerx, rect.centery, alfa, centrado=True)
+
+        cor = (MENU_COR_TEXTO_DESABILITADO if self.desabilitado else
+               MENU_COR_TEXTO if selecionado else MENU_COR_TEXTO_SECUNDARIO)
+        fonte_base = fonte_sel if selecionado else fonte
+        fonte_ativa, rotulo = self._ajustar_rotulo(
+            fonte_base, self.texto, rect.width - layout.px(52), layout)
+        chave_texto = (id(fonte_ativa), rotulo, cor, selecionado)
+        surf = self._texto_cache.get(chave_texto)
+        if surf is None:
+            surf = texto_suave(fonte_ativa, rotulo, cor,
+                               primaria if selecionado else None,
+                               layout.px(3) if selecionado else 0, True)
+            self._texto_cache[chave_texto] = surf
+        texto_rect = surf.get_rect(midleft=(rect.x + layout.px(24), rect.centery))
+        self._blit(tela, surf, texto_rect.x, texto_rect.centery, alfa)
+        if self.novo:
+            self._desenhar_selo(tela, rect, tema, alfa, layout)
+
+    @staticmethod
+    def _desenhar_selo(tela, rect, tema, alfa, layout):
+        """Desenha o selo em cache sem alterar a área de clique do botão."""
+        width = layout.px(MENU_SELO_LARGURA)
+        height = layout.px(MENU_SELO_ALTURA)
+        badge = pygame.Rect(rect.right - width - layout.px(12), 0, width, height)
+        badge.centery = rect.centery
+        color = tema["terciaria"]
+        key = (badge.size, tuple(color), MENU_SELO_FONT_SIZE)
+        surface = OpcaoMenu._SUPERFICIES_SELO.get(key)
+        if surface is None:
+            surface = pygame.Surface(badge.size, pygame.SRCALPHA)
+            pygame.draw.rect(surface, color, surface.get_rect(),
+                             border_radius=layout.px(6))
+            text = layout.fonte_texto(MENU_SELO_FONT_SIZE).render(
+                "NOVO", True, (255, 255, 255))
+            surface.blit(text, text.get_rect(center=surface.get_rect().center))
+            OpcaoMenu._SUPERFICIES_SELO[key] = surface
+        OpcaoMenu._blit(tela, surface, badge.centerx, badge.centery, alfa, centrado=True)
+
+    @staticmethod
+    def _ajustar_rotulo(fonte_base, texto, largura_maxima, layout):
+        """Reduz a fonte e, se preciso, abrevia antes de alcançar a borda."""
+        altura_base = max(8, round(fonte_base.get_height() / layout.escala))
+        minimo = MENU_FONTE_MINIMA_ROTULO
+        for tamanho in range(altura_base, minimo - 1, -1):
+            fonte_ajustada = layout.fonte_titulo(tamanho)
+            if fonte_ajustada.size(texto)[0] <= largura_maxima:
+                return fonte_ajustada, texto
+        fonte_ajustada = layout.fonte_titulo(minimo)
+        rotulo = texto
+        while rotulo and fonte_ajustada.size(rotulo + "…")[0] > largura_maxima:
+            rotulo = rotulo[:-1]
+        return fonte_ajustada, rotulo.rstrip() + "…"
 
 
 class SistemaNotificacao:
@@ -510,13 +620,19 @@ class MenuPrincipal:
         self.fonte_legenda = self.layout.fonte_texto(20)
         self.fonte_opcao = self.layout.fonte_titulo(27)
         self.fonte_opcao_sel = self.layout.fonte_titulo(32)
+        self.fonte_principal = self.layout.fonte_titulo(MENU_FONTE_PRINCIPAL)
+        self.fonte_principal_sel = self.layout.fonte_titulo(
+            MENU_FONTE_PRINCIPAL_SELECIONADA)
+        self.fonte_secundaria = self.layout.fonte_titulo(MENU_FONTE_SECUNDARIA)
+        self.fonte_secundaria_sel = self.layout.fonte_titulo(
+            MENU_FONTE_SECUNDARIA_SELECIONADA)
         self.fonte_media = self.layout.fonte_texto(26)
         self.fonte_pequena = self.layout.fonte_texto(20)
         self.fonte_cabecalho = self.layout.fonte_titulo(38)
 
         # layout ancorado: coluna de opcoes e cabecalhos derivados da
         # proporcao da tela interna (container), nao de pixels fixos
-        self.x_opcoes = self.layout.x(0.61)
+        self._estilo_layout_opcoes = None
         self.opcao_selecionada = 0
         self.opcoes = []
         self._construir_opcoes_menu()
@@ -528,6 +644,7 @@ class MenuPrincipal:
         self._bloco_logo_cache = {}
         self._cabecalho_cache = {}
         self._cache_espacado = {}
+        self._rodape_cache = {}
 
         self.continuar_selecao = 0
         self.loja_selecao = 0
@@ -550,8 +667,13 @@ class MenuPrincipal:
         self.tela_loja = TelaLojaJogo(self)
         self.tela_configuracoes = TelaConfiguracoesJogo(self)
         self.profile_screen = ProfileScreen(self)
+        self.jogar_hub = MenuHubScreen(self, "JOGAR")
+        self.perfil_hub = MenuHubScreen(self, "PERFIL")
+        self._origem_menu = 0
         self.telas = {
             "MENU": TelaPrincipal(self),
+            "JOGAR": self.jogar_hub,
+            "PERFIL": self.perfil_hub,
             "CONTINUAR": TelaContinuar(self),
             "LOJA": TelaLoja(self),
             "RECORDES": TelaRecordes(self),
@@ -569,14 +691,25 @@ class MenuPrincipal:
         self.fonte_legenda = self.layout.fonte_texto(20)
         self.fonte_opcao = self.layout.fonte_titulo(27)
         self.fonte_opcao_sel = self.layout.fonte_titulo(32)
+        self.fonte_principal = self.layout.fonte_titulo(MENU_FONTE_PRINCIPAL)
+        self.fonte_principal_sel = self.layout.fonte_titulo(
+            MENU_FONTE_PRINCIPAL_SELECIONADA)
+        self.fonte_secundaria = self.layout.fonte_titulo(MENU_FONTE_SECUNDARIA)
+        self.fonte_secundaria_sel = self.layout.fonte_titulo(
+            MENU_FONTE_SECUNDARIA_SELECIONADA)
         self.fonte_media = self.layout.fonte_texto(26)
         self.fonte_pequena = self.layout.fonte_texto(20)
         self.fonte_cabecalho = self.layout.fonte_titulo(38)
-        self.x_opcoes = self.layout.x(0.61)
+        self.x_opcoes = self.layout.x(MENU_X_COLUNA_FRACAO)
         self._titulo_cache.clear()
         self._bloco_logo_cache.clear()
         self._cabecalho_cache.clear()
         self._cache_espacado.clear()
+        self._rodape_cache.clear()
+        self.tela_principal._text_cache.clear()
+        self.tela_principal._card_cache.clear()
+        self.jogar_hub._text_cache.clear()
+        self.perfil_hub._text_cache.clear()
         self.phase_screen.set_layout(self.layout)
 
     # ------------------------------------------------------------------ sons
@@ -588,28 +721,61 @@ class MenuPrincipal:
 
     def _construir_opcoes_menu(self):
         itens = [
-            ("01 // CONTINUAR", self._abrir_continuar),
-            ("02 // LOBBY", self._abrir_lobby),
-            ("03 // HANGAR", self._abrir_loja),
-            ("04 // RECORDES", self._abrir_recordes),
-            ("05 // CONFIGURAÇÕES", self._abrir_config),
-            ("06 // ARQUIVO DE MEMÓRIAS", self._abrir_arquivo),
-            ("07 // PERFIS", self._abrir_perfis),
-            ("08 // SAIR", self._sair),
+            ("01 // JOGAR", self._abrir_jogar),
+            ("02 // HANGAR", self._abrir_loja),
+            ("03 // PERFIL", self._abrir_perfil_hub),
+            ("04 // CONFIGURAÇÕES", self._abrir_config),
+            ("05 // SAIR", self._sair),
         ]
-        # ancora a coluna alinhada a esquerda: nunca deixa o texto mais longo
-        # estourar a borda direita da tela (usa a fonte da opcao selecionada)
-        largura_max = self.layout.px(OpcaoMenu.LARGURA_PAINEL)
-        x_max = self.layout.largura - largura_max - self.layout.px(24)
-        self.x_opcoes = min(self.layout.x(0.61), x_max)
-        y = self.layout.px(125)
+        # O retângulo visual também é a área clicável; os rótulos se ajustam
+        # dentro dele sem alterar a geometria de entrada.
         self.opcoes = []
-        for texto, funcao in itens:
-            self.opcoes.append(OpcaoMenu(texto, y, funcao))
-            y += self.layout.px(65)
+        for indice, (texto, funcao) in enumerate(itens):
+            self.opcoes.append(OpcaoMenu(
+                texto, self.layout.px(125 + indice * 65), funcao))
         self.opcao_selecionada = 0
-        self.destaque.y = self.opcoes[0].y
-        self.destaque.alvo = self.opcoes[0].y
+        self._estilo_layout_opcoes = None
+        self._aplicar_layout_opcoes()
+        self.destaque.y = self.opcoes[self.opcao_selecionada].y
+        self.destaque.alvo = self.destaque.y
+        self.opcoes[0].desabilitado = False
+
+    def _layout_4_3(self):
+        """Detecta uma resolução quase 4:3 pela janela selecionada."""
+        try:
+            width, height = (int(value) for value in
+                             self.jogo.config["resolucao"].lower().split("x"))
+        except (AttributeError, TypeError, ValueError):
+            return False
+        return width / max(1, height) <= MENU_LAYOUT_4_3_MAX_RAZAO
+
+    def _aplicar_layout_opcoes(self):
+        """Aplica a hierarquia comum e ajusta a coluna para janela 4:3."""
+        estilo = self.jogo.config["estilo_visual"]
+        narrow = self._layout_4_3()
+        layout_key = (estilo, narrow)
+        if layout_key == self._estilo_layout_opcoes:
+            return
+        largura = MENU_4_3_LARGURA_COLUNA if narrow else MENU_LARGURA_COLUNA
+        x_proposto = self.layout.x(
+            MENU_4_3_X_COLUNA_FRACAO if narrow else MENU_X_COLUNA_FRACAO)
+        primarias = MENU_4_3_Y_PRINCIPAIS if narrow else MENU_Y_PRINCIPAIS
+        secundarias = MENU_4_3_Y_SECUNDARIOS if narrow else MENU_Y_SECUNDARIOS
+        for indice, opcao in enumerate(self.opcoes):
+            principal = indice < len(primarias)
+            frac_y = (primarias[indice] if principal else
+                      secundarias[indice - len(primarias)])
+            opcao.y = self.layout.y(frac_y)
+            opcao.largura_painel = largura
+            opcao.altura_painel = (MENU_ALTURA_PRINCIPAL if principal else
+                                   MENU_ALTURA_SECUNDARIA)
+            opcao.principal = principal
+        margem = self.layout.margem(MENU_MARGEM_SEGURANCA)
+        x_maximo = self.layout.largura - self.layout.px(largura) - margem
+        self.x_opcoes = min(x_proposto, x_maximo)
+        self._estilo_layout_opcoes = layout_key
+        self.destaque.y = self.opcoes[self.opcao_selecionada].y
+        self.destaque.alvo = self.destaque.y
 
     def _selecionar(self, indice):
         """Muda a selecao atual com som e pulsar no destaque."""
@@ -620,12 +786,48 @@ class MenuPrincipal:
         self.destaque.pulsar()
         self._som("navegar")
 
+    def _novidades(self, categoria):
+        """Consulta novidades pelo serviço, sem abrir os arquivos do perfil."""
+        service = getattr(self.jogo, "profile_service", None)
+        if service is None or service.active is None:
+            return []
+        try:
+            if categoria == "hangar":
+                return service.refresh_hangar_novelties()
+            return service.novelty_ids(categoria)
+        except (KeyError, ValueError, TypeError):
+            return []
+
+    def _registrar_origem(self):
+        """Guarda o item focado antes de navegar para uma tela ou hub."""
+        if self.subestado == "MENU":
+            self._origem_menu = self.opcao_selecionada
+
+    def _abrir_jogar(self):
+        """Abre o hub com os destinos Continuar e Lobby."""
+        self._registrar_origem()
+        self._som("navegar")
+        self.jogar_hub.abrir()
+        self.subestado = "JOGAR"
+        self.sub_anim = 0.0
+        self.transicao.iniciar()
+
+    def _abrir_perfil_hub(self):
+        """Abre o hub de pilotos, recordes e memórias."""
+        self._registrar_origem()
+        self._som("navegar")
+        self.perfil_hub.abrir()
+        self.subestado = "PERFIL"
+        self.sub_anim = 0.0
+        self.transicao.iniciar()
+
     def _iniciar_missao(self, acao):
         """Inicia uma missao passando pela transicao cinematografica."""
         self._som("navegar")
         self.transicao_missao.iniciar(acao)
 
     def _abrir_continuar(self):
+        self._registrar_origem()
         self._som("navegar")
         self.continuar_selecao = 0
         self.sub_anim = 0.0
@@ -634,13 +836,17 @@ class MenuPrincipal:
 
     def _abrir_arquivo(self):
         """Abre apenas as cenas já vistas."""
+        self._registrar_origem()
         self._som("navegar")
+        if self.jogo.profile_service.active:
+            self.jogo.profile_service.acknowledge_novelties("memorias")
         self.sub_anim = 0.0
         self.subestado = "ARQUIVO"
         self.transicao.iniciar()
 
     def _abrir_perfis(self):
         """Abre seleção de perfis somente fora da partida."""
+        self._registrar_origem()
         self._som("navegar")
         self.profile_screen.refresh()
         self.subestado = "PERFIS"
@@ -656,6 +862,7 @@ class MenuPrincipal:
 
     def _abrir_fases(self, nova_campanha=False):
         """Abre o lobby de fases sem alterar o save antes da confirmacao."""
+        self._registrar_origem()
         self._som("navegar")
         if nova_campanha:
             self.phase_screen.iniciar_nova_campanha()
@@ -666,15 +873,19 @@ class MenuPrincipal:
         self.transicao.iniciar()
 
     def _abrir_loja(self):
+        self._registrar_origem()
         self._som("navegar")
         self.loja_selecao = self._indice_skin_atual()
         self.preview_skin = None
         self.preview_anim = 0.0
         self.sub_anim = 0.0
         self.subestado = "LOJA"
+        if self.jogo.profile_service.active:
+            self.jogo.profile_service.acknowledge_novelties("hangar")
         self.transicao.iniciar()
 
     def _abrir_recordes(self):
+        self._registrar_origem()
         self._som("navegar")
         self.jogo.recordes = self.jogo.progresso.carregar_recordes_perfil()
         self.sub_anim = 0.0
@@ -682,6 +893,7 @@ class MenuPrincipal:
         self.transicao.iniciar()
 
     def _abrir_config(self):
+        self._registrar_origem()
         self._som("navegar")
         self.config_selecao = 0
         self.config_submodo = None
@@ -716,6 +928,9 @@ class MenuPrincipal:
         self.config_scroll = 0
         self.sub_anim = 0.0
         self.subestado = "MENU"
+        self.opcao_selecionada = min(self._origem_menu, len(self.opcoes) - 1)
+        if self.opcoes:
+            self.destaque.alvo = self.opcoes[self.opcao_selecionada].y
         self.transicao.iniciar()
         self.entrada_t = 0.0
 
@@ -2152,12 +2367,16 @@ class MenuPrincipal:
                                  tema["primaria"], 16, True)
             titulo_eco = texto_suave(self.fonte_logo, NOME_JOGO,
                                      tema["primaria"], None, 0, False)
+            titulo_glitch_ciano = texto_suave(
+                self.fonte_logo, NOME_JOGO, tema["secundaria"], None, 0, False)
+            cor_sub = tema["primaria"] if opcoes_atuais().ativo else MENU_COR_TEXTO
             sub = self._espacado(self.fonte_legenda, "ENTRE NA FENDA.", 4,
-                                 tema["primaria"])
+                                 cor_sub)
             tag = self._espacado(self.fonte_legenda, "// COMBATE DIMENSIONAL",
                                  2, tema["secundaria"])
             self._titulo_cache[nome] = {
                 "incarnate": titulo, "incarnate_eco": titulo_eco,
+                "incarnate_glitch_ciano": titulo_glitch_ciano,
                 "sub": sub, "tag": tag}
         return self._titulo_cache[nome]
 
@@ -2213,15 +2432,22 @@ class MenuPrincipal:
         if self.entrada_t < 0.12:
             return
         layout = self.layout
-        prim = tema["primaria"]
-        cor1 = tuple(int(c * 0.85) for c in prim)
-        linha_suave(tela, cor1, layout.ponto(TOPO_ESQUERDA, 30, 470),
-                    layout.ponto(TOPO_ESQUERDA, 470, 180), 2)
-        linha_suave(tela, tema["borda_fraco"],
-                    layout.ponto(TOPO_ESQUERDA, 66, 470),
-                    layout.ponto(TOPO_ESQUERDA, 506, 180), 1)
-        linha_suave(tela, cor1, layout.ponto(TOPO_DIREITA, 0, 330),
-                    layout.ponto(TOPO_ESQUERDA, 640, 486), 1)
+        if opcoes_atuais().ativo:
+            prim = tema["primaria"]
+            cor1 = tuple(int(c * 0.85) for c in prim)
+            linha_suave(tela, cor1, layout.ponto(TOPO_ESQUERDA, 30, 470),
+                        layout.ponto(TOPO_ESQUERDA, 470, 180), 2)
+            linha_suave(tela, tema["borda_fraco"],
+                        layout.ponto(TOPO_ESQUERDA, 66, 470),
+                        layout.ponto(TOPO_ESQUERDA, 506, 180), 1)
+            linha_suave(tela, cor1, layout.ponto(TOPO_DIREITA, 0, 330),
+                        layout.ponto(TOPO_ESQUERDA, 640, 486), 1)
+            return
+        discreta = tema["borda_fraco"]
+        linha_suave(tela, discreta, layout.ponto(TOPO_ESQUERDA, 30, 485),
+                    layout.ponto(TOPO_ESQUERDA, 430, 405), 1)
+        linha_suave(tela, discreta, layout.ponto(TOPO_ESQUERDA, 70, 510),
+                    layout.ponto(TOPO_ESQUERDA, 470, 430), 1)
 
     def _desenhar_linha_titulo(self, tela, tema, x, y, alfa):
         """Linha de acento entre o titulo tipografico e o subtitulo."""
@@ -2259,86 +2485,189 @@ class MenuPrincipal:
                         (layout.px(62) + off, layout.px(171)), alfa_eco)
         self._blit_alfa(tela, ts["incarnate"],
                         (layout.px(56) + off, layout.px(165)), alfa)
+        self._desenhar_glitch_titulo(tela, ts, off)
         alfa_sub = int(255 * ease_out(p_sub))
-        self._desenhar_linha_titulo(tela, tema, layout.px(60) + off, layout.px(280),
+        linha_y = 280 if opcoes_atuais().ativo else 272
+        subtitulo_y = 302 if opcoes_atuais().ativo else 288
+        tag_y = 334 if opcoes_atuais().ativo else 320
+        self._desenhar_linha_titulo(tela, tema, layout.px(60) + off,
+                                    layout.px(linha_y),
                                     alfa_sub)
         self._blit_alfa(tela, ts["sub"],
-                        (layout.px(60) + off, layout.px(302)), alfa_sub)
+                        (layout.px(60) + off, layout.px(subtitulo_y)), alfa_sub)
         self._blit_alfa(tela, ts["tag"],
-                        (layout.px(60) + off, layout.px(334)), alfa_sub)
+                        (layout.px(60) + off, layout.px(tag_y)), alfa_sub)
 
     def _desenhar_seta(self, tela, tema):
         if self.entrada_t < 0.7:
             return
         op = self.opcoes[self.opcao_selecionada]
-        x = self.x_opcoes - self.layout.px(26)
+        x = self.x_opcoes - self.layout.px(MENU_MARCADOR_RECUO)
         y = op.y
-        desenhar_poligono(tela, tema["secundaria"],
-                          [(x, y), (x - 14, y - 9), (x - 14, y + 9)])
+        lado = self.layout.px(MENU_MARCADOR_LADO)
+        chave = (tema["secundaria"], lado)
+        marcador = self._marcador_cache.get(chave)
+        if marcador is None:
+            marcador = pygame.Surface((lado, lado), pygame.SRCALPHA)
+            pygame.draw.polygon(marcador, tema["secundaria"],
+                                [(lado - 1, lado // 2), (0, 0), (0, lado - 1)])
+            self._marcador_cache[chave] = marcador
+        tela.blit(marcador, marcador.get_rect(midright=(x, y)))
+
+    _marcador_cache = {}
+
+    def _desenhar_glitch_titulo(self, tela, superficies, deslocamento):
+        """Aplica um pulso cromático curto, limitado e desligável nas opções."""
+        intensidade = self.jogo.config["intensidade_flash"]
+        if intensidade == "DESLIGADO":
+            return
+        intervalo = (MENU_GLITCH_INTERVALO_MS if intensidade == "NORMAL"
+                     else MENU_GLITCH_INTERVALO_REDUZIDO_MS)
+        if pygame.time.get_ticks() % intervalo >= MENU_GLITCH_DURACAO_MS:
+            return
+        layout = self.layout
+        ajuste = MENU_GLITCH_AJUSTE_NORMAL if intensidade == "NORMAL" else 0
+        alfa = (MENU_GLITCH_ALPHA_NORMAL if intensidade == "NORMAL"
+                else MENU_GLITCH_ALPHA_REDUZIDO)
+        x = layout.px(56) + deslocamento
+        y = layout.px(165)
+        self._blit_alfa(tela, superficies["incarnate_eco"],
+                        (x - MENU_GLITCH_OFFSET - ajuste, y), alfa)
+        self._blit_alfa(tela, superficies["incarnate_glitch_ciano"],
+                        (x + MENU_GLITCH_OFFSET + ajuste, y), alfa)
 
     def _desenhar_rodape(self, tela, tema):
+        if opcoes_atuais().ativo:
+            self._desenhar_rodape_comic(tela)
+            return
         layout = self.layout
         p = self._frac(0.85, 0.3)
         if p <= 0:
             return
         alfa = int(255 * ease_out(p))
         f = self.fonte_pequena
-        linha = "PILOTO: %s   |   MOEDAS: %s" % (
-            self.jogo.nome_jogador.upper(),
-            formatar_pontos(self.jogo.loja.moedas))
-        surf = self._espacado(f, linha, 1, (176, 186, 224))
-        self._blit_alfa(tela, surf, (self.x_opcoes, layout.y(0.87)), alfa)
-        hint = "SETAS/WASD  NAVEGAR   |   ENTER  CONFIRMAR   |   ESC  SAIR"
-        surf2 = self._espacado(f, hint, 1, (118, 130, 170))
-        self._blit_alfa(tela, surf2,
-                        (layout.largura // 2 - surf2.get_width() // 2, layout.y(0.915)),
-                        int(alfa * 0.75))
-        versao = self._espacado(f, "v1.1.0 // ENTRE NA FENDA", 1,
-                                (110, 122, 160))
+        margem = layout.margem(MENU_MARGEM_SEGURANCA)
+        topo = layout.altura - layout.px(98)
+        altura_painel = layout.altura - topo - margem // 2
+        chave_painel = (layout.largura, altura_painel, MENU_COR_PAINEL_RODAPE,
+                        MENU_ALPHA_PAINEL_RODAPE, tuple(tema["secundaria"]))
+        painel = self._rodape_cache.get(chave_painel)
+        if painel is None:
+            painel = pygame.Surface((layout.largura - margem * 2,
+                                     altura_painel), pygame.SRCALPHA)
+            painel.fill(MENU_COR_PAINEL_RODAPE + (MENU_ALPHA_PAINEL_RODAPE,))
+            pygame.draw.line(painel, tema["secundaria"] + (210,),
+                             (0, 1), (painel.get_width(), 1), max(1, layout.px(2)))
+            self._rodape_cache[chave_painel] = painel
+        tela.blit(painel, (margem, topo))
+
+        summary = self.jogo.profile_service.menu_profile_summary()
+        balance = summary["coins"] if summary else self.jogo.loja.moedas
+        moedas = formatar_pontos(balance)
+        rotulo_versao = f"v{versao_projeto()} // ENTRE NA FENDA"
+        versao = self._espacado(f, rotulo_versao, 1, MENU_COR_TEXTO_SECUNDARIO)
+        largura_nome = (layout.largura - margem * 2 - versao.get_width()
+                        - layout.px(36))
+        linha = self._linha_perfil_rodape(
+            f, self.jogo.nome_jogador, moedas, largura_nome)
+        perfil = self._espacado(f, linha, 1, MENU_COR_TEXTO)
+        self._blit_alfa(tela, perfil,
+                        (margem + layout.px(8), topo + layout.px(7)), alfa)
         self._blit_alfa(tela, versao,
-                        (layout.x(0.5) - versao.get_width() // 2,
-                         layout.altura - layout.px(28)),
-                        int(alfa * 0.7))
+                        (layout.largura - margem - versao.get_width()
+                         - layout.px(8), topo + layout.px(7)), alfa)
+
+        hint = "SETAS/WASD NAVEGAR   |   ENTER SELECIONAR   |   ESC VOLTAR"
+        surf2 = self._espacado(f, hint, 1, MENU_COR_TEXTO_SECUNDARIO)
+        self._blit_alfa(tela, surf2,
+                        (layout.largura // 2 - surf2.get_width() // 2,
+                         topo + layout.px(35)), alfa)
+
+    def _desenhar_rodape_comic(self, tela):
+        """Preserva o rodapé usado pelo menu COMIC antes deste polimento."""
+        layout = self.layout
+        p = self._frac(0.85, 0.3)
+        if p <= 0:
+            return
+        alfa = int(255 * ease_out(p))
+        f = self.fonte_pequena
+        summary = self.jogo.profile_service.menu_profile_summary()
+        balance = summary["coins"] if summary else self.jogo.loja.moedas
+        name = summary["name"] if summary else self.jogo.nome_jogador
+        linha = "PILOTO: %s   |   MOEDAS: %s" % (
+            name.upper(), formatar_pontos(balance))
+        perfil = self._espacado(f, linha, 1, (176, 186, 224))
+        self._blit_alfa(tela, perfil, (self.x_opcoes, layout.y(0.87)), alfa)
+        dica = "SETAS/WASD  NAVEGAR   |   ENTER  CONFIRMAR   |   ESC  SAIR"
+        surf_dica = self._espacado(f, dica, 1, (118, 130, 170))
+        self._blit_alfa(
+            tela, surf_dica,
+            (layout.largura // 2 - surf_dica.get_width() // 2, layout.y(0.915)),
+            int(alfa * 0.75),
+        )
+        rotulo_versao = f"v{versao_projeto()} // ENTRE NA FENDA"
+        versao = self._espacado(f, rotulo_versao, 1, (110, 122, 160))
+        self._blit_alfa(
+            tela, versao,
+            (layout.x(0.5) - versao.get_width() // 2,
+             layout.altura - layout.px(28)),
+            int(alfa * 0.7),
+        )
+
+    @staticmethod
+    def _medir_espacado(fonte, texto, espacamento):
+        """Mede o mesmo avanço de glifos usado por ``texto_espacado``."""
+        return sum(fonte.size(caractere)[0] for caractere in texto) + max(
+            0, len(texto) - 1) * espacamento
+
+    @classmethod
+    def _linha_perfil_rodape(cls, fonte, nome, moedas, largura_maxima):
+        """Trunca o nome com reticências sem exceder o espaço medido."""
+        prefixo = "PILOTO: "
+        sufixo = f"   |   MOEDAS: {moedas}"
+        nome = str(nome).upper()
+        linha = prefixo + nome + sufixo
+        if cls._medir_espacado(fonte, linha, 1) <= largura_maxima:
+            return linha
+        while nome and cls._medir_espacado(
+                fonte, prefixo + nome + "…" + sufixo, 1) > largura_maxima:
+            nome = nome[:-1]
+        return prefixo + nome.rstrip() + "…" + sufixo
 
     def _desenhar_menu(self, tela):
-        tema = tema_atual(self.jogo.config["tema"])
-        self._desenhar_linhas_diagonais(tela, tema)
-        self._desenhar_bloco_titulo(tela, tema)
-
-        p_rot = self._frac(0.28, 0.3)
-        if p_rot > 0:
-            rotulo = self._espacado(self.fonte_pequena, "// COMANDO DE VOO", 2,
-                                    tema["secundaria"])
-            self._blit_alfa(tela, rotulo,
-                            (self.x_opcoes, self.layout.px(132)),
-                            int(255 * ease_out(p_rot)))
-
-        for i, opcao in enumerate(self.opcoes):
-            p = self._frac(0.34 + i * 0.07, 0.42)
-            desloc = int((1 - ease_out(p)) * 150)
-            opcao.desenhar(tela, self.fonte_opcao, self.fonte_opcao_sel,
-                           tema, self.x_opcoes, i == self.opcao_selecionada,
-                           desloc, int(255 * ease_out(p)), self.layout)
-        self._desenhar_rodape(tela, tema)
+        self.tela_principal.desenhar(tela)
 
     def desenhar(
         self,
         tela: pygame.Surface,
         cor_fundo_cutscene: tuple[int, int, int] | None = None,
     ) -> None:
+        self._aplicar_layout_opcoes()
         layout = self.layout
         tema = tema_atual(self.jogo.config["tema"])
         self.fundo.desenhar(tela, cor_fundo_cutscene=cor_fundo_cutscene)
-        skin = self.jogo.loja.pegar_skin(self.jogo.loja.skin_atual)
-        self.nave.desenhar(
-            tela,
-            skin,
-            layout.largura - layout.px(92),
-            layout.altura - layout.px(158),
-            1.35 * layout.escala,
-            tema,
-        )
-        self.hud.desenhar(tela, tema)
+        at_root = self.subestado == "MENU"
+        summary = self.jogo.profile_service.menu_profile_summary()
+        if at_root:
+            self.tela_principal.desenhar_fundo_cartao(tela, summary)
+        skin_id = summary["skin_id"] if summary else self.jogo.loja.skin_atual
+        skin = self.jogo.loja.pegar_skin(skin_id)
+        if at_root and summary:
+            card_x, card_y, card_width, _ = self.tela_principal.cartao_rect()
+            ship_x = card_x + card_width - layout.px(66)
+            ship_y = card_y + layout.px(62)
+            ship_scale = 0.92 * layout.escala
+        elif self.jogo.config["estilo_visual"] == "ORIGINAL":
+            ship_x = layout.px(MENU_X_NAVE)
+            ship_y = layout.px(MENU_Y_NAVE)
+            ship_scale = 1.35 * layout.escala
+        else:
+            ship_x = layout.largura - layout.px(92)
+            ship_y = layout.altura - layout.px(158)
+            ship_scale = 1.35 * layout.escala
+        if not at_root or summary:
+            self.nave.desenhar(tela, skin, ship_x, ship_y, ship_scale, tema)
+        self.hud.desenhar(tela, tema, self.jogo.config["estilo_visual"])
         if self.subestado == "PERFIS":
             self.profile_screen.draw(tela)
         elif self.subestado == "FASES":
@@ -2367,6 +2696,7 @@ class MenuPrincipal:
             tela.blit(overlay, (0, 0))
 
     def atualizar(self):
+        self._aplicar_layout_opcoes()
         self.fundo.atualizar()
         self.hud.atualizar()
         self.nave.atualizar()
@@ -2470,8 +2800,6 @@ class MenuPrincipal:
             self._selecionar(novo)
         elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
             self.opcoes[self.opcao_selecionada].funcao()
-        elif evento.key == pygame.K_BACKSPACE:
-            self.jogo.nome_jogador = self.jogo.nome_jogador[:-1]
         elif evento.key == pygame.K_ESCAPE:
             self._sair()
         elif evento.unicode and evento.unicode.isprintable() and len(self.jogo.nome_jogador) < 12:

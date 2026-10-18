@@ -1,5 +1,100 @@
 # Registro de uso de IA
 
+## Menu principal — etapa 3: cartão e layout responsivo
+
+- **Pedido:** adicionar cartão de perfil, resumo de Continuar, selos de novidade,
+  composição 4:3 e retirar telemetria decorativa sem dados; manter ORIGINAL e
+  COMIC com a mesma estrutura antes de apresentar capturas reais.
+- **Implementação da IA:** o cartão e os resumos consultam `ProfileService`; o
+  schema v3 guarda novidades pendentes do Hangar para não reaparecerem após
+  oscilação de moedas; perfis antigos recebem defaults e exportação/importação
+  preserva os campos. O HUD conserva molduras/cantos neon e remove rótulos falsos.
+- **Decisões:** Continuar mostra Dimensão 1 / Nível 1, que é o ponto iniciado
+  pelo callback atual, e o tempo total do perfil; Lobby continua retomando o
+  checkpoint. Layout 4:3 ajusta a apresentação sem ampliar a área jogável.
+- **Verificação:** testes direcionados de perfis/menu: 122 passaram. Suíte
+  completa: 639 passaram, 1 ignorado. Ruff limpo nos nove arquivos Python
+  alterados.
+- **Capturas reais:** antes/depois em ORIGINAL e COMIC, quatro resoluções,
+  AJUSTAR e PREENCHE, menu principal e hub Jogar, com e sem save estão em
+  `/tmp/incarnate-menu-stage3-audit/`.
+- **Benchmark:** SDL dummy, ORIGINAL, 1920×1080, 40 quadros de aquecimento,
+  12 rodadas de 100 quadros. Antes: média 7,750 ms, p95 12,664 ms, desvio das
+  médias por rodada 1,129 ms. Depois: média 8,539 ms, p95 12,234 ms, desvio
+  0,474 ms. A média aumentou 10,2% e o p95 caiu 3,4%; a dispersão entre
+  rodadas ficou menor que a da referência. O benchmark mede o desenho do menu,
+  não o passo de apresentação da janela.
+- **Ajustes manuais do usuário:** nenhum informado.
+
+## Menu principal — estrutura e dados (1.8.0)
+
+- **Pedido:** reorganizar ORIGINAL e COMIC em Jogar, Hangar, Perfil,
+  Configurações e Sair; preservar callbacks, permitir retorno com foco de
+  origem, guardar avisos reconhecidos e documentar a navegação.
+- **Implementação da IA:** dois hubs de segundo nível; migração do schema de
+  perfil para registrar novidades de Memórias e Hangar; consulta e confirmação
+  de novidades pelo `ProfileService`; testes de transferência e de aviso único.
+- **Decisões:** Continuar abre a tela existente de progresso/Novo Jogo para
+  preservar esse fluxo e inicia na Dimensão 1 / Nível 1. O checkpoint fica no
+  Lobby. O tempo exibido é total do perfil.
+- **Ajustes manuais do usuário:** nenhum informado.
+- **Verificação:** suíte completa: 632 passaram, 1 skip. Ruff nos arquivos
+  alterados: limpo. Testes adicionados para hubs, foco/retorno, migração de
+  perfil, exportação/importação e reconhecimento dos avisos.
+
+## Menu ORIGINAL — etapa 2: hierarquia e animação
+
+- **Pedido:** organizar Continuar, Lobby e Hangar como ações principais e agrupar
+  os itens secundários, preservando numeração, navegação e callbacks; mostrar a
+  comparação em quatro resoluções e nos modos AJUSTAR e PREENCHE.
+- **Implementação da IA:** tamanhos e posições por grupo foram centralizados nos
+  tokens de `theme.py`; indicador de foco, faixa selecionada, textos estáticos e
+  título usam cache. A nave ocupa o espaço livre à esquerda. O título recebe
+  glitch cromático breve limitado a 42 ms a cada 650 ms (menos de 3 pulsos/s),
+  respeitando `intensidade_flash` NORMAL, REDUZIDO e DESLIGADO. O estilo COMIC
+  mantém seu layout e seu HUD anteriores.
+- **Decisões:** a seleção segue contínua entre os grupos e continua começando em
+  Continuar com save ou Lobby sem save. Continuar sem save mantém o visual
+  desabilitado e o aviso existente ao ativar. A validação do `ProfileService`
+  rejeita apóstrofo em novos nomes; perfis antigos não são alterados. A tela
+  trata nomes longos com reticências e caracteres acentuados.
+- **Comparação visual:** imagens ANTES/DEPOIS das quatro resoluções e dos dois
+  modos, além do mockup 1920×1080, estão em
+  `/tmp/incarnate-menu-audit-2026-10-18/etapa2`; esses arquivos não são incluídos
+  no repositório. Duas capturas JPEG otimizadas foram adicionadas ao README.
+- **Benchmark do menu:** SDL dummy, estilo ORIGINAL, resolução lógica 1280×720,
+  30 quadros de aquecimento e 8 rodadas de 100 quadros. Na main anterior: média
+  7,589 ms, p95 10,335 ms e desvio das médias por rodada 0,315 ms. Após a etapa
+  2: média 7,608 ms, p95 9,632 ms e desvio 0,360 ms; a média variou 0,25%, dentro
+  da variação entre rodadas.
+- **Verificação:** suíte completa: 622 passaram e 1 foi ignorado. Os testes
+  direcionados do menu/perfis/layout somaram 127 aprovações. Ruff passou nos seis
+  arquivos Python alterados.
+- **Ajustes manuais do usuário:** nenhum informado.
+
+## Menu ORIGINAL — etapa 1: correções visuais
+
+- **Pedido:** corrigir cortes, sobreposições, contraste e margens do menu neon;
+  manter ações e ordem de navegação; diferenciar Continuar sem save.
+- **Implementação da IA:** rótulos são ajustados dentro dos botões, cuja área
+  clicável acompanha o desenho e a animação de entrada; linhas decorativas ficam
+  no espaço negativo; subtítulo e rodapé ganharam fundo/cores de alto contraste;
+  texto de perfil recebe reticências quando excede a largura calculada. A seleção
+  inicial escolhe Continuar com save e Lobby sem save.
+- **Apóstrofo:** `ProfileService` rejeita `'` em criação e renomeação. A regra foi
+  mantida; teste confirma que a tentativa de renomear falha sem mudar o perfil
+  existente. A renderização do menu continua aceitando nomes legados já salvos.
+- **Decisões:** callbacks do menu e gameplay permaneceram intactos. A versão do
+  rodapé lê `project.version`; a fonte única já havia sido introduzida no commit
+  `83be260`. Glitch e animações novas ficam para as etapas posteriores aprovadas.
+- **Ajustes manuais do usuário:** nenhum informado.
+- **Auditoria:** capturas originais e etapa 1 em
+  `/tmp/incarnate-menu-audit-2026-10-18`; arquivos fora do repositório.
+- **Verificação:** 617 testes passaram e 1 foi ignorado. Ruff passou nos sete
+  arquivos Python alterados. Testes cobrem nome com apóstrofo, limites de texto,
+  cliques nas oito combinações de resolução/modo, seleção inicial e contraste
+  amostrado sobre o fundo real incluindo o planeta.
+
 ## Fallback de inicialização gráfica
 
 - **Pedido:** investigar o segmentation fault de `python main.py` na criação da

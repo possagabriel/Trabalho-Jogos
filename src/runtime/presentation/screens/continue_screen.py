@@ -8,7 +8,11 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.core.constants import BRANCO
-from src.infrastructure.graphics.theme import tema_atual
+from src.infrastructure.graphics.theme import (
+    MENU_COR_BOTAO_DESABILITADO,
+    MENU_COR_BOTAO_DESABILITADO_HOVER,
+    tema_atual,
+)
 from src.infrastructure.ui.layout import ALTURA_BASE, CENTRO, LARGURA_BASE
 from src.runtime.infrastructure.persistence.shop import LojaSkins
 from src.runtime.presentation.ui import BotaoNeon
@@ -121,10 +125,14 @@ class TelaContinuarJogo:
                 "Nenhum progresso salvo ainda.", True, (200, 200, 240))
             menu._blit_alfa(tela, superficie, superficie.get_rect(
                 center=(painel.centerx + dx, painel.centery + dy)), int(255 * alfa))
-        for indice, botao in enumerate(self.botoes()):
+        botoes = self.botoes()
+        if not tem and menu.jogo.config["estilo_visual"] == "ORIGINAL":
+            botoes[0].cor = MENU_COR_BOTAO_DESABILITADO
+            botoes[0].cor_hover = MENU_COR_BOTAO_DESABILITADO_HOVER
+        for indice, botao in enumerate(botoes):
             botao.atualizar(menu.mouse)
             menu._desenhar_botao_entrada(tela, botao, menu.fonte_media,
                                          menu._frac_sub(0.55 + indice * 0.06, 0.3))
         if menu.continuar_selecao < 2:
-            pygame.draw.rect(tela, (255, 200, 100), self.botoes()[menu.continuar_selecao].rect, 3,
+            pygame.draw.rect(tela, (255, 200, 100), botoes[menu.continuar_selecao].rect, 3,
                              border_radius=10)

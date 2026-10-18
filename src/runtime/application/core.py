@@ -256,6 +256,11 @@ class Jogo:
             skin_atual=self.progresso.jogador["skin_atual"])
         self.nome_jogador = self.profile_service.active.name
         self.recordes = self.progresso.carregar_recordes_perfil()
+        self.menu.opcao_selecionada = 0
+        self.menu._origem_menu = 0
+        self.menu.opcoes[0].desabilitado = False
+        self.menu.destaque.y = self.menu.opcoes[self.menu.opcao_selecionada].y
+        self.menu.destaque.alvo = self.menu.destaque.y
         self.menu.subestado = "MENU"
         self._novo_jogo(self.nome_jogador, zerar_estado=False)
         self.estado = EstadoJogo.MENU
