@@ -31,6 +31,9 @@ from src.runtime.domain.entities.player import Jogador
 from src.runtime.domain.entities.powerups import PowerUp, sortear_tipo
 from src.runtime.controllers.progression import ControladorProgressao
 from src.runtime.infrastructure.persistence.save_system import SistemaProgressao
+from src.runtime.infrastructure.persistence.save_system import ProgressoPerfil
+from src.infrastructure.persistence.profile_repository import JsonProfileRepository
+from src.domain.systems.profile_service import ProfileService
 from src.runtime.domain.world.scenarios import CENARIOS, Cenario, cenario_do_nivel
 from src.core.settings import Configuracoes, TEMAS
 from src.runtime.infrastructure.persistence.shop import LojaSkins
@@ -87,6 +90,15 @@ class Jogo:
         pygame.init()
         self._configurar_backend_escala()
         self.config = config or Configuracoes()
+        self.profile_service = ProfileService(
+            JsonProfileRepository(), self.config["limite_perfis"],
+            self.config["limite_nome_perfil"])
+        self.profile_service.migrate_legacy(preferences={
+            "controles": dict(self.config.controles),
+            "sensibilidade": self.config["sensibilidade"],
+            "mira_ativa": self.config["mira_ativa"],
+        })
+        self.config.aplicar_perfil(self.profile_service)
         self.janela = self._iniciar_modo_video()
         self.tela = pygame.Surface((LARGURA, ALTURA))
         self._superficie_escalada: pygame.Surface | None = None
@@ -109,7 +121,7 @@ class Jogo:
         self.fontes = {22: self.fonte_pequena, 32: self.fonte_media,
                        64: self.fonte_grande, 84: self.fonte_titulo}
 
-        self.progresso = progresso or SistemaProgressao()
+        self.progresso = progresso or ProgressoPerfil(self.profile_service)
         self.loja = loja or LojaSkins(
             moedas=self.progresso.jogador["moedas"],
             desbloqueadas=self.progresso.jogador["skins_desbloqueadas"],
@@ -146,10 +158,12 @@ class Jogo:
         self._sombra_equipamento.fill((2, 4, 14, 220))
         self.trauma = 0.0
         self.hitstop = 0
-        self.recordes = SistemaProgressao.carregar_recordes()
+        self.recordes = self.progresso.carregar_recordes_perfil() if isinstance(
+            self.progresso, ProgressoPerfil) else SistemaProgressao.carregar_recordes()
         self.hud = HudJogo(self.layout)
         self.tela_melhorias = TelaMelhorias(self.layout)
         self.menu = MenuPrincipal(self, self.layout)
+        self.menu.subestado = "PERFIS"
         # --- estado do menu de pausa ---
         self._pausa_selecao = 0
         self._pausa_config_selecao = 0
@@ -172,6 +186,26 @@ class Jogo:
         self.render_controller = ControladorRenderizacao(self)
         self.loop_controller = ControladorLoop(self)
         self._novo_jogo("Jogador", zerar_estado=False)
+        self.estado = EstadoJogo.MENU
+
+    def ativar_perfil(self, profile_id: str) -> None:
+        """Ativa progresso, loja e preferências antes de entrar no menu."""
+        if self.estado is not EstadoJogo.MENU:
+            raise ValueError("Troca de perfil somente no menu principal")
+        self.profile_service.select(profile_id)
+        self.config.aplicar_perfil(self.profile_service)
+        self.controles = self.config.controles
+        self.sensibilidade = self.config["sensibilidade"]
+        if isinstance(self.progresso, ProgressoPerfil):
+            self.progresso.carregar_ativo()
+        self.loja = LojaSkins(
+            moedas=self.progresso.jogador["moedas"],
+            desbloqueadas=self.progresso.jogador["skins_desbloqueadas"],
+            skin_atual=self.progresso.jogador["skin_atual"])
+        self.nome_jogador = self.profile_service.active.name
+        self.recordes = self.progresso.carregar_recordes_perfil()
+        self.menu.subestado = "MENU"
+        self._novo_jogo(self.nome_jogador, zerar_estado=False)
         self.estado = EstadoJogo.MENU
 
     @property
@@ -717,6 +751,9 @@ class Jogo:
                 if armas:
                     self.jogador.selecionar_arma(
                         armas[self.indice_equipamento % len(armas)])
+                    if self.profile_service.active:
+                        self.profile_service.update_progress(
+                            arma_equipada=self.jogador.arma_atual)
             else:
                 especiais = self.especiais_desbloqueados
                 if especiais:

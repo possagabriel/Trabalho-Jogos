@@ -38,6 +38,10 @@ class ControladorProgressao:
         nome = nome.strip() or "Jogador"
         skin = jogo.loja.pegar_skin(jogo.loja.skin_atual)
         jogo.jogador = Jogador(nome, skin=skin)
+        if jogo.profile_service.active:
+            progress = jogo.profile_service.active.progress
+            jogo.jogador.armas_desbloqueadas = list(progress["armas_desbloqueadas"])
+            jogo.jogador.arma_atual = progress["arma_equipada"]
         jogo.jogador.velocidade = 5.0 * jogo.sensibilidade
         jogo.inimigos, jogo.projeteis, jogo.powerups = [], [], []
         jogo.boss = None
@@ -45,6 +49,8 @@ class ControladorProgressao:
         jogo.mensagens, jogo.fila_onda, jogo.xs_onda = [], [], []
         jogo.timer_spawn = jogo.inimigos_abates = jogo.bosses_abates = 0
         jogo.boss_intro = jogo.tiros_disparados = jogo.tempo_partida = 0
+        jogo._tempo_contabilizado = 0
+        jogo._abates_contabilizados = 0
         jogo.boost, jogo.especial, jogo.energia = 1.0, 0.0, 100.0
         jogo.especial_atual = "bomba"
         jogo.especiais_desbloqueados = ["bomba"]
@@ -72,6 +78,10 @@ class ControladorProgressao:
         """Inicia a partida com a tela de carregamento."""
         jogo = self.jogo
         self.novo_jogo(jogo.nome_jogador, zerar_estado=False)
+        if jogo.profile_service.active:
+            progress = jogo.profile_service.active.progress
+            jogo.profile_service.update_progress(
+                partidas_jogadas=progress["partidas_jogadas"] + 1)
         jogo.carregamento = 0
         jogo.estado = EstadoJogo.PREPARANDO
 
@@ -79,8 +89,20 @@ class ControladorProgressao:
         """Sincroniza a loja e persiste o progresso atual."""
         jogo = self.jogo
         jogo.progresso.registrar_checkpoint(jogo.jogador.nivel)
+        if jogo.profile_service.active:
+            statistics = jogo.progresso.dados["estatisticas"]
+            elapsed = max(0, int(jogo.tempo_partida) - jogo._tempo_contabilizado)
+            kills = max(0, jogo.inimigos_abates - jogo._abates_contabilizados)
+            statistics["tempo_total"] += elapsed
+            statistics["inimigos_derrotados"] += kills
+            jogo._tempo_contabilizado += elapsed
+            jogo._abates_contabilizados += kills
+            jogo.progresso.jogador["nivel_maximo"] = max(
+                jogo.progresso.jogador["nivel_maximo"], jogo.jogador.nivel)
         jogo.progresso.sincronizar_loja(jogo.loja)
         jogo.progresso.salvar_arquivo()
+        if jogo.profile_service.save_error:
+            jogo.menu.notificacoes.adicionar("Falha ao salvar perfil", "erro")
 
     def iniciar_nivel(self, nivel: int) -> None:
         """Configura as ondas ou o boss correspondente ao nivel."""
@@ -144,6 +166,8 @@ class ControladorProgressao:
         jogo.melhorias_oferecidas = []
         jogo.estado = EstadoJogo.JOGANDO
         self.iniciar_nivel(nivel)
+        if jogo.profile_service.active:
+            jogo.profile_service.increment_upgrade(chave)
         return True
 
     def verificar_desbloqueio_arma(self) -> None:
@@ -158,6 +182,10 @@ class ControladorProgressao:
                     f"ARMA NOVA: {arma['nome']}!", LARGURA // 2,
                     ALTURA // 2 + 80, arma["cor"], 130))
                 jogo.sons.tocar("arma")
+                if jogo.profile_service.active:
+                    jogo.profile_service.update_progress(
+                        armas_desbloqueadas=list(jogo.jogador.armas_desbloqueadas),
+                        arma_equipada=jogo.jogador.arma_atual)
 
     def transicao_cenario(self, novo_id: int) -> None:
         """Agenda o salto visual sem interromper a fila de eventos."""
@@ -174,6 +202,7 @@ class ControladorProgressao:
         jogo._aplicar_qualidade_grafica()
         jogo.avanco_controller.trocar_dimensao(jogo.cenario)
         jogo.progresso.desbloquear_cenario(novo_id)
+        jogo.progresso.salvar_arquivo()
 
     def atualizar_transicao(self) -> None:
         """Avança uma etapa do salto por passo fixo de simulação."""

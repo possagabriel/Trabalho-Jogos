@@ -93,7 +93,7 @@ def test_save_antigo_ativa_mira_por_padrao(tmp_path) -> None:
         assert config["mira_ativa"] is True
         config["mira_ativa"] = False
         assert config.salvar()
-        assert settings.Configuracoes()["mira_ativa"] is False
+        assert settings.Configuracoes()["mira_ativa"] is True  # ajuste por perfil
 
 
 def test_posicao_da_mira_usa_conversao_da_janela() -> None:

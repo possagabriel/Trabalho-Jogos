@@ -73,6 +73,7 @@ from src.runtime.presentation.screens.menu_screens import (
 )
 from src.runtime.presentation.screens.records_screen import TelaRecordesJogo
 from src.runtime.presentation.screens.memory_archive_screen import TelaArquivoMemorias
+from src.runtime.presentation.screens.profile_screen import ProfileScreen
 from src.runtime.presentation.screens.settings_screen import TelaConfiguracoesJogo
 from src.runtime.presentation.screens.store_screen import TelaLojaJogo
 from src.runtime.presentation.ui import BotaoNeon
@@ -543,6 +544,7 @@ class MenuPrincipal:
         self.tela_recordes = TelaRecordesJogo(self)
         self.tela_loja = TelaLojaJogo(self)
         self.tela_configuracoes = TelaConfiguracoesJogo(self)
+        self.profile_screen = ProfileScreen(self)
         self.telas = {
             "MENU": TelaPrincipal(self),
             "CONTINUAR": TelaContinuar(self),
@@ -587,14 +589,15 @@ class MenuPrincipal:
             ("04 // RECORDES", self._abrir_recordes),
             ("05 // CONFIGURAÇÕES", self._abrir_config),
             ("06 // ARQUIVO DE MEMÓRIAS", self._abrir_arquivo),
-            ("07 // SAIR", self._sair),
+            ("07 // PERFIS", self._abrir_perfis),
+            ("08 // SAIR", self._sair),
         ]
         # ancora a coluna alinhada a esquerda: nunca deixa o texto mais longo
         # estourar a borda direita da tela (usa a fonte da opcao selecionada)
         largura_max = self.layout.px(OpcaoMenu.LARGURA_PAINEL)
         x_max = self.layout.largura - largura_max - self.layout.px(24)
         self.x_opcoes = min(self.layout.x(0.61), x_max)
-        y = self.layout.px(190)
+        y = self.layout.px(125)
         self.opcoes = []
         for texto, funcao in itens:
             self.opcoes.append(OpcaoMenu(texto, y, funcao))
@@ -631,6 +634,13 @@ class MenuPrincipal:
         self.subestado = "ARQUIVO"
         self.transicao.iniciar()
 
+    def _abrir_perfis(self):
+        """Abre seleção de perfis somente fora da partida."""
+        self._som("navegar")
+        self.profile_screen.refresh()
+        self.subestado = "PERFIS"
+        self.transicao.iniciar()
+
     def _abrir_lobby(self):
         """Abre o Lobby na fase salva, sem reiniciar a campanha."""
         self._abrir_fases()
@@ -661,7 +671,7 @@ class MenuPrincipal:
 
     def _abrir_recordes(self):
         self._som("navegar")
-        self.jogo.recordes = SistemaProgressao.carregar_recordes()
+        self.jogo.recordes = self.jogo.progresso.carregar_recordes_perfil()
         self.sub_anim = 0.0
         self.subestado = "RECORDES"
         self.transicao.iniciar()
@@ -686,6 +696,7 @@ class MenuPrincipal:
 
     def _confirmar_sair(self):
         self.jogo._salvar_tudo()
+        self.jogo.profile_service.flush()
         self.jogo.rodando = False
 
     def _voltar_menu(self):
@@ -730,11 +741,9 @@ class MenuPrincipal:
 
     def _resetar_e_jogar(self):
         self.jogo.progresso.resetar_progresso()
-        try:
-            if os.path.exists(ARQUIVO_RECORDES):
-                os.remove(ARQUIVO_RECORDES)
-        except OSError as erro:
-            LOGGER.warning("Nao foi possivel apagar os recordes: %s", erro)
+        if self.jogo.profile_service.active:
+            self.jogo.profile_service.active.progress["recordes"] = []
+            self.jogo.profile_service.active.progress["recorde_pontos"] = 0
         self.jogo.loja = LojaSkins()
         self.jogo.progresso.sincronizar_loja(self.jogo.loja)
         self.jogo.progresso.salvar_arquivo()
@@ -2290,7 +2299,9 @@ class MenuPrincipal:
             tema,
         )
         self.hud.desenhar(tela, tema)
-        if self.subestado == "FASES":
+        if self.subestado == "PERFIS":
+            self.profile_screen.draw(tela)
+        elif self.subestado == "FASES":
             self.phase_screen.draw(tela)
             ship_x, ship_y = self.phase_screen.ship_position()
             self.nave.desenhar(tela, skin, ship_x, ship_y,
@@ -2346,6 +2357,9 @@ class MenuPrincipal:
     # -------------------------------------------------------------- eventos
 
     def tratar_eventos(self, evento):
+        if self.subestado == "PERFIS":
+            self.profile_screen.handle_event(evento)
+            return True
         if self.transicao_missao.em_andamento():
             return True
         if self.dialogo and self.dialogo.ativo:

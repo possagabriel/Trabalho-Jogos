@@ -11,6 +11,21 @@ SCHEMA_VERSION = 1
 MAX_MONEY = 2**63 - 1
 
 
+def migrate_schema(data: dict[str, Any]) -> dict[str, Any]:
+    """Atualiza formatos antigos em etapas sem sobrescrever dados desconhecidos."""
+    version = data.get("schema_version", 0)
+    if not isinstance(version, int) or version > SCHEMA_VERSION or version < 0:
+        raise ValueError("Versão de perfil não suportada")
+    result = dict(data)
+    while version < SCHEMA_VERSION:
+        if version == 0:
+            result.setdefault("preferences", {})
+            result.setdefault("progress", {})
+            result["schema_version"] = 1
+        version += 1
+    return result
+
+
 def now_iso() -> str:
     """Retorna instante UTC em formato persistível."""
     return datetime.now(timezone.utc).isoformat()
@@ -52,9 +67,7 @@ class Profile:
         """Lê versão anterior preenchendo campos novos sem perder extras."""
         if not isinstance(data, dict) or not data.get("id") or not data.get("name"):
             raise ValueError("Perfil inválido")
-        version = data.get("schema_version", 0)
-        if not isinstance(version, int) or version > SCHEMA_VERSION:
-            raise ValueError("Versão de perfil não suportada")
+        data = migrate_schema(data)
         progress = initial_progress()
         old_progress = data.get("progress", {})
         if not isinstance(old_progress, dict):

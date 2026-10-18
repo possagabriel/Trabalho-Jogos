@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from src.core.profile_service import ProfileService
+from src.domain.systems.profile_service import ProfileService
 from src.infrastructure.persistence.profile_repository import JsonProfileRepository
 
 
@@ -15,7 +15,7 @@ def service(tmp_path):
     return ProfileService(JsonProfileRepository(tmp_path), max_profiles=5, max_name_length=16)
 
 
-@pytest.mark.parametrize("name", ["", "   ", "A/ B", "A\nB", "A\tB", "X" * 17])
+@pytest.mark.parametrize("name", ["", "   ", "A/ B", "A@B", "A\nB", "A\tB", "X" * 17])
 def test_invalid_names(service, name):
     with pytest.raises(ValueError):
         service.create(name)
@@ -47,7 +47,7 @@ def test_crud_limit_and_active_delete(service):
         service.credit(1)
 
 
-def test_money_unlocks_and_catalog_validation(service):
+def test_money_unlocks_and_catalog_validation(service, caplog):
     profile = service.create("Jogadora")
     service.select(profile.id)
     service.credit(10)
@@ -61,11 +61,20 @@ def test_money_unlocks_and_catalog_validation(service):
     raw = service.active.to_dict()
     raw["progress"]["skins_desbloqueadas"] += ["skin-invalida"]
     raw["progress"]["armas_desbloqueadas"] += [999]
+    raw["progress"]["melhorias_escolhidas"] = {"inexistente": 3}
+    raw["progress"]["cenas_vistas"] = ["inexistente", "introducao"]
+    raw["progress"]["bosses_por_tipo"] = {"inexistente": 2}
+    raw["progress"]["skin_atual"] = "skin-invalida"
     service.repository.write_raw(profile.id, raw)
     reloaded = ProfileService(service.repository)
     reloaded.select(profile.id)
     assert "skin-invalida" not in reloaded.active.progress["skins_desbloqueadas"]
     assert 999 not in reloaded.active.progress["armas_desbloqueadas"]
+    assert reloaded.active.progress["skin_atual"] == "padrao"
+    assert reloaded.active.progress["melhorias_escolhidas"] == {}
+    assert reloaded.active.progress["cenas_vistas"] == ["introducao"]
+    assert reloaded.active.progress["bosses_por_tipo"] == {}
+    assert "descartado" in caplog.text
 
 
 def test_rebuild_index_and_corrupt_profile(tmp_path):
@@ -93,6 +102,19 @@ def test_corrupt_primary_uses_backup(tmp_path):
     recovered = ProfileService(JsonProfileRepository(tmp_path))
     recovered.select(profile.id)
     assert recovered.active.progress["moedas"] == 0
+    assert json.loads(recovered.repository.backup_path(profile.id).read_text(
+        encoding="utf-8"))["progress"]["moedas"] == 0
+
+
+def test_damaged_last_used_is_not_selected(tmp_path):
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    profile = service.create("Ana")
+    service.select(profile.id)
+    service.repository.profile_path(profile.id).write_text("{", encoding="utf-8")
+    service.repository.backup_path(profile.id).write_text("{", encoding="utf-8")
+    recovered = ProfileService(JsonProfileRepository(tmp_path))
+    assert recovered.select_last() is None
+    assert recovered.active is None
 
 
 @pytest.mark.parametrize("legacy", [
@@ -137,3 +159,51 @@ def test_interrupted_migration_recovers_without_duplicate(tmp_path):
     resumed.migrate_legacy()
     assert len(resumed.list_profiles()) == 1
     assert resumed.repository.read_index()["migration_complete"] is True
+
+
+def test_old_schema_and_deleted_last_profile_do_not_reimport(tmp_path):
+    legacy = '{"jogador":{"moedas":4}}'
+    (tmp_path / "save.json").write_text(legacy, encoding="utf-8")
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    service.migrate_legacy()
+    profile = service.list_profiles()[0]
+    raw = profile.to_dict()
+    raw["schema_version"] = 0
+    raw["progress"].pop("mortes")
+    service.repository.write_raw(profile.id, raw)
+    loaded = ProfileService(JsonProfileRepository(tmp_path))
+    assert loaded.list_profiles()[0].progress["mortes"] == 0
+    loaded.delete(profile.id, profile.name)
+    loaded.repository.index_path.unlink()
+    again = ProfileService(JsonProfileRepository(tmp_path))
+    again.migrate_legacy()
+    assert again.list_profiles() == []
+
+
+def test_orphan_is_cleaned_on_startup(tmp_path):
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    profile = service.create("Ana")
+    orphan = service.repository.folder / "00000000-0000-0000-0000-000000000001.json"
+    orphan.write_text(json.dumps(profile.to_dict()), encoding="utf-8")
+    ProfileService(JsonProfileRepository(tmp_path))
+    assert not orphan.exists()
+
+
+def test_missing_index_recovers_backup_only_profile(tmp_path):
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    profile = service.create("Ana")
+    service.select(profile.id)
+    service.repository.profile_path(profile.id).unlink()
+    service.repository.index_path.unlink()
+    recovered = ProfileService(JsonProfileRepository(tmp_path))
+    assert [item.id for item in recovered.list_profiles()] == [profile.id]
+
+
+def test_delete_damaged_profile_by_displayed_name(tmp_path):
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    profile = service.create("Ana")
+    service.repository.profile_path(profile.id).write_text("{", encoding="utf-8")
+    damaged = service.list_profiles()[0]
+    assert damaged.damaged
+    service.delete(damaged.id, damaged.name)
+    assert service.list_profiles() == []

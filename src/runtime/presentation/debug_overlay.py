@@ -19,7 +19,7 @@ class OverlayDebug:
     def __init__(self) -> None:
         self._fonte = fonte_texto(18)
         self._glifos: dict[str, pygame.Surface] = {}
-        self._fundo = pygame.Surface((440, 244), pygame.SRCALPHA)
+        self._fundo = pygame.Surface((540, 292), pygame.SRCALPHA)
         self._fundo.fill((*VOID_BLACK, 215))
 
     def desenhar(self, tela: pygame.Surface, jogo: Jogo, mira: tuple[int, int] | None) -> None:
@@ -34,7 +34,11 @@ class OverlayDebug:
         cena_id = narrativa.cena.id if narrativa.cena else "--"
         vistas = jogo.progresso.cenas_vistas
         flags = ", ".join(vistas[-2:]) or "--"
+        profile = jogo.profile_service.active
         linhas = (
+            f"PERFIL: {profile.name} [{profile.id[:8]}]" if profile else "PERFIL: --",
+            f"SALVO: {jogo.profile_service.last_save or '--'} | "
+            f"PENDENTE: {'SIM' if jogo.profile_service.dirty else 'NÃO'}",
             f"FPS: {jogo.fps_atual:.0f}",
             f"AVANÇO: {avanco.estado.value}",
             f"VELOCIDADE: {avanco.velocidade:.1f} px/s",

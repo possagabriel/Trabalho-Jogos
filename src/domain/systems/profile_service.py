@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import unicodedata
 from copy import deepcopy
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
 from src.domain.profiles import MAX_MONEY, Profile, initial_progress, now_iso
-from src.infrastructure.persistence.profile_repository import ProfileRepository
+from src.domain.repository.profile_repository import ProfileRepository
 from src.shared.persistence import carregar_json_resiliente
 
 LOGGER = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class ProfileService:
         name = unicodedata.normalize("NFC", value.strip())
         if not name or len(name) > self.max_name_length:
             raise ValueError("Nome vazio ou longo demais")
-        if any(unicodedata.category(ch).startswith("C") or ch in "/\\<>:*?\"|" for ch in name):
+        if any(not (ch.isalnum() or ch in " _-") for ch in name):
             raise ValueError("Caractere inválido")
         return name
 
@@ -54,8 +54,10 @@ class ProfileService:
         profiles = []
         for row in self.index["profiles"]:
             try:
-                profiles.append(self.repository.load(row["id"]))
-            except (ValueError, OSError):
+                profile = self.repository.load(row["id"])
+                self._validate_catalogs(profile)
+                profiles.append(profile)
+            except (ValueError, OSError, KeyError, TypeError):
                 profiles.append(Profile(row["id"], row.get("name", "DANIFICADO"),
                                         "", "", damaged=True))
         return profiles
@@ -118,8 +120,10 @@ class ProfileService:
         """Exige nome exato e remove índice antes do arquivo e backup."""
         if in_game and self.active and self.active.id == profile_id:
             raise ValueError("Perfil em uso durante a partida")
-        profile = self.repository.load(profile_id)
-        if confirmation != profile.name:
+        row = next((row for row in self.index["profiles"] if row["id"] == profile_id), None)
+        if row is None:
+            raise KeyError(profile_id)
+        if confirmation != row["name"]:
             raise ValueError("Confirmação incorreta")
         previous = deepcopy(self.index)
         self.index["profiles"] = [row for row in self.index["profiles"]
@@ -209,6 +213,7 @@ class ProfileService:
 
     def _validate_catalogs(self, profile: Profile) -> None:
         from src.runtime.domain.entities.player import SKINS
+        from src.runtime.domain.entities.bosses import BOSSES_POR_CENARIO
         from src.runtime.domain.entities.weapons import ARMARIA
         from src.runtime.domain.systems.upgrades import MELHORIAS
 
@@ -222,9 +227,15 @@ class ProfileService:
             source = progress.get(field, [])
             if not isinstance(source, list):
                 source = []
-            cleaned = list(dict.fromkeys(item for item in source if item in valid))
+            cleaned = []
             for item in source:
-                if item not in valid:
+                try:
+                    exists = item in valid
+                except TypeError:
+                    exists = False
+                if exists and item not in cleaned:
+                    cleaned.append(item)
+                elif not exists:
                     LOGGER.warning("Item inexistente descartado de %s: %s", field, item)
             if default not in cleaned:
                 cleaned.insert(0, default)
@@ -236,14 +247,56 @@ class ProfileService:
             if progress.get(equipped) not in progress[unlocked]:
                 progress[equipped] = default
         choices = progress.get("melhorias_escolhidas", {})
+        if isinstance(choices, dict):
+            for key in choices:
+                if key not in MELHORIAS:
+                    LOGGER.warning("Melhoria inexistente descartada: %s", key)
         progress["melhorias_escolhidas"] = {
             key: count for key, count in choices.items()
             if key in MELHORIAS and type(count) is int and count >= 0
         } if isinstance(choices, dict) else {}
         money = progress.get("moedas", 0)
         progress["moedas"] = money if type(money) is int and 0 <= money <= MAX_MONEY else 0
+        valid_bosses = {row["nome"] for row in BOSSES_POR_CENARIO.values()}
+        counts = progress.get("bosses_por_tipo", {})
+        if isinstance(counts, dict):
+            for key in counts:
+                if key not in valid_bosses:
+                    LOGGER.warning("Boss inexistente descartado: %s", key)
+        progress["bosses_por_tipo"] = {
+            key: count for key, count in counts.items()
+            if key in valid_bosses and type(count) is int and count >= 0
+        } if isinstance(counts, dict) else {}
+        story = json.loads((files("src.runtime.story") / "cenas_pt_BR.json").read_text(
+            encoding="utf-8"))
+        scene_ids = {row["id"] for row in story["cenas"]}
+        for field in ("cenas_vistas", "memorias_desbloqueadas"):
+            source = progress.get(field, [])
+            if not isinstance(source, list):
+                source = []
+            cleaned = []
+            for item in source:
+                if isinstance(item, str) and item in scene_ids and item not in cleaned:
+                    cleaned.append(item)
+                else:
+                    LOGGER.warning("Cena inexistente descartada de %s: %s", field, item)
+            progress[field] = cleaned
+        records = progress.get("recordes", [])
+        clean_records = []
+        if isinstance(records, list):
+            for record in records:
+                if not isinstance(record, dict) or not isinstance(record.get("pontos"), int):
+                    LOGGER.warning("Recorde inválido descartado: %s", record)
+                    continue
+                row = dict(record)
+                if row.get("skin") not in {item["nome"] for item in SKINS}:
+                    LOGGER.warning("Skin de recorde inexistente descartada: %s", row.get("skin"))
+                    row["skin"] = SKINS[0]["nome"]
+                clean_records.append(row)
+        progress["recordes"] = clean_records[:10]
 
-    def migrate_legacy(self, interrupt_after_profile: bool = False) -> None:
+    def migrate_legacy(self, interrupt_after_profile: bool = False,
+                       preferences: dict[str, Any] | None = None) -> None:
         """Importa uma vez o save único; nunca altera arquivos legados."""
         if self.index.get("migration_complete"):
             return
@@ -264,19 +317,34 @@ class ProfileService:
             self.migration_error = str(exc)
             return
         old = legacy["jogador"]
-        profile = self.create("JOGADOR")
+        profile = Profile.new("JOGADOR", deepcopy(preferences) if preferences else {})
         progress = initial_progress()
+        campaign = old.get("progresso_campanha")
+        campaign = campaign if isinstance(campaign, dict) else {}
+        dimensions = old.get("cenarios_desbloqueados", [1])
+        dimensions = [value for value in dimensions if type(value) is int and 1 <= value <= 6] \
+            if isinstance(dimensions, list) else [1]
         progress.update({
             "moedas": old.get("moedas", 0),
             "nivel_maximo": old.get("nivel_maximo", 1),
-            "dimensao_maxima": max(old.get("cenarios_desbloqueados", [1]) or [1]),
+            "dimensao_maxima": max(dimensions or [1]),
             "total_pontos": old.get("total_pontos", 0),
             "skins_desbloqueadas": old.get("skins_desbloqueadas", ["padrao"]),
             "skin_atual": old.get("skin_atual", "padrao"),
-            "cenas_vistas": old.get("progresso_campanha", {}).get("cenas_vistas", []),
+            "cenas_vistas": campaign.get("cenas_vistas", []),
+            "memorias_desbloqueadas": campaign.get("cenas_vistas", []),
             "legacy": deepcopy(legacy),
         })
+        defeated = campaign.get("bosses_derrotados", [])
+        from src.runtime.domain.entities.bosses import BOSSES_POR_CENARIO
+        if isinstance(defeated, list):
+            for index in defeated:
+                if type(index) is int and index in BOSSES_POR_CENARIO:
+                    name = BOSSES_POR_CENARIO[index]["nome"]
+                    counts = progress["bosses_por_tipo"]
+                    counts[name] = counts.get(name, 0) + 1
         statistics = legacy.get("estatisticas", {})
+        statistics = statistics if isinstance(statistics, dict) else {}
         for key in ("tempo_total", "inimigos_derrotados"):
             progress[key] = statistics.get(key, 0)
         try:
@@ -290,6 +358,11 @@ class ProfileService:
         self._validate_catalogs(profile)
         if not self.repository.save(profile):
             self.migration_error = "Falha ao gravar perfil importado"
+            return
+        self.index["profiles"].append({"id": profile.id, "name": profile.name})
+        if not self.repository.write_index(self.index):
+            self.index["profiles"].pop()
+            self.migration_error = "Falha ao atualizar índice importado"
             return
         if interrupt_after_profile:
             return

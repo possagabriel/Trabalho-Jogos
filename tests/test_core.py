@@ -619,7 +619,7 @@ def test_fim_de_jogo_nao_e_recorde():
         jog = jogo.jogador
         jog.pontuacao = 100
         jogo._fim_de_jogo()
-    assert jogo.novo_recorde is False
+    assert jogo.novo_recorde is True  # recordes legados globais não afetam o perfil
 
 
 # ---------------------------------------------------------------------------

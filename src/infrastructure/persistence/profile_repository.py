@@ -5,28 +5,14 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any
 from uuid import UUID
 
 from src.domain.profiles import Profile
-from src.shared.persistence import carregar_json_resiliente, salvar_json_atomico
+from src.shared.persistence import salvar_json_atomico
 from src.shared.user_data import diretorio_dados
 
 LOGGER = logging.getLogger(__name__)
-
-
-class ProfileRepository(Protocol):
-    """Porta de persistência, independente do formato em disco."""
-
-    def load(self, profile_id: str) -> Profile: ...
-
-    def save(self, profile: Profile) -> bool: ...
-
-    def read_index(self) -> dict[str, Any]: ...
-
-    def write_index(self, index: dict[str, Any]) -> bool: ...
-
-    def delete(self, profile_id: str) -> None: ...
 
 
 class JsonProfileRepository:
@@ -36,6 +22,7 @@ class JsonProfileRepository:
         self.data_dir = Path(data_dir or diretorio_dados())
         self.folder = self.data_dir / "profiles"
         self.index_path = self.folder / "index.json"
+        self.migration_marker = self.folder / ".migration-complete"
         self.folder.mkdir(parents=True, exist_ok=True)
 
     def profile_path(self, profile_id: str) -> Path:
@@ -55,6 +42,8 @@ class JsonProfileRepository:
                 profile = Profile.from_dict(data)
                 if profile.id != profile_id:
                     raise ValueError("ID divergente")
+                if candidate != path:
+                    salvar_json_atomico(path, profile.to_dict(), criar_backup=False)
                 return profile
             except (OSError, ValueError, TypeError) as exc:
                 LOGGER.warning("Perfil ilegível em %s: %s", candidate, exc)
@@ -74,15 +63,29 @@ class JsonProfileRepository:
             index = json.loads(self.index_path.read_text(encoding="utf-8"))
             if not isinstance(index, dict) or not isinstance(index.get("profiles"), list):
                 raise ValueError("Índice inválido")
+            for row in index["profiles"]:
+                if (not isinstance(row, dict) or not isinstance(row.get("name"), str)
+                        or not isinstance(row.get("id"), str)):
+                    raise ValueError("Entrada inválida no índice")
+                UUID(row["id"])
+            index.setdefault("last_used", None)
+            index.setdefault("migration_complete", self.migration_marker.exists())
             return index
         except (OSError, ValueError, json.JSONDecodeError):
             index = {"schema_version": 1, "profiles": [], "last_used": None,
-                     "migration_complete": False}
-            for path in sorted(self.folder.glob("*.json")):
-                if path.name == "index.json":
+                     "migration_complete": self.migration_marker.exists()}
+            candidates = sorted(set(self.folder.glob("*.json")) |
+                                set(self.folder.glob("*.json.bak")))
+            seen: set[str] = set()
+            for path in candidates:
+                if path.name.startswith("index.json"):
                     continue
                 try:
-                    profile_id = str(UUID(path.stem))
+                    raw_id = path.name.removesuffix(".json.bak").removesuffix(".json")
+                    profile_id = str(UUID(raw_id))
+                    if profile_id in seen:
+                        continue
+                    seen.add(profile_id)
                     try:
                         profile = self.load(profile_id)
                         name = profile.name
@@ -96,7 +99,15 @@ class JsonProfileRepository:
 
     def write_index(self, index: dict[str, Any]) -> bool:
         """Atualiza metadados derivados e marcador de migração."""
-        return salvar_json_atomico(self.index_path, index)
+        if not salvar_json_atomico(self.index_path, index):
+            return False
+        if index.get("migration_complete"):
+            try:
+                self.migration_marker.touch(exist_ok=True)
+            except OSError as exc:
+                LOGGER.warning("Não foi possível marcar migração: %s", exc)
+                return False
+        return True
 
     def delete(self, profile_id: str) -> None:
         """Apaga arquivo e backup após atualização do índice."""
@@ -105,12 +116,18 @@ class JsonProfileRepository:
 
     def clean_orphans(self, known_ids: set[str]) -> None:
         """Remove arquivos que não constam no índice válido."""
-        for path in self.folder.glob("*.json"):
-            if path.name == "index.json":
+        candidates = set(self.folder.glob("*.json")) | set(self.folder.glob("*.json.bak"))
+        for path in candidates:
+            if path.name.startswith("index.json"):
                 continue
             try:
-                profile_id = str(UUID(path.stem))
+                raw_id = path.name.removesuffix(".json.bak").removesuffix(".json")
+                profile_id = str(UUID(raw_id))
             except ValueError:
                 continue
             if profile_id not in known_ids:
-                self.delete(profile_id)
+                try:
+                    self.delete(profile_id)
+                except OSError as exc:
+                    LOGGER.warning("Não foi possível limpar perfil órfão %s: %s",
+                                   profile_id, exc)
