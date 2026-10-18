@@ -145,10 +145,16 @@ def test_grade_de_configuracoes_fica_centralizada_no_painel():
     painel = menu._painel_config()
     rotulo_x, indicador_x, inicio_slider, fim_slider, percentual_x = menu._grade_config()
 
-    assert painel.left < indicador_x < rotulo_x < inicio_slider < fim_slider < percentual_x < painel.right
+    assert (
+        painel.left < indicador_x < rotulo_x < inicio_slider
+        < fim_slider < percentual_x < painel.right
+    )
     # A margem do indicador e a cauda reservada para a porcentagem se espelham.
     fim_conteudo = percentual_x + menu.layout.px(40)
-    assert abs((indicador_x - painel.centerx) + (fim_conteudo - painel.centerx)) <= menu.layout.px(10)
+    assert (
+        abs((indicador_x - painel.centerx) + (fim_conteudo - painel.centerx))
+        <= menu.layout.px(10)
+    )
 
 
 def test_layout_em_todas_as_resolucoes_alvo():

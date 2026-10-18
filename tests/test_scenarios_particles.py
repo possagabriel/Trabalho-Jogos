@@ -28,7 +28,7 @@ import pygame  # noqa: E402
 from game import smooth  # noqa: E402
 from game.config import ALTURA, LARGURA  # noqa: E402
 from game.particles import MensagemFlutuante, Particula, SistemaParticulas  # noqa: E402
-from game.scenarios import (
+from game.scenarios import (  # noqa: E402
     CENARIOS,
     Cenario,
     Estrela,

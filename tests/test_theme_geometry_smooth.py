@@ -24,7 +24,7 @@ import math  # noqa: E402
 
 import pygame  # noqa: E402
 
-from game import (
+from game import (  # noqa: E402
     geometry,  # noqa: E402
     smooth,  # noqa: E402
     theme,  # noqa: E402

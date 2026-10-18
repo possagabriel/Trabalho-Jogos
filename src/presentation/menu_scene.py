@@ -409,7 +409,7 @@ class HudMenu:
     # ----- desenho -----
 
     def desenhar(self, tela: pygame.Surface, tema: dict) -> None:
-        l = self._largura
+        largura = self._largura
         h = self._altura
         primaria = tema["primaria"]
         secundaria = tema["secundaria"]
@@ -430,13 +430,13 @@ class HudMenu:
         pisca = 0.5 + 0.5 * math.sin(self.tempo * 3.2)
         cor_sys = (0, 255, 150) if pisca > 0.1 else (80, 255, 170)
         self._desenhar_texto(tela, "sys_rotulo", fonte_p, "SYS",
-                             (l - 36, 20), dim, 2, "direita")
+                             (largura - 36, 20), dim, 2, "direita")
         self._desenhar_texto(tela, "sys_valor", fonte_p, "ONLINE",
-                             (l - 34, 40), cor_sys, 2, "direita")
+                             (largura - 34, 40), cor_sys, 2, "direita")
         coord_txt = "GRID %.0f.%.0f" % (self._coord % 1000,
                                         self._coord * 3 % 1000)
         self._desenhar_texto(tela, "coord", fonte_p, coord_txt,
-                             (l - 34, 42), dim, 2, "direita")
+                             (largura - 34, 42), dim, 2, "direita")
 
         # radar
         cx, cy = 74, 588
@@ -452,7 +452,7 @@ class HudMenu:
 
         # banda inferior
         tela.blit(self.banda, (0, h - 64))
-        pygame.draw.line(tela, primaria, (0, h - 64), (l, h - 64), 2)
+        pygame.draw.line(tela, primaria, (0, h - 64), (largura, h - 64), 2)
 
         self._desenhar_texto(tela, "mis_rotulo", fonte_p, "MISSAO",
                              (40, h - 54), dim, 3)
@@ -477,12 +477,12 @@ class HudMenu:
                              (556, y_barra + 4), texto_cor, 1, "direita")
 
         self._desenhar_texto(tela, "vel_rotulo", fonte_p, "VELOCIDADE",
-                             (l - 40, h - 56), dim, 3, "direita")
+                             (largura - 40, h - 56), dim, 3, "direita")
         self._desenhar_texto(tela, "vel_valor", fonte_m,
                              "%.0f KC" % self._vel,
-                             (l - 40, h - 36), (255, 200, 120), 3, "direita")
+                             (largura - 40, h - 36), (255, 200, 120), 3, "direita")
         self._desenhar_texto(tela, "vel_sub", fonte_p, "NAV MODE",
-                             (l - 44, h - 22), borda, 2, "direita")
+                             (largura - 44, h - 22), borda, 2, "direita")
 
 
 # ---------------------------------------------------------------------------

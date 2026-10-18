@@ -113,7 +113,6 @@ class GameScreen:
         surface.blit(bg, painel.topleft)
         pygame.draw.rect(surface, tema["primaria"], painel, 6,
                          border_radius=28)
-        t = pygame.time.get_ticks() * 0.001
         ix, iy = LARGURA // 2, painel.y + 36
         for offset in (-16, 6):
             pygame.draw.rect(surface, tema["primaria"],

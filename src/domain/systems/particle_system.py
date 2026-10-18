@@ -80,7 +80,15 @@ class ParticleSystem:
     def __init__(self) -> None:
         self.particulas: list[Particula] = []
 
-    def explosao(self, x: float, y: float, cor: tuple, qtd: int = 20, forca: float = 6.0, gravidade: float = 0.0) -> None:
+    def explosao(
+        self,
+        x: float,
+        y: float,
+        cor: tuple,
+        qtd: int = 20,
+        forca: float = 6.0,
+        gravidade: float = 0.0,
+    ) -> None:
         for _ in range(qtd):
             ang = random.uniform(0, math.tau)
             v = random.uniform(1, forca)

@@ -219,7 +219,7 @@ def test_especial_acoes_mutante():
     e.carga = e.carga_maxima
     e.carregado = True
     vida = e.vida
-    acoes = e.acoes_carregado()
+    e.acoes_carregado()
     assert e.mini_boss is True
     assert e.vida == vida + 60
     assert e.raio == 36

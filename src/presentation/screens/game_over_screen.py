@@ -36,7 +36,6 @@ class GameOverScreen:
         f_title = pygame.font.SysFont("monospace", 48, bold=True)
         f_sub = pygame.font.SysFont("monospace", 24, bold=True)
         f_med = pygame.font.SysFont("monospace", 22)
-        f_sm = pygame.font.SysFont("monospace", 18)
 
         # titulo
         ts = f_title.render("RIFT COLLAPSED", True, RIFT_MAGENTA)
