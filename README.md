@@ -139,9 +139,9 @@ desabilitado e avisa quando ativado; Lobby recebe o foco inicial dentro de Jogar
 
 O Lobby conserva a campanha e abre a seleção de fases. O Hangar é uma loja
 separada para comprar e equipar skins. Continuar carrega o progresso persistido
-para iniciar uma missão; não retoma um checkpoint de combate. O resumo exibe
-dimensão e nível máximos salvos, não um ponto de retomada, além do tempo total
-do perfil.
+para iniciar uma missão no início da campanha (Dimensão 1, Nível 1); o Lobby
+retoma o checkpoint salvo. O resumo de Continuar mostra o início efetivo da
+missão e o tempo total acumulado pelo perfil.
 
 ### História e cutscenes (1.4.0)
 

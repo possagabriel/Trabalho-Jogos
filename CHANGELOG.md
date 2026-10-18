@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   e deixam cada tela anterior acessível em até duas ações.
 - O perfil versionado guarda os IDs de novidades reconhecidas no Arquivo e no
   Hangar, com defaults para perfis antigos e transferência preservada.
+- Um perfil recém-criado sem partidas não é tratado como save continuável; o
+  resumo de Continuar mostra a partida iniciada na Dimensão 1 / Nível 1.
 - README documenta a navegação nova, os destinos de Lobby/Hangar e a ausência
   de retomada por checkpoint.
 - A nave foi reposicionada para equilibrar o título e a coluna de ações. O marcador

@@ -136,6 +136,17 @@ def test_schema_v1_gets_novelty_defaults_and_transfer_preserves_state(
     }
 
 
+def test_fresh_profile_is_not_mistaken_for_a_continuable_save(service):
+    profile = service.create("Novo")
+    service.select(profile.id)
+    from src.runtime.infrastructure.persistence.save_system import ProgressoPerfil
+
+    progress = ProgressoPerfil(service)
+    assert progress.existe_save() is False
+    service.update_progress(partidas_jogadas=1)
+    assert progress.existe_save() is True
+
+
 def test_rebuild_index_and_corrupt_profile(tmp_path):
     repo = JsonProfileRepository(tmp_path)
     service = ProfileService(repo)

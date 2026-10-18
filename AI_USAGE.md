@@ -9,10 +9,10 @@
   perfil para registrar novidades de Memórias e Hangar; consulta e confirmação
   de novidades pelo `ProfileService`; testes de transferência e de aviso único.
 - **Decisões:** Continuar abre a tela existente de progresso/Novo Jogo para
-  preservar esse fluxo. Não há checkpoint: o resumo deve identificar máximos
-  salvos e tempo total do perfil.
+  preservar esse fluxo e inicia na Dimensão 1 / Nível 1. O checkpoint fica no
+  Lobby. O tempo exibido é total do perfil.
 - **Ajustes manuais do usuário:** nenhum informado.
-- **Verificação:** suíte completa: 631 passaram, 1 skip. Ruff nos arquivos
+- **Verificação:** suíte completa: 632 passaram, 1 skip. Ruff nos arquivos
   alterados: limpo. Testes adicionados para hubs, foco/retorno, migração de
   perfil, exportação/importação e reconhecimento dos avisos.
 
