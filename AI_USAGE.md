@@ -255,10 +255,17 @@
   mas nenhum arquivo `LICENSE` foi aplicado. Orbitron e Rajdhani usam SIL OFL 1.1.
 - **Verificação:** 601 testes passaram e 1 OpenGL foi ignorado; o smoke de CLI
   e 20 testes headless de partida, dimensões, boss, perfis e cutscenes passaram.
-  Ruff passou nos seis arquivos Python alterados; a varredura global ainda
+  Ruff passou nos arquivos Python alterados; a varredura global ainda
   registra 177 achados antigos fora do escopo. No benchmark COMIC/MEDIA de
   120 quadros × 5 repetições, duas rodadas por versão, a média/p95 do mundo
   com avanço foi 4,063–4,267/5,290–5,529 ms na main e
   4,079–4,206/5,405–5,615 ms na integração. As faixas se sobrepõem e a
   integração não alterou o desenho do mundo.
+- **Bloqueio de CI resolvido:** o mypy apontou dois tipos já existentes no
+  controlador de avanço e no indicador de progresso. Foram acrescentados
+  `cast` de tipagem, sem conversão de valores nem alteração de regras.
+- **Compatibilidade de dados:** um perfil criado pelo código da main anterior
+  foi aberto pela integração com identidade, progresso e preferências iguais.
+  Um save legado também foi migrado, preservando os bytes de `save.json` e
+  `records.json` originais.
 - **Ajustes manuais do usuário:** nenhum informado.

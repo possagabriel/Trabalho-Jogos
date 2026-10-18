@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from src.core.constants import ALTURA, CIANO, DIMENSION_GOLD, LARGURA, EstadoJogo
 from src.core.event_bus import GameEventType, publicar_evento
@@ -38,11 +38,11 @@ class ControladorProgressao:
     def atualizar_progresso_visual(self, dt: float, concluido: bool = False) -> float:
         """Atualiza o indicador visual sem interferir na onda ou no combate."""
         jogo = self.jogo
-        return self.progresso_visual.atualizar(
+        return cast(float, self.progresso_visual.atualizar(
             len(jogo.fila_onda), len(jogo.inimigos), dt,
             chefe_ativo=jogo.boss is not None,
             concluido=concluido,
-        )
+        ))
 
     def novo_jogo(self, nome: str, zerar_estado: bool = True) -> None:
         """Reinicia o estado efemero e prepara o primeiro nivel."""
