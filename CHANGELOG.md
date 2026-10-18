@@ -5,7 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.6.0] - 2026-10-18
+
+### Added
+- Marcos procedurais de percurso por dimensão, com sorteio reproduzível, pool
+  limitado por qualidade, evolução visual e destino de chegada para bosses.
+- Progresso de nível suavizado, monotônico e visível no F3, junto da semente e
+  da agenda de marcos.
+- Opções globais para marcos, evolução visual e ritmo variável, compatíveis com
+  `settings.json` antigos.
 
 ### Changed
 - `PREENCHE` preserva a área jogável em 16:9 e estende somente o fundo decorativo.
@@ -20,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   com posterização, tinta de dimensão, contorno e retícula.
 - Caixa de diálogo, retratos, títulos e controles de cutscene usam contorno cartoon sem
   glow decorativo; magenta fica restrito aos glitches e alertas.
+- A troca de dimensão faz fade dos marcos antigos e novos sem alterar a
+  transição de combate existente.
+- Versão do projeto elevada de 1.5.0 para 1.6.0.
 
 ## [1.5.0] - 2026-10-18
 

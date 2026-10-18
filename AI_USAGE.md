@@ -90,6 +90,24 @@
   geração, caindo a 0,0027 ms no acesso seguinte (3,52 MiB por surface de saída). Na
   sequência animada, o capítulo mantém o quadro de título, o texto se revela sem salto,
   e a fala de glitch alterna variantes curtas sem tremer a moldura ou borrar retratos.
+## Ajuste da Fase 2 — Fundo que evolui (1.6.0)
+
+- **Pedido:** dar sensação de percurso 2D com marcos por dimensão, evolução
+  progressiva do cenário, ritmo variável, chegada de boss, configuração, F3 e
+  comparação de benchmark.
+- **Implementação da IA:** catálogo de marcos procedurais cartoon, cache e pool
+  limitados por qualidade, sorteio reproduzível, progresso monotônico suavizado,
+  curvas de evolução por dimensão, destino acionado por eventos de boss, fades
+  durante troca dimensional, testes, benchmark e documentação.
+- **Decisões:** a semente é aleatória por partida quando `avanco_semente` é
+  `null`; números fixos permitem reproduzir testes. Minibosses não criam
+  destino. O indicador de nível usa fila e inimigos ativos, sem alterar combate.
+  Os marcos ficam sob as entidades jogáveis e congelam durante telas pausadas.
+- **Verificação:** baseline de avanço com 60 inimigos: média 4,819 ms, p95
+  6,372 ms. Após a alteração: média 5,421 ms, p95 8,850 ms, com o mesmo
+  ambiente e parâmetros. Memória de cache da dimensão 1: 435.000 bytes em
+  BAIXA, 610.092 em MEDIA e 753.200 em ALTA.
+- **Ajustes manuais do usuário:** nenhum informado.
 
 ## Fase 4 — Perfis de jogador (1.5.0)
 
