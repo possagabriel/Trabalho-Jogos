@@ -40,6 +40,13 @@ def test_diretorio_configurado_tem_prioridade(monkeypatch, tmp_path) -> None:
     assert user_data.diretorio_dados() == str(tmp_path)
 
 
+def test_diretorio_dados_aceita_variavel_legada(monkeypatch, tmp_path) -> None:
+    monkeypatch.delenv("INCARNATE_DATA_DIR", raising=False)
+    monkeypatch.setenv("SPACEFURY_DATA_DIR", str(tmp_path))
+
+    assert user_data.diretorio_dados() == str(tmp_path)
+
+
 def test_build_desktop_usa_separador_correto_por_sistema(tmp_path) -> None:
     windows = argumentos_distribuicao("win32", tmp_path)
     linux = argumentos_distribuicao("linux", tmp_path)

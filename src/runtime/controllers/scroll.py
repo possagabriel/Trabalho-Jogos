@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import random
 import weakref
-from typing import Any
+from typing import Any, cast
 
 from src.core.event_bus import EventBus, GameEvent, GameEventType
 from src.core.settings import VELOCIDADES_AVANCO_PADRAO
@@ -105,7 +105,7 @@ class ControladorAvanco:
         semente = _ler(self.config, "avanco_semente", None)
         self.semente = (semente if type(semente) is int
                         else random.SystemRandom().randrange(0, 2**32))
-        self._jogo().avanco_semente = self.semente
+        cast(Any, self._jogo()).avanco_semente = self.semente
         self.modelo = self._novo_modelo(cenario.id)
         self.destino = TransicaoDestino(
             _numero(_ler(self.config, "avanco_destino_entrada_s", 1.5), 1.5, 0.1, 5),
