@@ -28,6 +28,7 @@ from src.core.settings import (
     TEMAS,
     escala_visual,
 )
+from src.core.version import versao_projeto
 from src.infrastructure.graphics.comic_render import painel_tinta, texto_tinta
 from src.infrastructure.graphics.comic_theme import LARANJA, PAPEL, opcoes_atuais
 from src.infrastructure.graphics.theme import tema_atual
@@ -2293,7 +2294,8 @@ class MenuPrincipal:
         self._blit_alfa(tela, surf2,
                         (layout.largura // 2 - surf2.get_width() // 2, layout.y(0.915)),
                         int(alfa * 0.75))
-        versao = self._espacado(f, "v1.1.0 // ENTRE NA FENDA", 1,
+        rotulo_versao = f"v{versao_projeto()} // ENTRE NA FENDA"
+        versao = self._espacado(f, rotulo_versao, 1,
                                 (110, 122, 160))
         self._blit_alfa(tela, versao,
                         (layout.x(0.5) - versao.get_width() // 2,
