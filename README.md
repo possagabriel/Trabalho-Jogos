@@ -89,8 +89,44 @@ individuais se afastam do ponto central. **Limitação conhecida:** o **Íon**
 continua sendo uma coluna vertical fixa na posição da nave; apontar a mira
 não altera sua trajetória. Ajuste `dispersao_duplo_graus` (padrão `4.5`) e
 `dispersao_espiral_graus` (padrão `15.0`) no `settings.json` do diretório de
-dados do usuário para balancear o leque. `mira_ativa` é salva no mesmo JSON;
-configurações antigas recebem `true` como padrão.
+dados do usuário para balancear o leque. `mira_ativa` fica no perfil selecionado;
+configurações antigas são copiadas na migração e novos perfis recebem `true`.
+
+### Perfis de jogador (1.5.0)
+
+Ao abrir o jogo, selecione um perfil antes do menu principal. **N** cria um
+perfil; as setas escolhem outro, Enter seleciona, **R** renomeia e Delete pede
+confirmação digitando exatamente o nome exibido. O mouse também seleciona os
+cartões e botões. No menu principal, **Perfis** permite trocar de jogador fora
+de uma partida. O perfil em uso não pode ser excluído durante o combate. Se
+todos forem removidos, a tela oferece criar outro. A lista mostra moedas,
+armas, skins, dimensão, bosses e último acesso; um perfil ilegível aparece
+como **DANIFICADO**, sem impedir o acesso aos demais.
+
+Cada perfil tem UUID e um arquivo `profiles/<uuid>.json` com cópia `.bak` no
+diretório de dados do jogo. `profiles/index.json` guarda a lista, o último
+perfil usado e o marcador de migração; se sumir ou estiver corrompido, o jogo
+o reconstrói pelos arquivos de perfil. No primeiro uso, o `save.json` e o
+`records.json` antigos são importados para **JOGADOR** e preservados sem novas
+gravações. O nome pode ser editado depois. A seleção usa controles padrão
+antes de carregar um perfil. Uma gravação que falhe deixa a alteração pendente
+em memória; o jogo avisa na tela e o F3 mostra perfil, ID curto, última
+gravação e pendência.
+
+Para verificar na prática, defina `INCARNATE_DATA_DIR` para uma pasta de teste
+e execute `python main.py`. Crie dois perfis, ganhe ou gaste moedas no primeiro,
+troque pelo menu e confirme que o segundo começa sem esse progresso. Renomeie
+e exclua um perfil pela tela de seleção. Para testar migração, copie um
+`save.json` antigo para essa pasta antes de iniciar; para recuperação, altere
+o conteúdo de `profiles/<uuid>.json` para `{` e mantenha o `.bak` válido.
+Corrompa também o `.bak` para ver o aviso de perfil danificado. Faça esses
+testes em cópias dos arquivos, preservando os dados pessoais.
+
+`limite_perfis` (padrão 5, intervalo 1–20) e `limite_nome_perfil` (padrão 16,
+intervalo 1–32) são ajustáveis em `settings.json`. Controles remapeados,
+sensibilidade e `mira_ativa` ficam em cada perfil; volume, vídeo, qualidade
+visual e velocidade do diálogo permanecem globais. Melhorias escolhidas são
+contadas por perfil, mas seus efeitos terminam ao fim da partida.
 
 ### História e cutscenes (1.4.0)
 
@@ -162,12 +198,16 @@ visual com 60 inimigos está em `python -m tools.benchmark_scroll --quadros 120`
 
 Cada gravação substitui o arquivo de forma atômica e mantém uma cópia `.bak`.
 Se o arquivo principal estiver corrompido, o jogo tenta recuperar essa cópia.
-Para levar o progresso entre Linux e Windows, use o mesmo executável/Python:
+Para levar um perfil entre Linux e Windows, selecione-o no jogo e use:
 
 ```bash
 python main.py --export-save progresso.json
 python main.py --import-save progresso.json
 ```
+
+A exportação usa o último perfil selecionado. A importação cria outro perfil
+com UUID novo, chamado **IMPORTADO** (ou um nome numerado), sem modificar os
+arquivos legados. O comando de importação também aceita um `save.json` antigo.
 
 Os comandos equivalentes também funcionam com `VOID-SHIFT.exe` no Windows e
 `VOID-SHIFT/VOID-SHIFT` no Linux.
@@ -326,16 +366,15 @@ arquivos ficam em `%LOCALAPPDATA%\VoidShift`; no Linux, em
 
 | Arquivo | Conteúdo |
 |---------|----------|
-| `save.json` | Progresso: nome, moedas, skins desbloqueadas/atual, total de pontos, bosses, nível máximo, cenários desbloqueados, estatísticas |
-| `records.json` | Top 10 recordes (`{nome, pontos, nivel, skin}`) |
-| `settings.json` | Configurações: volumes, resolução, tela cheia, sensibilidade, controles, tema, aspecto |
+| `profiles/<uuid>.json` | Progresso, recordes, preferências e estatísticas do perfil |
+| `profiles/index.json` | Índice derivado, último perfil e marcador da migração |
+| `save.json` e `records.json` | Arquivos legados preservados após importação |
+| `settings.json` | Configurações globais: volumes, resolução, tela cheia, tema, aspecto e limites de perfis |
 | `skins.json` | Catálogo de skins (criado na primeira execução, espelha `player.SKINS`) |
 
-**Fluxo de gravação:** `MenuPrincipal`/`Jogo` alteram os objetos em memória
-(loja, config, progresso) e chamam `_salvar_tudo()` /
-`config.salvar()` que serializam em disco por substituição atômica. A versão
-anterior é mantida como `.bak` para recuperação. `SistemaProgressao.sincronizar_loja`
-garante que moedas/skins da `LojaSkins` sejam espelhadas no save.
+**Fluxo de gravação:** eventos de progresso sincronizam loja e perfil por
+`ProfileService`; a saída tenta uma gravação final. O repositório troca JSON
+atomicamente e mantém a versão anterior em `.bak` para recuperação.
 
 ---
 
@@ -497,6 +536,8 @@ funciona isolado. Cobertura por módulo:
 | --- | --- | --- |
 | `test_theme_geometry_smooth.py` | theme, geometry, smooth | cores (mix, ciclo, esmaecer), easing, caches e desenho suave (glow, gradientes, painéis, textos) |
 | `test_settings_save_shop.py` | settings, save_system, shop | configurações, persistência de progresso/save e loja de skins |
+| `test_profiles.py` | profiles, ProfileService, JsonProfileRepository | CRUD, nomes, limites, migração, backups e índice |
+| `test_profiles_integration.py` | seleção de perfis, jogo | tela inicial, isolamento de dados, entrada por mouse/teclado e falha de gravação |
 | `test_weapons_powerups.py` | weapons, powerups | todos os tipos de projétil (laser, ion, gauss, espiral...) e power-ups (vida, escudo, arma, skin...) |
 | `test_player.py` | player | jogador: movimento, controles, cooldowns, rajadas, combo, dano, skins (inclui sprite da nave padrão e fallback) |
 | `test_enemies_bosses.py` | enemies, bosses | inimigos, especiais (acumulador, cristalino...), ondas, sorteios e todos os bosses |
