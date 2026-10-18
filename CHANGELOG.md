@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configurações e README explicam que as bordas adicionais não ampliam o campo de jogo.
 - Flash e fade de transição também cobrem as faixas decorativas; a apresentação reutiliza
   buffers de escala e de fundo, e as bordas ficam fora do shake da câmera.
+- HUD renderizado na resolução física da área jogável, com tipografia mínima efetiva,
+  contraste automatizado e cores/medidas centralizadas em tokens.
+- Medidor circular do HUD desenhado sem superfície temporária por quadro; brilho removido
+  de elementos não focados.
 
 ## [1.5.0] - 2026-10-18
 

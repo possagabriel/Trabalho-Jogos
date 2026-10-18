@@ -650,7 +650,7 @@ def test_adicionar_trauma_limita_a_1():
 # Desenho e apresentacao
 # ---------------------------------------------------------------------------
 
-def test_interface_usa_o_canvas_logico_em_vez_da_resolucao_da_janela():
+def test_interface_generica_permanece_no_canvas_logico():
     jogo = Jogo()
     assert jogo.tela_ui is not jogo.tela
     assert jogo.tela_ui.get_flags() & pygame.SRCALPHA
@@ -662,11 +662,11 @@ def test_hud_e_composto_no_canvas_logico_antes_da_apresentacao():
     jogo = novo_jogo()
     jogo._desenhar_jogo = mock.Mock()
     jogo._apresentar = mock.Mock()
-    jogo.hud.desenhar = mock.Mock()
+    jogo._desenhar_hud = mock.Mock()
 
     jogo.render_controller.desenhar()
 
-    jogo.hud.desenhar.assert_called_once_with(jogo.tela_ui, jogo)
+    jogo._desenhar_hud.assert_called_once()
     jogo._apresentar.assert_called_once()
 
 
@@ -681,7 +681,7 @@ def test_apresentador_gpu_recebe_mundo_interface_e_destino_fisico():
         OpcoesShaderComic.de_config(jogo.config))
     jogo._apresentador_gpu.apresentar.assert_called_once_with(
         jogo.tela, (0, 0, 1920, 1080), (1920, 1080), (8, 8, 13),
-        interface=jogo.tela_ui, fundo=None, efeito_borda=None)
+        interface=jogo.tela_ui, fundo=None, efeito_borda=None, hud=None)
 
 
 def test_fallback_cpu_compoe_interface_sobre_o_mundo():
@@ -707,6 +707,55 @@ def test_gpu_processa_interface_junto_quando_preservacao_esta_desligada():
     argumentos = jogo._apresentador_gpu.apresentar.call_args
     assert argumentos.args[0] is jogo._tela_composta
     assert argumentos.kwargs["interface"] is None
+
+
+def test_hud_nativo_usa_area_16_por_9_e_reutiliza_canvas():
+    jogo = Jogo()
+    jogo.janela = pygame.Surface((900, 700))
+    jogo.config["aspecto"] = "PREENCHE"
+
+    jogo._desenhar_hud()
+    primeira = jogo._hud_superficie_nativa
+    jogo._desenhar_hud()
+
+    assert primeira.get_size() == (900, 506)
+    assert jogo._hud_superficie_nativa is primeira
+
+
+def test_hud_nativo_recria_canvas_apenas_quando_muda_a_area():
+    jogo = Jogo()
+    jogo.janela = pygame.Surface((1920, 1080))
+    jogo._desenhar_hud()
+    anterior = jogo._hud_superficie_nativa
+
+    jogo.janela = pygame.Surface((900, 700))
+    jogo._desenhar_hud()
+
+    assert jogo._hud_superficie_nativa.get_size() == (900, 506)
+    assert jogo._hud_superficie_nativa is not anterior
+
+
+def test_apresentador_cpu_compoe_hud_nativo_no_viewport():
+    jogo = Jogo()
+    jogo.janela = pygame.Surface((1280, 720))
+    jogo.fade = 0
+    jogo.flash = 0
+    jogo._hud_superficie_nativa = pygame.Surface((1280, 720), pygame.SRCALPHA)
+    jogo._hud_superficie_nativa.fill((0, 0, 0, 0))
+    jogo._hud_superficie_nativa.set_at((40, 40), (240, 30, 50, 255))
+    jogo._hud_nativo_pronto = True
+
+    jogo._apresentar()
+
+    assert jogo.janela.get_at((40, 40))[:3] == (240, 30, 50)
+
+
+def test_hud_nativo_fica_abaixo_dos_fades_de_tela():
+    jogo = Jogo()
+    jogo.fade = 18
+    jogo._hud_nativo_pronto = True
+
+    assert not jogo._hud_nativo_visivel()
 
 
 def test_status_do_shader_distingue_configuracao_e_fallback():

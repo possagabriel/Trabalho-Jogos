@@ -35,6 +35,42 @@
   rodadas antes/depois foi 0,090/0,020 ms sem avanço e 0,059/0,088 ms com avanço
   (desvio das médias, respectivamente), portanto a diferença observada é ruído.
 
+## Fase 5 — Polimento visual, etapa 2: HUD e tipografia
+
+- **Pedido:** legibilidade do HUD em pixels efetivos, contraste essencial de ao menos
+  4,5:1, brilho restrito a foco/boss/transições e comparação de performance.
+- **Implementação da IA:** HUD em surface nativa do viewport 16:9, fontes com altura de
+  tinta mínima (18 px essencial, 14 px secundária), ajuste de contraste, tokens de tema,
+  painel escuro nos medidores e plaquetas do boss, redução de brilho e cache da surface
+  até redimensionar.
+  O medidor circular agora desenha diretamente no canvas, sem surface temporária por quadro.
+- **Decisões:** manter mundo e hitboxes na resolução lógica; renderizar somente o HUD na
+  resolução efetiva da janela. Em 900×700 o HUD ocupa o viewport 900×506, centrado na
+  janela. A qualidade de texto melhora; o custo medido do desenho do HUD aumenta porque
+  seu canvas passa a ter resolução de saída. O passo de escala quase não muda.
+- **Ajustes manuais do usuário:** nenhum informado.
+- **Verificação:** contraste e alturas de glifos cobertos por testes; benchmark SDL dummy,
+  COMIC/MEDIA, janela 1920×1080, 30 inimigos, 80 projéteis e 180 partículas. Sete rodadas
+  de 120 amostras (840 no total), média/p95 em ms; o último valor por grupo é o desvio
+  padrão das médias entre rodadas:
+
+  | Medida | Antes | Depois | Desvio antes/depois |
+  | --- | ---: | ---: | ---: |
+  | Desenho do HUD | 1,451 / 1,797 | 2,655 / 3,063 | 0,034 / 0,032 |
+  | Apresentação | 4,996 / 6,151 | 5,047 / 6,342 | 0,130 / 0,311 |
+  | Quadro completo | 12,347 / 13,602 | 13,700 / 15,364 | 0,137 / 0,365 |
+
+  O acréscimo do quadro completo foi 1,353 ms na média; a apresentação variou 0,051 ms.
+  A superfície do HUD é reutilizada entre quadros e recriada apenas quando muda o tamanho
+  do viewport. Capturas comparativas completas ficam fora do repo;
+  a imagem-chave do README está em `docs/screenshots/hud-900x700.jpg`.
+  A suíte completa passou com 571 testes e 1 skip; os arquivos Python alterados passaram
+  em todas as regras Ruff ativas. A verificação global ainda aponta 204 achados anteriores
+  fora desta etapa. Foram gerados GIFs locais de explosão, troca de dimensão, entrada de
+  boss, frenagem/aceleração e transição do menu em `/tmp/incarnate-visual-audit-20261018/etapa2/animacoes`;
+  os efeitos mantêm continuidade, a entrada do boss é legível e o menu de primeira execução
+  mostra corretamente a seleção/criação de perfil.
+
 ## Fase 4 — Perfis de jogador (1.5.0)
 
 - **Pedido:** múltiplos perfis locais com CRUD, progresso individual, migração do save único,

@@ -475,23 +475,30 @@ para catálogo, testes, integração, persistência e parâmetros de balanceamen
 
 ## HUD de combate
 
-O HUD fica em `game/hud.py` (`HudJogo`) e é desenhado pelo core em
-`_desenhar_hud()`. É **responsivo** (usa `game/layout`, escala de
-1920x1080 até janelas menores) e mantém o **centro da tela sempre livre**
-para o gameplay. O **tom do HUD acompanha a fase**: cada dimensão tinge
-os painéis, o badge do jogador, boost, energia e a barra de especial com
-as cores principais do cenário (`cores_principais` em `scenarios.py`;
-sem elas usa a paleta padrão da marca ciano/magenta):
+O HUD fica em `src/runtime/presentation/hud.py` (`HudJogo`) e é desenhado pelo core
+em `_desenhar_hud()`. O mundo continua na resolução lógica; o HUD é renderizado
+em pixels da área de jogo apresentada para manter o texto nítido em cada janela.
+Em uma janela 900×700, por exemplo, o HUD acompanha a área 16:9 de 900×506 e
+permanece centralizado nela. Textos essenciais têm altura efetiva mínima de 18 px,
+textos secundários de 14 px, e o contraste é ajustado para no mínimo 4,5:1 sobre
+os painéis escuros. As cores, limites e espaçamentos estão centralizados em
+`src/runtime/infrastructure/graphics/style_tokens.py`. Brilho fica reservado
+para boss e especial pronto; os acentos acompanham a dimensão sem usar magenta
+fora de alertas e efeitos de glitch:
 
 | Módulo | Posição | Conteúdo |
 | --- | --- | --- |
-| Jogador | topo-esquerda | ícone da nave, `PLAYER 01`, vida segmentada + numérica, escudo (ciano), energia |
-| Score | topo-direita | `SCORE` grande, `HIGH SCORE`, abates, multiplicador combo |
-| Setor | topo-centro | `SECTOR xx`, nome da região e barra de progresso da fase (discreta) |
+| Jogador | topo-esquerda | ícone da nave, `PILOTO 01`, vida segmentada + numérica, escudo, energia |
+| Pontos | topo-direita | pontuação, recorde, abates, multiplicador combo |
+| Setor | topo-centro | `SETOR xx`, nome da região e barra de progresso da fase |
 | Boost | base-esquerda | medidor circular, velocidade e recarga da esquiva |
 | Arma | base-direita | ícone geométrico da arma, nome, `LVL`, carga/munição |
 | Especial | base-centro | barra de especial com `SPECIAL READY` pulsando quando cheia (tecla `E`) |
 | Boss | topo-centro | barra dourada segmentada com nome e fase comportamental |
+
+Exemplo em 900×700 (modo `PREENCHE`):
+
+![HUD em 900×700 com texto renderizado na resolução efetiva da área de jogo](docs/screenshots/hud-900x700.jpg)
 
 Os medidores novos (`boost`, `especial`, `energia`) são mantidos pelo core:
 SHIFT/LCTRL turbina (drena boost e energia), abates carregam o especial.

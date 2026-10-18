@@ -294,6 +294,9 @@ class Jogo:
         self._fundo_preenche_logico = None
         self._overlay_bordas_preenche = None
         self._overlay_bordas_tamanho = None
+        self._hud_superficie_nativa = None
+        self._hud_tamanho_nativo = None
+        self._hud_nativo_pronto = False
 
     @contextmanager
     def _desenhar_na_interface(self):
@@ -601,6 +604,8 @@ class Jogo:
         interface = self.tela_ui if preservar else None
         self._apresentador_gpu.apresentar(
             quadro, destino, tamanho_janela, VOID_BLACK, interface=interface,
+            hud=(getattr(self, "_hud_superficie_nativa", None)
+                 if self._hud_nativo_visivel() else None),
             fundo=getattr(self, "_fundo_preenche_logico", None)
             if self.config["aspecto"] == "PREENCHE" else None,
             efeito_borda=efeito_borda
@@ -617,6 +622,10 @@ class Jogo:
         self._configurar_shader_gpu()
         if (w, h) == (LARGURA, ALTURA) and self._apresentador_gpu is None:
             self.janela.blit(self._quadro_composto(), (0, 0))
+            hud = getattr(self, "_hud_superficie_nativa", None)
+            if (self._hud_nativo_visivel() and hud is not None
+                    and hud.get_size() == (w, h)):
+                self.janela.blit(hud, (0, 0))
             return
         escala, off_x, off_y = self._transformacao_janela()
         destino = (int(off_x), int(off_y), max(1, int(LARGURA * escala)),
@@ -635,6 +644,10 @@ class Jogo:
         else:
             self.janela.fill(VOID_BLACK)
         self.janela.blit(superficie, destino[:2])
+        hud = getattr(self, "_hud_superficie_nativa", None)
+        if (self._hud_nativo_visivel() and hud is not None
+                and hud.get_size() == destino[2:]):
+            self.janela.blit(hud, destino[:2])
         if self.config["aspecto"] == "PREENCHE":
             self._desenhar_efeito_borda_preenche(
                 destino, (w, h), efeito_borda)
@@ -648,6 +661,11 @@ class Jogo:
             (int(off_x), int(off_y + ALTURA * escala)),
             (int(off_x + LARGURA * escala),
              int(off_y + ALTURA * escala)), 1)
+
+    def _hud_nativo_visivel(self) -> bool:
+        """Evita HUD residual em menus e deixa os efeitos cobrirem a interface."""
+        return bool(getattr(self, "_hud_nativo_pronto", False)
+                    and not self.fade and not self.flash)
 
     def _atualizar_modo_desempenho(self, tempo_quadro_ms: float) -> None:
         """Alterna o upscale de CPU sem travar o jogo em máquinas modestas.
@@ -1032,7 +1050,18 @@ class Jogo:
     # ----- desenho -----
 
     def _desenhar_hud(self):
-        self.render_controller.desenhar_hud()
+        """Desenha o HUD em pixels de saída dentro da área 16:9."""
+        escala, _, _ = self._transformacao_janela()
+        tamanho = (max(1, int(LARGURA * escala)),
+                   max(1, int(ALTURA * escala)))
+        if self._hud_tamanho_nativo != tamanho:
+            self._hud_superficie_nativa = pygame.Surface(
+                tamanho, pygame.SRCALPHA, 32)
+            self._hud_tamanho_nativo = tamanho
+            self.hud = HudJogo(Layout(*tamanho))
+        self._hud_superficie_nativa.fill((0, 0, 0, 0))
+        self.hud.desenhar(self._hud_superficie_nativa, self)
+        self._hud_nativo_pronto = True
 
     def _desenhar_jogo(self):
         self.cenario.desenhar(self.tela)
