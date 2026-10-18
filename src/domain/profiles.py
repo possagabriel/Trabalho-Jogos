@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 MAX_MONEY = 2**63 - 1
 
 
@@ -22,6 +22,13 @@ def migrate_schema(data: dict[str, Any]) -> dict[str, Any]:
             result.setdefault("preferences", {})
             result.setdefault("progress", {})
             result["schema_version"] = 1
+        elif version == 1:
+            progress = result.setdefault("progress", {})
+            if isinstance(progress, dict):
+                progress.setdefault("novidades_vistas", {
+                    "memorias": [], "hangar": [],
+                })
+            result["schema_version"] = 2
         version += 1
     return result
 
@@ -39,6 +46,7 @@ def initial_progress() -> dict[str, Any]:
         "armas_desbloqueadas": [0], "arma_equipada": 0,
         "skins_desbloqueadas": ["padrao"], "skin_atual": "padrao",
         "melhorias_escolhidas": {}, "cenas_vistas": [], "memorias_desbloqueadas": [],
+        "novidades_vistas": {"memorias": [], "hangar": []},
         "partidas_jogadas": 0, "tempo_total": 0, "inimigos_derrotados": 0,
         "mortes": 0, "recordes": [], "legacy": {},
     }

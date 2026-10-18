@@ -210,13 +210,74 @@ class ProfileService:
         counts[key] = counts.get(key, 0) + 1
         self._save()
 
+    def novelty_ids(self, category: str) -> list[str]:
+        """Retorna novidades elegíveis ainda não apresentadas nesta categoria."""
+        if category == "memorias":
+            progress = self._active().progress
+            unlocked = progress.get("memorias_desbloqueadas", [])
+            return self._novelties("memorias", unlocked)
+        if category == "hangar":
+            from src.runtime.domain.entities.player import SKINS
+
+            progress = self._active().progress
+            unlocked = set(progress.get("skins_desbloqueadas", []))
+            balance = progress.get("moedas", 0)
+            eligible = [
+                row["id"] for row in SKINS
+                if row["id"] not in unlocked
+                and type(row.get("preco")) is int
+                and row["preco"] <= balance
+            ]
+            return self._novelties("hangar", eligible)
+        raise ValueError(f"Categoria de novidade desconhecida: {category}")
+
+    def acknowledge_novelties(self, category: str) -> list[str]:
+        """Registra itens elegíveis exibidos ao abrir sua tela correspondente."""
+        current = self.novelty_ids(category)
+        if not current:
+            return []
+        progress = self._active().progress
+        state = progress["novidades_vistas"]
+        acknowledged = state[category]
+        for identifier in current:
+            if identifier not in acknowledged:
+                acknowledged.append(identifier)
+        self._save()
+        return current
+
+    def _novelties(self, category: str, eligible: object) -> list[str]:
+        """Filtra IDs elegíveis pelo registro persistente de apresentação."""
+        progress = self._active().progress
+        state = progress.setdefault("novidades_vistas", {})
+        if not isinstance(state, dict):
+            state = {}
+            progress["novidades_vistas"] = state
+        seen = state.setdefault(category, [])
+        if not isinstance(seen, list):
+            seen = []
+            state[category] = seen
+        if not isinstance(eligible, (list, tuple, set)):
+            return []
+        return [identifier for identifier in eligible
+                if isinstance(identifier, str) and identifier not in seen]
+
     def _validate_catalogs(self, profile: Profile) -> None:
-        from src.runtime.domain.entities.player import SKINS
         from src.runtime.domain.entities.bosses import BOSSES_POR_CENARIO
+        from src.runtime.domain.entities.player import SKINS
         from src.runtime.domain.entities.weapons import ARMARIA
         from src.runtime.domain.systems.upgrades import MELHORIAS
 
         progress = profile.progress
+        novelty_state = progress.get("novidades_vistas", {})
+        if not isinstance(novelty_state, dict):
+            novelty_state = {}
+        progress["novidades_vistas"] = {
+            category: list(dict.fromkeys(
+                item for item in novelty_state.get(category, [])
+                if isinstance(item, str)
+            )) if isinstance(novelty_state.get(category, []), list) else []
+            for category in ("memorias", "hangar")
+        }
         skins = {row["id"] for row in SKINS}
         weapons = set(range(len(ARMARIA)))
         for field, valid, default in (
@@ -269,6 +330,13 @@ class ProfileService:
         story = json.loads((files("src.runtime.story") / "cenas_pt_BR.json").read_text(
             encoding="utf-8"))
         scene_ids = {row["id"] for row in story["cenas"]}
+        novelty = progress["novidades_vistas"]
+        novelty["memorias"] = [
+            item for item in novelty["memorias"] if item in scene_ids
+        ]
+        novelty["hangar"] = [
+            item for item in novelty["hangar"] if item in skins
+        ]
         for field in ("cenas_vistas", "memorias_desbloqueadas"):
             source = progress.get(field, [])
             if not isinstance(source, list):

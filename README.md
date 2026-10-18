@@ -127,6 +127,22 @@ sensibilidade e `mira_ativa` ficam em cada perfil; volume, vídeo, qualidade
 visual e velocidade do diálogo permanecem globais. Melhorias escolhidas são
 contadas por perfil, mas seus efeitos terminam ao fim da partida.
 
+### Menu principal e navegação
+
+O menu tem cinco destinos: **Jogar** abre **Continuar** e **Lobby**; **Hangar**
+abre compra e equipamento de skins; **Perfil** reúne as abas **Pilotos**,
+**Recordes** e **Memórias**; **Configurações** e **Sair** completam a navegação.
+Setas ou W/S movem o foco, Enter ativa e Esc volta ao menu mantendo o foco de
+origem. No menu principal, Esc abre a confirmação de saída. Cada destino das
+telas antigas fica a até dois passos do menu. Sem save, Continuar aparece
+desabilitado e avisa quando ativado; Lobby recebe o foco inicial dentro de Jogar.
+
+O Lobby conserva a campanha e abre a seleção de fases. O Hangar é uma loja
+separada para comprar e equipar skins. Continuar carrega o progresso persistido
+para iniciar uma missão; não retoma um checkpoint de combate. O resumo exibe
+dimensão e nível máximos salvos, não um ponto de retomada, além do tempo total
+do perfil.
+
 ### História e cutscenes (1.4.0)
 
 A introdução e o capítulo 1 são reproduzidos durante a partida. O roteiro

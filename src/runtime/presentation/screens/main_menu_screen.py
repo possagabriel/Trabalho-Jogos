@@ -50,7 +50,7 @@ class TelaPrincipalJogo:
             deslocamento = -int((1 - ease_out(progresso)) * min(
                 menu.layout.px(150),
                 menu.x_opcoes - menu.layout.margem(18)))
-            opcao.desabilitado = indice == 0 and not menu._tem_save()
+            opcao.desabilitado = False
             fonte = (menu.fonte_principal if opcao.principal
                      else menu.fonte_secundaria)
             fonte_sel = (menu.fonte_principal_sel if opcao.principal

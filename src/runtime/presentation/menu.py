@@ -102,6 +102,7 @@ from src.runtime.presentation.menu_scene import (
 from src.runtime.presentation.screens.continue_screen import TelaContinuarJogo
 from src.runtime.presentation.screens.main_menu_screen import TelaPrincipalJogo
 from src.runtime.presentation.screens.memory_archive_screen import TelaArquivoMemorias
+from src.runtime.presentation.screens.menu_hub_screen import MenuHubScreen
 from src.runtime.presentation.screens.menu_screens import (
     TelaConfiguracoes,
     TelaContinuar,
@@ -632,8 +633,13 @@ class MenuPrincipal:
         self.tela_loja = TelaLojaJogo(self)
         self.tela_configuracoes = TelaConfiguracoesJogo(self)
         self.profile_screen = ProfileScreen(self)
+        self.jogar_hub = MenuHubScreen(self, "JOGAR")
+        self.perfil_hub = MenuHubScreen(self, "PERFIL")
+        self._origem_menu = 0
         self.telas = {
             "MENU": TelaPrincipal(self),
+            "JOGAR": self.jogar_hub,
+            "PERFIL": self.perfil_hub,
             "CONTINUAR": TelaContinuar(self),
             "LOJA": TelaLoja(self),
             "RECORDES": TelaRecordes(self),
@@ -677,14 +683,11 @@ class MenuPrincipal:
 
     def _construir_opcoes_menu(self):
         itens = [
-            ("01 // CONTINUAR", self._abrir_continuar),
-            ("02 // LOBBY", self._abrir_lobby),
-            ("03 // HANGAR", self._abrir_loja),
-            ("04 // RECORDES", self._abrir_recordes),
-            ("05 // CONFIGURAÇÕES", self._abrir_config),
-            ("06 // ARQUIVO DE MEMÓRIAS", self._abrir_arquivo),
-            ("07 // PERFIS", self._abrir_perfis),
-            ("08 // SAIR", self._sair),
+            ("01 // JOGAR", self._abrir_jogar),
+            ("02 // HANGAR", self._abrir_loja),
+            ("03 // PERFIL", self._abrir_perfil_hub),
+            ("04 // CONFIGURAÇÕES", self._abrir_config),
+            ("05 // SAIR", self._sair),
         ]
         # O retângulo visual também é a área clicável; os rótulos se ajustam
         # dentro dele sem alterar a geometria de entrada.
@@ -693,13 +696,11 @@ class MenuPrincipal:
             self.opcoes.append(OpcaoMenu(
                 texto, self.layout.px(125 + indice * 65), funcao))
         self.opcao_selecionada = 0
-        if not self._tem_save():
-            self.opcao_selecionada = 1
         self._estilo_layout_opcoes = None
         self._aplicar_layout_opcoes()
         self.destaque.y = self.opcoes[self.opcao_selecionada].y
         self.destaque.alvo = self.destaque.y
-        self.opcoes[0].desabilitado = not self._tem_save()
+        self.opcoes[0].desabilitado = False
 
     def _aplicar_layout_opcoes(self):
         """Aplica a nova hierarquia apenas ao estilo ORIGINAL."""
@@ -742,12 +743,46 @@ class MenuPrincipal:
         self.destaque.pulsar()
         self._som("navegar")
 
+    def _novidades(self, categoria):
+        """Consulta novidades pelo serviço, sem abrir os arquivos do perfil."""
+        service = getattr(self.jogo, "profile_service", None)
+        if service is None or service.active is None:
+            return []
+        try:
+            return service.novelty_ids(categoria)
+        except (KeyError, ValueError, TypeError):
+            return []
+
+    def _registrar_origem(self):
+        """Guarda o item focado antes de navegar para uma tela ou hub."""
+        if self.subestado == "MENU":
+            self._origem_menu = self.opcao_selecionada
+
+    def _abrir_jogar(self):
+        """Abre o hub com os destinos Continuar e Lobby."""
+        self._registrar_origem()
+        self._som("navegar")
+        self.jogar_hub.abrir()
+        self.subestado = "JOGAR"
+        self.sub_anim = 0.0
+        self.transicao.iniciar()
+
+    def _abrir_perfil_hub(self):
+        """Abre o hub de pilotos, recordes e memórias."""
+        self._registrar_origem()
+        self._som("navegar")
+        self.perfil_hub.abrir()
+        self.subestado = "PERFIL"
+        self.sub_anim = 0.0
+        self.transicao.iniciar()
+
     def _iniciar_missao(self, acao):
         """Inicia uma missao passando pela transicao cinematografica."""
         self._som("navegar")
         self.transicao_missao.iniciar(acao)
 
     def _abrir_continuar(self):
+        self._registrar_origem()
         self._som("navegar")
         self.continuar_selecao = 0
         self.sub_anim = 0.0
@@ -756,13 +791,17 @@ class MenuPrincipal:
 
     def _abrir_arquivo(self):
         """Abre apenas as cenas já vistas."""
+        self._registrar_origem()
         self._som("navegar")
+        if self.jogo.profile_service.active:
+            self.jogo.profile_service.acknowledge_novelties("memorias")
         self.sub_anim = 0.0
         self.subestado = "ARQUIVO"
         self.transicao.iniciar()
 
     def _abrir_perfis(self):
         """Abre seleção de perfis somente fora da partida."""
+        self._registrar_origem()
         self._som("navegar")
         self.profile_screen.refresh()
         self.subestado = "PERFIS"
@@ -778,6 +817,7 @@ class MenuPrincipal:
 
     def _abrir_fases(self, nova_campanha=False):
         """Abre o lobby de fases sem alterar o save antes da confirmacao."""
+        self._registrar_origem()
         self._som("navegar")
         if nova_campanha:
             self.phase_screen.iniciar_nova_campanha()
@@ -788,15 +828,19 @@ class MenuPrincipal:
         self.transicao.iniciar()
 
     def _abrir_loja(self):
+        self._registrar_origem()
         self._som("navegar")
         self.loja_selecao = self._indice_skin_atual()
         self.preview_skin = None
         self.preview_anim = 0.0
         self.sub_anim = 0.0
         self.subestado = "LOJA"
+        if self.jogo.profile_service.active:
+            self.jogo.profile_service.acknowledge_novelties("hangar")
         self.transicao.iniciar()
 
     def _abrir_recordes(self):
+        self._registrar_origem()
         self._som("navegar")
         self.jogo.recordes = self.jogo.progresso.carregar_recordes_perfil()
         self.sub_anim = 0.0
@@ -804,6 +848,7 @@ class MenuPrincipal:
         self.transicao.iniciar()
 
     def _abrir_config(self):
+        self._registrar_origem()
         self._som("navegar")
         self.config_selecao = 0
         self.config_submodo = None
@@ -838,6 +883,9 @@ class MenuPrincipal:
         self.config_scroll = 0
         self.sub_anim = 0.0
         self.subestado = "MENU"
+        self.opcao_selecionada = min(self._origem_menu, len(self.opcoes) - 1)
+        if self.opcoes:
+            self.destaque.alvo = self.opcoes[self.opcao_selecionada].y
         self.transicao.iniciar()
         self.entrada_t = 0.0
 
@@ -2706,8 +2754,6 @@ class MenuPrincipal:
             self._selecionar(novo)
         elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
             self.opcoes[self.opcao_selecionada].funcao()
-        elif evento.key == pygame.K_BACKSPACE:
-            self.jogo.nome_jogador = self.jogo.nome_jogador[:-1]
         elif evento.key == pygame.K_ESCAPE:
             self._sair()
         elif evento.unicode and evento.unicode.isprintable() and len(self.jogo.nome_jogador) < 12:

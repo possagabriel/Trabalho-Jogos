@@ -86,6 +86,56 @@ def test_money_unlocks_and_catalog_validation(service, caplog):
     assert "descartado" in caplog.text
 
 
+def test_novelty_memories_are_acknowledged_without_marking_story_seen(service):
+    profile = service.create("Memórias")
+    service.select(profile.id)
+    service.update_progress(memorias_desbloqueadas=["introducao"], cenas_vistas=[])
+
+    assert service.novelty_ids("memorias") == ["introducao"]
+    assert service.acknowledge_novelties("memorias") == ["introducao"]
+    assert service.novelty_ids("memorias") == []
+    assert service.active.progress["cenas_vistas"] == []
+
+
+def test_hangar_novelty_is_one_time_after_presentation_despite_balance_changes(
+        service):
+    profile = service.create("Hangar")
+    service.select(profile.id)
+    service.credit(500)
+
+    assert service.novelty_ids("hangar") == ["fenix"]
+    assert service.acknowledge_novelties("hangar") == ["fenix"]
+    service.spend(500)
+    service.credit(500)
+    assert service.novelty_ids("hangar") == []
+
+
+def test_schema_v1_gets_novelty_defaults_and_transfer_preserves_state(
+        service, tmp_path):
+    from src.domain.profiles import Profile
+
+    old = Profile.from_dict({
+        "schema_version": 1, "id": "old", "name": "Antigo",
+        "progress": {"moedas": 12},
+    })
+    assert old.progress["novidades_vistas"] == {"memorias": [], "hangar": []}
+
+    profile = service.create("Transferência")
+    service.select(profile.id)
+    service.active.progress["novidades_vistas"] = {
+        "memorias": ["introducao"], "hangar": ["fenix"],
+    }
+    service.flush()
+    exported = tmp_path / "transfer.json"
+    assert service.export_active(exported)
+
+    imported = ProfileService(JsonProfileRepository(tmp_path / "importado"))
+    result = imported.import_file(exported)
+    assert result.progress["novidades_vistas"] == {
+        "memorias": ["introducao"], "hangar": ["fenix"],
+    }
+
+
 def test_rebuild_index_and_corrupt_profile(tmp_path):
     repo = JsonProfileRepository(tmp_path)
     service = ProfileService(repo)

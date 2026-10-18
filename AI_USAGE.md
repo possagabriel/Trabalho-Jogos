@@ -1,5 +1,21 @@
 # Registro de uso de IA
 
+## Menu principal — estrutura e dados (1.8.0)
+
+- **Pedido:** reorganizar ORIGINAL e COMIC em Jogar, Hangar, Perfil,
+  Configurações e Sair; preservar callbacks, permitir retorno com foco de
+  origem, guardar avisos reconhecidos e documentar a navegação.
+- **Implementação da IA:** dois hubs de segundo nível; migração do schema de
+  perfil para registrar novidades de Memórias e Hangar; consulta e confirmação
+  de novidades pelo `ProfileService`; testes de transferência e de aviso único.
+- **Decisões:** Continuar abre a tela existente de progresso/Novo Jogo para
+  preservar esse fluxo. Não há checkpoint: o resumo deve identificar máximos
+  salvos e tempo total do perfil.
+- **Ajustes manuais do usuário:** nenhum informado.
+- **Verificação:** suíte completa: 631 passaram, 1 skip. Ruff nos arquivos
+  alterados: limpo. Testes adicionados para hubs, foco/retorno, migração de
+  perfil, exportação/importação e reconhecimento dos avisos.
+
 ## Menu ORIGINAL — etapa 2: hierarquia e animação
 
 - **Pedido:** organizar Continuar, Lobby e Hangar como ações principais e agrupar

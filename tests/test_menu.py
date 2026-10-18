@@ -41,14 +41,11 @@ from src.infrastructure.graphics.theme import (  # noqa: E402
 )
 
 ROTULOS_ESPERADOS = [
-    "01 // CONTINUAR",
-    "02 // LOBBY",
-    "03 // HANGAR",
-    "04 // RECORDES",
-    "05 // CONFIGURAÇÕES",
-    "06 // ARQUIVO DE MEMÓRIAS",
-    "07 // PERFIS",
-    "08 // SAIR",
+    "01 // JOGAR",
+    "02 // HANGAR",
+    "03 // PERFIL",
+    "04 // CONFIGURAÇÕES",
+    "05 // SAIR",
 ]
 
 
@@ -76,7 +73,7 @@ def configurar_menu_original(jogo, menu):
 def test_construcao_subestado_e_opcoes():
     _, menu = novo_menu()
     assert menu.subestado == "MENU"
-    assert len(menu.opcoes) == 8
+    assert len(menu.opcoes) == 5
     assert [o.texto for o in menu.opcoes] == ROTULOS_ESPERADOS
     assert menu.x_opcoes <= menu.layout.largura
 
@@ -88,7 +85,7 @@ def test_hierarquia_visual_mantem_tres_acoes_maiores_que_as_secundarias():
     rects = [opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
              for opcao in menu.opcoes]
     assert len({rect.width for rect in rects}) == 1
-    assert all(rects[index].height > rects[index + 3].height
+    assert all(rects[index].height > rects[3].height
                for index in range(3))
     assert all(b.top - a.bottom > 0 for a, b in zip(rects, rects[1:]))
     assert menu.destaque.y == menu.opcoes[0].y
@@ -129,7 +126,7 @@ def test_retangulo_clicavel_coincide_com_botao_em_todas_as_apresentacoes(
     jogo.janela = pygame.display.set_mode(resolucao)
     escala_janela = jogo._transformacao_janela()[0]
     assert menu.fonte_secundaria.get_height() * escala_janela >= 14
-    opcao = menu.opcoes[5]
+    opcao = menu.opcoes[3]
     esperado = opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
     tela = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
 
@@ -150,7 +147,7 @@ def test_retangulo_clicavel_coincide_com_botao_em_todas_as_apresentacoes(
 
 def test_clique_fora_do_botao_nao_dispara_callback():
     _, menu = novo_menu()
-    opcao = menu.opcoes[5]
+    opcao = menu.opcoes[3]
     callback = mock.Mock()
     opcao.funcao = callback
     rect = opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
@@ -189,9 +186,10 @@ def test_selecao_inicial_respeita_existencia_de_save():
         assert menu.opcoes[0].desabilitado is False
     with mock.patch.object(jogo.progresso, "existe_save", return_value=False):
         menu._construir_opcoes_menu()
-        menu.opcoes[0].desabilitado = not menu._tem_save()
-        assert menu.opcao_selecionada == 1
-        assert menu.opcoes[0].desabilitado is True
+        menu.jogar_hub.abrir()
+        assert menu.opcao_selecionada == 0
+        assert menu.opcoes[0].desabilitado is False
+        assert menu.jogar_hub.selection == 1
 
 
 def test_ativar_perfil_seleciona_lobby_sem_save_e_continuar_com_save():
@@ -200,8 +198,8 @@ def test_ativar_perfil_seleciona_lobby_sem_save_e_continuar_com_save():
     with mock.patch.object(jogo.progresso, "existe_save", return_value=False):
         jogo.ativar_perfil(perfil_id)
     assert menu.subestado == "MENU"
-    assert menu.opcao_selecionada == 1
-    assert menu.opcoes[0].desabilitado is True
+    assert menu.opcao_selecionada == 0
+    assert menu.opcoes[0].desabilitado is False
     with mock.patch.object(jogo.progresso, "existe_save", return_value=True):
         jogo.ativar_perfil(perfil_id)
     assert menu.opcao_selecionada == 0
@@ -261,13 +259,11 @@ def test_continuar_sem_save_fica_visualmente_desabilitado_no_menu_original():
     jogo, menu = novo_menu()
     configurar_menu_original(jogo, menu)
     superficie = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
-    menu.opcoes[0]._SUPERFICIES_BOTAO.clear()
     with mock.patch.object(menu, "_tem_save", return_value=False):
-        menu._construir_opcoes_menu()
-        menu.tela_principal.desenhar(superficie)
-    assert menu.opcoes[0].desabilitado is True
-    assert menu.opcao_selecionada == 1
-    assert any(chave[-1] is True for chave in menu.opcoes[0]._SUPERFICIES_BOTAO)
+        menu._abrir_jogar()
+        menu.jogar_hub.desenhar(superficie)
+    assert menu.jogar_hub.selection == 1
+    assert menu.opcoes[0].desabilitado is False
 
 
 def test_contraste_do_rodape_sobre_fundo_real_inclui_planeta():
@@ -532,6 +528,81 @@ def test_voltar_menu():
     assert menu.subestado == "MENU"
     assert menu.config_submodo is None
     assert menu.remapando is None
+
+
+def test_nova_estrutura_tem_cinco_itens_nos_dois_estilos():
+    jogo, menu = novo_menu()
+    assert [item.texto for item in menu.opcoes] == ROTULOS_ESPERADOS
+    for estilo in ("ORIGINAL", "COMIC"):
+        jogo.config["estilo_visual"] = estilo
+        menu._estilo_layout_opcoes = None
+        menu._aplicar_layout_opcoes()
+        assert [item.texto for item in menu.opcoes] == ROTULOS_ESPERADOS
+
+
+def test_hubs_preservam_destinos_antigos_em_no_maximo_duas_acoes():
+    jogo, menu = novo_menu()
+    menu._abrir_jogar()
+    assert menu.jogar_hub.entries == (
+        ("CONTINUAR", "continuar"), ("LOBBY", "lobby"))
+    menu.jogar_hub.ativar(0)
+    assert menu.subestado == "CONTINUAR"
+    menu._abrir_jogar()
+    menu.jogar_hub.ativar(1)
+    assert menu.subestado == "FASES"
+
+    menu._voltar_menu()
+    menu._abrir_perfil_hub()
+    assert menu.perfil_hub.entries == (
+        ("PILOTOS", "pilotos"), ("RECORDES", "recordes"),
+        ("MEMÓRIAS", "memorias"))
+    for index, destino in enumerate(("PERFIS", "RECORDES", "ARQUIVO")):
+        menu._abrir_perfil_hub()
+        menu.perfil_hub.ativar(index)
+        assert menu.subestado == destino
+
+
+def test_hub_jogar_sem_save_foca_lobby_e_avisa_ao_ativar_continuar():
+    _, menu = novo_menu()
+    with mock.patch.object(menu, "_tem_save", return_value=False):
+        menu._abrir_jogar()
+        assert menu.jogar_hub.selection == 1
+        menu.jogar_hub.ativar(0)
+    assert any(item["tipo"] == "erro"
+               for item in menu.notificacoes.notificacoes)
+
+
+def test_escape_dos_hubs_e_destinos_restaura_foco_de_origem():
+    _, menu = novo_menu()
+    menu.opcao_selecionada = 2
+    menu._abrir_perfil_hub()
+    menu.perfil_hub.tratar_tecla(pygame.event.Event(
+        pygame.KEYDOWN, {"key": pygame.K_ESCAPE}))
+    assert menu.subestado == "MENU"
+    assert menu.opcao_selecionada == 2
+
+    menu._abrir_perfil_hub()
+    menu.perfil_hub.ativar(1)
+    menu.telas["RECORDES"].tratar_tecla(pygame.event.Event(
+        pygame.KEYDOWN, {"key": pygame.K_ESCAPE}))
+    assert menu.subestado == "MENU"
+    assert menu.opcao_selecionada == 2
+
+
+def test_clique_do_hub_usa_o_mesmo_retangulo_desenhado():
+    _, menu = novo_menu()
+    menu._abrir_jogar()
+    rect = menu.jogar_hub._rects()[1]
+    menu.jogar_hub.tratar_clique(rect.center)
+    assert menu.subestado == "FASES"
+
+
+def test_botao_voltar_do_hub_funciona_com_mouse():
+    _, menu = novo_menu()
+    menu._abrir_jogar()
+    menu.jogar_hub.tratar_clique(menu.jogar_hub._back_rect().center)
+    assert menu.subestado == "MENU"
+    assert menu.opcao_selecionada == 0
 
 
 # ---------------------------------------------------------------------------

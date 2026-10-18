@@ -8,9 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- O menu ORIGINAL agora agrupa Continuar, Lobby e Hangar como ações principais,
-  mantendo os itens 01–08 e a ordem de navegação; opções secundárias usam texto
-  menor, espaçamento próprio e uma linha divisória.
+- Menu ORIGINAL e COMIC compartilham cinco destinos: Jogar, Hangar, Perfil,
+  Configurações e Sair; os hubs de Jogar e Perfil preservam os callbacks atuais
+  e deixam cada tela anterior acessível em até duas ações.
+- O perfil versionado guarda os IDs de novidades reconhecidas no Arquivo e no
+  Hangar, com defaults para perfis antigos e transferência preservada.
+- README documenta a navegação nova, os destinos de Lobby/Hangar e a ausência
+  de retomada por checkpoint.
 - A nave foi reposicionada para equilibrar o título e a coluna de ações. O marcador
   de seleção e os painéis estáticos usam superfícies em cache.
 - O título recebe pulsos cromáticos breves em vez de glitch contínuo; a opção de
