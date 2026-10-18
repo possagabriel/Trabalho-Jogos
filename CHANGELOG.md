@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `PREENCHE` preserva a área jogável em 16:9 e estende somente o fundo decorativo.
+- Configurações e README explicam que as bordas adicionais não ampliam o campo de jogo.
+- Flash e fade de transição também cobrem as faixas decorativas; a apresentação reutiliza
+  buffers de escala e de fundo, e as bordas ficam fora do shake da câmera.
+- HUD renderizado na resolução física da área jogável, com tipografia mínima efetiva,
+  contraste automatizado e cores/medidas centralizadas em tokens.
+- Medidor circular do HUD desenhado sem superfície temporária por quadro; brilho removido
+  de elementos não focados.
+- Fundos rasterizados de cutscene recebem acabamento cartoon pré-processado e cacheado,
+  com posterização, tinta de dimensão, contorno e retícula.
+- Caixa de diálogo, retratos, títulos e controles de cutscene usam contorno cartoon sem
+  glow decorativo; magenta fica restrito aos glitches e alertas.
+
 ## [1.5.0] - 2026-10-18
 
 ### Added

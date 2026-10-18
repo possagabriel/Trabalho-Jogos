@@ -1,5 +1,96 @@
 # Registro de uso de IA
 
+## Fase 5 — Polimento visual, etapa 1: PREENCHE
+
+- **Pedido:** preservar a área jogável 16:9 em todas as telas e usar as faixas
+  externas apenas para fundo decorativo, mantendo mira alinhada e círculos sem distorção.
+- **Implementação da IA:** unificação da transformação de apresentação e mouse,
+  fundo decorativo em cache para CPU/OpenGL, descrição em Config e README,
+  teste de escala/mira em dois modos e quatro resoluções, e screenshot ultrawide.
+- **Ajustes manuais do usuário:** nenhum informado.
+- **Decisões:** `AJUSTAR` mantém letterbox; `PREENCHE` cobre as bordas com o fundo,
+  sem mudar a área de combate. Nem o cenário nem o HUD são ampliados lateralmente.
+- **Verificação:** 557 testes passaram e 1 foi ignorado. No benchmark de rolagem
+  (120 quadros × 3 repetições, Linux x86_64, Python 3.14.8, pygame 2.5.8,
+  SDL dummy, COMIC/MEDIA), média/p95 foram 1,733/2,014 ms no mundo sem avanço
+  e 3,284/3,461 ms com avanço; a baseline era 1,884/2,211 ms e 3,831/4,836 ms.
+  O benchmark mede mundo e entidades, não a apresentação; as médias variaram
+  para baixo e não indicam custo do novo preenchimento decorativo.
+  Complemento: foram adicionados testes para clique nas bordas, flash/fade em
+  tela inteira, shake, Ajustar Tela em PREENCHE, redimensionamento/tela cheia e
+  a geometria em 900x700. A suíte passou com 564 testes e 1 skip. Os cinco
+  arquivos Python alterados passam em todas as regras configuradas do Ruff
+  (E, F, I, W), sem regras ignoradas nesses arquivos. A verificação global
+  encontrou 213 problemas preexistentes: 113 F401, 50 I001, 31 E741, 8 E501,
+  6 F841 e 5 W292. Recomendo limpá-los em `chore/ruff-baseline`, sem adicionar
+  exceções globais ao `pyproject.toml`.
+- **Apresentação:** em SDL dummy, 7 rodadas de 120 quadros, PREENCHE/COMIC/MEDIA;
+  2560x1080: média 8,221 ms, p95 9,500 ms, desvio das médias de rodada 0,160 ms
+  (faixa 8,009–8,448); 1920x1080: 7,475/8,694 ms, desvio 0,125 ms
+  (7,335–7,714); 900x700: 3,432/4,147 ms, desvio 0,087 ms (3,366–3,606).
+  A superfície de borda manteve a mesma identidade durante as rodadas; seus
+  pixels ocupam 10,55 MiB, 7,91 MiB e 2,40 MiB, respectivamente. O conteúdo é
+  repopulado quando muda a cena/estilo ou o tamanho, sem alocação por quadro.
+  O benchmark do mundo não foi afetado por esta etapa; a variação entre as
+  rodadas antes/depois foi 0,090/0,020 ms sem avanço e 0,059/0,088 ms com avanço
+  (desvio das médias, respectivamente), portanto a diferença observada é ruído.
+
+## Fase 5 — Polimento visual, etapa 2: HUD e tipografia
+
+- **Pedido:** legibilidade do HUD em pixels efetivos, contraste essencial de ao menos
+  4,5:1, brilho restrito a foco/boss/transições e comparação de performance.
+- **Implementação da IA:** HUD em surface nativa do viewport 16:9, fontes com altura de
+  tinta mínima (18 px essencial, 14 px secundária), ajuste de contraste, tokens de tema,
+  painel escuro nos medidores e plaquetas do boss, redução de brilho e cache da surface
+  até redimensionar.
+  O medidor circular agora desenha diretamente no canvas, sem surface temporária por quadro.
+- **Decisões:** manter mundo e hitboxes na resolução lógica; renderizar somente o HUD na
+  resolução efetiva da janela. Em 900×700 o HUD ocupa o viewport 900×506, centrado na
+  janela. A qualidade de texto melhora; o custo medido do desenho do HUD aumenta porque
+  seu canvas passa a ter resolução de saída. O passo de escala quase não muda.
+- **Ajustes manuais do usuário:** nenhum informado.
+- **Verificação:** contraste e alturas de glifos cobertos por testes; benchmark SDL dummy,
+  COMIC/MEDIA, janela 1920×1080, 30 inimigos, 80 projéteis e 180 partículas. Sete rodadas
+  de 120 amostras (840 no total), média/p95 em ms; o último valor por grupo é o desvio
+  padrão das médias entre rodadas:
+
+  | Medida | Antes | Depois | Desvio antes/depois |
+  | --- | ---: | ---: | ---: |
+  | Desenho do HUD | 1,451 / 1,797 | 2,655 / 3,063 | 0,034 / 0,032 |
+  | Apresentação | 4,996 / 6,151 | 5,047 / 6,342 | 0,130 / 0,311 |
+  | Quadro completo | 12,347 / 13,602 | 13,700 / 15,364 | 0,137 / 0,365 |
+
+  O acréscimo do quadro completo foi 1,353 ms na média; a apresentação variou 0,051 ms.
+  A superfície do HUD é reutilizada entre quadros e recriada apenas quando muda o tamanho
+  do viewport. Capturas comparativas completas ficam fora do repo;
+  a imagem-chave do README está em `docs/screenshots/hud-900x700.jpg`.
+  A suíte completa passou com 571 testes e 1 skip; os arquivos Python alterados passaram
+  em todas as regras Ruff ativas. A verificação global ainda aponta 204 achados anteriores
+  fora desta etapa. Foram gerados GIFs locais de explosão, troca de dimensão, entrada de
+  boss, frenagem/aceleração e transição do menu em `/tmp/incarnate-visual-audit-20261018/etapa2/animacoes`;
+  os efeitos mantêm continuidade, a entrada do boss é legível e o menu de primeira execução
+  mostra corretamente a seleção/criação de perfil.
+
+## Fase 5 — Polimento visual, etapa 3: cutscenes
+
+- **Pedido:** aplicar acabamento cartoon barato aos fundos rasterizados já existentes,
+  sem trocar assets, e alinhar caixa, retratos e títulos à guia aprovada; magenta somente
+  para glitch/alerta.
+- **Implementação da IA:** cache de posterização em paleta curta, tinta por dimensão,
+  contorno e retícula; passagem opcional no fundo da partida e do menu durante cutscenes;
+  contornos de texto, retratos com moldura de tinta e painéis sem glow decorativo. As
+  superfícies de atores e as regras de gameplay permanecem fora do filtro.
+- **Ajustes manuais do usuário:** nenhum informado.
+- **Verificação visual e performance:** capturas antes/depois e GIF curto em
+  `/tmp/incarnate-visual-audit-20261018/etapa3`; imagem-chave em
+  `docs/screenshots/cutscene-dialogue.jpg`. Benchmark headless de cutscene, cena fixa em
+  1280×720, cinco rodadas de 30 quadros: baseline 19,710 ms de média e 25,831 ms de p95
+  médio (desvio entre médias 1,537 ms); após 19,514/24,516 ms (desvio 1,367 ms). A
+  diferença fica dentro da variação entre rodadas. O filtro custou 29,001 ms na primeira
+  geração, caindo a 0,0027 ms no acesso seguinte (3,52 MiB por surface de saída). Na
+  sequência animada, o capítulo mantém o quadro de título, o texto se revela sem salto,
+  e a fala de glitch alterna variantes curtas sem tremer a moldura ou borrar retratos.
+
 ## Fase 4 — Perfis de jogador (1.5.0)
 
 - **Pedido:** múltiplos perfis locais com CRUD, progresso individual, migração do save único,

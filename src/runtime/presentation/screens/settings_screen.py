@@ -231,7 +231,9 @@ class TelaConfiguracoesJogo:
             valores = {
                 "resolucao": menu.jogo.config["resolucao"],
                 "tema": menu.jogo.config["tema"],
-                "aspecto": menu.jogo.config["aspecto"],
+                "aspecto": ("FUNDO NAS BORDAS"
+                            if menu.jogo.config["aspecto"] == "PREENCHE"
+                            else "ÁREAS SEGURAS"),
                 "controles": "PERSONALIZAR >",
                 "ajuste": "CALIBRAR >",
                 "qualidade": menu.jogo.config["qualidade_grafica"],

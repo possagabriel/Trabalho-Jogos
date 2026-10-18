@@ -43,8 +43,8 @@ class ControladorRenderizacao:
                     preparar_rotacoes(sprite, hachuras, variacao)
 
     def desenhar_hud(self) -> None:
-        """Desenha o HUD na superficie logica de jogo."""
-        self.jogo.hud.desenhar(self.jogo.tela_ui, self.jogo)
+        """Desenha o HUD em resolução efetiva, mantendo o mundo lógico."""
+        self.jogo._desenhar_hud()
 
     def _desenhar_campo(self) -> None:
         """Mostra o combate ou a animação dimensional, com HUD quando aplicável."""
@@ -78,6 +78,7 @@ class ControladorRenderizacao:
 
     def _compor(self) -> None:
         jogo = self.jogo
+        jogo._hud_nativo_pronto = False
         self.sincronizar_cursor()
         jogo.tela_ui.fill((0, 0, 0, 0))
         if jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
@@ -92,9 +93,12 @@ class ControladorRenderizacao:
                 jogo._desenhar_carregando(incluir_cenario=False)
         elif jogo.estado is EstadoJogo.CUTSCENE:
             if jogo.cutscene_controller.estado_anterior is EstadoJogo.MENU:
-                jogo.menu.desenhar(jogo.tela)
+                jogo.menu.desenhar(
+                    jogo.tela,
+                    cor_fundo_cutscene=jogo.cenario.cor_transicao,
+                )
             else:
-                jogo._desenhar_jogo()
+                jogo._desenhar_jogo(acabamento_cutscene=True)
             jogo.cutscene_controller.caixa.desenhar(
                 jogo.tela, jogo.cutscene_controller, jogo.cenario.cor_transicao)
         elif jogo.estado is EstadoJogo.JOGANDO:

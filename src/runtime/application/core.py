@@ -2,66 +2,114 @@
 
 import math
 import random
-import sys
 from contextlib import contextmanager
 
 import pygame
 
-from src.core.constants import ALTURA, AMARELO, BRANCO, CIANO, DIMENSION_GOLD, \
-    DIVISOR_NIVEL_INTERVALO_SPAWN, DOURADO, EstadoJogo, FPS, \
-    INCREMENTO_CARREGAMENTO, INTERVALO_SPAWN_BASE, \
-    INTERVALO_SPAWN_MINIMO, LARGURA, LARANJA, NEGRO, QUANTUM_CYAN, \
-    RIFT_MAGENTA, NOME_JOGO, TITULO, VERDE, VOID_BLACK
-from src.runtime.domain.entities.bosses import Boss
-from src.runtime.infrastructure.assets import carregar_imagem_alpha
-from src.runtime.infrastructure.graphics.cel_shading import TextoAcao
-from src.runtime.controllers.combat import ControladorCombate
-from src.runtime.controllers.miniboss import ControladorMiniboss
-from src.runtime.controllers.game_over import ControladorGameOver
-from src.runtime.domain.entities.enemies import Inimigo, InimigoEspecial, composicao_onda, \
-    sortear_inimigo_especial
-from src.runtime.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
-from src.runtime.presentation.hud import HudJogo
-from src.runtime.presentation.equipment_overlay import desenhar_menu_equipamento
-from src.runtime.presentation.menu import Dialogo, MenuPrincipal
-from src.runtime.presentation.crosshair import Mira
-from src.runtime.presentation.debug_overlay import OverlayDebug
-from src.runtime.presentation.screens.upgrade_screen import TelaMelhorias
-from src.runtime.domain.world.particles import MensagemFlutuante, SistemaParticulas
-from src.runtime.domain.entities.player import Jogador
-from src.runtime.domain.entities.powerups import PowerUp, sortear_tipo
-from src.runtime.controllers.progression import ControladorProgressao
-from src.runtime.infrastructure.persistence.save_system import SistemaProgressao
-from src.runtime.infrastructure.persistence.save_system import ProgressoPerfil
-from src.infrastructure.persistence.profile_repository import JsonProfileRepository
-from src.domain.systems.profile_service import ProfileService
-from src.runtime.domain.world.scenarios import CENARIOS, Cenario, cenario_do_nivel
-from src.core.settings import Configuracoes, OpcoesShaderComic, TEMAS
-from src.runtime.infrastructure.persistence.shop import LojaSkins
-from src.runtime.infrastructure.audio.sounds import Sons
-from src.runtime.infrastructure.graphics.smooth import (
-    desenhar_botao_cartoon, desenhar_circulo, desenhar_estrela, desenhar_glow,
-    desenhar_painel, desenhar_painel_cartoon, desenhar_poligono,
-    desenhar_vignette, retangulo_suave,
+from src.core.constants import (
+    ALTURA,
+    AMARELO,
+    BRANCO,
+    CIANO,
+    DIMENSION_GOLD,
+    DIVISOR_NIVEL_INTERVALO_SPAWN,
+    DOURADO,
+    FPS,
+    INCREMENTO_CARREGAMENTO,
+    INTERVALO_SPAWN_BASE,
+    INTERVALO_SPAWN_MINIMO,
+    LARANJA,
+    LARGURA,
+    NEGRO,
+    NOME_JOGO,
+    QUANTUM_CYAN,
+    RIFT_MAGENTA,
+    TITULO,
+    VERDE,
+    VOID_BLACK,
+    EstadoJogo,
 )
+from src.core.settings import TEMAS, Configuracoes, OpcoesShaderComic, escala_visual
+from src.domain.systems.profile_service import ProfileService
 from src.infrastructure.graphics.theme import tema_atual
+from src.infrastructure.persistence.profile_repository import JsonProfileRepository
 from src.infrastructure.ui.layout import Layout
+from src.runtime.controllers.combat import ControladorCombate
+from src.runtime.controllers.cutscene import ControladorCutscene
+from src.runtime.controllers.game_over import ControladorGameOver
 from src.runtime.controllers.loop import ControladorLoop
+from src.runtime.controllers.miniboss import ControladorMiniboss
 from src.runtime.controllers.pause import ControladorPausa
+from src.runtime.controllers.progression import ControladorProgressao
 from src.runtime.controllers.render import ControladorRenderizacao
 from src.runtime.controllers.scroll import ControladorAvanco
-from src.runtime.controllers.cutscene import ControladorCutscene
 from src.runtime.diagnostics.frame_metrics import MetricasQuadro
-from src.runtime.presentation.ui import desenhar_barra, desenhar_cantos, desenhar_texto, \
-    desenhar_titulo
+from src.runtime.domain.entities.bosses import Boss
+from src.runtime.domain.entities.enemies import (
+    Inimigo,
+    InimigoEspecial,
+    composicao_onda,
+    sortear_inimigo_especial,
+)
+from src.runtime.domain.entities.player import Jogador
+from src.runtime.domain.entities.powerups import PowerUp, sortear_tipo
 from src.runtime.domain.entities.weapons import Projetil
+from src.runtime.domain.world.particles import MensagemFlutuante, SistemaParticulas
+from src.runtime.domain.world.scenarios import CENARIOS, Cenario, cenario_do_nivel
+from src.runtime.infrastructure.assets import carregar_imagem_alpha
+from src.runtime.infrastructure.audio.sounds import Sons
+from src.runtime.infrastructure.graphics.cel_shading import TextoAcao
+from src.runtime.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
+from src.runtime.infrastructure.graphics.smooth import (
+    desenhar_botao_cartoon,
+    desenhar_circulo,
+    desenhar_estrela,
+    desenhar_glow,
+    desenhar_painel,
+    desenhar_painel_cartoon,
+    desenhar_poligono,
+    desenhar_vignette,
+    retangulo_suave,
+)
+from src.runtime.infrastructure.persistence.save_system import ProgressoPerfil, SistemaProgressao
+from src.runtime.infrastructure.persistence.shop import LojaSkins
+from src.runtime.presentation.crosshair import Mira
+from src.runtime.presentation.debug_overlay import OverlayDebug
+from src.runtime.presentation.dimension_transition import (
+    INICIO_FLASH,
+    INICIO_REVELACAO,
+)
+from src.runtime.presentation.equipment_overlay import desenhar_menu_equipamento
+from src.runtime.presentation.hud import HudJogo
+from src.runtime.presentation.menu import Dialogo, MenuPrincipal
+from src.runtime.presentation.screens.upgrade_screen import TelaMelhorias
+from src.runtime.presentation.ui import (
+    desenhar_barra,
+    desenhar_cantos,
+    desenhar_texto,
+    desenhar_titulo,
+)
 
 try:
-    from src.runtime.infrastructure.graphics.gpu_renderer import ApresentadorGPU, \
-        GPU_DISPONIVEL
+    from src.runtime.infrastructure.graphics.gpu_renderer import GPU_DISPONIVEL, ApresentadorGPU
 except ImportError:  # pragma: no cover - PyOpenGL e opcional
     ApresentadorGPU = None
     GPU_DISPONIVEL = False
+
+__all__ = [
+    "INCREMENTO_CARREGAMENTO",
+    "LARANJA",
+    "NEGRO",
+    "Boss",
+    "TextoAcao",
+    "composicao_onda",
+    "Jogador",
+    "PowerUp",
+    "sortear_tipo",
+    "CENARIOS",
+    "cenario_do_nivel",
+    "Projetil",
+]
 
 DICAS_CARREGAMENTO = [
     "Prepare-se para atravessar a fenda!",
@@ -241,6 +289,14 @@ class Jogo:
         self.layout = Layout(LARGURA, ALTURA)
         self.tela_ui = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
         self._tela_composta = pygame.Surface((LARGURA, ALTURA), depth=self.tela)
+        self._fundo_preenche_chave = None
+        self._fundo_preenche = None
+        self._fundo_preenche_logico = None
+        self._overlay_bordas_preenche = None
+        self._overlay_bordas_tamanho = None
+        self._hud_superficie_nativa = None
+        self._hud_tamanho_nativo = None
+        self._hud_nativo_pronto = False
 
     @contextmanager
     def _desenhar_na_interface(self):
@@ -358,14 +414,136 @@ class Jogo:
         calibrar a imagem para o monitor (overscan, TVs, etc.). Usada tanto
         no ``_apresentar`` quanto na conversao de mouse (``_pos_logica``).
         """
-        if self.config["aspecto"] == "PREENCHE":
-            return (self.config["ajuste_escala"],
-                    self.config["ajuste_off_x"], self.config["ajuste_off_y"])
         escala, off_x, off_y = self._escala_janela()
         escala *= max(0.5, self.config["ajuste_escala"])
         off_x += self.config["ajuste_off_x"]
         off_y += self.config["ajuste_off_y"]
         return escala, off_x, off_y
+
+    def _obter_fundo_preenche(self, tamanho: tuple[int, int]) -> pygame.Surface:
+        """Prepara o fundo decorativo para as faixas externas da cena 16:9."""
+        largura, altura = tamanho
+        estado = self.estado
+        e_menu = (estado in (EstadoJogo.MENU, EstadoJogo.CONTINUAR,
+                             EstadoJogo.LOJA, EstadoJogo.RECORDES, EstadoJogo.CONFIG)
+                  or (estado is EstadoJogo.CUTSCENE
+                      and self.cutscene_controller.estado_anterior is EstadoJogo.MENU))
+        cenario_id = None if e_menu else getattr(self.cenario, "id", 1)
+        chave = (
+            tamanho, e_menu, cenario_id, self.config["estilo_visual"],
+            self.config["qualidade_comic"], self.config["comic_papel"],
+            self.config["comic_halftone"],
+            bool(getattr(self.cenario, "parallax", None)),
+        )
+        if chave == self._fundo_preenche_chave:
+            return self._fundo_preenche
+
+        origem = pygame.Surface((LARGURA, ALTURA))
+        if e_menu and hasattr(self, "menu"):
+            from src.infrastructure.graphics.comic_theme import usar_visual
+
+            with usar_visual(self.config):
+                self.menu.fundo.desenhar(origem)
+        elif getattr(self.cenario, "parallax", None) is not None:
+            self.cenario.parallax._base().desenhar(origem)
+        elif self.config["estilo_visual"] == "COMIC":
+            from src.infrastructure.graphics.comic_render import fundo_comic
+
+            origem = fundo_comic(
+                origem.get_size(), cenario_id or 1,
+                self.config["qualidade_comic"], self.config["comic_papel"],
+                self.config["comic_halftone"],
+            )
+        elif getattr(self.cenario, "fundo_estatico", None) is not None:
+            origem = self.cenario.fundo_estatico
+        else:
+            origem.fill(VOID_BLACK)
+
+        if (self._fundo_preenche is None or
+                self._fundo_preenche.get_size() != tamanho):
+            self._fundo_preenche = pygame.Surface(tamanho)
+        if (self._fundo_preenche_logico is None or
+                self._fundo_preenche_logico.get_size() != (LARGURA, ALTURA)):
+            self._fundo_preenche_logico = pygame.Surface((LARGURA, ALTURA))
+
+        escala = max(largura / origem.get_width(), altura / origem.get_height())
+        tamanho_escalado = (max(largura, int(origem.get_width() * escala)),
+                            max(altura, int(origem.get_height() * escala)))
+        escalada = pygame.transform.smoothscale(origem, tamanho_escalado)
+        esquerda = (escalada.get_width() - largura) // 2
+        topo = (escalada.get_height() - altura) // 2
+        recorte = escalada.subsurface((esquerda, topo, largura, altura))
+        self._fundo_preenche.fill(VOID_BLACK)
+        self._fundo_preenche.blit(recorte, (0, 0))
+        self._fundo_preenche_chave = chave
+        pygame.transform.smoothscale(
+            self._fundo_preenche, (LARGURA, ALTURA),
+            self._fundo_preenche_logico)
+        return self._fundo_preenche
+
+    def _efeito_borda_preenche(self):
+        """Combina os efeitos visuais que tambem cobrem as bordas da janela."""
+        efeitos = []
+        transicao = getattr(self.progressao_controller, "transicao", None)
+        if transicao is not None and INICIO_FLASH <= transicao.quadro < INICIO_REVELACAO:
+            alfa = min(255, int((transicao.quadro - INICIO_FLASH) * 12 *
+                                escala_visual(self.config["intensidade_flash"])))
+            if alfa:
+                efeitos.append(((255, 255, 255), alfa))
+
+        escala = escala_visual(self.config["intensidade_flash"])
+        if self.flash > 0 and escala:
+            efeitos.append(((255, 0, 0), min(255, int(self.flash * 15 * escala))))
+        if self.fade > 0:
+            efeitos.append(((0, 0, 0), min(255, int(self.fade))))
+        if not efeitos:
+            return None
+
+        alfa_composto = 0.0
+        cor_premultiplicada = [0.0, 0.0, 0.0]
+        for cor, alfa in efeitos:
+            fracao = alfa / 255.0
+            cor_premultiplicada = [
+                canal * fracao + anterior * (1.0 - fracao)
+                for canal, anterior in zip(cor, cor_premultiplicada)
+            ]
+            alfa_composto = fracao + alfa_composto * (1.0 - fracao)
+        cor_final = tuple(
+            round(canal / alfa_composto) for canal in cor_premultiplicada
+        )
+        return cor_final, round(alfa_composto * 255)
+
+    def _desenhar_efeito_borda_preenche(self, destino, tamanho, efeito) -> None:
+        """Aplica o efeito fora da area jogavel usando uma superficie cacheada."""
+        if efeito is None:
+            return
+        largura, altura = tamanho
+        if self._overlay_bordas_tamanho != tamanho:
+            self._overlay_bordas_preenche = pygame.Surface(
+                tamanho, pygame.SRCALPHA, 32)
+            self._overlay_bordas_tamanho = tamanho
+        overlay = self._overlay_bordas_preenche
+        overlay.fill((0, 0, 0, 0))
+
+        x, y, w, h = destino
+        esquerda, topo = max(0, x), max(0, y)
+        direita, base = min(largura, x + w), min(altura, y + h)
+        retangulos = []
+        if topo > 0:
+            retangulos.append(pygame.Rect(0, 0, largura, topo))
+        if base < altura:
+            retangulos.append(pygame.Rect(0, base, largura, altura - base))
+        if esquerda > 0 and base > topo:
+            retangulos.append(pygame.Rect(0, topo, esquerda, base - topo))
+        if direita < largura and base > topo:
+            retangulos.append(pygame.Rect(direita, topo,
+                                           largura - direita, base - topo))
+        if not retangulos:
+            retangulos.append(overlay.get_rect())
+        cor, alfa = efeito
+        for retangulo in retangulos:
+            pygame.draw.rect(overlay, (*cor, alfa), retangulo)
+        self.janela.blit(overlay, (0, 0))
 
     def _aplicar_modo_video(self):
         """Reconfigura a janela na resolucao escolhida, em janela ou fullscreen."""
@@ -418,46 +596,62 @@ class Jogo:
         escalar(self._quadro_composto(), tamanho, self._superficie_escalada)
         return self._superficie_escalada
 
-    def _apresentar_gpu(self, destino, tamanho_janela) -> None:
+    def _apresentar_gpu(self, destino, tamanho_janela,
+                        efeito_borda=None) -> None:
         """Envia mundo e UI ao apresentador conforme a opção de preservação."""
         preservar = self.config["preservar_interface"]
         quadro = self.tela if preservar else self._quadro_composto()
         interface = self.tela_ui if preservar else None
         self._apresentador_gpu.apresentar(
-            quadro, destino, tamanho_janela, VOID_BLACK, interface=interface)
+            quadro, destino, tamanho_janela, VOID_BLACK, interface=interface,
+            hud=(getattr(self, "_hud_superficie_nativa", None)
+                 if self._hud_nativo_visivel() else None),
+            fundo=getattr(self, "_fundo_preenche_logico", None)
+            if self.config["aspecto"] == "PREENCHE" else None,
+            efeito_borda=efeito_borda
+            if self.config["aspecto"] == "PREENCHE" else None,
+        )
 
     def _apresentar(self):
         """Redimensiona a superficie interna (1280x720) para a janela.
 
-        No modo AJUSTAR preserva as proporcoes com safe areas (letterbox);
-        no modo PREENCHE estica a cena. flip() e chamado por _desenhar().
+        Nos dois modos preserva a area jogavel 16:9. PREENCHE estende apenas
+        o fundo decorativo para fora dessa area. flip() e chamado por _desenhar().
         """
         w, h = self.janela.get_size()
         self._configurar_shader_gpu()
         if (w, h) == (LARGURA, ALTURA) and self._apresentador_gpu is None:
             self.janela.blit(self._quadro_composto(), (0, 0))
-            return
-        if self.config["aspecto"] == "PREENCHE":
-            escala = max(0.5, self.config["ajuste_escala"])
-            destino = (int(self.config["ajuste_off_x"]),
-                        int(self.config["ajuste_off_y"]),
-                        max(1, int(w * escala)), max(1, int(h * escala)))
-            if self._apresentador_gpu is not None:
-                self._apresentar_gpu(destino, (w, h))
-                return
-            superficie = self._escalar_quadro_cpu(destino[2:])
-            self.janela.fill(VOID_BLACK)
-            self.janela.blit(superficie, destino[:2])
+            hud = getattr(self, "_hud_superficie_nativa", None)
+            if (self._hud_nativo_visivel() and hud is not None
+                    and hud.get_size() == (w, h)):
+                self.janela.blit(hud, (0, 0))
             return
         escala, off_x, off_y = self._transformacao_janela()
         destino = (int(off_x), int(off_y), max(1, int(LARGURA * escala)),
                     max(1, int(ALTURA * escala)))
+        efeito_borda = (self._efeito_borda_preenche()
+                        if self.config["aspecto"] == "PREENCHE" else None)
         if self._apresentador_gpu is not None:
-            self._apresentar_gpu(destino, (w, h))
+            if self.config["aspecto"] == "PREENCHE":
+                self._obter_fundo_preenche((w, h))
+            self._apresentar_gpu(destino, (w, h), efeito_borda)
             return
         superficie = self._escalar_quadro_cpu(destino[2:])
-        self.janela.fill(VOID_BLACK)
+        if self.config["aspecto"] == "PREENCHE":
+            fundo = self._obter_fundo_preenche((w, h))
+            self.janela.blit(fundo, (0, 0))
+        else:
+            self.janela.fill(VOID_BLACK)
         self.janela.blit(superficie, destino[:2])
+        hud = getattr(self, "_hud_superficie_nativa", None)
+        if (self._hud_nativo_visivel() and hud is not None
+                and hud.get_size() == destino[2:]):
+            self.janela.blit(hud, destino[:2])
+        if self.config["aspecto"] == "PREENCHE":
+            self._desenhar_efeito_borda_preenche(
+                destino, (w, h), efeito_borda)
+            return
         cor_safe = (32, 28, 48)
         pygame.draw.aaline(self.janela, cor_safe,
                            (int(off_x), int(off_y)),
@@ -467,6 +661,11 @@ class Jogo:
             (int(off_x), int(off_y + ALTURA * escala)),
             (int(off_x + LARGURA * escala),
              int(off_y + ALTURA * escala)), 1)
+
+    def _hud_nativo_visivel(self) -> bool:
+        """Evita HUD residual em menus e deixa os efeitos cobrirem a interface."""
+        return bool(getattr(self, "_hud_nativo_pronto", False)
+                    and not self.fade and not self.flash)
 
     def _atualizar_modo_desempenho(self, tempo_quadro_ms: float) -> None:
         """Alterna o upscale de CPU sem travar o jogo em máquinas modestas.
@@ -851,10 +1050,21 @@ class Jogo:
     # ----- desenho -----
 
     def _desenhar_hud(self):
-        self.render_controller.desenhar_hud()
+        """Desenha o HUD em pixels de saída dentro da área 16:9."""
+        escala, _, _ = self._transformacao_janela()
+        tamanho = (max(1, int(LARGURA * escala)),
+                   max(1, int(ALTURA * escala)))
+        if self._hud_tamanho_nativo != tamanho:
+            self._hud_superficie_nativa = pygame.Surface(
+                tamanho, pygame.SRCALPHA, 32)
+            self._hud_tamanho_nativo = tamanho
+            self.hud = HudJogo(Layout(*tamanho))
+        self._hud_superficie_nativa.fill((0, 0, 0, 0))
+        self.hud.desenhar(self._hud_superficie_nativa, self)
+        self._hud_nativo_pronto = True
 
-    def _desenhar_jogo(self):
-        self.cenario.desenhar(self.tela)
+    def _desenhar_jogo(self, acabamento_cutscene=False):
+        self.cenario.desenhar(self.tela, acabamento_cutscene=acabamento_cutscene)
         perigos = sum(proj.origem == "inimigo" for proj in self.projeteis)
         if perigos >= 12 or self.miniboss:
             self._tela_sombra.fill((4, 6, 18, 42))

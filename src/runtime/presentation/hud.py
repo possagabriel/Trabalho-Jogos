@@ -30,13 +30,7 @@ import math
 import pygame
 
 from src.core.constants import (
-    ALTURA,
     DIMENSION_GOLD,
-    LARGURA,
-    QUANTUM_CYAN,
-    RIFT_MAGENTA,
-    SHIFT_WHITE,
-    VOID_BLACK,
 )
 from src.infrastructure.graphics.comic_render import texto_tinta
 from src.infrastructure.graphics.comic_theme import (
@@ -61,26 +55,69 @@ from src.runtime.infrastructure.graphics.smooth import (
     linha_suave,
     retangulo_suave,
 )
+from src.runtime.infrastructure.graphics.style_tokens import (
+    CONTRASTE_TEXTO_HUD_AJUSTE,
+    CONTRASTE_TEXTO_MINIMO,
+    FUNDO_TEXTO_HUD,
+    HUD_ALTURA_PAINEL_ARMA_COMPACTO,
+    HUD_ALTURA_PAINEL_ARMA_PADRAO,
+    HUD_ALTURA_PAINEL_COMPACTO,
+    HUD_ALTURA_PAINEL_PADRAO,
+    HUD_ALTURA_PAINEL_PONTUACAO_COMPACTO,
+    HUD_ALTURA_PAINEL_STATUS_PADRAO,
+    HUD_COR_ALERTA,
+    HUD_COR_CIANO,
+    HUD_COR_DOURADO,
+    HUD_COR_ENERGIA,
+    HUD_COR_FUNDO,
+    HUD_COR_TEXTO,
+    HUD_COR_TEXTO_MUTED,
+    HUD_ESPESSURA_CONTORNO,
+    HUD_FONTE_NUMERO,
+    HUD_FONTE_PADRAO_M,
+    HUD_FONTE_PADRAO_S,
+    HUD_FONTE_PADRAO_XS,
+    HUD_FONTE_PADRAO_XXS,
+    HUD_FONTE_TITULO_G,
+    HUD_FONTE_TITULO_M,
+    HUD_FONTE_TITULO_S,
+    HUD_FONTE_TITULO_XS,
+    HUD_LARGURA_BARRA_BOSS,
+    HUD_LARGURA_PAINEL_CENTRAL,
+    HUD_LARGURA_PAINEL_DIREITO,
+    HUD_LARGURA_PAINEL_ESQUERDO,
+    HUD_MARGEM_BASE,
+    HUD_MARGEM_PLAQUETA_TEXTO,
+    HUD_RAIO_PLAQUETA_TEXTO,
+    HUD_SEGMENTOS_BOSS,
+    HUD_SEGMENTOS_VIDA,
+    HUD_TAMANHO_CANTO,
+    HUD_Y_BARRA_BOSS_COMPACTO,
+    HUD_Y_BARRA_BOSS_PADRAO,
+    OPACIDADE_PAINEL_HUD,
+    TEXTO_ESSENCIAL_MIN_PX,
+    TEXTO_SECUNDARIO_MIN_PX,
+)
 
 # ---------------------------------------------------------------------------
 # Paleta do HUD (derivada da marca VOID//SHIFT, nunca saturada em excesso)
 # ---------------------------------------------------------------------------
 
-AZUL_PROFUNDO = (9, 11, 26)       # fundo dos paineis holograficos
-CIANO_HUD = QUANTUM_CYAN
-MAGENTA_HUD = RIFT_MAGENTA
-BRANCO_HUD = SHIFT_WHITE
-CINZA_HUD = (150, 158, 200)
-VIDA_COR = (255, 96, 140)         # rosa magenta (vida)
+AZUL_PROFUNDO = HUD_COR_FUNDO
+CIANO_HUD = HUD_COR_CIANO
+SECUNDARIA_HUD = HUD_COR_DOURADO
+BRANCO_HUD = HUD_COR_TEXTO
+CINZA_HUD = HUD_COR_TEXTO_MUTED
+VIDA_COR = HUD_COR_ALERTA
 ESCUDO_COR = CIANO_HUD
 BOOST_COR = CIANO_HUD
-ENERGIA_COR = (150, 116, 255)     # violeta (energia de sistemas)
-ESPECIAL_COR = MAGENTA_HUD
+ENERGIA_COR = HUD_COR_ENERGIA
+ESPECIAL_COR = SECUNDARIA_HUD
 OURO_HUD = DIMENSION_GOLD
 
 # Segmentos das barras segmentadas
-SEGMENTOS_VIDA = 12
-SEGMENTOS_BOSS = 16
+SEGMENTOS_VIDA = HUD_SEGMENTOS_VIDA
+SEGMENTOS_BOSS = HUD_SEGMENTOS_BOSS
 
 
 # ---------------------------------------------------------------------------
@@ -89,7 +126,7 @@ SEGMENTOS_BOSS = 16
 
 PALETA_HUD_PADRAO = {
     "primaria": CIANO_HUD,
-    "secundaria": MAGENTA_HUD,
+    "secundaria": SECUNDARIA_HUD,
     "energia": ENERGIA_COR,
     "fundo": AZUL_PROFUNDO,
 }
@@ -130,30 +167,75 @@ def _paleta_fase(cenario):
 # ---------------------------------------------------------------------------
 
 def _render(fonte, texto, cor):
+    cor = cor_com_contraste(cor, FUNDO_TEXTO_HUD, CONTRASTE_TEXTO_HUD_AJUSTE)
     if opcoes_atuais().ativo:
         return texto_tinta(str(texto), max(9, int(fonte.get_height() * .7)), tuple(cor[:3]))
     return fonte.render(texto, True, cor[:3])
 
 
+def _luminancia(cor):
+    """Calcula luminância relativa sRGB para a razão WCAG."""
+    canais = []
+    for canal in cor[:3]:
+        valor = canal / 255
+        canais.append(valor / 12.92 if valor <= 0.04045
+                      else ((valor + 0.055) / 1.055) ** 2.4)
+    return 0.2126 * canais[0] + 0.7152 * canais[1] + 0.0722 * canais[2]
+
+
+def razao_contraste(cor_a, cor_b):
+    """Retorna a razão de contraste WCAG entre duas cores RGB."""
+    clara, escura = sorted((_luminancia(cor_a), _luminancia(cor_b)), reverse=True)
+    return (clara + 0.05) / (escura + 0.05)
+
+
+def cor_com_contraste(cor, fundo, minimo=CONTRASTE_TEXTO_MINIMO):
+    """Ajusta a luminosidade preservando a cor até alcançar o contraste mínimo."""
+    cor = tuple(max(0, min(255, int(c))) for c in cor[:3])
+    fundo = tuple(max(0, min(255, int(c))) for c in fundo[:3])
+    if razao_contraste(cor, fundo) >= minimo:
+        return cor
+
+    destino = (255, 255, 255) if _luminancia(fundo) < 0.5 else (0, 0, 0)
+    baixo, alto = 0.0, 1.0
+    for _ in range(8):
+        fator = (baixo + alto) / 2
+        candidata = tuple(round(a + (b - a) * fator)
+                          for a, b in zip(cor, destino))
+        if razao_contraste(candidata, fundo) >= minimo:
+            alto = fator
+        else:
+            baixo = fator
+    return tuple(round(a + (b - a) * alto) for a, b in zip(cor, destino))
+
+
+def _fonte_com_altura_efetiva(layout, tamanho_base, minimo, titulo=False):
+    """Garante altura de tinta mínima, medida no glifo desenhado."""
+    criar = fonte_titulo if titulo else fonte_texto
+    tamanho = max(layout.px(tamanho_base), minimo)
+    fonte = criar(tamanho)
+    while fonte.render("Ag0", True, (255, 255, 255)).get_bounding_rect().height < minimo:
+        tamanho += 1
+        fonte = criar(tamanho)
+    return fonte
+
+
 def _blit_alfa(tela, surf, pos, alfa=255):
     if alfa <= 0:
         return
-    if alfa >= 255:
-        tela.blit(surf, pos)
-    else:
-        s = surf.copy()
-        s.set_alpha(alfa)
-        tela.blit(s, pos)
+    # Texto essencial permanece opaco para cumprir o contraste após composição.
+    tela.blit(surf, pos)
 
 
-def _painel(tela, layout, rect, cor_borda, alpha=150, raio=12, glow=14,
+def _painel(tela, layout, rect, cor_borda, alpha=150, raio=12, glow=0,
             fundo=AZUL_PROFUNDO):
     """Painel holografico translucido com borda neon e cantos em L."""
     desenhar_painel(tela, cor_borda, rect,
                     cor_fundo=fundo, raio_canto=raio, alpha=alpha,
                     glow_raio=glow)
     desenhar_cantos(tela, tuple(min(255, c + 70) for c in cor_borda[:3]),
-                    rect, tamanho=layout.px(9), espessura=2)
+                    rect, tamanho=layout.px(HUD_TAMANHO_CANTO),
+                    espessura=HUD_ESPESSURA_CONTORNO)
 
 
 def _barra_segmentada(tela, layout, rect, fracao, cor, segmentos=12,
@@ -169,13 +251,12 @@ def _barra_segmentada(tela, layout, rect, fracao, cor, segmentos=12,
         if i < preenchidos:
             barra_suave(tela, seg.x, seg.y, seg.w, seg.h, 1.0, cor,
                         fundo=(26, 32, 66), raio_canto=raio_canto)
-            desenhar_glow(tela, cor, seg.center, max(2, seg.h), 0.35)
         else:
             barra_suave(tela, seg.x, seg.y, seg.w, seg.h, 1.0,
                         (44, 50, 82), fundo=(18, 22, 48), raio_canto=raio_canto)
 
 
-def _barra_fina(tela, layout, rect, fracao, cor, brilho=True):
+def _barra_fina(tela, layout, rect, fracao, cor, brilho=False):
     """Barra extremamente discreta, de 4px, para progressos secundarios."""
     fracao = max(0.0, min(1.0, fracao))
     barra_suave(tela, rect.x, rect.y, rect.w, rect.h, fracao, cor,
@@ -202,16 +283,21 @@ def _medidor_circular(tela, layout, centro, raio, fracao, cor,
                       rotulo=None, valor=None):
     """Gauge circular com arco de fundo, ticks e arco de valor com brilho.
 
-    Tudo e desenhado numa surface SRCALPHA local (recortada ao gauge) e
-    blitada uma unica vez, mantendo transparencia sem custo de surface
-    por linha.
+    Desenha diretamente na superfície de destino, sem alocar temporários
+    durante cada quadro.
     """
     r = raio
     fracao = max(0.0, min(1.0, fracao))
-    pad = layout.px(14)
-    ext = int(r * 2 + pad * 2)
-    surf = pygame.Surface((ext, ext), pygame.SRCALPHA)
-    local = (pad + r, pad + r)
+    local = centro
+    pygame.draw.circle(
+        tela, (*FUNDO_TEXTO_HUD, OPACIDADE_PAINEL_HUD), local,
+        max(1, r - layout.px(10)),
+    )
+
+    pygame.draw.circle(
+        tela, (*FUNDO_TEXTO_HUD, OPACIDADE_PAINEL_HUD), local,
+        max(1, r - layout.px(10)),
+    )
 
     # ticks de fundo a cada 30 graus
     for i in range(12):
@@ -221,34 +307,35 @@ def _medidor_circular(tela, layout, centro, raio, fracao, cor,
         p0 = (local[0] + math.cos(a) * r0, local[1] + math.sin(a) * r0)
         p1 = (local[0] + math.cos(a) * r1, local[1] + math.sin(a) * r1)
         cor_tick = (170, 180, 215) if (i % 3 == 0) else (66, 72, 104)
-        linha_suave(surf, cor_tick, p0, p1, layout.px(2))
+        linha_suave(tela, cor_tick, p0, p1, layout.px(2))
 
     # arco de fundo (quase cheio, bem discreto)
-    _arc(surf, local, r - layout.px(3), 0, math.tau, (56, 64, 100),
+    _arc(tela, local, r - layout.px(3), 0, math.tau, (56, 64, 100),
          layout.px(5), 150)
 
     # arco de valor com brilho na ponta
     if fracao > 0.01:
         fim = -math.pi / 2 + fracao * math.tau
-        _arc(surf, local, r - layout.px(3), -math.pi / 2, fim, cor,
+        _arc(tela, local, r - layout.px(3), -math.pi / 2, fim, cor,
              layout.px(5), 255)
         px = local[0] + math.cos(fim) * (r - layout.px(3))
         py = local[1] + math.sin(fim) * (r - layout.px(3))
-        desenhar_glow(surf, cor, (px, py), layout.px(8), 0.9)
-        desenhar_circulo(surf, cor, (px, py), layout.px(2), brilho=1.4)
-
-    tela.blit(surf, (int(centro[0]) - pad - r, int(centro[1]) - pad - r))
+        desenhar_circulo(tela, cor, (px, py), layout.px(2))
 
     if valor is not None:
-        fonte = fonte_titulo(layout.px(16))
+        fonte = _fonte_com_altura_efetiva(
+            layout, 16, TEXTO_ESSENCIAL_MIN_PX, titulo=True)
         surf_v = fonte.render(valor, True, BRANCO_HUD)
-        _blit_alfa(tela, surf_v, surf_v.get_rect(center=centro), 235)
+        _blit_alfa(tela, surf_v, surf_v.get_rect(
+            center=(centro[0], centro[1] - layout.px(8))))
     if rotulo:
-        fonte = fonte_texto(layout.px(11))
-        surf_r = fonte.render(rotulo, True, CINZA_HUD)
-        _blit_alfa(tela, surf_r,
-                   surf_r.get_rect(center=(centro[0], centro[1] +
-                                           layout.px(14))), 210)
+        fonte = _fonte_com_altura_efetiva(
+            layout, 11, TEXTO_SECUNDARIO_MIN_PX)
+        cor = cor_com_contraste(
+            CINZA_HUD, FUNDO_TEXTO_HUD, CONTRASTE_TEXTO_HUD_AJUSTE)
+        surf_r = fonte.render(rotulo, True, cor)
+        _blit_alfa(tela, surf_r, surf_r.get_rect(center=(
+            centro[0], centro[1] + layout.px(14))))
 
 
 def _icone_nave(tela, centro, escala, cor=BRANCO_HUD):
@@ -257,7 +344,6 @@ def _icone_nave(tela, centro, escala, cor=BRANCO_HUD):
     pts = [(centro[0], centro[1] - 10 * c), (centro[0] + 7 * c, centro[1] + 4 * c),
            (centro[0] + 3 * c, centro[1] + 7 * c), (centro[0] - 3 * c, centro[1] + 7 * c),
            (centro[0] - 7 * c, centro[1] + 4 * c)]
-    desenhar_glow(tela, cor, centro, 9 * c, 0.8)
     desenhar_poligono(tela, cor, pts)
     desenhar_poligono(tela, (255, 255, 255), [
         (centro[0] - 2 * c, centro[1] - 1 * c),
@@ -270,19 +356,16 @@ def _icone_arma(tela, tipo, centro, cor, escala=1.0):
     x, y = centro
     c = escala
     if tipo == "laser":
-        desenhar_glow(tela, cor, (x, y), 8 * c, 0.6)
         linha_suave(tela, cor, (x, y - 8 * c), (x, y + 8 * c), int(2 * c))
         linha_suave(tela, BRANCO_HUD, (x, y - 8 * c), (x, y - 2 * c),
                     int(1 * c))
     elif tipo == "duplo":
         for s in (-1, 1):
-            desenhar_glow(tela, cor, (x + s * 4 * c, y), 5 * c, 0.5)
             linha_suave(tela, cor, (x + s * 6 * c, y - 8 * c),
                         (x + s * 6 * c, y + 8 * c), int(2 * c))
     elif tipo == "plasma":
-        desenhar_glow(tela, cor, (x, y), 8 * c, 0.9)
         desenhar_circulo(tela, cor, (x, y), int(5 * c))
-        desenhar_circulo(tela, BRANCO_HUD, (x, y), int(2 * c), brilho=1.4)
+        desenhar_circulo(tela, BRANCO_HUD, (x, y), int(2 * c))
     elif tipo == "metralhadora":
         for i in range(3):
             dx = (i - 1) * 3 * c
@@ -294,7 +377,6 @@ def _icone_arma(tela, tipo, centro, cor, escala=1.0):
             p0 = (x + math.cos(a) * 6 * c, y + math.sin(a) * 6 * c)
             desenhar_circulo(tela, cor, p0, int(2 * c))
     elif tipo == "ion":
-        desenhar_glow(tela, cor, (x, y), 8 * c, 0.7)
         retangulo_suave(tela, cor, pygame.Rect(
             int(x - 3 * c), int(y - 8 * c), int(6 * c), int(16 * c)),
             int(3 * c))
@@ -314,16 +396,14 @@ def _icone_arma(tela, tipo, centro, cor, escala=1.0):
             linha_suave(tela, cor, p0, p1, int(1 * c))
         desenhar_circulo(tela, cor, (x, y), int(2 * c))
     else:  # padrao
-        desenhar_glow(tela, cor, (x, y), 6 * c, 0.6)
         desenhar_circulo(tela, cor, (x, y), int(3 * c))
-        desenhar_circulo(tela, BRANCO_HUD, (x, y), int(1 * c), brilho=1.4)
+        desenhar_circulo(tela, BRANCO_HUD, (x, y), int(1 * c))
 
 
 def _icone_abates(tela, centro, cor=CINZA_HUD, escala=1.0):
     """Crosshair compacto para o contador de inimigos abatidos."""
     x, y = centro
     c = escala
-    desenhar_glow(tela, cor, (x, y), 6 * c, 0.4)
     for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
         linha_suave(tela, cor, (x + dx * 6 * c, y + dy * 6 * c),
                     (x + dx * 8 * c, y + dy * 8 * c), int(2 * c))
@@ -356,18 +436,33 @@ class HudJogo:
 
     def __init__(self, layout=None):
         self.layout = layout or Layout()
-        l = self.layout
-        self._f_padrao_xxs = l.fonte_texto(12)
-        self._f_padrao_xs = l.fonte_texto(15)
-        self._f_padrao_s = l.fonte_texto(18)
-        self._f_padrao_m = l.fonte_texto(22)
-        self._f_titulo_xs = l.fonte_titulo(13)
-        self._f_titulo_s = l.fonte_titulo(17)
-        self._f_titulo_m = l.fonte_titulo(24)
-        self._f_titulo_g = l.fonte_titulo(34)
-        self._f_numero = l.fonte_titulo(30)
+        layout = self.layout
+        self.compacto = layout.altura < 620
+        self._f_padrao_xxs = self._fonte(
+            layout, HUD_FONTE_PADRAO_XXS, TEXTO_SECUNDARIO_MIN_PX)
+        self._f_padrao_xs = self._fonte(
+            layout, HUD_FONTE_PADRAO_XS, TEXTO_SECUNDARIO_MIN_PX)
+        self._f_padrao_s = self._fonte(
+            layout, HUD_FONTE_PADRAO_S, TEXTO_ESSENCIAL_MIN_PX)
+        self._f_padrao_m = self._fonte(
+            layout, HUD_FONTE_PADRAO_M, TEXTO_ESSENCIAL_MIN_PX)
+        self._f_titulo_xs = self._fonte(
+            layout, HUD_FONTE_TITULO_XS, TEXTO_SECUNDARIO_MIN_PX, True)
+        self._f_titulo_s = self._fonte(
+            layout, HUD_FONTE_TITULO_S, TEXTO_ESSENCIAL_MIN_PX, True)
+        self._f_titulo_m = self._fonte(
+            layout, HUD_FONTE_TITULO_M, TEXTO_ESSENCIAL_MIN_PX, True)
+        self._f_titulo_g = self._fonte(
+            layout, HUD_FONTE_TITULO_G, TEXTO_ESSENCIAL_MIN_PX, True)
+        self._f_numero = self._fonte(
+            layout, HUD_FONTE_NUMERO, TEXTO_ESSENCIAL_MIN_PX, True)
         self._telemetria_surface = None
         self._telemetria_chave = None
+
+    @staticmethod
+    def _fonte(layout, tamanho_base, minimo, titulo=False):
+        """Cria fonte em pixels de saída, impondo o mínimo de leitura efetivo."""
+        return _fonte_com_altura_efetiva(layout, tamanho_base, minimo, titulo)
 
     # ------------------------------------------------------------- dados
 
@@ -452,53 +547,49 @@ class HudJogo:
             self._telemetria_chave = chave
         if self._telemetria_surface is None:
             return
-        l = self.layout
-        rect = self._telemetria_surface.get_rect(midtop=(l.x(0.5), l.px(112)))
-        fundo = rect.inflate(l.px(16), l.px(8))
-        retangulo_suave(tela, (9, 18, 38), fundo, l.px(5), 1,
-                         glow_cor=CIANO_HUD, glow_raio=l.px(4))
+        layout = self.layout
+        rect = self._telemetria_surface.get_rect(midtop=(layout.x(0.5), layout.px(112)))
+        fundo = rect.inflate(layout.px(16), layout.px(8))
+        retangulo_suave(tela, (9, 18, 38), fundo, layout.px(5), 1,
+                         )
         _blit_alfa(tela, self._telemetria_surface, rect, 220)
 
     # -------------------------------------------------------- modulos
 
     def _topo_esquerda(self, tela, d, t):
-        l = self.layout
-        m = l.margem(14)
-        largura = l.px(232)
-        altura = l.px(96)
+        layout = self.layout
+        m = layout.margem(HUD_MARGEM_BASE)
+        largura = layout.px(HUD_LARGURA_PAINEL_ESQUERDO)
+        altura = layout.px(
+            HUD_ALTURA_PAINEL_COMPACTO if self.compacto
+            else HUD_ALTURA_PAINEL_STATUS_PADRAO)
         painel = pygame.Rect(m, m, largura, altura)
-        _painel(tela, l, painel, self._paleta["primaria"], alpha=140, glow=10,
-                fundo=self._paleta["fundo"])
+        _painel(tela, layout, painel, self._paleta["primaria"],
+                alpha=OPACIDADE_PAINEL_HUD, glow=0,
+                fundo=FUNDO_TEXTO_HUD)
 
         # icone da nave em badge losangular
-        badge_c = (painel.x + l.px(30), painel.y + l.px(30))
+        badge_c = (painel.x + layout.px(30), painel.y + layout.px(30))
         desenhar_poligono(tela, (52, 66, 110),
-                          losango(badge_c, l.px(26), l.px(30)),
-                          espessura=1, glow_cor=self._paleta["primaria"],
-                          glow_raio=8)
-        _icone_nave(tela, badge_c, l.escala * 1.15, BRANCO_HUD)
+                          losango(badge_c, layout.px(26), layout.px(30)),
+                          espessura=1)
+        _icone_nave(tela, badge_c, layout.escala * 1.15, BRANCO_HUD)
 
         # identificacao
-        x0 = painel.x + l.px(62)
+        x0 = painel.x + layout.px(62)
         rotulo = _render(self._f_titulo_xs, "PILOTO 01", CINZA_HUD)
-        _blit_alfa(tela, rotulo, (x0, painel.y + l.px(14)), 210)
-        pulsar = 0.72 + 0.28 * math.sin(t * 2.4)
-        status = _render(self._f_padrao_xxs,
-                         "SISTEMAS ATIVOS" if d["vida"] > 0 else "DANO CRÍTICO",
-                         tuple(int(c * pulsar) for c in VIDA_COR))
-        _blit_alfa(tela, status, (x0, painel.y + l.px(30)), 200)
-
+        _blit_alfa(tela, rotulo, (x0, painel.y + layout.px(8)))
         # barra de vida (segmentada) + numerico
-        by = painel.y + l.px(44)
-        barra = pygame.Rect(x0, by, l.px(128), l.px(9))
-        _barra_segmentada(tela, l, barra, d["vida"] / max(1, d["vida_max"]),
+        by = painel.y + layout.px(75 if self.compacto else 50)
+        barra = pygame.Rect(x0, by, layout.px(100 if self.compacto else 128), layout.px(9))
+        _barra_segmentada(tela, layout, barra, d["vida"] / max(1, d["vida_max"]),
                           VIDA_COR, SEGMENTOS_VIDA)
-        _numero(tela, l, self._f_padrao_s, f"{d['vida']}/{d['vida_max']}",
-                (painel.right - l.px(10), by + l.px(5)), VIDA_COR,
+        _numero(tela, layout, self._f_padrao_s, f"{d['vida']}/{d['vida_max']}",
+                (painel.right - layout.px(10), painel.y + layout.px(34)), VIDA_COR,
                 "direita", 235)
 
         # barra de escudo (fina, ciano) - aparece quando o escudo esta ativo
-        sy = by + l.px(14)
+        sy = painel.y + layout.px(90 if self.compacto else 84)
         escudo_frac = 1.0 if d["escudo"] else 0.0
         if d["escudo"]:
             pulso = 0.75 + 0.25 * math.sin(t * 3)
@@ -506,195 +597,241 @@ class HudJogo:
                                for c in self._paleta["primaria"])
         else:
             cor_escudo = self._paleta["primaria"]
-        barra_escudo = pygame.Rect(x0, sy, l.px(128), l.px(5))
-        _barra_fina(tela, l, barra_escudo, escudo_frac, cor_escudo,
-                    brilho=d["escudo"])
-        rot_esc = _render(self._f_padrao_xxs, "ESCUDO", (120, 150, 210))
-        _blit_alfa(tela, rot_esc, (x0, sy - l.px(2)), 180)
-
+        barra_escudo = pygame.Rect(x0, sy, layout.px(100 if self.compacto else 128), layout.px(5))
+        _barra_fina(tela, layout, barra_escudo, escudo_frac, cor_escudo,
+                    brilho=False)
         # energia de sistemas (mini barra + valor)
-        ey = sy + l.px(10)
+        ey = painel.y + layout.px(130 if self.compacto else 118)
         frac_energia = d["energia"] / 100.0
-        barra_energia = pygame.Rect(x0, ey, l.px(128), l.px(5))
-        _barra_fina(tela, l, barra_energia, frac_energia,
+        barra_energia = pygame.Rect(x0, ey, layout.px(100 if self.compacto else 128), layout.px(5))
+        _barra_fina(tela, layout, barra_energia, frac_energia,
                     self._paleta["energia"])
-        rot_ener = _render(self._f_padrao_xxs, "ENERGIA", (150, 132, 240))
-        _blit_alfa(tela, rot_ener, (x0, ey - l.px(2)), 180)
-        _numero(tela, l, self._f_padrao_xxs, f"{int(d['energia'])}",
-                (painel.right - l.px(10), ey + l.px(1)),
-                self._paleta["energia"], "direita", 210)
+        rot_ener = _render(self._f_padrao_xxs, "ENERGIA", CINZA_HUD)
+        rotulo_y = painel.y + layout.px(105 if self.compacto else 97)
+        _blit_alfa(tela, rot_ener, (x0, rotulo_y))
+        _numero(tela, layout, self._f_padrao_xxs, f"{int(d['energia'])}",
+                (painel.right - layout.px(10), rotulo_y),
+                self._paleta["energia"], "direita")
 
     def _topo_direita(self, tela, d, t):
-        l = self.layout
-        m = l.margem(14)
-        largura = l.px(228)
-        altura = l.px(96)
-        painel = pygame.Rect(l.largura - m - largura, m, largura, altura)
-        _painel(tela, l, painel, self._paleta["secundaria"], alpha=140,
-                glow=10, fundo=self._paleta["fundo"])
+        layout = self.layout
+        m = layout.margem(HUD_MARGEM_BASE)
+        largura = layout.px(HUD_LARGURA_PAINEL_DIREITO)
+        altura = layout.px(
+            HUD_ALTURA_PAINEL_PONTUACAO_COMPACTO if self.compacto
+            else HUD_ALTURA_PAINEL_PADRAO)
+        painel = pygame.Rect(layout.largura - m - largura, m, largura, altura)
+        _painel(tela, layout, painel, self._paleta["secundaria"],
+                alpha=OPACIDADE_PAINEL_HUD,
+                glow=0, fundo=FUNDO_TEXTO_HUD)
 
-        x = painel.right - l.px(12)
+        x = painel.right - layout.px(12)
+        if self.compacto:
+            rotulo = _render(self._f_titulo_xs, "PONTOS", CINZA_HUD)
+            _blit_alfa(tela, rotulo, (painel.x + layout.px(12),
+                                      painel.y + layout.px(8)))
+            _numero(tela, layout, self._f_numero, d["pontos"],
+                    (x, painel.y + layout.px(8)), BRANCO_HUD, "direita")
+            surf_hi = _render(self._f_padrao_xxs, "RECORDE", CINZA_HUD)
+            _blit_alfa(tela, surf_hi, (painel.x + layout.px(12),
+                                       painel.y + layout.px(48)))
+            _numero(tela, layout, self._f_padrao_s, d["recorde"],
+                    (x, painel.y + layout.px(48)), OURO_HUD, "direita")
+            y_abates = painel.y + layout.px(91)
+            _icone_abates(tela, (painel.x + layout.px(24), y_abates), CINZA_HUD,
+                          layout.escala)
+            _numero(tela, layout, self._f_padrao_s, d["abates"],
+                    (painel.x + layout.px(38), y_abates), CINZA_HUD, "esquerda")
+            if d["combo"] > 1:
+                mult = _render(self._f_titulo_s, f"x{d['bonus']:.1f}",
+                               (255, 214, 110))
+                _blit_alfa(tela, mult, (painel.right - layout.px(12) -
+                                        mult.get_width(), y_abates))
+            return
 
         rotulo = _render(self._f_titulo_xs, "PONTOS", CINZA_HUD)
-        _blit_alfa(tela, rotulo, (x - rotulo.get_width(), painel.y + l.px(10)),
+        _blit_alfa(tela, rotulo, (x - rotulo.get_width(), painel.y + layout.px(10)),
                    210)
-        _numero(tela, l, self._f_numero, d["pontos"],
-                (x, painel.y + l.px(28)), BRANCO_HUD, "direita", 245)
+        _numero(tela, layout, self._f_numero, d["pontos"],
+                (x, painel.y + layout.px(28)), BRANCO_HUD, "direita", 245)
 
         # high score
         surf_hi = _render(self._f_padrao_xxs, "RECORDE", (120, 130, 170))
-        _blit_alfa(tela, surf_hi, (painel.x + l.px(12), painel.y + l.px(14)),
+        _blit_alfa(tela, surf_hi, (painel.x + layout.px(12), painel.y + layout.px(14)),
                    190)
-        _numero(tela, l, self._f_padrao_s, d["recorde"],
-                (painel.x + l.px(12), painel.y + l.px(32)), OURO_HUD,
+        _numero(tela, layout, self._f_padrao_s, d["recorde"],
+                (painel.x + layout.px(12), painel.y + layout.px(32)), OURO_HUD,
                 "esquerda", 215)
 
         # abates
-        y_abates = painel.y + l.px(56)
-        _icone_abates(tela, (painel.x + l.px(24), y_abates), CINZA_HUD,
-                      l.escala)
-        _numero(tela, l, self._f_padrao_s, d["abates"],
-                (painel.x + l.px(38), y_abates + l.px(1)), CINZA_HUD,
+        y_abates = painel.y + layout.px(56)
+        _icone_abates(tela, (painel.x + layout.px(24), y_abates), CINZA_HUD,
+                      layout.escala)
+        _numero(tela, layout, self._f_padrao_s, d["abates"],
+                (painel.x + layout.px(38), y_abates + layout.px(1)), CINZA_HUD,
                 "esquerda", 220)
         rot_ab = _render(self._f_padrao_xxs, "ABATES", (110, 118, 160))
-        _blit_alfa(tela, rot_ab, (painel.x + l.px(64), y_abates - l.px(4)),
+        _blit_alfa(tela, rot_ab, (painel.x + layout.px(64), y_abates - layout.px(4)),
                    180)
 
         # combo multiplicador (visivel quando > 1)
         if d["combo"] > 1:
-            cx = painel.right - l.px(12)
-            comb_x = x - l.px(12)
+            comb_x = x - layout.px(12)
             mult = _render(self._f_titulo_s, f"x{d['bonus']:.1f}",
                            (255, 214, 110))
             _blit_alfa(tela, mult, (comb_x - mult.get_width(),
-                                    painel.y + l.px(56)), 240)
+                                    painel.y + layout.px(56)), 240)
             fracao = min(1.0, d["combo"] / 20.0)
-            barra = pygame.Rect(comb_x - l.px(64), painel.y + l.px(78),
-                                l.px(60), l.px(4))
-            _barra_fina(tela, l, barra, fracao, OURO_HUD)
+            barra = pygame.Rect(comb_x - layout.px(64), painel.y + layout.px(78),
+                                layout.px(60), layout.px(4))
+            _barra_fina(tela, layout, barra, fracao, OURO_HUD)
             rot_combo = _render(self._f_padrao_xxs, f"COMBO {d['combo']}",
                                 (200, 170, 90))
             _blit_alfa(tela, rot_combo, (comb_x - rot_combo.get_width(),
-                                         painel.y + l.px(82)), 200)
+                                         painel.y + layout.px(82)), 200)
 
     def _topo_centro(self, tela, d, t):
-        l = self.layout
-        cx = l.largura // 2
-        y = l.margem(16)
+        layout = self.layout
+        cx = layout.largura // 2
+        y = layout.margem(16)
+        painel = pygame.Rect(0, 0, layout.px(HUD_LARGURA_PAINEL_CENTRAL),
+                             layout.px(82))
+        painel.midtop = (cx, y - layout.px(8))
+        _painel(tela, layout, painel, self._paleta["primaria"],
+                alpha=OPACIDADE_PAINEL_HUD, raio=8, glow=0,
+                fundo=FUNDO_TEXTO_HUD)
 
         setor = _render(self._f_titulo_m,
                         f"SETOR {d['cenario']:02d}", BRANCO_HUD)
-        rect_setor = setor.get_rect(center=(cx, y + l.px(16)))
+        rect_setor = setor.get_rect(center=(
+            cx, y + layout.px(22 if self.compacto else 16)))
         _blit_alfa(tela, setor, rect_setor, 240)
         # acentos laterais discretos
         for s in (-1, 1):
             linha_suave(tela, (90, 100, 150),
-                        (rect_setor.left - l.px(22), rect_setor.centery),
-                        (rect_setor.left - l.px(6), rect_setor.centery), 1)
+                        (rect_setor.left - layout.px(22), rect_setor.centery),
+                        (rect_setor.left - layout.px(6), rect_setor.centery), 1)
             linha_suave(tela, (90, 100, 150),
-                        (rect_setor.right + l.px(6), rect_setor.centery),
-                        (rect_setor.right + l.px(22), rect_setor.centery), 1)
+                        (rect_setor.right + layout.px(6), rect_setor.centery),
+                        (rect_setor.right + layout.px(22), rect_setor.centery), 1)
 
         regiao = _render(self._f_titulo_xs, d["regiao"], self._paleta["primaria"])
-        _blit_alfa(tela, regiao, regiao.get_rect(center=(cx, y + l.px(38))),
+        _blit_alfa(tela, regiao, regiao.get_rect(center=(
+            cx, y + layout.px(54 if self.compacto else 38))),
                    230)
 
         # progresso da fase (extremamente discreto)
-        largura = l.px(280)
-        barra = pygame.Rect(cx - largura // 2, y + l.px(50), largura, l.px(4))
-        _barra_fina(tela, l, barra, d["progresso"], self._paleta["primaria"],
+        largura = layout.px(280)
+        barra = pygame.Rect(cx - largura // 2,
+                            y + layout.px(70 if self.compacto else 50),
+                            largura, layout.px(4))
+        _barra_fina(tela, layout, barra, d["progresso"], self._paleta["primaria"],
                     brilho=False)
 
     def _base_esquerda(self, tela, d, t):
-        l = self.layout
-        m = l.margem(14)
-        centro = (m + l.px(46), l.altura - m - l.px(82))
-        raio = l.px(38)
+        layout = self.layout
+        m = layout.margem(HUD_MARGEM_BASE)
+        centro = (m + layout.px(82), layout.altura - m -
+                  layout.px(120 if self.compacto else 82))
+        raio = layout.px(38)
         fracao = d["boost"]
         if fracao < 0.25:
             pulso = 0.55 + 0.45 * abs(math.sin(t * 5))
             cor = tuple(int(c * pulso) for c in self._paleta["primaria"])
         else:
             cor = self._paleta["primaria"]
-        _medidor_circular(tela, l, centro, raio, fracao, cor,
+        _medidor_circular(tela, layout, centro, raio, fracao, cor,
                           rotulo="IMPULSO", valor=f"{int(fracao * 100)}%")
 
         # velocidade
         vx = centro[0]
-        vy = centro[1] + raio + l.px(20)
+        vy = centro[1] + raio + layout.px(40 if self.compacto else 20)
         vel = _render(self._f_padrao_s, f"VEL {d['vel']:.1f}",
                       (170, 178, 220))
-        _blit_alfa(tela, vel, vel.get_rect(center=(vx, vy)), 220)
-        barra_vel = pygame.Rect(vx - l.px(30), vy + l.px(10), l.px(60), l.px(3))
-        _barra_fina(tela, l, barra_vel, min(1.0, d["vel"] / 12.0),
+        _blit_alfa(tela, vel, vel.get_rect(center=(vx, vy)))
+        barra_vel = pygame.Rect(
+            vx - layout.px(30), vy + layout.px(10),
+            layout.px(60), layout.px(3))
+        _barra_fina(tela, layout, barra_vel, min(1.0, d["vel"] / 12.0),
                     self._paleta["primaria"], brilho=False)
         esquiva = _render(
             self._f_padrao_xxs,
             "ESQUIVA PRONTA" if d["esquiva"] >= 1 else f"ESQUIVA {d['esquiva']:.0%}",
             self._paleta["primaria"] if d["esquiva"] >= 1 else CINZA_HUD,
         )
-        _blit_alfa(tela, esquiva, esquiva.get_rect(center=(vx, vy + l.px(25))), 220)
+        _blit_alfa(tela, esquiva, esquiva.get_rect(center=(
+            vx, vy + layout.px(45 if self.compacto else 25))))
 
     def _base_direita(self, tela, d, t):
-        l = self.layout
-        m = l.margem(14)
+        layout = self.layout
+        m = layout.margem(HUD_MARGEM_BASE)
         arma = d["arma"]
-        largura = l.px(232)
-        altura = l.px(92)
-        painel = pygame.Rect(l.largura - m - largura, l.altura - m - altura,
+        largura = layout.px(HUD_LARGURA_PAINEL_ESQUERDO)
+        altura = layout.px(
+            HUD_ALTURA_PAINEL_ARMA_COMPACTO if self.compacto
+            else HUD_ALTURA_PAINEL_ARMA_PADRAO)
+        painel = pygame.Rect(layout.largura - m - largura, layout.altura - m - altura,
                              largura, altura)
-        _painel(tela, l, painel, arma["cor"], alpha=140, glow=10,
-                fundo=self._paleta["fundo"])
+        _painel(tela, layout, painel, arma["cor"],
+                alpha=OPACIDADE_PAINEL_HUD, glow=0,
+                fundo=FUNDO_TEXTO_HUD)
 
-        badge_c = (painel.x + l.px(28), painel.y + l.px(30))
+        badge_c = (painel.x + layout.px(28), painel.y + layout.px(30))
         desenhar_poligono(tela, (52, 66, 110),
-                          losango(badge_c, l.px(24), l.px(26)),
-                          espessura=1, glow_cor=arma["cor"], glow_raio=8)
-        _icone_arma(tela, arma["tipo"], badge_c, arma["cor"], l.escala * 1.1)
+                          losango(badge_c, layout.px(24), layout.px(26)),
+                          espessura=1)
+        _icone_arma(tela, arma["tipo"], badge_c, arma["cor"], layout.escala * 1.1)
 
-        x0 = painel.x + l.px(58)
+        x0 = painel.x + layout.px(58)
         cor_nome = BRANCO_HUD
         if opcoes_atuais().ativo:
             indice = next(i for i, item in enumerate(ARMARIA) if item["tipo"] == arma["tipo"])
             cor_nome = RARIDADES[RARIDADE_ARMAS[indice]]
-        nome = _render(self._f_titulo_s, arma["nome"].upper(), cor_nome)
-        _blit_alfa(tela, nome, (x0, painel.y + l.px(12)), 240)
+        if self.compacto and " " in arma["nome"]:
+            palavras = arma["nome"].upper().split(maxsplit=1)
+            for indice, palavra in enumerate(palavras):
+                nome = _render(self._f_titulo_s, palavra, cor_nome)
+                _blit_alfa(tela, nome, (x0, painel.y + layout.px(4 + indice * 32)))
+        else:
+            nome = _render(self._f_titulo_s, arma["nome"].upper(), cor_nome)
+            _blit_alfa(tela, nome,
+                       (x0, painel.y + layout.px(4 if self.compacto else 12)))
         legenda = f"NV {arma['nivel']:02d}"
-        if opcoes_atuais().ativo:
+        if opcoes_atuais().ativo and not self.compacto:
             legenda += " / " + RARIDADE_ARMAS[indice].upper()
         nivel = _render(
             self._f_padrao_xxs, legenda, cor_nome if opcoes_atuais().ativo else CINZA_HUD)
-        _blit_alfa(tela, nivel, (x0, painel.y + l.px(30)), 200)
+        _blit_alfa(tela, nivel, (x0, painel.y + layout.px(64 if self.compacto else 30)))
 
         # carga / municao da arma
-        cy = painel.y + l.px(48)
-        barra = pygame.Rect(x0, cy, l.px(118), l.px(6))
-        _barra_segmentada(tela, l, barra, d["municao"], arma["cor"], 8,
+        cy = painel.y + layout.px(88 if self.compacto else 48)
+        barra = pygame.Rect(x0, cy, layout.px(118), layout.px(6))
+        _barra_segmentada(tela, layout, barra, d["municao"], arma["cor"], 8,
                           raio_canto=2)
         rot_carga = _render(self._f_padrao_xxs,
                             "CARREGANDO" if d["municao"] < 1.0 else "PRONTA",
                             (150, 158, 200) if d["municao"] < 1.0 else arma["cor"])
-        _blit_alfa(tela, rot_carga, (x0, cy + l.px(8)), 200)
+        _blit_alfa(tela, rot_carga, (x0, cy + layout.px(10 if self.compacto else 8)))
 
     def _base_centro(self, tela, d, t):
-        l = self.layout
-        cx = l.largura // 2
-        largura = l.px(236)
-        altura = l.px(10)
-        m = l.margem(14)
-        y = l.altura - m - altura - l.px(18)
+        layout = self.layout
+        cx = layout.largura // 2
+        largura = layout.px(236)
+        altura = layout.px(10)
+        m = layout.margem(14)
+        y = layout.altura - m - altura - layout.px(18)
         barra = pygame.Rect(cx - largura // 2, y, largura, altura)
 
         pronto = d["especial"] >= 1.0
         cor = (self._paleta["secundaria"] if pronto
                else tuple(int(c * 0.42)
                           for c in self._paleta["secundaria"]))
-        _barra_segmentada(tela, l, barra, d["especial"], cor, 10,
+        _barra_segmentada(tela, layout, barra, d["especial"], cor, 10,
                           raio_canto=2)
 
         rotulo = _render(self._f_titulo_xs, "BOMBA", CINZA_HUD)
         _blit_alfa(tela, rotulo,
-                   (barra.x + l.px(6), barra.y + l.px(12)), 200)
+                   (barra.x + layout.px(6), barra.y + layout.px(12)), 200)
 
         if pronto:
             pulso = 0.7 + 0.3 * math.sin(t * 4)
@@ -704,24 +841,33 @@ class HudJogo:
                            tuple(int(c * pulso)
                                  for c in self._paleta["secundaria"]))
             _blit_alfa(tela, surf,
-                       surf.get_rect(midright=(barra.right - l.px(6),
-                                               barra.y + l.px(12))), 235)
+                       surf.get_rect(midright=(barra.right - layout.px(6),
+                                               barra.y + layout.px(12))), 235)
 
     def _barra_boss(self, tela, d, t):
         boss = d["boss"]
         if not boss:
             return
-        l = self.layout
-        cx = l.largura // 2
-        largura = l.px(540)
-        altura = l.px(16)
-        y = l.margem(58)
+        layout = self.layout
+        cx = layout.largura // 2
+        largura = layout.px(HUD_LARGURA_BARRA_BOSS)
+        altura = layout.px(16)
+        y = layout.px(
+            HUD_Y_BARRA_BOSS_COMPACTO if self.compacto
+            else HUD_Y_BARRA_BOSS_PADRAO)
         barra = pygame.Rect(cx - largura // 2, y, largura, altura)
 
         fracao = max(0.0, min(1.0, boss.vida / max(1, boss.vida_max)))
 
         nome = _render(self._f_titulo_s, boss.nome, BRANCO_HUD)
-        rect_nome = nome.get_rect(center=(cx, y - l.px(12)))
+        rect_nome = nome.get_rect(center=(
+            cx, y - layout.px(30 if self.compacto else 20)))
+        retangulo_suave(
+            tela, FUNDO_TEXTO_HUD,
+            rect_nome.inflate(layout.px(HUD_MARGEM_PLAQUETA_TEXTO),
+                              layout.px(HUD_MARGEM_PLAQUETA_TEXTO)),
+            layout.px(HUD_RAIO_PLAQUETA_TEXTO),
+        )
         _blit_alfa(tela, nome, rect_nome, 245)
         # linhas de ancoragem do nome
         for s in (-1, 1):
@@ -731,9 +877,9 @@ class HudJogo:
                         (barra.right if s < 0 else barra.left,
                          rect_nome.centery), 1)
 
-        _painel(tela, l, barra.inflate(l.px(16), l.px(14)),
+        _painel(tela, layout, barra.inflate(layout.px(16), layout.px(14)),
                 OURO_HUD, alpha=120, raio=14, glow=16)
-        _barra_segmentada(tela, l, barra, fracao, OURO_HUD, SEGMENTOS_BOSS,
+        _barra_segmentada(tela, layout, barra, fracao, OURO_HUD, SEGMENTOS_BOSS,
                           raio_canto=4)
         desenhar_glow(tela, OURO_HUD, barra.center, max(barra.w, barra.h),
                       0.25)
@@ -744,5 +890,12 @@ class HudJogo:
         estado_miniboss = getattr(boss, "estado", None)
         rotulo = getattr(estado_miniboss, "rotulo", f"FASE {fase_atual}/3")
         fase = _render(self._f_padrao_xxs, rotulo, OURO_HUD)
-        _blit_alfa(tela, fase, fase.get_rect(midleft=(barra.right + l.px(14),
-                                                      barra.centery)), 220)
+        rect_fase = fase.get_rect(midleft=(barra.right + layout.px(14),
+                                           barra.centery))
+        retangulo_suave(
+            tela, FUNDO_TEXTO_HUD,
+            rect_fase.inflate(layout.px(HUD_MARGEM_PLAQUETA_TEXTO),
+                              layout.px(HUD_MARGEM_PLAQUETA_TEXTO)),
+            layout.px(HUD_RAIO_PLAQUETA_TEXTO),
+        )
+        _blit_alfa(tela, fase, rect_fase, 220)

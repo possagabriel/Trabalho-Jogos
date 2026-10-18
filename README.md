@@ -154,6 +154,14 @@ No `settings.json`, `velocidade_dialogo` define os caracteres por segundo:
 padrão `42`, aceitando valores de `10` a `120`. Saves antigos recebem
 `cenas_vistas: []` em `progresso_campanha` sem perder outros dados.
 
+Os fundos rasterizados das cutscenes recebem posterização, tinta leve da
+dimensão, contorno e retícula preparados uma vez e mantidos em cache. Retratos,
+caixa e títulos usam contorno escuro de 3–5 px; o magenta fica reservado aos
+quadros de glitch e alerta. As camadas do mundo, inimigos e projéteis continuam
+desenhados por cima do fundo filtrado.
+
+![Cutscene com fundo tratado e caixa de diálogo cartoon](docs/screenshots/cutscene-dialogue.jpg)
+
 ### Avanço da nave e parallax (1.3.0)
 
 O cenário rola continuamente para baixo, com velocidade própria para cada uma
@@ -232,9 +240,15 @@ recompõe automaticamente.
 - **Modo de aspecto** (configuração `aspecto`, disponível em Settings):
   - `AJUSTAR` (padrão): *scale-to-fit* com **safe areas** (letterbox) em
     `VOID_BLACK`, mantendo proporções iguais em qualquer formato de tela.
-  - `PREENCHE`: estica a cena para preencher a janela inteira.
-- **Tela cheia:** usa exatamente a resolução escolhida no menu (sem `SCALED`,
-  sem esticar). Alterar a resolução mantém a tela cheia ligada; se o monitor
+  - `PREENCHE`: mantém a área jogável em 16:9, com nave, HUD, mira e textos
+    na proporção correta; somente o fundo decorativo se estende pelas bordas.
+    Em telas ultrawide, as laterais extras não ampliam o campo de jogo.
+
+Prévia do modo `PREENCHE` em ultrawide:
+
+![Modo PREENCHE mantém a cena jogável em 16:9 e estende o fundo](docs/screenshots/preenche-ultrawide.jpg)
+- **Tela cheia:** usa exatamente a resolução escolhida no menu (sem `SCALED`;
+  a área jogável continua sem distorção). Alterar a resolução mantém a tela cheia ligada; se o monitor
   não suportar o modo selecionado, o jogo restaura a configuração anterior.
 - **Qualidade visual:** em **Config → Qualidade Visual**, escolha `ALTA`,
   `EQUILIBRADA` ou `DESEMPENHO`. `ALTA` preserva o redimensionamento suave em
@@ -253,9 +267,9 @@ recompõe automaticamente.
   (ou `Esc` cancela). Persistido em `ajuste_escala`, `ajuste_off_x` e
   `ajuste_off_y`; vale tanto no modo `AJUSTAR` quanto no `PREENCHE`.
 - **Conversão do mouse:** `MenuPrincipal._pos_logica` converte coordenadas da
-  janela para a superfície interna aplicando a transformação vigente (escala +
-  offsets do letterbox e os ajustes manuais de Ajustar Tela; proporção direta
-  com escala no modo `PREENCHE`).
+  janela para a superfície interna usando a mesma escala uniforme e os mesmos
+  offsets da cena. A mira permanece alinhada nos dois modos; as faixas externas
+  decorativas não fazem parte da área jogável.
 - **Layout responsivo:** `game/layout.py` define `Layout`, com `x()/y()`
   (frações da superfície), `px()` (escala da base de design), `rect(ancora, …)`
   (containers), `ponto(ancora, …)` e `fonte(...)` (fontes escaladas). Todas as
@@ -469,23 +483,30 @@ para catálogo, testes, integração, persistência e parâmetros de balanceamen
 
 ## HUD de combate
 
-O HUD fica em `game/hud.py` (`HudJogo`) e é desenhado pelo core em
-`_desenhar_hud()`. É **responsivo** (usa `game/layout`, escala de
-1920x1080 até janelas menores) e mantém o **centro da tela sempre livre**
-para o gameplay. O **tom do HUD acompanha a fase**: cada dimensão tinge
-os painéis, o badge do jogador, boost, energia e a barra de especial com
-as cores principais do cenário (`cores_principais` em `scenarios.py`;
-sem elas usa a paleta padrão da marca ciano/magenta):
+O HUD fica em `src/runtime/presentation/hud.py` (`HudJogo`) e é desenhado pelo core
+em `_desenhar_hud()`. O mundo continua na resolução lógica; o HUD é renderizado
+em pixels da área de jogo apresentada para manter o texto nítido em cada janela.
+Em uma janela 900×700, por exemplo, o HUD acompanha a área 16:9 de 900×506 e
+permanece centralizado nela. Textos essenciais têm altura efetiva mínima de 18 px,
+textos secundários de 14 px, e o contraste é ajustado para no mínimo 4,5:1 sobre
+os painéis escuros. As cores, limites e espaçamentos estão centralizados em
+`src/runtime/infrastructure/graphics/style_tokens.py`. Brilho fica reservado
+para boss e especial pronto; os acentos acompanham a dimensão sem usar magenta
+fora de alertas e efeitos de glitch:
 
 | Módulo | Posição | Conteúdo |
 | --- | --- | --- |
-| Jogador | topo-esquerda | ícone da nave, `PLAYER 01`, vida segmentada + numérica, escudo (ciano), energia |
-| Score | topo-direita | `SCORE` grande, `HIGH SCORE`, abates, multiplicador combo |
-| Setor | topo-centro | `SECTOR xx`, nome da região e barra de progresso da fase (discreta) |
+| Jogador | topo-esquerda | ícone da nave, `PILOTO 01`, vida segmentada + numérica, escudo, energia |
+| Pontos | topo-direita | pontuação, recorde, abates, multiplicador combo |
+| Setor | topo-centro | `SETOR xx`, nome da região e barra de progresso da fase |
 | Boost | base-esquerda | medidor circular, velocidade e recarga da esquiva |
 | Arma | base-direita | ícone geométrico da arma, nome, `LVL`, carga/munição |
 | Especial | base-centro | barra de especial com `SPECIAL READY` pulsando quando cheia (tecla `E`) |
 | Boss | topo-centro | barra dourada segmentada com nome e fase comportamental |
+
+Exemplo em 900×700 (modo `PREENCHE`):
+
+![HUD em 900×700 com texto renderizado na resolução efetiva da área de jogo](docs/screenshots/hud-900x700.jpg)
 
 Os medidores novos (`boost`, `especial`, `energia`) são mantidos pelo core:
 SHIFT/LCTRL turbina (drena boost e energia), abates carregam o especial.

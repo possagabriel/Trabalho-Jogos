@@ -33,6 +33,7 @@ try:
         GL_MODELVIEW,
         GL_ONE_MINUS_SRC_ALPHA,
         GL_PROJECTION,
+        GL_QUADS,
         GL_RGBA,
         GL_SRC_ALPHA,
         GL_STATIC_DRAW,
@@ -134,6 +135,8 @@ class ApresentadorGPU:
         self._tipo_buffer = ctypes.c_ubyte * (self.largura * self.altura * 4)
         self.textura = self._criar_textura()
         self.textura_interface = self._criar_textura()
+        self.textura_hud = self._criar_textura_tamanho((1, 1))
+        self._tamanho_textura_hud = (1, 1)
         self.vao = self.vbo = 0
         self.erros_shader: list[str] = []
         self.backend_shader = "FIXO"
@@ -165,6 +168,21 @@ class ApresentadorGPU:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, self.largura, self.altura,
+                     0, GL_RGBA, GL_UNSIGNED_BYTE, None)
+        return textura
+
+    @staticmethod
+    def _criar_textura_tamanho(tamanho):
+        """Cria textura auxiliar com dimensões independentes da cena lógica."""
+        largura, altura = tamanho
+        textura = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, textura)
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, largura, altura,
                      0, GL_RGBA, GL_UNSIGNED_BYTE, None)
         return textura
 
@@ -345,17 +363,25 @@ class ApresentadorGPU:
 
     def _pixels(self, superficie):
         """Retorna o buffer sem copia quando a Surface usa o formato nativo."""
+        largura, altura = superficie.get_size()
         if (superficie.get_bytesize() == 4 and
-                superficie.get_pitch() == self.largura * 4 and
+                superficie.get_pitch() == largura * 4 and
                 superficie.get_shifts()[:3] == (16, 8, 0)):
-            return self._tipo_buffer.from_buffer(superficie.get_view("1")), GL_BGRA
+            tipo_buffer = ctypes.c_ubyte * (largura * altura * 4)
+            return tipo_buffer.from_buffer(superficie.get_view("1")), GL_BGRA
         return pygame.image.tobytes(superficie, "RGBA"), GL_RGBA
 
     def _enviar_textura(self, textura, superficie):
         glActiveTexture(GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_2D, textura)
+        largura, altura = superficie.get_size()
+        if (textura == self.textura_hud and
+                self._tamanho_textura_hud != (largura, altura)):
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, largura, altura,
+                         0, GL_RGBA, GL_UNSIGNED_BYTE, None)
+            self._tamanho_textura_hud = (largura, altura)
         pixels, formato = self._pixels(superficie)
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, self.largura, self.altura,
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, largura, altura,
                         formato, GL_UNSIGNED_BYTE, pixels)
 
     def _desenhar_quad(self):
@@ -390,15 +416,61 @@ class ApresentadorGPU:
         if mistura:
             glDisable(GL_BLEND)
 
+    def _desenhar_efeito_borda(self, destino, tamanho_janela, efeito):
+        """Desenha um efeito translucido nas faixas externas da cena."""
+        if efeito is None:
+            return
+        largura, altura = tamanho_janela
+        x, y, w, h = destino
+        esquerda, topo = max(0, x), max(0, y)
+        direita, base = min(largura, x + w), min(altura, y + h)
+        retangulos = []
+        if topo > 0:
+            retangulos.append((0, 0, largura, topo))
+        if base < altura:
+            retangulos.append((0, base, largura, altura - base))
+        if esquerda > 0 and base > topo:
+            retangulos.append((0, topo, esquerda, base - topo))
+        if direita < largura and base > topo:
+            retangulos.append((direita, topo, largura - direita, base - topo))
+        if not retangulos:
+            retangulos.append((0, 0, largura, altura))
+
+        cor, alfa = efeito
+        glViewport(0, 0, largura, altura)
+        glUseProgram(0)
+        glDisable(GL_TEXTURE_2D)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glColor4f(*(canal / 255 for canal in cor), alfa / 255)
+        glBegin(GL_QUADS)
+        for rx, ry, rw, rh in retangulos:
+            esquerda_ndc = 2 * rx / largura - 1
+            direita_ndc = 2 * (rx + rw) / largura - 1
+            topo_ndc = 1 - 2 * ry / altura
+            base_ndc = 1 - 2 * (ry + rh) / altura
+            glVertex2f(esquerda_ndc, base_ndc)
+            glVertex2f(direita_ndc, base_ndc)
+            glVertex2f(direita_ndc, topo_ndc)
+            glVertex2f(esquerda_ndc, topo_ndc)
+        glEnd()
+        glDisable(GL_BLEND)
+        glEnable(GL_TEXTURE_2D)
+        glColor4f(1.0, 1.0, 1.0, 1.0)
+
     def apresentar(
         self, superficie, destino, tamanho_janela, cor_fundo,
-        interface=None,
+        interface=None, fundo=None, efeito_borda=None, hud=None,
     ):
-        """Apresenta a cena e, opcionalmente, a interface sem filtra-la."""
+        """Apresenta fundo decorativo, cena 16:9 e interface opcional."""
         largura, altura = tamanho_janela
         glViewport(0, 0, largura, altura)
         glClearColor(*(canal / 255 for canal in cor_fundo), 1.0)
         glClear(GL_COLOR_BUFFER_BIT)
+        if fundo is not None:
+            self._enviar_textura(self.textura, fundo)
+            glViewport(0, 0, largura, altura)
+            self._desenhar_textura(self.textura, intensidade=0.0)
         self._enviar_textura(self.textura, superficie)
         if interface is not None:
             self._enviar_textura(self.textura_interface, interface)
@@ -407,6 +479,12 @@ class ApresentadorGPU:
         if interface is not None and self.preservar_interface:
             self._desenhar_textura(
                 self.textura_interface, intensidade=0.0, mistura=True)
+        if hud is not None:
+            self._enviar_textura(self.textura_hud, hud)
+            glViewport(*viewport_opengl(destino, altura))
+            self._desenhar_textura(
+                self.textura_hud, intensidade=0.0, mistura=True)
+        self._desenhar_efeito_borda(destino, tamanho_janela, efeito_borda)
 
     def liberar(self):
         """Libera objetos enquanto o contexto OpenGL ainda esta ativo."""
@@ -420,6 +498,7 @@ class ApresentadorGPU:
             if self.vao:
                 glDeleteVertexArrays(1, [self.vao])
                 self.vao = 0
-            glDeleteTextures([self.textura, self.textura_interface])
+            glDeleteTextures([self.textura, self.textura_interface,
+                              self.textura_hud])
         except Exception:  # pragma: no cover - contexto ja encerrado
             pass
