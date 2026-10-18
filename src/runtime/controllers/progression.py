@@ -43,6 +43,7 @@ class ControladorProgressao:
             jogo.jogador.armas_desbloqueadas = list(progress["armas_desbloqueadas"])
             jogo.jogador.arma_atual = progress["arma_equipada"]
         jogo.jogador.velocidade = 5.0 * jogo.sensibilidade
+        self._aplicar_melhorias_permanentes()
         jogo.inimigos, jogo.projeteis, jogo.powerups = [], [], []
         jogo.boss = None
         jogo.miniboss_controller.reiniciar()
@@ -73,6 +74,28 @@ class ControladorProgressao:
             f"Bem-vindo, {nome}!", LARGURA // 2, ALTURA // 2 + 20, CIANO, 110))
         if zerar_estado:
             jogo.estado = EstadoJogo.JOGANDO
+
+    def _aplicar_melhorias_permanentes(self) -> None:
+        """Aplica no novo piloto as compras persistidas no Lobby."""
+        jogo = self.jogo
+        salvas = jogo.progresso.jogador.get("melhorias", {})
+
+        def nivel(chave: str) -> int:
+            try:
+                return max(0, int(salvas.get(chave, 0)))
+            except (AttributeError, TypeError, ValueError):
+                return 0
+
+        blindagem = nivel("blindagem")
+        motor = nivel("motor")
+        jogo.jogador.melhorias.update({
+            "blindagem": blindagem,
+            "motor": motor,
+        })
+        jogo.jogador.max_vida += blindagem
+        jogo.jogador.vida += blindagem
+        jogo.jogador.multiplicador_velocidade = 1.0 + motor * 0.1
+        jogo.jogador.velocidade *= jogo.jogador.multiplicador_velocidade
 
     def preparar_jogo(self) -> None:
         """Inicia a partida com a tela de carregamento."""

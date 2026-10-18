@@ -89,6 +89,14 @@ def test_configuracoes_carregar_defaults():
         assert cfg["mostrar_desempenho"] is False
         assert cfg["ajuste_escala"] == 1.0
         assert cfg["ajuste_off_x"] == 0
+        assert cfg["shader_comic"] is True
+        assert cfg["intensidade_shader"] == 0.7
+        assert cfg["contorno_shader"] == 0.75
+        assert cfg["tons_shader"] == 3
+        assert cfg["hachuras_shader"] is True
+        assert cfg["grao_shader"] == 0.35
+        assert cfg["saturacao_shader"] == 1.1
+        assert cfg["preservar_interface"] is True
         assert cfg.controles["atirar"] == pygame.K_SPACE
         assert cfg.controles["esquivar"] == pygame.K_x
 
@@ -143,6 +151,55 @@ def test_configuracoes_controles_parciais_mesclam():
         assert cfg.controles["cima"] == pygame.K_UP
 
 
+def test_configuracoes_normalizam_intensidade_do_shader():
+    dados = _tmp_dados()
+    caminho = os.path.join(dados, "settings.json")
+    with open(caminho, "w", encoding="utf-8") as arquivo:
+        json.dump({"intensidade_shader": 3.5}, arquivo)
+    with _patch_config(dados):
+        assert settings.Configuracoes()["intensidade_shader"] == 1.0
+
+    with open(caminho, "w", encoding="utf-8") as arquivo:
+        json.dump({"intensidade_shader": "invalida"}, arquivo)
+    with _patch_config(dados):
+        assert settings.Configuracoes()["intensidade_shader"] == 0.7
+
+
+def test_configuracoes_normalizam_controles_avancados_do_shader():
+    dados = _tmp_dados()
+    caminho = os.path.join(dados, "settings.json")
+    with open(caminho, "w", encoding="utf-8") as arquivo:
+        json.dump({
+            "contorno_shader": -2,
+            "tons_shader": 5,
+            "grao_shader": 4,
+            "saturacao_shader": "invalida",
+        }, arquivo)
+    with _patch_config(dados):
+        cfg = settings.Configuracoes()
+        assert cfg["contorno_shader"] == 0.0
+        assert cfg["tons_shader"] == 3
+        assert cfg["grao_shader"] == 1.0
+        assert cfg["saturacao_shader"] == 1.1
+
+
+def test_opcoes_shader_reunem_estado_efetivo_e_valores_normalizados():
+    opcoes = settings.OpcoesShaderComic.de_config({
+        "estilo_visual": "ORIGINAL",
+        "shader_comic": True,
+        "intensidade_shader": 2,
+        "qualidade_comic": "invalida",
+        "tons_shader": "6",
+        "saturacao_shader": 0,
+    })
+
+    assert opcoes.ativo is False
+    assert opcoes.intensidade == 1.0
+    assert opcoes.qualidade == "MEDIA"
+    assert opcoes.tons == 6
+    assert opcoes.saturacao == 0.5
+
+
 # ---------------------------------------------------------------------------
 # save_system.SistemaProgressao
 # ---------------------------------------------------------------------------
@@ -154,6 +211,7 @@ def test_save_novo_dados():
         assert prog.jogador["moedas"] == 0
         assert prog.jogador["skins_desbloqueadas"] == ["padrao"]
         assert prog.jogador["cenarios_desbloqueados"] == [1]
+        assert prog.jogador["melhorias"] == {"blindagem": 0, "motor": 0}
         assert prog.dados["estatisticas"]["tiros_disparados"] == 0
 
 

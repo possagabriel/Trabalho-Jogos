@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import math
 import os
+from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import pygame
@@ -67,6 +69,10 @@ _DEFAULT: dict[str, Any] = {
     "avanco_velocidades": VELOCIDADES_AVANCO_PADRAO,
     "limite_perfis": 5,
     "limite_nome_perfil": 16,
+    "shader_comic": True, "intensidade_shader": 0.7,
+    "contorno_shader": 0.75, "tons_shader": 3,
+    "hachuras_shader": True, "grao_shader": 0.35,
+    "saturacao_shader": 1.1, "preservar_interface": True,
 }
 PREFERENCIAS_PERFIL = ("controles", "sensibilidade", "mira_ativa")
 
@@ -125,6 +131,73 @@ def _normalizar_avanco(valores: dict[str, Any]) -> None:
     )
 
 
+
+def limitar_float(
+    valor: object,
+    padrao: float,
+    minimo: float = 0.0,
+    maximo: float = 1.0,
+) -> float:
+    """Converte e limita um valor numerico persistido."""
+    try:
+        numero = float(valor)
+    except (TypeError, ValueError):
+        numero = padrao
+    return max(minimo, min(maximo, numero))
+
+
+def _ler_config(config: Mapping[str, Any] | Any, chave: str, padrao: Any) -> Any:
+    try:
+        return config[chave]
+    except (KeyError, TypeError):
+        return padrao
+
+
+@dataclass(frozen=True)
+class OpcoesShaderComic:
+    """Estado validado do acabamento comic enviado ao apresentador GPU."""
+
+    ativo: bool = True
+    intensidade: float = 0.7
+    qualidade: str = "MEDIA"
+    contorno: float = 0.75
+    tons: int = 3
+    hachuras: bool = True
+    grao: float = 0.35
+    saturacao: float = 1.1
+    preservar_interface: bool = True
+
+    @classmethod
+    def de_config(cls, config: Mapping[str, Any] | Any) -> "OpcoesShaderComic":
+        """Cria opções seguras a partir de um mapeamento ou Configuracoes."""
+        qualidade = str(_ler_config(config, "qualidade_comic", "MEDIA")).upper()
+        if qualidade not in ("BAIXA", "MEDIA", "ALTA"):
+            qualidade = "MEDIA"
+        try:
+            tons = int(_ler_config(config, "tons_shader", 3))
+        except (TypeError, ValueError):
+            tons = 3
+        return cls(
+            ativo=(
+                _ler_config(config, "estilo_visual", "COMIC") == "COMIC"
+                and bool(_ler_config(config, "shader_comic", True))
+            ),
+            intensidade=limitar_float(
+                _ler_config(config, "intensidade_shader", 0.7), 0.7),
+            qualidade=qualidade,
+            contorno=limitar_float(
+                _ler_config(config, "contorno_shader", 0.75), 0.75),
+            tons=tons if tons in (3, 4, 6) else 3,
+            hachuras=bool(_ler_config(config, "hachuras_shader", True)),
+            grao=limitar_float(
+                _ler_config(config, "grao_shader", 0.35), 0.35),
+            saturacao=limitar_float(
+                _ler_config(config, "saturacao_shader", 1.1), 1.1, 0.5, 1.5),
+            preservar_interface=bool(
+                _ler_config(config, "preservar_interface", True)),
+        )
+
+
 def parse_resolucao(texto: str | None) -> tuple[int, int]:
     """Converte uma resolucao textual, usando a superficie logica no fallback."""
     try:
@@ -156,6 +229,17 @@ class Configuracoes:
                 valores.get("limite_perfis"), 5, 1, 20))
             valores["limite_nome_perfil"] = int(_limitar_numero(
                 valores.get("limite_nome_perfil"), 16, 1, 32))
+            valores["shader_comic"] = bool(valores.get("shader_comic", True))
+            shader = OpcoesShaderComic.de_config(valores)
+            valores.update({
+                "intensidade_shader": shader.intensidade,
+                "contorno_shader": shader.contorno,
+                "tons_shader": shader.tons,
+                "hachuras_shader": shader.hachuras,
+                "grao_shader": shader.grao,
+                "saturacao_shader": shader.saturacao,
+                "preservar_interface": shader.preservar_interface,
+            })
             return valores
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             valores = {chave: dict(valor) if isinstance(valor, dict) else valor
