@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "void-shift"
+name = "incarnate"
 version = "1.5.0"
 description = "INCARNATE — Entre na Fenda"
 readme = "README.md"
@@ -33,6 +33,7 @@ dev = [
 ]
 
 [project.scripts]
+incarnate = "src.core.application:main"
 void-shift = "src.core.application:main"
 
 [tool.setuptools.packages.find]
@@ -42,11 +43,40 @@ include = ["src*"]
 "src.runtime.story" = ["*.json"]
 
 [tool.ruff]
-line-length = 99
+line-length = 100
 target-version = "py310"
+extend-exclude = ["build", "dist", "*.egg-info", ".eggs"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W"]
+select = ["C901", "E", "F", "I", "W"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+# Funções acima do limite 12 já existentes; não ampliar esta lista.
+"game/phase_select.py" = ["C901"]
+"src/domain/entities/enemies/base.py" = ["C901"]
+"src/domain/systems/combat.py" = ["C901"]
+"src/domain/systems/profile_service.py" = ["C901"]
+"src/infrastructure/input/input_manager.py" = ["C901"]
+"src/infrastructure/ui/hud.py" = ["C901"]
+"src/presentation/screens/pause_screen.py" = ["C901"]
+"src/presentation/screens/shop_screen.py" = ["C901"]
+"src/runtime/application/core.py" = ["C901"]
+"src/runtime/controllers/combat.py" = ["C901"]
+"src/runtime/controllers/cutscene.py" = ["C901"]
+"src/runtime/controllers/loop.py" = ["C901"]
+"src/runtime/controllers/pause.py" = ["C901"]
+"src/runtime/domain/entities/bosses.py" = ["C901"]
+"src/runtime/domain/entities/enemies.py" = ["C901"]
+"src/runtime/domain/entities/player.py" = ["C901"]
+"src/runtime/domain/world/scenarios.py" = ["C901"]
+"src/runtime/presentation/hud.py" = ["C901"]
+"src/runtime/presentation/menu.py" = ["C901"]
+"src/runtime/presentation/screens/profile_screen.py" = ["C901"]
+"src/runtime/presentation/screens/settings_screen.py" = ["C901"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
