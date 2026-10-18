@@ -22,7 +22,10 @@ def jogo(tmp_path, monkeypatch):
     monkeypatch.setattr(save_system, "ARQUIVO_SAVE", str(tmp_path / "save.json"))
     monkeypatch.setattr(save_system, "ARQUIVO_RECORDES", str(tmp_path / "records.json"))
     monkeypatch.setattr(save_system, "PASTA_DADOS", str(tmp_path))
+    monkeypatch.setenv("INCARNATE_DATA_DIR", str(tmp_path))
     j = Jogo(sons=Mock())
+    perfil = j.profile_service.create("Jogador")
+    j.ativar_perfil(perfil.id)
     j.estado = EstadoJogo.JOGANDO
     j.inimigos, j.fila_onda, j.projeteis = [], [], []
     return j
@@ -48,7 +51,7 @@ def test_derrota_por_colisao_recompensa_uma_vez_e_persiste(jogo) -> None:
     assert jogo.loja.moedas == moedas + b.cfg["moedas"]
     assert jogo.jogador.moedas_jogo == 0  # recompensa imediata não duplica no game over
     assert len(jogo.powerups) == 1
-    salvo = save_system.SistemaProgressao()
+    salvo = save_system.ProgressoPerfil(jogo.profile_service)
     assert salvo.jogador["minibosses_derrotados"] == 1
     assert salvo.jogador["moedas"] == jogo.loja.moedas
     assert salvo.jogador["bosses_derrotados"] == 0

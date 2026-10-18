@@ -24,7 +24,10 @@ def _isolar_persistencia(monkeypatch, pasta) -> None:
 def test_partida_completa_persiste_progresso_e_reinicia(tmp_path, monkeypatch):
     """Inicia, luta, coleta, enfrenta boss, salva e reinicia a partida."""
     _isolar_persistencia(monkeypatch, tmp_path)
+    monkeypatch.setenv("INCARNATE_DATA_DIR", str(tmp_path))
     jogo = Jogo()
+    perfil = jogo.profile_service.create("Integracao")
+    jogo.ativar_perfil(perfil.id)
     jogo._novo_jogo("Integracao")
     jogo.estado = EstadoJogo.JOGANDO
 
@@ -58,8 +61,10 @@ def test_partida_completa_persiste_progresso_e_reinicia(tmp_path, monkeypatch):
 
     # Fim de jogo persiste pontuacao, moedas e boss; nova instancia le o save.
     jogo._fim_de_jogo()
-    assert os.path.exists(save_system.ARQUIVO_SAVE)
+    assert jogo.profile_service.repository.profile_path(perfil.id).exists()
+    assert not os.path.exists(save_system.ARQUIVO_SAVE)
     reiniciado = Jogo()
+    reiniciado.ativar_perfil(perfil.id)
     assert reiniciado.progresso.jogador["bosses_derrotados"] == 1
     assert reiniciado.loja.moedas == jogo.moedas_ganhas
 

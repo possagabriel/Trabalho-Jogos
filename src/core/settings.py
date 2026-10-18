@@ -7,12 +7,15 @@ import math
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pygame
 
 from src.shared.persistence import carregar_json_resiliente, salvar_json_atomico
 from src.shared.user_data import diretorio_dados
+
+if TYPE_CHECKING:
+    from src.domain.systems.profile_service import ProfileService
 
 from .constants import (
     ALTURA, DISPERSAO_DUPLO_GRAUS, DISPERSAO_ESPIRAL_GRAUS, LARGURA,
@@ -64,11 +67,14 @@ _DEFAULT: dict[str, Any] = {
     "avanco_miniboss_percentual": 0.5,
     "avanco_miniboss_tipos": {},
     "avanco_velocidades": VELOCIDADES_AVANCO_PADRAO,
+    "limite_perfis": 5,
+    "limite_nome_perfil": 16,
     "shader_comic": True, "intensidade_shader": 0.7,
     "contorno_shader": 0.75, "tons_shader": 3,
     "hachuras_shader": True, "grao_shader": 0.35,
     "saturacao_shader": 1.1, "preservar_interface": True,
 }
+PREFERENCIAS_PERFIL = ("controles", "sensibilidade", "mira_ativa")
 
 
 def escala_visual(intensidade: str) -> float:
@@ -205,6 +211,7 @@ class Configuracoes:
     """Configuracoes do jogador com carregamento e persistencia em JSON."""
 
     def __init__(self) -> None:
+        self.profile_service = None
         self._dados = self._carregar()
 
     def _carregar(self) -> dict[str, Any]:
@@ -218,6 +225,10 @@ class Configuracoes:
             _normalizar_avanco(valores)
             valores["velocidade_dialogo"] = _limitar_numero(
                 valores.get("velocidade_dialogo"), 42, 10, 120)
+            valores["limite_perfis"] = int(_limitar_numero(
+                valores.get("limite_perfis"), 5, 1, 20))
+            valores["limite_nome_perfil"] = int(_limitar_numero(
+                valores.get("limite_nome_perfil"), 16, 1, 32))
             valores["shader_comic"] = bool(valores.get("shader_comic", True))
             shader = OpcoesShaderComic.de_config(valores)
             valores.update({
@@ -236,11 +247,31 @@ class Configuracoes:
             _normalizar_avanco(valores)
             valores["velocidade_dialogo"] = _limitar_numero(
                 valores.get("velocidade_dialogo"), 42, 10, 120)
+            valores["limite_perfis"] = 5
+            valores["limite_nome_perfil"] = 16
             return valores
 
     def salvar(self) -> bool:
         """Persiste as configuracoes e informa se a gravacao foi concluida."""
-        return salvar_json_atomico(ARQUIVO_CONFIG, self._dados)
+        if self.profile_service is not None and self.profile_service.active is not None:
+            self.profile_service.active.preferences = {
+                key: self._dados[key] for key in PREFERENCIAS_PERFIL
+            }
+            self.profile_service._save()
+        globais = {key: value for key, value in self._dados.items()
+                   if key not in PREFERENCIAS_PERFIL}
+        return salvar_json_atomico(ARQUIVO_CONFIG, globais)
+
+    def aplicar_perfil(self, profile_service: ProfileService) -> None:
+        """Aplica comandos e preferências do perfil selecionado."""
+        self.profile_service = profile_service
+        profile = profile_service.active
+        preferences = profile.preferences if profile else {}
+        controls = dict(DEFAULT_CONTROLES)
+        controls.update(preferences.get("controles", {}))
+        self._dados["controles"] = controls
+        self._dados["sensibilidade"] = preferences.get("sensibilidade", 1.0)
+        self._dados["mira_ativa"] = preferences.get("mira_ativa", True)
 
     def __getitem__(self, chave: str) -> Any:
         return self._dados[chave]

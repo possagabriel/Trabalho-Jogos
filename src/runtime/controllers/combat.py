@@ -220,6 +220,10 @@ class ControladorCombate:
         sessao.progresso.registrar_boss()
         sessao.progresso.registrar_fase_concluida(boss.nivel)
         sessao.progresso.salvar_arquivo()
+        if sessao.profile_service.active:
+            counts = dict(sessao.profile_service.active.progress["bosses_por_tipo"])
+            counts[boss.nome] = counts.get(boss.nome, 0) + 1
+            sessao.profile_service.update_progress(bosses_por_tipo=counts)
         sessao.bosses_abates += 1
         sessao.mensagens.append(MensagemFlutuante(
             f"CHEFE DERROTADO! +{total}", boss.x, boss.y, boss.cor, 110))

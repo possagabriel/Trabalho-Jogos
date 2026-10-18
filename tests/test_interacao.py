@@ -31,6 +31,9 @@ from game.menu import ACOES_CONTROLE  # noqa: E402
 
 def novo_jogo_estado(estado="MENU"):
     jogo = Jogo()
+    perfis = jogo.profile_service.list_profiles()
+    perfil = perfis[0] if perfis else jogo.profile_service.create("Jogador")
+    jogo.ativar_perfil(perfil.id)
     jogo.estado = estado
     jogo.menu.alpha_entrada = 255
     return jogo
@@ -38,6 +41,9 @@ def novo_jogo_estado(estado="MENU"):
 
 def novo_jogo_partida():
     jogo = Jogo()
+    perfis = jogo.profile_service.list_profiles()
+    perfil = perfis[0] if perfis else jogo.profile_service.create("Jogador")
+    jogo.ativar_perfil(perfil.id)
     jogo._preparar_jogo()
     jogo.estado = "JOGANDO"
     jogo.inimigos = []

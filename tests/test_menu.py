@@ -40,12 +40,16 @@ ROTULOS_ESPERADOS = [
     "04 // RECORDES",
     "05 // CONFIGURAÇÕES",
     "06 // ARQUIVO DE MEMÓRIAS",
-    "07 // SAIR",
+    "07 // PERFIS",
+    "08 // SAIR",
 ]
 
 
 def novo_menu():
     jogo = Jogo()
+    perfis = jogo.profile_service.list_profiles()
+    perfil = perfis[0] if perfis else jogo.profile_service.create("Jogador")
+    jogo.ativar_perfil(perfil.id)
     menu = jogo.menu
     menu.alpha_entrada = 255
     return jogo, menu
@@ -58,7 +62,7 @@ def novo_menu():
 def test_construcao_subestado_e_opcoes():
     _, menu = novo_menu()
     assert menu.subestado == "MENU"
-    assert len(menu.opcoes) == 7
+    assert len(menu.opcoes) == 8
     assert [o.texto for o in menu.opcoes] == ROTULOS_ESPERADOS
     assert menu.x_opcoes <= menu.layout.largura
 

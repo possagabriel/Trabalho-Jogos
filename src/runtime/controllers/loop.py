@@ -24,6 +24,11 @@ class ControladorLoop:
     def atualizar(self) -> None:
         """Atualiza o estado ativo e os efeitos que independem da tela."""
         jogo = self.jogo
+        if jogo.profile_service.save_error and not getattr(jogo, "_aviso_save_exibido", False):
+            jogo.menu.notificacoes.adicionar("Falha ao salvar perfil", "erro")
+            jogo._aviso_save_exibido = True
+        elif not jogo.profile_service.save_error:
+            jogo._aviso_save_exibido = False
         if jogo.estado is EstadoJogo.JOGANDO:
             if jogo.progressao_controller.transicao is not None:
                 jogo.progressao_controller.atualizar_transicao()
@@ -88,6 +93,7 @@ class ControladorLoop:
             if evento.type == pygame.QUIT:
                 jogo.menu.cancelar_confirmacao_resolucao()
                 jogo._salvar_tudo()
+                jogo.profile_service.flush()
                 return False
             if jogo.estado is EstadoJogo.CUTSCENE:
                 jogo.cutscene_controller.tratar_evento(evento)
@@ -118,6 +124,9 @@ class ControladorLoop:
                     jogo._ativar_especial()
                 elif pygame.K_1 <= evento.key <= pygame.K_9:
                     jogo.jogador.selecionar_arma(evento.key - pygame.K_1)
+                    if jogo.profile_service.active:
+                        jogo.profile_service.update_progress(
+                            arma_equipada=jogo.jogador.arma_atual)
             elif jogo.estado is EstadoJogo.MELHORIA:
                 if evento.key in (pygame.K_LEFT, pygame.K_a):
                     jogo.melhoria_selecionada = (jogo.melhoria_selecionada - 1) % 3

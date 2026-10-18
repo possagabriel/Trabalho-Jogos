@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from typing import TYPE_CHECKING
 
 import pygame
@@ -11,7 +10,6 @@ import pygame
 from src.core.constants import BRANCO
 from src.infrastructure.ui.layout import CENTRO, LARGURA_BASE, ALTURA_BASE
 from src.runtime.presentation.menu_scene import texto_espacado
-from src.runtime.infrastructure.persistence.save_system import ARQUIVO_RECORDES
 from src.runtime.infrastructure.persistence.shop import LojaSkins
 from src.runtime.infrastructure.graphics.smooth import ease_out
 from src.infrastructure.graphics.theme import tema_atual
@@ -61,11 +59,9 @@ class TelaContinuarJogo:
         """Remove o progresso existente e inicia uma nova missao."""
         menu = self.menu
         menu.jogo.progresso.resetar_progresso()
-        try:
-            if os.path.exists(ARQUIVO_RECORDES):
-                os.remove(ARQUIVO_RECORDES)
-        except OSError as erro:
-            LOGGER.warning("Nao foi possivel apagar os recordes: %s", erro)
+        if menu.jogo.profile_service.active:
+            menu.jogo.profile_service.active.progress["recordes"] = []
+            menu.jogo.profile_service.active.progress["recorde_pontos"] = 0
         menu.jogo.loja = LojaSkins()
         menu.jogo.progresso.sincronizar_loja(menu.jogo.loja)
         menu.jogo.progresso.salvar_arquivo()

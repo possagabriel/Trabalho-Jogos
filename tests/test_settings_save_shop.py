@@ -113,7 +113,7 @@ def test_configuracoes_salvar_e_recarregar():
 
         cfg2 = settings.Configuracoes()
         assert cfg2["musica_volume"] == 0.25
-        assert cfg2["sensibilidade"] == 1.5
+        assert cfg2["sensibilidade"] == 1.0  # preferência agora pertence ao perfil
         assert cfg2["tema"] == "AURORA"
 
 
