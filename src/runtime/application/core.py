@@ -1063,8 +1063,8 @@ class Jogo:
         self.hud.desenhar(self._hud_superficie_nativa, self)
         self._hud_nativo_pronto = True
 
-    def _desenhar_jogo(self):
-        self.cenario.desenhar(self.tela)
+    def _desenhar_jogo(self, acabamento_cutscene=False):
+        self.cenario.desenhar(self.tela, acabamento_cutscene=acabamento_cutscene)
         perigos = sum(proj.origem == "inimigo" for proj in self.projeteis)
         if perigos >= 12 or self.miniboss:
             self._tela_sombra.fill((4, 6, 18, 42))

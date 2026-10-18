@@ -360,14 +360,20 @@ class Cenario:
 
     # ----- desenho -----
 
-    def desenhar(self, tela):
+    def desenhar(self, tela: pygame.Surface, acabamento_cutscene: bool = False) -> None:
         if self.parallax is not None:
-            self.parallax.desenhar(tela)
+            cor = self.cor_transicao if acabamento_cutscene and self.fundo_imagem else None
+            self.parallax.desenhar(tela, cor_fundo_cutscene=cor)
             return
         if opcoes_atuais().ativo:
             desenhar_fundo(tela, self.id)
             return
-        tela.blit(self.fundo_estatico, (0, 0))
+        fundo = self.fundo_estatico
+        if acabamento_cutscene and self.fundo_imagem is not None:
+            from src.runtime.presentation.cutscene_raster import filtrar_fundo_cutscene
+
+            fundo = filtrar_fundo_cutscene(fundo, self.cor_transicao)
+        tela.blit(fundo, (0, 0))
         if self._desenhar_luzes:
             self._desenhar_luzes_ambiente(tela)
         for estrela in self.estrelas[::self._passo_estrelas]:

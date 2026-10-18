@@ -93,9 +93,12 @@ class ControladorRenderizacao:
                 jogo._desenhar_carregando(incluir_cenario=False)
         elif jogo.estado is EstadoJogo.CUTSCENE:
             if jogo.cutscene_controller.estado_anterior is EstadoJogo.MENU:
-                jogo.menu.desenhar(jogo.tela)
+                jogo.menu.desenhar(
+                    jogo.tela,
+                    cor_fundo_cutscene=jogo.cenario.cor_transicao,
+                )
             else:
-                jogo._desenhar_jogo()
+                jogo._desenhar_jogo(acabamento_cutscene=True)
             jogo.cutscene_controller.caixa.desenhar(
                 jogo.tela, jogo.cutscene_controller, jogo.cenario.cor_transicao)
         elif jogo.estado is EstadoJogo.JOGANDO:

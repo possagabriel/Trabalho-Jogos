@@ -2321,10 +2321,14 @@ class MenuPrincipal:
                            desloc, int(255 * ease_out(p)), self.layout)
         self._desenhar_rodape(tela, tema)
 
-    def desenhar(self, tela):
+    def desenhar(
+        self,
+        tela: pygame.Surface,
+        cor_fundo_cutscene: tuple[int, int, int] | None = None,
+    ) -> None:
         layout = self.layout
         tema = tema_atual(self.jogo.config["tema"])
-        self.fundo.desenhar(tela)
+        self.fundo.desenhar(tela, cor_fundo_cutscene=cor_fundo_cutscene)
         skin = self.jogo.loja.pegar_skin(self.jogo.loja.skin_atual)
         self.nave.desenhar(
             tela,

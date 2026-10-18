@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   contraste automatizado e cores/medidas centralizadas em tokens.
 - Medidor circular do HUD desenhado sem superfície temporária por quadro; brilho removido
   de elementos não focados.
+- Fundos rasterizados de cutscene recebem acabamento cartoon pré-processado e cacheado,
+  com posterização, tinta de dimensão, contorno e retícula.
+- Caixa de diálogo, retratos, títulos e controles de cutscene usam contorno cartoon sem
+  glow decorativo; magenta fica restrito aos glitches e alertas.
 
 ## [1.5.0] - 2026-10-18
 

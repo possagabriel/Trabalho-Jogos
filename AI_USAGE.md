@@ -71,6 +71,26 @@
   os efeitos mantêm continuidade, a entrada do boss é legível e o menu de primeira execução
   mostra corretamente a seleção/criação de perfil.
 
+## Fase 5 — Polimento visual, etapa 3: cutscenes
+
+- **Pedido:** aplicar acabamento cartoon barato aos fundos rasterizados já existentes,
+  sem trocar assets, e alinhar caixa, retratos e títulos à guia aprovada; magenta somente
+  para glitch/alerta.
+- **Implementação da IA:** cache de posterização em paleta curta, tinta por dimensão,
+  contorno e retícula; passagem opcional no fundo da partida e do menu durante cutscenes;
+  contornos de texto, retratos com moldura de tinta e painéis sem glow decorativo. As
+  superfícies de atores e as regras de gameplay permanecem fora do filtro.
+- **Ajustes manuais do usuário:** nenhum informado.
+- **Verificação visual e performance:** capturas antes/depois e GIF curto em
+  `/tmp/incarnate-visual-audit-20261018/etapa3`; imagem-chave em
+  `docs/screenshots/cutscene-dialogue.jpg`. Benchmark headless de cutscene, cena fixa em
+  1280×720, cinco rodadas de 30 quadros: baseline 19,710 ms de média e 25,831 ms de p95
+  médio (desvio entre médias 1,537 ms); após 19,514/24,516 ms (desvio 1,367 ms). A
+  diferença fica dentro da variação entre rodadas. O filtro custou 29,001 ms na primeira
+  geração, caindo a 0,0027 ms no acesso seguinte (3,52 MiB por surface de saída). Na
+  sequência animada, o capítulo mantém o quadro de título, o texto se revela sem salto,
+  e a fala de glitch alterna variantes curtas sem tremer a moldura ou borrar retratos.
+
 ## Fase 4 — Perfis de jogador (1.5.0)
 
 - **Pedido:** múltiplos perfis locais com CRUD, progresso individual, migração do save único,

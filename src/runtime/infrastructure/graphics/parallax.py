@@ -11,8 +11,11 @@ import pygame
 from src.core.constants import ALTURA, LARGURA
 from src.infrastructure.graphics.comic_render import fundo_comic
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
-from src.runtime.domain.world.scroll import EstadoAvanco, deslocamento_camada, faixas_repetidas
-
+from src.runtime.domain.world.scroll import (
+    EstadoAvanco,
+    deslocamento_camada,
+    faixas_repetidas,
+)
 
 QUALIDADE_CAMADAS = {"BAIXA": (3, 28), "MEDIA": (4, 52), "ALTA": (5, 84)}
 LIMITE_LINHAS_DIMENSAO = {1: 52, 2: 60, 3: 44, 4: 48, 5: 70, 6: 56}
@@ -214,15 +217,22 @@ class ParallaxBackground:
         self._linhas = SpeedLines(self._limite, cenario.cor_estrela,
                                   self.direcao, 8_100 + cenario.id)
 
-    def _base(self) -> ScrollingLayer:
+    def _base(self, cor_fundo_cutscene: tuple[int, int, int] | None = None) -> ScrollingLayer:
         opcoes = opcoes_atuais()
-        chave = (opcoes.ativo, opcoes.qualidade, opcoes.papel, opcoes.halftone)
+        chave = (opcoes.ativo, opcoes.qualidade, opcoes.papel, opcoes.halftone,
+                 cor_fundo_cutscene)
         if chave not in self._bases:
             if opcoes.ativo:
                 fonte = fundo_comic((LARGURA, ALTURA), self.cenario.id,
                                     opcoes.qualidade, opcoes.papel, opcoes.halftone)
             else:
                 fonte = self.cenario.fundo_estatico
+                if cor_fundo_cutscene is not None:
+                    from src.runtime.presentation.cutscene_raster import (
+                        filtrar_fundo_cutscene,
+                    )
+
+                    fonte = filtrar_fundo_cutscene(fonte, cor_fundo_cutscene)
             camada = ScrollingLayer(_espelhar(fonte), FATORES[0])
             if self._bases:
                 anterior = next(iter(self._bases.values()))
@@ -251,10 +261,11 @@ class ParallaxBackground:
                 velocidade_base, dt, self.direcao, intensidade,
             )
 
-    def desenhar(self, tela: pygame.Surface) -> None:
+    def desenhar(self, tela: pygame.Surface,
+                 cor_fundo_cutscene: tuple[int, int, int] | None = None) -> None:
         """Desenha a arte, os planos distantes e os rastros em ordem."""
         self._preparar()
-        self._base().desenhar(tela)
+        self._base(cor_fundo_cutscene).desenhar(tela)
         for camada in self._detalhes:
             camada.desenhar(tela)
         if self.linhas_ativas and self._linhas is not None:

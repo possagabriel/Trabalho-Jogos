@@ -154,6 +154,14 @@ No `settings.json`, `velocidade_dialogo` define os caracteres por segundo:
 padrão `42`, aceitando valores de `10` a `120`. Saves antigos recebem
 `cenas_vistas: []` em `progresso_campanha` sem perder outros dados.
 
+Os fundos rasterizados das cutscenes recebem posterização, tinta leve da
+dimensão, contorno e retícula preparados uma vez e mantidos em cache. Retratos,
+caixa e títulos usam contorno escuro de 3–5 px; o magenta fica reservado aos
+quadros de glitch e alerta. As camadas do mundo, inimigos e projéteis continuam
+desenhados por cima do fundo filtrado.
+
+![Cutscene com fundo tratado e caixa de diálogo cartoon](docs/screenshots/cutscene-dialogue.jpg)
+
 ### Avanço da nave e parallax (1.3.0)
 
 O cenário rola continuamente para baixo, com velocidade própria para cada uma
