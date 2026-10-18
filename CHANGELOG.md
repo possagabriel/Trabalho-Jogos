@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-18
+
+### Added
+- Perfis locais com UUID, seleção inicial, criação, renomeação e exclusão confirmada.
+- Progresso, recordes, preferências de mira e controles separados por perfil.
+- Repositório JSON versionado com backups, recuperação de índice e aviso para perfis danificados.
+- Migração idempotente do save único, preservando `save.json` e `records.json` originais.
+- Indicadores do perfil, última gravação e alterações pendentes no overlay F3.
+- Importação e exportação portáteis pela CLI sem novas gravações nos arquivos legados.
+
+### Changed
+- Melhorias de partida são contadas por perfil como estatísticas; seus efeitos continuam
+  restritos à partida atual.
+- `settings.json` mantém somente opções globais; controles, sensibilidade e mira ficam
+  no perfil selecionado.
+- Versão do projeto elevada de 1.4.0 para 1.5.0.
+
 ## [1.4.0] - 2026-10-17
 
 ### Added

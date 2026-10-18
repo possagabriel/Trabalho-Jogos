@@ -1,5 +1,20 @@
 # Registro de uso de IA
 
+## Fase 4 — Perfis de jogador (1.5.0)
+
+- **Pedido:** múltiplos perfis locais com CRUD, progresso individual, migração do save único,
+  recuperação de arquivos danificados e interface de seleção antes do menu.
+- **Implementação da IA:** modelo versionado, repositório JSON por UUID, serviço de regras,
+  seleção por teclado e mouse, integração do progresso e dos recordes ao perfil ativo,
+  importação e exportação portáteis para perfis,
+  testes de lógica e integração, README e changelog.
+- **Decisões:** JSON por perfil; `index.json` derivado, com reconstrução por varredura;
+  controles, sensibilidade e mira por perfil; som, vídeo e diálogo globais. O jogo guarda
+  checkpoint de campanha, mas reinicia a partida no nível 1, então as melhorias são
+  registradas apenas como contagens agregadas. Arquivos legados permanecem intactos após
+  a migração. Os capítulos 3 a 6 do roteiro não foram incluídos.
+- **Ajustes manuais do usuário:** nenhum informado.
+
 ## Fase 3 — História e cutscenes (1.4.0, capítulo 1 para revisão)
 
 - **Pedido:** motor de cenas e diálogos em JSON, integração com eventos de
