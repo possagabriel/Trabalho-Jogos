@@ -25,6 +25,13 @@ O código está na versão 1.8.0. A candidata `v1.8.0-rc1` está disponível em
 [Releases](../../releases/tag/v1.8.0-rc1); a release oficial depende da
 validação manual no Windows descrita no [roadmap](ROADMAP.md).
 
+No Windows, o SmartScreen ou o antivírus pode mostrar um aviso de reputação
+para um build sem assinatura reconhecida. Para conferir o download, baixe
+`SHA256SUMS.txt`, rode `Get-FileHash .\INCARNATE-Setup.exe -Algorithm SHA256`
+no PowerShell e compare o valor com a linha de `INCARNATE-Setup.exe` no arquivo.
+O [guia de distribuição Windows](docs/distribuicao-windows.md) explica os
+avisos e a verificação.
+
 Para jogar a partir do código-fonte, instale Python 3.10 ou superior e Pygame:
 
 ```bash
@@ -631,3 +638,11 @@ seus detalhes. A prévia mostra as dez skins em quatro direções.
 ![Naves e skins COMIC com contorno e hachura proporcionais](docs/screenshots/sprites-comic.jpg)
 
 Veja [pipeline visual, screenshots, testes e custos medidos](docs/visual/README.md).
+
+## Licenças
+
+O código do INCARNATE é distribuído sob a licença MIT, no arquivo
+[`LICENSE`](LICENSE). As fontes Orbitron e Rajdhani permanecem sob a SIL Open
+Font License 1.1; seus avisos de copyright e o texto integral da licença estão
+em [`data/fonts/OFL.txt`](data/fonts/OFL.txt) e são incluídos nos pacotes
+Windows e Linux.

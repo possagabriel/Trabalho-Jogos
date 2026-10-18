@@ -150,6 +150,11 @@ jobs:
       - name: Empacotar e registrar commit do build
         run: |
           chmod +x dist/INCARNATE/INCARNATE
+          mkdir -p dist/INCARNATE/licenses
+          cp data/fonts/OFL.txt dist/INCARNATE/licenses/OFL.txt
+          grep -q "Orbitron Project Authors" dist/INCARNATE/licenses/OFL.txt
+          grep -q "Indian Type Foundry" dist/INCARNATE/licenses/OFL.txt
+          grep -q "SIL OPEN FONT LICENSE Version 1.1" dist/INCARNATE/licenses/OFL.txt
           echo "${{ github.sha }}" > dist/BUILD-COMMIT-Linux.txt
           tar -czf dist/INCARNATE-Linux-x86_64.tar.gz -C dist INCARNATE
           cd dist
