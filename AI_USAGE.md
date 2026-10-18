@@ -106,6 +106,27 @@
   6,372 ms. Após a alteração: média 5,421 ms, p95 8,850 ms, com o mesmo
   ambiente e parâmetros. Memória de cache da dimensão 1: 435.000 bytes em
   BAIXA, 610.092 em MEDIA e 753.200 em ALTA.
+- **Ajustes manuais do usuário:** nenhum informado.
+
+## Polimento do repositório (sem gameplay)
+
+- **Pedido:** conferir as Fases 1 a 3 e atualizar README, imports, configuração de lint,
+  workflows, preview do HUD, caminhos de dados, `.gitignore`, migração de arquitetura,
+  versões e documentação de uso.
+- **Implementação da IA:** README separado para jogadores e desenvolvedores; comandos e
+  controles revisados; `tools/preview_hud.py` usa imports canônicos; Ruff centralizado no
+  `pyproject.toml`; CI dispara em pushes e pull requests; adapters legados usam
+  `INCARNATE_DATA_DIR` com fallback para `SPACEFURY_DATA_DIR`; `.gitignore` protege dados,
+  perfis, saves e builds; mapa de migração e tabela de testes atualizados.
+- **Decisões:** mantém-se o nome de comando `void-shift` por compatibilidade e adiciona-se
+  `incarnate`; versão do código permanece 1.5.0 e nenhuma tag de release é criada. Foi
+  proposta licença MIT para o jogo; nenhuma `LICENSE` foi aplicada. Orbitron e Rajdhani
+  foram verificados como SIL OFL 1.1. Os arquivos `.flake8` e `.pylintrc` foram removidos
+  após listar seus conteúdos e regras antes da remoção.
+- **Ajustes manuais do usuário:** nenhum informado.
+
+Este registro descreve a branch original em 1.5.0; a integração abaixo
+preserva 1.8.0 e adia a renomeação do pacote/comando para a branch própria.
 
 ## Fase 5 — Polimento visual, etapa 1: PREENCHE
 
