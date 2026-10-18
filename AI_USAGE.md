@@ -45,6 +45,7 @@
   com boss/miniboss e a transição de 64 quadros, configurações retrocompatíveis,
   brilho do propulsor, testes, benchmark e documentação.
 - **Ajustes manuais do usuário:** nenhum informado.
+
 - **Decisões:** direção fixa `[0, 1]` independente da mira; miniboss a 50% por
   padrão, com percentuais de 0% a 100% e exceções por tipo; desvio residual
   de 4% nas camadas distantes durante `PARADO`; eventos genéricos
@@ -289,4 +290,24 @@ preserva 1.8.0 e adia a renomeação do pacote/comando para a branch própria.
   foi aberto pela integração com identidade, progresso e preferências iguais.
   Um save legado também foi migrado, preservando os bytes de `save.json` e
   `records.json` originais.
+- **Ajustes manuais do usuário:** nenhum informado.
+
+## Renomeação final para INCARNATE (1.8.0)
+
+- **Pedido:** consolidar a marca visível, o comando, os atalhos, o executável e
+  o instalador; preservar atualização de instalações e dados existentes.
+- **Implementação da IA:** pacote e comando `incarnate`, novo `incarnate.py`,
+  alias compatível `main.py`, executáveis/artefatos/instalador INCARNATE e
+  documentação atualizada. Criados `ROADMAP.md` e `docs/integration-2026-10-18.md`.
+- **Decisões:** versão mantida em 1.8.0; AppId Inno Setup preservado;
+  `UsePreviousAppDir=yes`; caminhos `VoidShift`/`void-shift` e fallback
+  `SPACEFURY_DATA_DIR` permanecem funcionais. Nenhuma migração de dados foi
+  necessária. `void-shift` permanece como alias de linha de comando.
+- **Verificação:** 602 testes passaram e 1 teste OpenGL foi ignorado; Ruff
+  passou nos arquivos Python alterados; `main.py --smoke-test` e
+  `incarnate.py --smoke-test` passaram. O benchmark COMIC/MEDIA (1280×720,
+  61 entidades, 120 quadros, 3 repetições) marcou média/p95 de 4,771/6,366 ms
+  na main e 4,873/6,629 ms nesta branch, com sobreposição de amostras e sem
+  alterações no mundo. O cache de marcos ficou em 435.000/610.092/753.200 bytes
+  nas qualidades BAIXA/MEDIA/ALTA.
 - **Ajustes manuais do usuário:** nenhum informado.

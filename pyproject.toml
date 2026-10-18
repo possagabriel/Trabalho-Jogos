@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "void-shift"
+name = "incarnate"
 version = "1.8.0"
 description = "INCARNATE — Entre na Fenda"
 readme = "README.md"
@@ -33,10 +33,14 @@ dev = [
 ]
 
 [project.scripts]
+incarnate = "incarnate:cli"
 void-shift = "src.core.application:main"
 
 [tool.setuptools.packages.find]
 include = ["src*"]
+
+[tool.setuptools]
+py-modules = ["incarnate"]
 
 [tool.setuptools.package-data]
 "src.runtime.story" = ["*.json"]

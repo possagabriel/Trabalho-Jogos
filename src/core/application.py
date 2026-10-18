@@ -15,7 +15,7 @@ FabricaJogo = Callable[[], Jogo]
 
 
 class Application:
-    """Compõe e inicia o runtime canônico do VOID//SHIFT."""
+    """Compõe e inicia o runtime canônico do INCARNATE."""
 
     def __init__(self, fabrica_jogo: FabricaJogo | None = None) -> None:
         self._fabrica_jogo = fabrica_jogo or Jogo
@@ -38,7 +38,7 @@ class Application:
 
 
 def main() -> None:
-    """Entry point instalável e equivalente a executar ``python main.py``."""
+    """Entry point instalável usado pelo lançador INCARNATE."""
     Application().run()
 
 

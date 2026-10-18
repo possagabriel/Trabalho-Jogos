@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.8.0] - 2026-10-18
 
 ### Changed
+- Produto, pacote Python, comando principal, ponto de entrada, executável,
+  artefatos e instalador agora usam o nome INCARNATE. `void-shift`, `main.py` e
+  os diretórios de dados anteriores continuam compatíveis.
+- O AppId do Inno Setup foi mantido para atualizar instalações existentes; a
+  candidata usa metadados de pré-lançamento sem marcar a release como latest.
 - Contornos de sprites escalam com o tamanho, respeitando limites comuns para
   nave, inimigos, bosses e skins.
 - Densidade de hachura cresce com o tamanho do sprite e é omitida nas formas pequenas,

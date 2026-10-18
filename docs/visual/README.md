@@ -12,7 +12,7 @@ não inclui personagens, marcas, fontes ou imagens desse jogo.
 ## Executar, configurar e reverter
 
 ```bash
-python main.py
+python incarnate.py
 ```
 
 Em **Configurações → Estilo visual**, escolha **COMIC** ou **ORIGINAL**.

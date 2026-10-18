@@ -17,17 +17,19 @@ cenários, efeitos, interface, sons e música gerados pelo jogo.
 ### Baixar e iniciar
 
 Baixe uma versão publicada em [Releases](../../releases). O instalador Windows
-cria atalhos; o pacote Linux é uma pasta autocontida. Os nomes dos executáveis
-mantêm `VOID-SHIFT` por compatibilidade com os builds atuais. Consulte os guias
+cria atalhos; o pacote Linux é uma pasta autocontida. Os artefatos novos usam
+o nome INCARNATE; instalações antigas são atualizadas pelo mesmo AppId do
+Inno Setup. Consulte os guias
 de [Windows](docs/distribuicao-windows.md) e [Linux](docs/distribuicao-linux.md).
-O `pyproject.toml` e o changelog estão em 1.8.0. A tag Git de release mais
-recente é `v1.1.2`; as Releases publicadas podem estar atrás da main.
+O código está na versão 1.8.0. A candidata `v1.8.0-rc1` será publicada depois
+da integração desta branch; a release oficial depende da validação manual no
+Windows descrita no [roadmap](ROADMAP.md).
 
 Para jogar a partir do código-fonte, instale Python 3.10 ou superior e Pygame:
 
 ```bash
 python -m pip install -e .
-python main.py
+python incarnate.py
 ```
 
 ### Controles padrão
@@ -51,7 +53,7 @@ ajustes de mira, sensibilidade, áudio, resolução e qualidade visual.
 
 ```bash
 python -m pip install -e ".[gpu]"           # Linux ou Windows
-python main.py
+python incarnate.py
 ```
 
 Sem aceleração OpenGL, instale apenas com `python -m pip install -e .`; o jogo
@@ -109,7 +111,7 @@ em memória; o jogo avisa na tela e o F3 mostra perfil, ID curto, última
 gravação e pendência.
 
 Para verificar na prática, defina `INCARNATE_DATA_DIR` para uma pasta de teste
-e execute `python main.py`. Crie dois perfis, ganhe ou gaste moedas no primeiro,
+e execute `python incarnate.py`. Crie dois perfis, ganhe ou gaste moedas no primeiro,
 troque pelo menu e confirme que o segundo começa sem esse progresso. Renomeie
 e exclua um perfil pela tela de seleção. Para testar migração, copie um
 `save.json` antigo para essa pasta antes de iniciar; para recuperação, altere
@@ -240,16 +242,17 @@ Se o arquivo principal estiver corrompido, o jogo tenta recuperar essa cópia.
 Para levar um perfil entre Linux e Windows, selecione-o no jogo e use:
 
 ```bash
-python main.py --export-save progresso.json
-python main.py --import-save progresso.json
+python incarnate.py --export-save progresso.json
+python incarnate.py --import-save progresso.json
 ```
 
 A exportação usa o último perfil selecionado. A importação cria outro perfil
 com UUID novo, chamado **IMPORTADO** (ou um nome numerado), sem modificar os
 arquivos legados. O comando de importação também aceita um `save.json` antigo.
 
-Os comandos equivalentes também funcionam com `VOID-SHIFT.exe` no Windows e
-`VOID-SHIFT/VOID-SHIFT` no Linux.
+Os comandos equivalentes também funcionam com `INCARNATE.exe` no Windows e
+`INCARNATE/INCARNATE` no Linux. `python main.py` e o comando instalado
+`void-shift` continuam como aliases de compatibilidade.
 
 ### Resolução e responsividade
 
@@ -318,7 +321,8 @@ migração ainda tem exceções, detalhadas em
 
 ```
 Trabalho-Jogos/
-├── main.py                       # chama src.core.application.main
+├── incarnate.py                  # entrada e comandos portáteis do produto
+├── main.py                       # alias de compatibilidade
 ├── src/
 │   ├── core/                     # entry point, estados, constantes e configurações
 │   ├── runtime/                  # implementação executável, por responsabilidade
@@ -588,7 +592,7 @@ antigos em módulos legados; a limpeza está planejada em branch separada.
 
 O `tests/conftest.py` configura SDL dummy e `INCARNATE_DATA_DIR` temporário
 antes de importar o jogo. `SPACEFURY_DATA_DIR` continua testado como fallback
-para scripts antigos. Nesta branch, a suíte contém **602 casos: 601 passam e 1
+para scripts antigos. Nesta branch, a suíte contém **603 casos: 602 passam e 1
 teste OpenGL real é ignorado** quando não há display/driver configurado.
 
 | Arquivo(s) | Cobertura |

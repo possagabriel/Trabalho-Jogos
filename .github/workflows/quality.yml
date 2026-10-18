@@ -19,6 +19,7 @@ jobs:
         run: >-
           python -m ruff check
           main.py
+          incarnate.py
           src/core/application.py
           src/runtime/application/timing.py
           src/runtime/diagnostics/frame_metrics.py
