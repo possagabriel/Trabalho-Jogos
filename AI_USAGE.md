@@ -1,5 +1,19 @@
 # Registro de uso de IA
 
+## Integração do polimento do repositório (1.8.0)
+
+- **Pedido:** integrar a documentação, o Ruff, o CI e a unificação de caminhos de
+  dados da branch `chore/polir-repo`, sem mudanças de gameplay.
+- **Implementação da IA:** README em duas partes, preview HUD em `tools/`,
+  caminhos de dados compatíveis com o legado, revisão do `.gitignore` e do mapa
+  de arquitetura, além de CI que verifica os arquivos Python alterados.
+- **Decisões:** a versão permanece 1.8.0; nome do pacote, comando e instalador
+  serão tratados na branch de renomeação separada. Os registros anteriores de
+  uso de IA foram preservados. `.flake8` e `.pylintrc` foram removidos após
+  consolidar as regras úteis no `pyproject.toml`. A licença MIT foi proposta,
+  mas nenhum arquivo `LICENSE` foi aplicado. Orbitron e Rajdhani usam SIL OFL 1.1.
+- **Ajustes manuais do usuário:** nenhum informado.
+
 ## Fase 5 — Polimento visual, etapa 1: PREENCHE
 
 - **Pedido:** preservar a área jogável 16:9 em todas as telas e usar as faixas
@@ -151,8 +165,6 @@
   6,372 ms. Após a alteração: média 5,421 ms, p95 8,850 ms, com o mesmo
   ambiente e parâmetros. Memória de cache da dimensão 1: 435.000 bytes em
   BAIXA, 610.092 em MEDIA e 753.200 em ALTA.
-- **Ajustes manuais do usuário:** nenhum informado.
-
 ## Fase 4 — Perfis de jogador (1.5.0)
 
 - **Pedido:** múltiplos perfis locais com CRUD, progresso individual, migração do save único,

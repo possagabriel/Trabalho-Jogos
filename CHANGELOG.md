@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-10-18
+
+### Changed
+- Contornos de sprites escalam com o tamanho, respeitando limites comuns para
+  nave, inimigos, bosses e skins.
+- Densidade de hachura cresce com o tamanho do sprite e é omitida nas formas pequenas,
+  mantendo detalhes visuais legíveis sem alterar hitboxes.
+- Screenshot do README registra as dez skins COMIC em quatro direções.
+- Versão do projeto elevada de 1.7.0 para 1.8.0.
+- README reorganizado em guia para jogadores e documentação técnica, com descrição
+  correta dos assets, resolução interna, controles, fases e cobertura de testes.
+- Ruff centralizado em `pyproject.toml`; scripts de dados usam o caminho canônico
+  `INCARNATE_DATA_DIR` e preservam `SPACEFURY_DATA_DIR` como fallback legado.
+- Preview do HUD movido para `tools/`; CI de qualidade dispara em qualquer push e PR.
+- Guia de migração atualizado com os módulos pendentes e critérios para remover `game/`.
+
+## [1.7.0] - 2026-10-18
+
+### Changed
+- Fundos COMIC agora usam composição distinta para cada dimensão: rotas orbitais,
+  cristas vulcânicas, ondas e recifes, cristais, fendas e raios divinos.
+- Detalhes de fundo têm menos densidade, contraste e saturação para preservar a leitura
+  de inimigos, projéteis e marcos.
+- Projéteis inimigos usam contorno escuro e claro com contraste mínimo de 3:1; hitboxes
+  e lógica de combate não mudam.
+- Screenshot do README documenta as seis composições de cenário.
+- Versão do projeto elevada de 1.6.0 para 1.7.0.
+
 ## [1.6.0] - 2026-10-18
 
 ### Added
@@ -31,28 +59,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A troca de dimensão faz fade dos marcos antigos e novos sem alterar a
   transição de combate existente.
 - Versão do projeto elevada de 1.5.0 para 1.6.0.
-
-## [1.7.0] - 2026-10-18
-
-### Changed
-- Fundos COMIC agora usam composição distinta para cada dimensão: rotas orbitais,
-  cristas vulcânicas, ondas e recifes, cristais, fendas e raios divinos.
-- Detalhes de fundo têm menos densidade, contraste e saturação para preservar a leitura
-  de inimigos, projéteis e marcos.
-- Projéteis inimigos usam contorno escuro e claro com contraste mínimo de 3:1; hitboxes
-  e lógica de combate não mudam.
-- Screenshot do README documenta as seis composições de cenário.
-- Versão do projeto elevada de 1.6.0 para 1.7.0.
-
-## [1.8.0] - 2026-10-18
-
-### Changed
-- Contornos de sprites escalam com o tamanho, respeitando limites comuns para
-  nave, inimigos, bosses e skins.
-- Densidade de hachura cresce com o tamanho do sprite e é omitida nas formas pequenas,
-  mantendo detalhes visuais legíveis sem alterar hitboxes.
-- Screenshot do README registra as dez skins COMIC em quatro direções.
-- Versão do projeto elevada de 1.7.0 para 1.8.0.
 
 ## [1.5.0] - 2026-10-18
 

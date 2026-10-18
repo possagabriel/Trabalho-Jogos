@@ -1,48 +1,53 @@
-# INCARNATE 
+# INCARNATE
 
-Shoot 'em up vertical em **Pygame** com progressão, personalização de nave,
-6 dimensões, inimigos especiais e entidades RIFT (bosses). O código é 100%
-procedural (visual, sons e música são gerados em runtime, sem assets
-externos).
+Shoot 'em up vertical 2D em **Pygame**: enfrente seis dimensões, desbloqueie
+armas e skins, atravesse cenários em movimento e derrote entidades RIFT. A
+identidade visual combina arte incluída em `images/` e `data/fonts/` com
+cenários, efeitos, interface, sons e música gerados pelo jogo.
 
-## Windows e Linux
+## Parte A — Para jogadores
 
-Baixe a versão para Windows em [Releases](../../releases). Em cada versão,
-`VOID-SHIFT-Setup.exe` instala o jogo com atalho e desinstalador; `VOID-SHIFT.exe`
-é a opção portátil. Não é necessário abrir o GitHub Actions. Builds de teste
-continuam disponíveis como artefatos do workflow **Executáveis Desktop**. Veja
-as instruções de [distribuição para Windows](docs/distribuicao-windows.md).
+### Imagens do jogo
 
-No Linux, a mesma Release inclui `VOID-SHIFT-Linux-x86_64.tar.gz`. Extraia o
-arquivo e abra `VOID-SHIFT/VOID-SHIFT`. O formato de pasta autocontida reduz o
-tempo de abertura e evita depender da extração em diretórios temporários. Builds
-de teste e instruções locais estão em
-[distribuição para Linux](docs/distribuicao-linux.md).
+<!-- Espaço reservado para screenshots e GIF de gameplay. -->
 
-Os dois pacotes são gerados no mesmo workflow e no mesmo commit. Os arquivos
-`BUILD-COMMIT-Windows.txt` e `BUILD-COMMIT-Linux.txt` permitem confirmar que
-as distribuições contêm exatamente a mesma versão do jogo.
+_Screenshots e GIF de gameplay serão adicionados aqui._
 
-> Este README é orientado a **desenvolvedores e IAs**: explica a arquitetura,
-> o fluxo de dados e as convenções para que qualquer pessoa (ou modelo) possa
-> navegar, modificar e estender o código com segurança.
+### Baixar e iniciar
 
----
+Baixe uma versão publicada em [Releases](../../releases). O instalador Windows
+cria atalhos; o pacote Linux é uma pasta autocontida. Os nomes dos executáveis
+mantêm `VOID-SHIFT` por compatibilidade com os builds atuais. Consulte os guias
+de [Windows](docs/distribuicao-windows.md) e [Linux](docs/distribuicao-linux.md).
+O `pyproject.toml` e o changelog estão em 1.5.0, enquanto a tag Git mais recente
+no repositório é `v1.1.2`; portanto, as Releases publicadas podem estar atrás da
+versão da branch principal.
 
-## Sumário
+Para jogar a partir do código-fonte, instale Python 3.10 ou superior e Pygame:
 
-1. [Como executar](#como-executar)
-2. [Arquitetura](#arquitetura)
-3. [Fluxo do jogo](#fluxo-do-jogo)
-4. [Modelo de dados](#modelo-de-dados)
-5. [Convenções do código](#convenções-do-código)
-6. [Performance](#performance)
-7. [Como estender](#como-estender)
-8. [Testes](#testes)
+```bash
+python -m pip install -e .
+python main.py
+```
 
----
+### Controles padrão
 
-## Como executar
+| Ação | Controle |
+| --- | --- |
+| Mover | Setas ou WASD |
+| Mirar | Mouse |
+| Atirar | Segurar botão esquerdo, Espaço ou Z |
+| Esquivar | X |
+| Acelerar | Segurar Shift ou Ctrl |
+| Habilidade especial | E |
+| Pausar | P ou Esc |
+
+Atirar e esquivar podem ser remapeados em Configurações. O jogo também oferece
+ajustes de mira, sensibilidade, áudio, resolução e qualidade visual.
+
+## Parte B — Para desenvolvedores
+
+### Executar localmente
 
 ```bash
 python -m pip install -e ".[gpu]"           # Linux ou Windows
@@ -51,16 +56,6 @@ python main.py
 
 Sem aceleração OpenGL, instale apenas com `python -m pip install -e .`; o jogo
 usa automaticamente o renderizador de CPU e os perfis de desempenho.
-
-Em **Configurações**, o acabamento comic da GPU permite ajustar intensidade,
-contorno, quantidade de tons, hachuras, grão e saturação. A opção **Preservar
-interface** mantém HUD e textos fora do filtro e vem ligada por padrão.
-
-Sem áudio/vídeo (CI, servidores, debugging):
-
-```bash
-SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python main.py
-```
 
 ### Mira e disparos (1.2.0)
 
@@ -261,17 +256,15 @@ Os comandos equivalentes também funcionam com `VOID-SHIFT.exe` no Windows e
 O jogo renderiza numa superfície interna **16:9 de 1280×720** e a ajusta à
 janela preservando a proporção (scale-to-fit). Em Full HD, a cena ocupa toda a
 tela sem ser esticada; o custo continua bem menor que uma renderização nativa
-em 1920×1080. O posicionamento de **toda** a UI passa
-pelo módulo `game/layout.py` — um sistema responsivo com **ancoras** (grade
-3x3), **containers** ancorados, **proporções** da superfície, **escala** de uma
-base de design (900×700) e **safe areas** (margem interna). Nenhum elemento usa
-coordenada rígida em pixels: se a superfície lógica mudar de tamanho, o menu se
-recompõe automaticamente.
+em 1920×1080. O layout responsivo canônico fica em
+`src/infrastructure/ui/layout.py` e usa âncoras, containers, proporções, escala
+da base de design 900×700 e safe areas. Algumas telas ainda têm medidas locais
+em pixels; a migração para o sistema de layout segue em andamento.
 
 - **Inicialização padrão:** abre em **janela Full HD** (`1920x1080`).
 - **Resoluções suportadas:** `900x700`, `1024x768`, `1280x720`, `1280x800`,
   `1366x768`, `1440x900`, `1600x900`, `1680x1050`, `1920x1080`, `2560x1080`,
-  `2560x1440`, `3440x1440`, `3840x2160` (a lista vive em `settings.RESOLUCOES`;
+  `2560x1440`, `3440x1440`, `3840x2160` (a lista vive em `src/core/settings.py`;
   no menu **Config → Resolução** há um seletor com rolagem para escolher).
 - **Modo de aspecto** (configuração `aspecto`, disponível em Settings):
   - `AJUSTAR` (padrão): *scale-to-fit* com **safe areas** (letterbox) em
@@ -304,9 +297,9 @@ Prévia do modo `PREENCHE` em ultrawide:
   `ajuste_off_y`; vale tanto no modo `AJUSTAR` quanto no `PREENCHE`.
 - **Conversão do mouse:** `MenuPrincipal._pos_logica` converte coordenadas da
   janela para a superfície interna usando a mesma escala uniforme e os mesmos
-  offsets da cena. A mira permanece alinhada nos dois modos; as faixas externas
-  decorativas não fazem parte da área jogável.
-- **Layout responsivo:** `game/layout.py` define `Layout`, com `x()/y()`
+  offsets da cena e de Ajustar Tela. A mira permanece alinhada nos dois modos;
+  as faixas externas decorativas não fazem parte da área jogável.
+- **Layout responsivo:** `src/infrastructure/ui/layout.py` define `Layout`, com `x()/y()`
   (frações da superfície), `px()` (escala da base de design), `rect(ancora, …)`
   (containers), `ponto(ancora, …)` e `fonte(...)` (fontes escaladas). Todas as
   telas do menu (`menu.py`) e os elementos visuais (`menu_scene.py`) derivam
@@ -316,10 +309,12 @@ Prévia do modo `PREENCHE` em ultrawide:
 
 ## Arquitetura
 
-O projeto segue o padrão **Game Loop** clássico: um estado global
-(`Jogo.estado`) decide o que é atualizado e desenhado a cada frame. O runtime
-executável fica em `src/runtime/`; `game/` existe apenas como fachada de
-compatibilidade para imports antigos.
+O projeto segue o padrão **Game Loop** clássico: `Jogo.estado` orienta a
+atualização e o desenho. O runtime executável fica em `src/runtime/`. Imports
+novos devem apontar para os módulos canônicos `src/runtime`, `src/core` e
+`src/infrastructure`; `game/` é reservado a fachadas de compatibilidade. A
+migração ainda tem exceções, detalhadas em
+[docs/architecture-migration.md](docs/architecture-migration.md).
 
 ```
 Trabalho-Jogos/
@@ -335,7 +330,7 @@ Trabalho-Jogos/
 │   ├── domain/                   # abstrações reutilizáveis em evolução
 │   ├── infrastructure/           # adaptadores reutilizáveis em evolução
 │   └── presentation/             # componentes e telas reutilizáveis em evolução
-├── game/                          # fachadas de compatibilidade sem lógica
+├── game/                          # fachadas antigas; ver exceções na migração
 ├── tests/                         # testes unitários, integração e arquitetura
 ├── docs/architecture-migration.md # regras e mapa da migração
 └── data/fonts/                    # fontes incluídas na distribuição
@@ -343,11 +338,9 @@ Trabalho-Jogos/
 
 ### Ativos visuais
 
-A pasta `images/` concentra as artes: fundos por cenário, o menu e a folha de
-sprites de naves (`naves.png`). A nave padrão do jogador é um recorte da folha
-(`nave-padrao.png`, extraído com fundo transparente) e é carregada por
-`src/runtime/domain/entities/player.py` com fallback para a nave procedural
-caso o arquivo falte.
+A pasta `images/` contém fundos, arte do menu, ícone e sprites de naves
+(`naves.png` e `nave-padrao.png`). `data/fonts/` contém Orbitron e Rajdhani.
+Há também efeitos, fundos e áudio gerados proceduralmente em runtime.
 No estilo **ORIGINAL**, as seis dimensões combinam as imagens existentes com
 formas próprias pré-renderizadas; o Oceano Cósmico também recebe uma tonalidade
 azul própria. O estilo **COMIC** continua usando seu fundo separado.
@@ -412,7 +405,8 @@ partida atual**), atualiza estatísticas, sincroniza a loja e vai para
 Tudo é persistido como JSON. **Não há banco de dados.** No Windows, os
 arquivos ficam em `%LOCALAPPDATA%\VoidShift`; no Linux, em
 `$XDG_DATA_HOME/void-shift` ou `~/.local/share/void-shift`. As variáveis
-`INCARNATE_DATA_DIR` e `SPACEFURY_DATA_DIR` permitem substituir esse local.
+`INCARNATE_DATA_DIR` substitui esse local; `SPACEFURY_DATA_DIR` continua aceito
+como fallback legado para instalações e scripts antigos.
 
 | Arquivo | Conteúdo |
 |---------|----------|
@@ -420,7 +414,7 @@ arquivos ficam em `%LOCALAPPDATA%\VoidShift`; no Linux, em
 | `profiles/index.json` | Índice derivado, último perfil e marcador da migração |
 | `save.json` e `records.json` | Arquivos legados preservados após importação |
 | `settings.json` | Configurações globais: volumes, resolução, tela cheia, tema, aspecto e limites de perfis |
-| `skins.json` | Catálogo de skins (criado na primeira execução, espelha `player.SKINS`) |
+| `skins.json` | Catálogo de skins (criado na primeira execução; espelha `SKINS` em `src/runtime/domain/entities/player.py`) |
 
 **Fluxo de gravação:** eventos de progresso sincronizam loja e perfil por
 `ProfileService`; a saída tenta uma gravação final. O repositório troca JSON
@@ -431,16 +425,19 @@ atomicamente e mantém a versão anterior em `.bak` para recuperação.
 ## Convenções do código
 
 - **Idioma:** Português (nomes, docstrings e comentários). Mantenha assim.
-- **Imports:** sempre relativos dentro do pacote `game` (`from .x import y`).
+- **Imports:** use caminhos absolutos para os módulos canônicos (`src.runtime`,
+  `src.core`, `src.domain`, `src.infrastructure`, `src.presentation` e
+  `src.shared`). Não crie implementação nova em `game/`; ali ficam apenas
+  fachadas de compatibilidade até a migração terminar.
 - **Estrutura de entidades:** cada entidade (inimigo, boss, projétil, power-up)
   implementa `atualizar(...)` e `desenhar(tela, ...)`; retorna projéteis novos
   a partir de `atualizar()` para o `core` adicionar às listas.
 - **Rect de colisão:** exposto via `@property rect` (retângulo centrado no
   raio), usado com `colliderect`.
-- **Configuração:** constantes globais em `config.py`; configurações do
+- **Configuração:** constantes em `src/core/constants.py`; configurações do
   jogador via `Configuracoes` (acessadas por `jogo.config["chave"]`).
-- **Cores:** cores base em `config.py`; cores de destaque por tema via
-  `theme.tema_atual()`. Não use cores RGB soltas espalhadas pelo código.
+- **Cores:** cores base em `src/core/constants.py`; cores de destaque por tema
+  via `src/infrastructure/graphics/theme.py`. Não espalhe cores RGB pelo código.
 - **Fontes:** sempre via `fonte_texto(tamanho)` / `fonte_titulo(tamanho)`
   (cacheadas). Nunca `pygame.font.Font(None, n)` no meio do jogo.
 - **Desenho:** use os helpers de `smooth.py` (`desenhar_glow`,
@@ -486,14 +483,14 @@ também aceita intervalo por segundos e seed. Veja [minibosses](docs/minibosses.
 para catálogo, testes, integração, persistência e parâmetros de balanceamento.
 
 ### Nova arma
-1. Adicione um dict em `ARMARIA` (`game/weapons.py`) com `nivel`, `cor`,
+1. Adicione um dict em `ARMARIA` (`src/runtime/domain/entities/weapons.py`) com `nivel`, `cor`,
    `raio`, `vel`, `dano`, `cooldown`, `tipo`.
 2. Implemente o disparo em `Jogador.atirar` (novo branch de `tipo`).
 3. Se o projétil tiver comportamento visual novo, adicione um `tipo` em
    `Projetil.desenhar`.
 
 ### Novo inimigo
-1. Adicione o tipo em `TIPOS` e a forma em `FORMAS` (`game/enemies.py`).
+1. Adicione o tipo em `TIPOS` e a forma em `FORMAS` (`src/runtime/domain/entities/enemies.py`).
 2. Implemente o movimento em `Inimigo.atualizar` e o ataque em `_atacar`.
 3. Inclua o tipo na lista `inimigos` de um cenário em `scenarios.py`.
 
@@ -504,14 +501,14 @@ para catálogo, testes, integração, persistência e parâmetros de balanceamen
    `desenhar`.
 
 ### Novo cenário
-1. Adicione um dict em `CENARIOS` (`scenarios.py`) — cores, camadas de
+1. Adicione um dict em `CENARIOS` (`src/runtime/domain/world/scenarios.py`) — cores, camadas de
    estrelas, efeito, inimigos, especiais.
 2. Se o efeito for novo, implemente em `Cenario._atualizar_efeito` /
    `_desenhar_efeito`.
-3. Adicione o boss correspondente em `BOSSES_POR_CENARIO` (`bosses.py`).
+3. Adicione o boss correspondente em `BOSSES_POR_CENARIO` (`src/runtime/domain/entities/bosses.py`).
 
 ### Nova skin
-1. Adicione um dict em `SKINS` (`player.py`) com `id`, `preco`, `cor`,
+1. Adicione um dict em `SKINS` (`src/runtime/domain/entities/player.py`) com `id`, `preco`, `cor`,
    `efeito`, `descricao`.
 2. Implemente o efeito visual em `Skin.desenhar`/`_desenhar_*`.
 
@@ -571,8 +568,8 @@ janela e renderização continuam responsivos durante a animação.
 Para ver todos os componentes sobre um fundo neutro em 1920x1080:
 
 ```bash
-python preview_hud.py            # janela animada
-python preview_hud.py --save     # salva images/preview_hud.png
+python -m tools.preview_hud            # janela animada
+python -m tools.preview_hud --save     # salva images/preview_hud.png
 ```
 
 ---
@@ -580,34 +577,45 @@ python preview_hud.py --save     # salva images/preview_hud.png
 ## Testes
 
 ```bash
-pytest tests/                  # suite completa (recomendado)
-python tests/run_all.py        # alternativa standalone, sem pytest
+python -m pytest tests/         # suíte completa, headless
+python -m ruff check main.py src/core/application.py \
+  src/runtime/application/timing.py src/runtime/diagnostics/frame_metrics.py \
+  src/runtime/domain/spatial.py src/runtime/presentation/equipment_overlay.py \
+  src/shared/persistence.py src/shared/user_data.py \
+  src/infrastructure/graphics/renderer.py tools/build_desktop.py \
+  tools/benchmark_runtime.py tests/test_application_entrypoint.py \
+  tests/test_cross_platform.py tests/test_runtime_module_layout.py \
+  tests/test_spatial_index.py tests/test_timing_metrics.py
+python tests/run_all.py          # smoke tests standalone
 ```
 
-Os testes rodam **headless** (drivers dummy do SDL). O `tests/conftest.py`
-define o ambiente antes de qualquer importação do jogo e cria um
-`SPACEFURY_DATA_DIR` temporário para a sessão do pytest; cada arquivo também
-funciona isolado. Cobertura por módulo:
+O workflow `quality.yml` aplica o mesmo comando Ruff em push e pull request.
+Uma varredura completa do repositório também encontra apontamentos antigos em
+módulos legados fora do conjunto de CI; eles não foram corrigidos aqui para
+manter esta tarefa sem mudanças de gameplay.
 
-| Arquivo | Módulos | O que cobre |
-| --- | --- | --- |
-| `test_theme_geometry_smooth.py` | theme, geometry, smooth | cores (mix, ciclo, esmaecer), easing, caches e desenho suave (glow, gradientes, painéis, textos) |
-| `test_settings_save_shop.py` | settings, save_system, shop | configurações, persistência de progresso/save e loja de skins |
-| `test_profiles.py` | profiles, ProfileService, JsonProfileRepository | CRUD, nomes, limites, migração, backups e índice |
-| `test_profiles_integration.py` | seleção de perfis, jogo | tela inicial, isolamento de dados, entrada por mouse/teclado e falha de gravação |
-| `test_weapons_powerups.py` | weapons, powerups | todos os tipos de projétil (laser, ion, gauss, espiral...) e power-ups (vida, escudo, arma, skin...) |
-| `test_player.py` | player | jogador: movimento, controles, cooldowns, rajadas, combo, dano, skins (inclui sprite da nave padrão e fallback) |
-| `test_enemies_bosses.py` | enemies, bosses | inimigos, especiais (acumulador, cristalino...), ondas, sorteios e todos os bosses |
-| `test_scenarios_particles.py` | scenarios, particles | 6 cenários, estrelas, cover, partículas e mensagens flutuantes |
-| `test_menu_scene.py` | menu_scene | fundo com `fundo-menuprincipal.png` (e fallback), HUD, nave, destaque, transições |
-| `test_menu.py` | menu | menu principal: construção, navegação entre telas, save, loja, diálogo de saída, `_pos_logica` |
-| `test_interacao.py` | core, menu | eventos reais (pygame.event): teclas de navegação, pausa/game over, remap de controles e cliques do mouse |
-| `test_core.py` | core | estados, níveis/boss a cada 5, desbloqueio de armas, combate e fim de jogo |
-| `test_hud.py` | hud | HUD: renderização de todos os módulos, segmentos, barra de boss, medidores e duck typing |
-| `test_layout.py` | layout | layout responsivo nas resoluções-alvo |
+O `tests/conftest.py` configura SDL dummy e `INCARNATE_DATA_DIR` temporário
+antes de importar o jogo. `SPACEFURY_DATA_DIR` continua testado como fallback
+para scripts antigos. A suíte contém **546 casos**: **545 passam e 1 teste
+OpenGL real é ignorado** quando não há display/driver configurado.
 
-O `smoke_test.py` faz um smoke test geral: inicialização, loop de combate
-avançando níveis, desenho dos 6 cenários e mapeamento nível→cenário.
+| Arquivo(s) | Cobertura |
+| --- | --- |
+| `smoke_test.py`, `test_application_entrypoint.py` | Inicialização, CLI e smoke de gameplay sem janela. |
+| `test_core.py`, `test_gameplay_integration.py`, `test_state_machine.py` | Loop, estados, combate, níveis, recordes e game over. |
+| `test_cross_platform.py`, `test_runtime_assets.py`, `test_public_api_types.py` | Diretórios de dados, builds, assets e contratos públicos. |
+| `test_cutscene_integration.py`, `test_story_engine.py` | Motor de cenas, roteiro, pausa, pulo e arquivo de memórias. |
+| `test_mira.py`, `test_scroll.py`, `test_scroll_integration.py` | Mira, progresso visual, avanço, frenagem e retomada do cenário. |
+| `test_profiles.py`, `test_profiles_integration.py` | CRUD, migração, backups, seleção e isolamento de perfis. |
+| `test_enemies_bosses.py`, `test_minibosses.py`, `test_miniboss_integration.py` | Inimigos, bosses, protocolos especiais e integrações. |
+| `test_player.py`, `test_weapons_powerups.py`, `test_settings_save_shop.py` | Nave, armas, power-ups, configurações, persistência e loja. |
+| `test_scenarios_particles.py`, `test_spatial_index.py`, `test_timing_metrics.py` | Cenários, partículas, colisões e métricas de desempenho. |
+| `test_menu.py`, `test_menu_scene.py`, `test_interacao.py`, `test_hud.py`, `test_layout.py` | Menus, eventos reais, HUD e layout responsivo. |
+| `test_comic_visual.py`, `test_gpu_renderer.py`, `test_gpu_shader_integration.py`, `test_theme_geometry_smooth.py` | Tema, renderização comic, fallback CPU e integração OpenGL. |
+| `test_src_migration.py`, `test_runtime_module_layout.py` | Fachadas compatíveis e organização de módulos canônicos. |
+
+A contagem acima é do último teste completo local na branch. O teste OpenGL é
+executado em ambiente com Xvfb/Mesa pelo workflow de qualidade.
 
 ## Visual comic (1.1.0)
 
