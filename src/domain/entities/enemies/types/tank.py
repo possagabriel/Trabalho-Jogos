@@ -7,7 +7,6 @@ Slow movement, high HP, area attacks.
 from __future__ import annotations
 
 import math
-import random
 from typing import Optional
 
 import pygame

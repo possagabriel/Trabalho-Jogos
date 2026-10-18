@@ -9,7 +9,7 @@ from typing import Any
 
 import pygame
 
-from src.core.constants import BRANCO, CIANO, DOURADO, LARGURA, ALTURA, VERDE
+from src.core.constants import ALTURA, BRANCO, CIANO, DOURADO, LARGURA, VERDE
 from src.presentation.screens.menu_screen import SistemaNotificacao, formatar_pontos
 
 

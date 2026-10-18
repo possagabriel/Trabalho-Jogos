@@ -30,9 +30,15 @@ import pygame  # noqa: E402
 
 from game.core import Jogo  # noqa: E402
 from game.layout import (  # noqa: E402
-    ANCRAS, ALTURA_BASE, BASE_CENTRO, BASE_DIREITA, BASE_ESQUERDA, CENTRO,
-    LARGURA_BASE, MEIO_DIREITA, MEIO_ESQUERDA, TOPO_CENTRO, TOPO_DIREITA,
-    TOPO_ESQUERDA, Layout)
+    ALTURA_BASE,
+    ANCRAS,
+    BASE_CENTRO,
+    BASE_ESQUERDA,
+    CENTRO,
+    LARGURA_BASE,
+    TOPO_DIREITA,
+    Layout,
+)
 from game.menu import MenuPrincipal  # noqa: E402
 
 RESOLUCOES_ALVO = [(900, 700), (1280, 720), (1366, 768), (1920, 1080),

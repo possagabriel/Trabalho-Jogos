@@ -28,12 +28,14 @@ sys.path.insert(0, RAIZ)
 
 import pygame  # noqa: E402
 
-from game import persistence  # noqa: E402
-from game import save_system  # noqa: E402
-from game import settings  # noqa: E402
-from game import shop  # noqa: E402
+from game import (
+    persistence,  # noqa: E402
+    save_system,  # noqa: E402
+    settings,  # noqa: E402
+    shop,  # noqa: E402
+)
 from game.config import ALTURA, LARGURA  # noqa: E402
-from game.player import Jogador, SKINS, Skin  # noqa: E402
+from game.player import SKINS, Jogador, Skin  # noqa: E402
 
 
 def _tmp_dados(prefix="incarnate_persist_"):

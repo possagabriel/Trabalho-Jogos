@@ -25,11 +25,15 @@ sys.path.insert(0, RAIZ)
 
 import pygame  # noqa: E402
 
-from game.config import LARGURA  # noqa: E402
 from game.layout import Layout  # noqa: E402
 from game.menu_scene import (  # noqa: E402
-    DestaqueMenu, FundoCinematico, HudMenu, NaveMenu, TransicaoMissao,
-    texto_espacado)
+    DestaqueMenu,
+    FundoCinematico,
+    HudMenu,
+    NaveMenu,
+    TransicaoMissao,
+    texto_espacado,
+)
 from game.player import SKINS, Skin  # noqa: E402
 from game.theme import TEMAS_CORES  # noqa: E402
 

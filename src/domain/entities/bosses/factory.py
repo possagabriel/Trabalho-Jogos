@@ -5,7 +5,7 @@ Uses Factory Method pattern to instantiate the correct boss for each scenario.
 
 from __future__ import annotations
 
-from src.domain.entities.bosses.types import Boss, BOSSES_POR_CENARIO
+from src.domain.entities.bosses.types import BOSSES_POR_CENARIO, Boss
 
 
 class BossFactory:

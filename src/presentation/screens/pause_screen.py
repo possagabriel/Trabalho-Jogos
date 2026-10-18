@@ -5,12 +5,11 @@ Migrated from game/core.py _desenhar_pausa* and _tratar_eventos_pausa*.
 
 from __future__ import annotations
 
-import math
 from typing import Any
 
 import pygame
 
-from src.core.constants import BRANCO, CIANO, LARGURA, ALTURA, VERDE
+from src.core.constants import ALTURA, LARGURA
 from src.core.settings import TEMAS
 
 

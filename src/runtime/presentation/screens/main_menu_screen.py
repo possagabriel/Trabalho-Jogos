@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.runtime.infrastructure.graphics.smooth import ease_out
 from src.infrastructure.graphics.theme import tema_atual
+from src.runtime.infrastructure.graphics.smooth import ease_out
 
 if TYPE_CHECKING:
     from src.runtime.presentation.menu import MenuPrincipal

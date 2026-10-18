@@ -12,7 +12,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import pygame
 
 from src.infrastructure.graphics.comic_theme import usar_visual
-from src.runtime.domain.entities.player import Jogador, SKINS, Skin
+from src.runtime.domain.entities.player import SKINS, Jogador, Skin
 
 RAIZ = Path(__file__).resolve().parents[1]
 SAIDA_PADRAO = RAIZ / "images" / "preview_naves_mira.png"

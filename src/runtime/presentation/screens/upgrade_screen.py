@@ -6,13 +6,13 @@ import pygame
 
 from src.core.constants import BRANCO, CIANO, DOURADO, LARGURA, RIFT_MAGENTA, VOID_BLACK
 from src.infrastructure.ui.layout import Layout
+from src.runtime.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_cantos,
     desenhar_glow,
     desenhar_painel,
     retangulo_suave,
 )
-from src.runtime.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
 
 
 class TelaMelhorias:

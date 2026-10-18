@@ -7,14 +7,19 @@ HUD, and manages the in-game overlays (boss intro, vignette, flash).
 from __future__ import annotations
 
 import math
-import random
 from typing import Any
 
 import pygame
 
 from src.core.constants import (
-    ALTURA, BRANCO, CIANO, DIMENSION_GOLD, DOURADO, LARGURA, NEGRO,
-    QUANTUM_CYAN, RIFT_MAGENTA, VERDE,
+    ALTURA,
+    BRANCO,
+    DIMENSION_GOLD,
+    DOURADO,
+    LARGURA,
+    QUANTUM_CYAN,
+    RIFT_MAGENTA,
+    VERDE,
 )
 
 

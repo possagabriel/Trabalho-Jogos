@@ -25,13 +25,17 @@ import random  # noqa: E402
 
 import pygame  # noqa: E402
 
-from game.config import ALTURA, LARGURA  # noqa: E402
-from game.particles import (  # noqa: E402
-    MensagemFlutuante, Particula, SistemaParticulas)
-from game.scenarios import CENARIOS, Cenario, Estrela, _ajustar_cover, \
-    _superficie_alpha, cenario_do_nivel  # noqa: E402
 from game import smooth  # noqa: E402
-
+from game.config import ALTURA, LARGURA  # noqa: E402
+from game.particles import MensagemFlutuante, Particula, SistemaParticulas  # noqa: E402
+from game.scenarios import (
+    CENARIOS,
+    Cenario,
+    Estrela,
+    _ajustar_cover,
+    _superficie_alpha,  # noqa: E402
+    cenario_do_nivel,
+)
 
 # ---------------------------------------------------------------------------
 # Cenario

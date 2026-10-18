@@ -6,8 +6,6 @@ Uses float or straight movement with various ranged attack patterns.
 
 from __future__ import annotations
 
-import math
-import random
 from typing import Optional
 
 import pygame
