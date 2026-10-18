@@ -44,6 +44,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Screenshot do README documenta as seis composições de cenário.
 - Versão do projeto elevada de 1.6.0 para 1.7.0.
 
+## [1.8.0] - 2026-10-18
+
+### Changed
+- Contornos de sprites escalam com o tamanho, respeitando limites comuns para
+  nave, inimigos, bosses e skins.
+- Densidade de hachura cresce com o tamanho do sprite e é omitida nas formas pequenas,
+  mantendo detalhes visuais legíveis sem alterar hitboxes.
+- Screenshot do README registra as dez skins COMIC em quatro direções.
+- Versão do projeto elevada de 1.7.0 para 1.8.0.
+
 ## [1.5.0] - 2026-10-18
 
 ### Added

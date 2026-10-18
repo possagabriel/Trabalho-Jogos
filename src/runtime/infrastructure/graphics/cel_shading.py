@@ -16,7 +16,7 @@ from src.infrastructure.graphics.comic_render import (
     poligono_tinta,
     texto_tinta,
 )
-from src.infrastructure.graphics.comic_theme import opcoes_atuais
+from src.infrastructure.graphics.comic_theme import espessura_contorno_sprite, opcoes_atuais
 
 ESPRESSURA_CONTORNO_PADRAO = 3
 
@@ -61,6 +61,9 @@ def contorno_poligono(tela, pontos, espessura=ESPRESSURA_CONTORNO_PADRAO,
     """
     if len(pontos) < 3 or espessura <= 0:
         return
+    extensao = min(max(p[0] for p in pontos) - min(p[0] for p in pontos),
+                   max(p[1] for p in pontos) - min(p[1] for p in pontos))
+    espessura = espessura_contorno_sprite(extensao, espessura)
     cx = sum(p[0] for p in pontos) / len(pontos)
     cy = sum(p[1] for p in pontos) / len(pontos)
     pontos_expandidos = []
@@ -82,6 +85,7 @@ def contorno_circulo(tela, centro, raio, espessura=ESPRESSURA_CONTORNO_PADRAO,
     """Desenha contorno grosso ao redor de um circulo."""
     if espessura <= 0:
         return
+    espessura = espessura_contorno_sprite(raio * 2, espessura)
     pygame.draw.circle(tela, cor_contorno, (int(centro[0]), int(centro[1])),
                        int(raio) + espessura)
 
@@ -124,7 +128,7 @@ def circulo_com_contorno(tela, cor, centro, raio, espessura_contorno=3,
                          desenhar_borda_interna=True):
     """Desenha circulo preenchido com contorno grosso e sombra interna."""
     if opcoes_atuais().ativo:
-        circulo_tinta(tela, cor, centro, raio)
+        circulo_tinta(tela, cor, centro, raio, espessura_contorno)
         return
     contorno_circulo(tela, centro, raio, espessura_contorno, cor_contorno)
     pygame.draw.circle(tela, cor, (int(centro[0]), int(centro[1])), int(raio))

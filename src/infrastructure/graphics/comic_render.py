@@ -16,11 +16,12 @@ from src.infrastructure.graphics.comic_theme import (
     FUNDOS,
     LARANJA,
     PAPEL,
-    PASSO_HACHURA,
     PASSO_HALFTONE,
     SOMBRA,
     TINTA,
+    espessura_contorno_sprite,
     opcoes_atuais,
+    passo_hachura_sprite,
 )
 from src.shared.paths import PASTA_FONTES
 
@@ -30,6 +31,11 @@ def poligono_tinta(tela: pygame.Surface, cor: tuple, pontos: list,
     """Desenha geometria procedural com três tons e hachuras dentro da face."""
     if len(pontos) < 3:
         return
+    largura = max(p[0] for p in pontos) - min(p[0] for p in pontos)
+    altura = max(p[1] for p in pontos) - min(p[1] for p in pontos)
+    extensao = max(1, int(min(largura, altura)))
+    espessura = espessura_contorno_sprite(extensao, espessura)
+    passo_hachura = passo_hachura_sprite(extensao)
     sombra, base, luz = gerar_paleta(cor)
     centro = (sum(p[0] for p in pontos) / len(pontos),
               sum(p[1] for p in pontos) / len(pontos))
@@ -39,8 +45,8 @@ def poligono_tinta(tela: pygame.Surface, cor: tuple, pontos: list,
         face = [centro, a, b]
         escura = (a[0] + b[0]) / 2 > centro[0]
         pygame.draw.polygon(tela, sombra if escura else luz, face)
-        if escura and opcoes_atuais().hachuras:
-            passos = max(1, int(math.dist(a, b) / PASSO_HACHURA))
+        if escura and opcoes_atuais().hachuras and passo_hachura:
+            passos = max(1, int(math.dist(a, b) / passo_hachura))
             for j in range(1, passos):
                 t = j / passos
                 inicio = (a[0] + (centro[0] - a[0]) * t,
@@ -53,19 +59,22 @@ def poligono_tinta(tela: pygame.Surface, cor: tuple, pontos: list,
 
 
 @lru_cache(maxsize=512)
-def disco_tinta(cor: tuple, raio: int, hachuras: bool) -> pygame.Surface:
+def disco_tinta(cor: tuple, raio: int, hachuras: bool,
+                espessura: int = CONTORNO) -> pygame.Surface:
     """Prepara esfera em três faixas, contorno irregular e hachuras fixas."""
     r = max(1, raio)
-    pad = CONTORNO + 1
+    espessura = espessura_contorno_sprite(r * 2, espessura)
+    passo_hachura = passo_hachura_sprite(r * 2)
+    pad = espessura + 1
     surf = superficie_alpha((2 * (r + pad), 2 * (r + pad)))
     c = r + pad
     sombra, base, luz = gerar_paleta(cor)
-    pygame.draw.circle(surf, TINTA, (c, c), r + CONTORNO)
+    pygame.draw.circle(surf, TINTA, (c, c), r + espessura)
     pygame.draw.circle(surf, sombra, (c, c), r)
     pygame.draw.circle(surf, base, (c - r // 5, c - r // 5), max(1, r * 4 // 5))
     pygame.draw.circle(surf, luz, (c - r // 3, c - r // 3), max(1, r // 3))
-    if hachuras:
-        for y in range(-r // 3, r, PASSO_HACHURA):
+    if hachuras and passo_hachura:
+        for y in range(-r // 3, r, passo_hachura):
             borda = int(math.sqrt(max(0, r * r - y * y)))
             pygame.draw.line(surf, TINTA, (c + borda // 2, c + y),
                              (c + borda, c + y - 2))
@@ -73,9 +82,10 @@ def disco_tinta(cor: tuple, raio: int, hachuras: bool) -> pygame.Surface:
 
 
 def circulo_tinta(tela: pygame.Surface, cor: tuple, centro: tuple,
-                   raio: float) -> None:
+                   raio: float, espessura: int = CONTORNO) -> None:
     """Compõe uma esfera preparada, sem superfícies temporárias."""
-    surf = disco_tinta(tuple(cor[:3]), int(raio), opcoes_atuais().hachuras)
+    surf = disco_tinta(tuple(cor[:3]), int(raio), opcoes_atuais().hachuras,
+                       espessura)
     tela.blit(surf, surf.get_rect(center=centro))
 
 

@@ -112,6 +112,28 @@
   composições são preparados fora do caminho por quadro. A suíte completa passou
   com 599 testes e 1 skip; Ruff passou nos arquivos Python alterados.
 
+## Fase 5 — Polimento visual, etapa 5: sprites
+
+- **Pedido:** uniformizar contornos e dimensionar as hachuras por sprite, sem
+  encobrir hitboxes ou alterar gameplay.
+- **Implementação da IA:** contorno adaptativo com limite compartilhado para
+  polígonos, círculos e imagens; espaçamento de hachura diminui com o tamanho,
+  e sprites abaixo de 18 px não recebem hachura. A geometria de colisão não foi tocada.
+- **Decisões:** arte menor mantém menos ruído; objetos grandes recebem mais detalhe.
+  Superfícies ainda passam pelo cache existente; contornos externos não entram nas
+  retângulos de colisão.
+- **Ajustes manuais do usuário:** nenhum informado.
+- **Verificação visual:** contatos antes/depois e GIFs de explosão, troca dimensional,
+  boss, avanço/frenagem e menu em `/tmp/incarnate-visual-audit-20261018/etapa5`;
+  screenshot compacta em `docs/screenshots/sprites-comic.jpg`.
+- **Benchmark:** SDL dummy, 1280×720, COMIC/MEDIA, 30 inimigos, 80 projéteis,
+  180 partículas, sete rodadas de 120 quadros. Quadro completo antes/depois:
+  média 12,963/12,394 ms; p95 14,357/13,129 ms; desvio das médias por rodada
+  0,141/0,065 ms. Média dos p95 de cada rodada: 14,464/13,145 ms. No mundo
+  isolado: 5,419/5,273 ms de média e 5,880/5,565 ms de p95. O quadro completo
+  permaneceu dentro da variação entre rodadas. A suíte completa passou com 600
+  testes e 1 skip; Ruff passou nos arquivos Python alterados.
+
 ## Ajuste da Fase 2 — Fundo que evolui (1.6.0)
 
 - **Pedido:** dar sensação de percurso 2D com marcos por dimensão, evolução

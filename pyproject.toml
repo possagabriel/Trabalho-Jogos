@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "void-shift"
-version = "1.7.0"
+version = "1.8.0"
 description = "INCARNATE — Entre na Fenda"
 readme = "README.md"
 requires-python = ">=3.10"

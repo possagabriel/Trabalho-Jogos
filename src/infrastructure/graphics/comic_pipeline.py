@@ -10,8 +10,9 @@ from src.infrastructure.graphics.comic_theme import (
     FATOR_LUZ,
     FATOR_SOMBRA,
     NIVEIS,
-    PASSO_HACHURA,
     TINTA,
+    espessura_contorno_sprite,
+    passo_hachura_sprite,
 )
 
 
@@ -32,6 +33,7 @@ def posterizar(origem: pygame.Surface, hachuras: bool = False,
                material: tuple | None = None) -> pygame.Surface:
     """Quantiza no carregamento, preservando transparência e a superfície original."""
     resultado = superficie_alpha(origem.get_size())
+    passo = passo_hachura_sprite(min(origem.get_size()))
     paleta = gerar_paleta(material) if material is not None else None
     for y in range(origem.get_height()):
         for x in range(origem.get_width()):
@@ -39,7 +41,8 @@ def posterizar(origem: pygame.Surface, hachuras: bool = False,
             rgb = tuple(NIVEIS[min(3, c * 4 // 256)] for c in (r, g, b))
             if paleta is not None:
                 rgb = paleta[min(2, max(r, g, b) * 3 // 256)]
-            if hachuras and max(r, g, b) < 160 and (x + y) % PASSO_HACHURA == 0:
+            if (hachuras and passo and max(r, g, b) < 160
+                    and (x + y) % passo == 0):
                 rgb = TINTA
             resultado.set_at((x, y), (*rgb, a))
     return resultado
@@ -64,6 +67,7 @@ def contornar(origem: pygame.Surface, espessura: int = CONTORNO,
     """
     pad = max(0, espessura)
     w, h = origem.get_size()
+    pad = espessura_contorno_sprite(min(w, h), pad) if pad else 0
     resultado = superficie_alpha((w + 2 * pad, h + 2 * pad))
     silhueta = _silhueta(origem, cor)
     for dx, dy in ((-pad, 0), (pad, 0), (0, -pad), (0, pad),

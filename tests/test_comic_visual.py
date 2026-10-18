@@ -45,7 +45,7 @@ def test_contorno_usa_mascara_uma_vez_sem_mutar_sprite():
         b = contornar(origem, 3)
         assert a is b
         assert mascara.call_count == 1
-    assert a.get_size() == (15, 15)
+    assert a.get_size() == (11, 11)
     assert a.get_at((4, 6)).a > 0
     assert pygame.image.tobytes(origem, "RGBA") == antes
 
@@ -115,6 +115,20 @@ def test_paleta_tem_tres_faixas_ordenadas():
 
     sombra, base, luz = gerar_paleta((80, 160, 240))
     assert all(s < b < claro for s, b, claro in zip(sombra, base, luz))
+
+
+def test_contorno_e_hachura_escalam_com_o_tamanho_do_sprite():
+    from src.infrastructure.graphics.comic_theme import (
+        espessura_contorno_sprite,
+        passo_hachura_sprite,
+    )
+
+    espessuras = [espessura_contorno_sprite(tamanho) for tamanho in (12, 24, 48, 96)]
+    passos = [passo_hachura_sprite(tamanho) for tamanho in (12, 24, 48, 96)]
+    assert espessuras == sorted(espessuras)
+    assert passos[0] == 0
+    assert passos[1] > passos[2] > passos[3] > 0
+    assert espessura_contorno_sprite(96, solicitada=4) <= 4
 
 
 @pytest.mark.parametrize("chave", ["comic_papel", "comic_halftone", "comic_hachuras"])

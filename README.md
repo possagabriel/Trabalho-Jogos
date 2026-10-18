@@ -621,4 +621,10 @@ não aceitar GLSL 1.20, a apresentação continua normalmente sem o filtro.
 O Lobby de fases também usa o fundo impresso, lettering com contorno, miniaturas
 posterizadas e painéis angulares do estilo comic.
 
+Os contornos dos sprites aumentam com o tamanho até um limite comum. Hachuras
+ficam mais densas em sprites grandes e são omitidas nos pequenos para preservar
+seus detalhes. A prévia mostra as dez skins em quatro direções.
+
+![Naves e skins COMIC com contorno e hachura proporcionais](docs/screenshots/sprites-comic.jpg)
+
 Veja [pipeline visual, screenshots, testes e custos medidos](docs/visual/README.md).
