@@ -1,4 +1,4 @@
-"""HUD de combate profissional do VOID//SHIFT.
+"""HUD de combate profissional do INCARNATE.
 
 Interface de nave espacial militar de alta tecnologia, em identidade visual
 sci-fi cinematografica: roxo escuro + azul profundo + ciano + magenta, com
@@ -100,7 +100,7 @@ from src.runtime.infrastructure.graphics.style_tokens import (
 )
 
 # ---------------------------------------------------------------------------
-# Paleta do HUD (derivada da marca VOID//SHIFT, nunca saturada em excesso)
+# Paleta do HUD (derivada da marca INCARNATE, nunca saturada em excesso)
 # ---------------------------------------------------------------------------
 
 AZUL_PROFUNDO = HUD_COR_FUNDO

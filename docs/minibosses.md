@@ -128,7 +128,7 @@ intervalos não positivos e intervalos fracionários no modo ondas.
    reinício cancelam o encontro. Lacaios e zonas são removidos ao encerrar;
    projéteis que já estavam em voo seguem seu ciclo normal.
 
-Não é preciso colar código em outro entry point: `python main.py` já usa essa
+Não é preciso colar código em outro entry point: `python incarnate.py` já usa essa
 integração. Os módulos são coletados pelo empacotamento Windows existente.
 
 ## Persistência e recompensas
