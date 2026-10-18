@@ -44,6 +44,8 @@ def test_partida_completa_persiste_progresso_e_reinicia(tmp_path, monkeypatch):
     jogo._atualizar_powerups()
     assert jogo.powerups == []
     assert jogo.jogador.moedas_jogo == 100
+    assert jogo.loja.moedas == 100
+    assert jogo.profile_service.repository.load(perfil.id).progress["moedas"] == 100
 
     # A progressao cria ondas nos niveis intermediarios e um boss no nivel 5.
     for nivel in range(2, 6):

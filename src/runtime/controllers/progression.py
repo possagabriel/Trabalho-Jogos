@@ -75,6 +75,7 @@ class ControladorProgressao:
         jogo.flash, jogo.fade, jogo.trauma, jogo.hitstop = 0, 255, 0.0, 0
         jogo.novo_recorde = False
         jogo.moedas_ganhas = 0
+        jogo._moedas_creditadas = 0
         jogo.textos_acao = []
         jogo.melhorias_oferecidas = []
         jogo.melhoria_selecionada = 0
@@ -124,6 +125,8 @@ class ControladorProgressao:
     def salvar_tudo(self) -> None:
         """Sincroniza a loja e persiste o progresso atual."""
         jogo = self.jogo
+        self.creditar_moedas_partida(persistir=False)
+        jogo.progresso.sincronizar_loja(jogo.loja)
         jogo.progresso.registrar_checkpoint(jogo.jogador.nivel)
         if jogo.profile_service.active:
             statistics = jogo.progresso.dados["estatisticas"]
@@ -135,10 +138,21 @@ class ControladorProgressao:
             jogo._abates_contabilizados += kills
             jogo.progresso.jogador["nivel_maximo"] = max(
                 jogo.progresso.jogador["nivel_maximo"], jogo.jogador.nivel)
-        jogo.progresso.sincronizar_loja(jogo.loja)
         jogo.progresso.salvar_arquivo()
         if jogo.profile_service.save_error:
             jogo.menu.notificacoes.adicionar("Falha ao salvar perfil", "erro")
+
+    def creditar_moedas_partida(self, persistir: bool = True) -> None:
+        """Credita as moedas coletadas uma vez e as grava ao receber a coleta."""
+        jogo = self.jogo
+        pendentes = jogo.jogador.moedas_jogo - jogo._moedas_creditadas
+        if pendentes <= 0:
+            return
+        jogo.loja.moedas += pendentes
+        jogo._moedas_creditadas += pendentes
+        if persistir:
+            jogo.progresso.sincronizar_loja(jogo.loja)
+            jogo.progresso.salvar_arquivo()
 
     def iniciar_nivel(self, nivel: int) -> None:
         """Configura as ondas ou o boss correspondente ao nivel."""

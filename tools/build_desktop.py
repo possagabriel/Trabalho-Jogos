@@ -33,6 +33,9 @@ def argumentos_distribuicao(
         f"{raiz / 'data' / 'fonts'}{separador}data/fonts",
         "--add-data",
         f"{raiz / 'pyproject.toml'}{separador}.",
+        "--add-data",
+        f"{raiz / 'src' / 'runtime' / 'story' / 'cenas_pt_BR.json'}"
+        f"{separador}src/runtime/story",
         "--collect-submodules",
         "src",
         "--collect-submodules",

@@ -10,6 +10,7 @@ import pygame
 from src.core import settings
 from src.core.settings import DEFAULT_CONTROLES
 from src.runtime.application.core import Jogo
+from src.runtime.domain.entities.powerups import PowerUp
 
 
 def test_start_without_profile_uses_default_controls(tmp_path, monkeypatch):
@@ -55,6 +56,26 @@ def test_two_profiles_keep_progress_and_controls_separate(tmp_path, monkeypatch)
     global_settings = json.loads((tmp_path / "settings.json").read_text(encoding="utf-8"))
     assert "mira_ativa" not in global_settings
     assert "controles" not in global_settings
+
+
+def test_coleta_de_moedas_persiste_ao_sair_da_missao(tmp_path, monkeypatch):
+    monkeypatch.setenv("INCARNATE_DATA_DIR", str(tmp_path))
+    jogo = Jogo(sons=Mock())
+    perfil = jogo.profile_service.create("Ana")
+    jogo.ativar_perfil(perfil.id)
+    jogo._novo_jogo("Ana")
+    jogo.powerups = [PowerUp("moedas", jogo.jogador.x, jogo.jogador.y)]
+
+    jogo._atualizar_powerups()
+
+    assert jogo.jogador.moedas_jogo == 100
+    assert jogo.loja.moedas == 100
+    assert jogo.profile_service.repository.load(perfil.id).progress["moedas"] == 100
+
+    jogo.pausa_controller.confirmar_saida()
+    reiniciado = Jogo(sons=Mock())
+    reiniciado.ativar_perfil(perfil.id)
+    assert reiniciado.loja.moedas == 100
 
 
 def test_failed_profile_write_keeps_pending(tmp_path, monkeypatch):

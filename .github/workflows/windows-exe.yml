@@ -51,6 +51,8 @@ jobs:
         run: |
           & .\dist\INCARNATE.exe --smoke-test
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & .\dist\INCARNATE.exe --smoke-test-legacy
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Assinar executável quando houver certificado
         shell: pwsh
         env:
@@ -146,7 +148,9 @@ jobs:
         env:
           SDL_VIDEODRIVER: dummy
           SDL_AUDIODRIVER: dummy
-        run: ./dist/INCARNATE/INCARNATE --smoke-test
+        run: |
+          ./dist/INCARNATE/INCARNATE --smoke-test
+          ./dist/INCARNATE/INCARNATE --smoke-test-legacy
       - name: Empacotar e registrar commit do build
         run: |
           chmod +x dist/INCARNATE/INCARNATE

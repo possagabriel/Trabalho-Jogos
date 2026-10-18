@@ -11,21 +11,33 @@ import tempfile
 from pathlib import Path
 
 
-def executar_smoke_test() -> int:
-    """Inicializa, simula e salva três quadros sem abrir uma janela real."""
+def executar_smoke_test(com_save_legado: bool = False) -> int:
+    """Valida a inicialização sem perfil ou com migração de um save antigo."""
     os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
     os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
     with tempfile.TemporaryDirectory(prefix="incarnate_smoke_") as dados:
         os.environ["INCARNATE_DATA_DIR"] = dados
+        if com_save_legado:
+            (Path(dados) / "save.json").write_text(
+                '{"jogador": {"moedas": 1}}', encoding="utf-8")
         import pygame
 
         from src.core.application import Application
 
         jogo = Application().jogo
+        perfis = jogo.profile_service.list_profiles()
+        if com_save_legado:
+            assert len(perfis) == 1 and perfis[0].progress["moedas"] == 1
+        else:
+            assert perfis == []
+            assert jogo.profile_service.active is None
+            assert not jogo.progresso.existe_save()
         for _ in range(3):
             jogo.loop_controller.atualizar()
             jogo.render_controller.desenhar()
         jogo._salvar_tudo()
+        if not com_save_legado:
+            assert jogo.profile_service.list_profiles() == []
         pygame.quit()
     return 0
 
@@ -73,6 +85,8 @@ def _transferir_save(argumentos: list[str]) -> int | None:
 def cli(argumentos: list[str] | None = None) -> int:
     """Executa o jogo ou uma operação administrativa portátil."""
     argumentos = list(sys.argv[1:] if argumentos is None else argumentos)
+    if "--smoke-test-legacy" in argumentos:
+        return executar_smoke_test(com_save_legado=True)
     if "--smoke-test" in argumentos:
         return executar_smoke_test()
     resultado = _transferir_save(argumentos)

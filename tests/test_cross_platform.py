@@ -57,6 +57,15 @@ def test_build_desktop_usa_separador_correto_por_sistema(tmp_path) -> None:
     assert f"{tmp_path / 'images'}:images" in linux
     assert f"{tmp_path / 'pyproject.toml'};." in windows
     assert f"{tmp_path / 'pyproject.toml'}:." in linux
+    catalogo = tmp_path / "src" / "runtime" / "story" / "cenas_pt_BR.json"
+    assert f"{catalogo};src/runtime/story" in windows
+    assert f"{catalogo}:src/runtime/story" in linux
+    for argumentos, separador in ((windows, ";"), (linux, ":")):
+        destinos = {
+            argumentos[indice + 1].rsplit(separador, 1)[1]
+            for indice, valor in enumerate(argumentos) if valor == "--add-data"
+        }
+        assert destinos == {"images", "data/fonts", ".", "src/runtime/story"}
     assert "--icon" in windows
     assert "--icon" not in linux
     assert "--onefile" in windows
