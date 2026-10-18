@@ -23,6 +23,7 @@ import pygame
 from src.core.constants import NEGRO, NOME_JOGO
 from src.infrastructure.graphics.comic_render import desenhar_fundo
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
+from src.infrastructure.graphics.theme import MENU_MARGEM_SEGURANCA
 from src.infrastructure.ui.layout import Layout
 from src.runtime.domain.entities.player import Jogador
 from src.runtime.infrastructure.assets import carregar_imagem
@@ -471,10 +472,12 @@ class HudMenu:
         self._desenhar_texto(tela, "mis_valor", layout.fonte_texto(15),
                              "SALTO DIMENSIONAL", (layout.px(40), layout.altura - layout.px(34)),
                              texto_cor, 3)
-        self._desenhar_texto(tela, "mis_sub", layout.fonte_texto(11),
-                             "ALVO // ENTRE NA FENDA", (layout.px(44),
-                                                          layout.altura - layout.px(20)),
-                             primaria, 2)
+        fonte_sub = layout.fonte_texto(20)
+        y_sub = (layout.altura - layout.margem(MENU_MARGEM_SEGURANCA)
+                 - fonte_sub.get_height())
+        self._desenhar_texto(tela, "mis_sub", fonte_sub,
+                             "ALVO // ENTRE NA FENDA", (layout.px(44), y_sub),
+                             texto_cor, 1)
 
         # velocidade + coordenadas
         self._desenhar_texto(tela, "vel_rotulo", layout.fonte_texto(12),
@@ -485,10 +488,10 @@ class HudMenu:
                              "%.0f KC" % self._vel, (layout.largura - layout.px(40),
                                                      layout.altura - layout.px(36)),
                              (255, 200, 120), 3, "direita")
-        self._desenhar_texto(tela, "vel_sub", layout.fonte_texto(11),
+        self._desenhar_texto(tela, "vel_sub", fonte_sub,
                              "MODO NAVEGAÇÃO", (layout.largura - layout.px(44),
-                                          layout.altura - layout.px(22)),
-                             borda, 2, "direita")
+                                          y_sub),
+                             texto_cor, 1, "direita")
 
 
 # ---------------------------------------------------------------------------

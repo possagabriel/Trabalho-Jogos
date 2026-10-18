@@ -32,6 +32,13 @@ from game.menu import MenuPrincipal  # noqa: E402
 from game.phase_select import PhaseStatus  # noqa: E402
 from game.theme import tema_atual  # noqa: E402
 from src.infrastructure.graphics.comic_theme import usar_visual  # noqa: E402
+from src.infrastructure.graphics.theme import (  # noqa: E402
+    MENU_ALPHA_PAINEL_RODAPE,
+    MENU_COR_PAINEL_RODAPE,
+    MENU_COR_TEXTO,
+    MENU_COR_TEXTO_SECUNDARIO,
+    MENU_MARGEM_SEGURANCA,
+)
 
 ROTULOS_ESPERADOS = [
     "01 // CONTINUAR",
@@ -77,8 +84,8 @@ def test_opcoes_principais_tem_tamanho_uniforme_e_nao_usam_indicador_antigo():
     assert menu.destaque.y == menu.opcoes[0].y  # estado mantido para compatibilidade
 
 
-def test_opcao_selecionada_no_estilo_original_tem_fundo_visivel():
-    """O fundo de selecao ocupa a area clicavel e nao aparece nas demais opcoes."""
+def test_opcoes_originais_têm_painel_e_selecao_destacada_na_area_clicavel():
+    """O painel desenhado coincide com a mesma área usada para clique."""
     jogo, menu = novo_menu()
     opcao = menu.opcoes[0]
     rect = opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
@@ -92,8 +99,116 @@ def test_opcao_selecionada_no_estilo_original_tem_fundo_visivel():
             opcao.desenhar(tela, menu.fonte_opcao, menu.fonte_opcao_sel, tema,
                            menu.x_opcoes, selecionado, 0, 255, menu.layout)
 
-    assert sem_selecao.get_at(amostra).a == 0
-    assert com_selecao.get_at(amostra).a > 0
+    assert sem_selecao.get_at(amostra).a > 0
+    assert com_selecao.get_at(amostra).a > sem_selecao.get_at(amostra).a
+    assert opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout) == rect
+
+
+@pytest.mark.parametrize("resolucao", [(900, 700), (1280, 720),
+                                        (1920, 1080), (2560, 1080)])
+@pytest.mark.parametrize("aspecto", ["AJUSTAR", "PREENCHE"])
+def test_retangulo_clicavel_coincide_com_botao_em_todas_as_apresentacoes(
+        resolucao, aspecto):
+    jogo, menu = novo_menu()
+    largura, altura = resolucao
+    jogo.config["aspecto"] = aspecto
+    jogo.config["resolucao"] = f"{largura}x{altura}"
+    jogo.janela = pygame.display.set_mode(resolucao)
+    opcao = menu.opcoes[5]
+    esperado = opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
+    tela = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
+
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        tema = tema_atual(jogo.config["tema"])
+        opcao.desenhar(tela, menu.fonte_opcao, menu.fonte_opcao_sel, tema,
+                       menu.x_opcoes, True, 0, 255, menu.layout)
+
+    assert opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout) == esperado
+    escala, offset_x, offset_y = jogo._transformacao_janela()
+    ponto_janela = (round((esperado.centerx * escala) + offset_x),
+                    round((esperado.centery * escala) + offset_y))
+    pos_logica = menu._pos_logica(ponto_janela)
+    assert abs(pos_logica[0] - esperado.centerx) <= 1
+    assert abs(pos_logica[1] - esperado.centery) <= 1
+    assert esperado.collidepoint(pos_logica)
+
+
+def test_clique_fora_do_botao_nao_dispara_callback():
+    _, menu = novo_menu()
+    opcao = menu.opcoes[5]
+    callback = mock.Mock()
+    opcao.funcao = callback
+    rect = opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
+    menu.tela_principal.tratar_clique((rect.right + 1, rect.centery))
+    callback.assert_not_called()
+    menu.tela_principal.tratar_clique(rect.center)
+    callback.assert_called_once_with()
+
+
+def test_rotulos_cabem_no_botao_e_nome_longo_do_perfil_usa_reticencias():
+    _, menu = novo_menu()
+    for opcao in menu.opcoes:
+        fonte_ajustada, rotulo = opcao._ajustar_rotulo(
+            menu.fonte_opcao, opcao.texto,
+            menu.layout.px(type(opcao).LARGURA_PAINEL - 52), menu.layout)
+        assert fonte_ajustada.size(rotulo)[0] <= menu.layout.px(
+            type(opcao).LARGURA_PAINEL - 52)
+
+    fonte = menu.fonte_pequena
+    linha = menu._linha_perfil_rodape(fonte, "PILOTO-" + "X" * 80, "123", 300)
+    assert linha.endswith("   |   MOEDAS: 123")
+    assert "…" in linha
+    assert menu._medir_espacado(fonte, linha, 1) <= 300
+
+
+def test_selecao_inicial_respeita_existencia_de_save():
+    jogo, menu = novo_menu()
+    with mock.patch.object(jogo.progresso, "existe_save", return_value=True):
+        menu._construir_opcoes_menu()
+        assert menu.opcao_selecionada == 0
+        assert menu.opcoes[0].desabilitado is False
+    with mock.patch.object(jogo.progresso, "existe_save", return_value=False):
+        menu._construir_opcoes_menu()
+        menu.opcoes[0].desabilitado = not menu._tem_save()
+        assert menu.opcao_selecionada == 1
+        assert menu.opcoes[0].desabilitado is True
+
+
+def test_contraste_do_rodape_sobre_fundo_real_inclui_planeta():
+    jogo, menu = novo_menu()
+    fundo = pygame.Surface(jogo.tela.get_size())
+    margem = menu.layout.margem(MENU_MARGEM_SEGURANCA)
+    topo = menu.layout.altura - menu.layout.px(98)
+    amostras = []
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        menu.fundo.desenhar(fundo)
+        menu.hud.desenhar(fundo, tema_atual(jogo.config["tema"]))
+    for x in range(margem, menu.layout.largura - margem, 17):
+        for y in range(topo, menu.layout.altura - margem // 2, 11):
+            amostras.append(fundo.get_at((x, y))[:3])
+
+    def luminancia(cor):
+        canais = []
+        for canal in cor:
+            valor = canal / 255
+            canais.append(valor / 12.92 if valor <= 0.04045
+                          else ((valor + 0.055) / 1.055) ** 2.4)
+        return sum(peso * valor for peso, valor in zip((0.2126, 0.7152, 0.0722), canais))
+
+    def contraste(foreground, background):
+        clara, escura = sorted((luminancia(foreground), luminancia(background)),
+                               reverse=True)
+        return (clara + 0.05) / (escura + 0.05)
+
+    ratios = []
+    for pixel in amostras:
+        alpha = MENU_ALPHA_PAINEL_RODAPE / 255
+        composto = tuple(round(MENU_COR_PAINEL_RODAPE[i] * alpha
+                               + pixel[i] * (1 - alpha)) for i in range(3))
+        ratios.extend((contraste(MENU_COR_TEXTO, composto),
+                       contraste(MENU_COR_TEXTO_SECUNDARIO, composto)))
+    assert len(amostras) > 100
+    assert min(ratios) >= 4.5
 
 
 def test_menu_widescreen_separa_titulo_da_coluna_de_opcoes():

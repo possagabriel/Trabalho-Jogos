@@ -1,5 +1,28 @@
 # Registro de uso de IA
 
+## Menu ORIGINAL — etapa 1: correções visuais
+
+- **Pedido:** corrigir cortes, sobreposições, contraste e margens do menu neon;
+  manter ações e ordem de navegação; diferenciar Continuar sem save.
+- **Implementação da IA:** rótulos são ajustados dentro dos botões, cuja área
+  clicável acompanha o desenho e a animação de entrada; linhas decorativas ficam
+  no espaço negativo; subtítulo e rodapé ganharam fundo/cores de alto contraste;
+  texto de perfil recebe reticências quando excede a largura calculada. A seleção
+  inicial escolhe Continuar com save e Lobby sem save.
+- **Apóstrofo:** `ProfileService` rejeita `'` em criação e renomeação. A regra foi
+  mantida; teste confirma que a tentativa de renomear falha sem mudar o perfil
+  existente. A renderização do menu continua aceitando nomes legados já salvos.
+- **Decisões:** callbacks do menu e gameplay permaneceram intactos. A versão do
+  rodapé lê `project.version`; a fonte única já havia sido introduzida no commit
+  `83be260`. Glitch e animações novas ficam para as etapas posteriores aprovadas.
+- **Ajustes manuais do usuário:** nenhum informado.
+- **Auditoria:** capturas originais e etapa 1 em
+  `/tmp/incarnate-menu-audit-2026-10-18`; arquivos fora do repositório.
+- **Verificação:** 617 testes passaram e 1 foi ignorado. Ruff passou nos sete
+  arquivos Python alterados. Testes cobrem nome com apóstrofo, limites de texto,
+  cliques nas oito combinações de resolução/modo, seleção inicial e contraste
+  amostrado sobre o fundo real incluindo o planeta.
+
 ## Fase 1 — Mira customizada (1.2.0)
 
 - **Pedido:** criar a mira cartoon por dimensão, orientar disparos para o mouse,

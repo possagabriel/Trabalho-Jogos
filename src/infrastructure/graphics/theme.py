@@ -46,6 +46,18 @@ TEMAS_CORES: Dict[str, Dict[str, tuple]] = {
 
 DEFAULT_TEMA = "NEON"
 
+# Tokens do menu ORIGINAL. O canvas continua lógico; o renderer aplica a
+# mesma escala da área jogável para todas as resoluções.
+MENU_MARGEM_SEGURANCA = 18
+MENU_COR_TEXTO = (245, 248, 255)
+MENU_COR_TEXTO_SECUNDARIO = (220, 230, 250)
+MENU_COR_TEXTO_DESABILITADO = (145, 158, 184)
+MENU_COR_PAINEL_RODAPE = (5, 8, 24)
+MENU_ALPHA_PAINEL_RODAPE = 255
+MENU_ALPHA_BOTAO_NORMAL = 200
+MENU_ALPHA_BOTAO_SELECIONADO = 236
+MENU_ESPESSURA_BOTAO = 2
+
 def atualizar_animacao(dt: float = 1.0) -> None:
     """Compatibility API; animations use a monotonic clock instead.
 

@@ -15,7 +15,9 @@ def service(tmp_path):
     return ProfileService(JsonProfileRepository(tmp_path), max_profiles=5, max_name_length=16)
 
 
-@pytest.mark.parametrize("name", ["", "   ", "A/ B", "A@B", "A\nB", "A\tB", "X" * 17])
+@pytest.mark.parametrize("name", [
+    "", "   ", "A/ B", "A@B", "A'B", "A\nB", "A\tB", "X" * 17,
+])
 def test_invalid_names(service, name):
     with pytest.raises(ValueError):
         service.create(name)
@@ -30,6 +32,13 @@ def test_names_unicode_trim_duplicates_and_limit(service):
     with pytest.raises(ValueError):
         service.rename(first.id, "á" * 16)
     assert service.rename(first.id, " JOÃO ").name == "JOÃO"
+
+
+def test_apostrophe_is_rejected_without_changing_existing_profile(service):
+    profile = service.create("GABRIEL")
+    with pytest.raises(ValueError, match="Caractere inválido"):
+        service.rename(profile.id, "GABRIEL'")
+    assert service.repository.load(profile.id).name == "GABRIEL"
 
 
 def test_crud_limit_and_active_delete(service):

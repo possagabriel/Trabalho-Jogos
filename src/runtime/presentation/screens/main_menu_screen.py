@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.runtime.infrastructure.graphics.smooth import ease_out
 from src.infrastructure.graphics.theme import tema_atual
+from src.runtime.infrastructure.graphics.smooth import ease_out
 
 if TYPE_CHECKING:
     from src.runtime.presentation.menu import MenuPrincipal
@@ -29,11 +29,14 @@ class TelaPrincipalJogo:
         if progresso > 0:
             rotulo = menu._espacado(menu.fonte_pequena, "// COMANDO DE VOO", 2,
                                     tema["secundaria"])
-            menu._blit_alfa(tela, rotulo, (menu.x_opcoes, menu.layout.px(132)),
+            menu._blit_alfa(tela, rotulo, (menu.x_opcoes, menu.layout.px(48)),
                             int(255 * ease_out(progresso)))
         for indice, opcao in enumerate(menu.opcoes):
             progresso = menu._frac(0.34 + indice * 0.07, 0.42)
-            deslocamento = int((1 - ease_out(progresso)) * 150)
+            deslocamento = -int((1 - ease_out(progresso)) * min(
+                menu.layout.px(150),
+                menu.x_opcoes - menu.layout.margem(18)))
+            opcao.desabilitado = indice == 0 and not menu._tem_save()
             opcao.desenhar(tela, menu.fonte_opcao, menu.fonte_opcao_sel, tema,
                            menu.x_opcoes, indice == menu.opcao_selecionada,
                            deslocamento, int(255 * ease_out(progresso)), menu.layout)

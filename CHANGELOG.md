@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Menu lê sua versão de `project.version` no `pyproject.toml`.
+- Menu ORIGINAL mantém títulos, botões e textos de rodapé dentro das margens,
+  com contraste reforçado, rótulos ajustáveis e Continue desabilitado sem save.
+- O rodapé trunca nomes longos sem alterar perfis existentes; a validação atual
+  continua rejeitando apóstrofos em nomes novos e renomeações.
 
 ## [1.8.0] - 2026-10-18
 
