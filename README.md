@@ -9,9 +9,10 @@ cenários, efeitos, interface, sons e música gerados pelo jogo.
 
 ### Imagens do jogo
 
-<!-- Espaço reservado para screenshots e GIF de gameplay. -->
+![Percurso 2D e HUD em PREENCHE](docs/screenshots/preenche-ultrawide.jpg)
+![Seis dimensões com composições próprias](docs/screenshots/dimensoes-composicao.jpg)
 
-_Screenshots e GIF de gameplay serão adicionados aqui._
+<!-- Espaço reservado para um GIF curto de gameplay. -->
 
 ### Baixar e iniciar
 
@@ -19,9 +20,8 @@ Baixe uma versão publicada em [Releases](../../releases). O instalador Windows
 cria atalhos; o pacote Linux é uma pasta autocontida. Os nomes dos executáveis
 mantêm `VOID-SHIFT` por compatibilidade com os builds atuais. Consulte os guias
 de [Windows](docs/distribuicao-windows.md) e [Linux](docs/distribuicao-linux.md).
-O `pyproject.toml` e o changelog estão em 1.5.0, enquanto a tag Git mais recente
-no repositório é `v1.1.2`; portanto, as Releases publicadas podem estar atrás da
-versão da branch principal.
+O `pyproject.toml` e o changelog estão em 1.8.0. A tag Git de release mais
+recente é `v1.1.2`; as Releases publicadas podem estar atrás da main.
 
 Para jogar a partir do código-fonte, instale Python 3.10 ou superior e Pygame:
 
@@ -307,7 +307,7 @@ Prévia do modo `PREENCHE` em ultrawide:
 
 ---
 
-## Arquitetura
+### Arquitetura
 
 O projeto segue o padrão **Game Loop** clássico: `Jogo.estado` orienta a
 atualização e o desenho. O runtime executável fica em `src/runtime/`. Imports
@@ -336,7 +336,7 @@ Trabalho-Jogos/
 └── data/fonts/                    # fontes incluídas na distribuição
 ```
 
-### Ativos visuais
+#### Ativos visuais
 
 A pasta `images/` contém fundos, arte do menu, ícone e sprites de naves
 (`naves.png` e `nave-padrao.png`). `data/fonts/` contém Orbitron e Rajdhani.
@@ -345,7 +345,7 @@ No estilo **ORIGINAL**, as seis dimensões combinam as imagens existentes com
 formas próprias pré-renderizadas; o Oceano Cósmico também recebe uma tonalidade
 azul própria. O estilo **COMIC** continua usando seu fundo separado.
 
-### Responsabilidades por camada
+#### Responsabilidades por camada
 
 | Camada | Módulos | Responsabilidade |
 |--------|---------|------------------|
@@ -357,15 +357,15 @@ azul própria. O estilo **COMIC** continua usando seu fundo separado.
 
 ---
 
-## Fluxo do jogo
+### Fluxo do jogo
 
-### Estados (`Jogo.estado`)
+#### Estados (`Jogo.estado`)
 
 `MENU`, `CONTINUAR`, `LOJA`, `RECORDES`, `CONFIG` → renderizados pelo
 `MenuPrincipal`. Durante o gameplay: `PREPARANDO` (tela de carregamento
 falsa) → `JOGANDO` → `PAUSA` / `GAME_OVER`.
 
-### Loop principal (`core.Jogo.executar`)
+#### Loop principal (`core.Jogo.executar`)
 
 A cada quadro renderizado, na ordem:
 
@@ -375,7 +375,7 @@ A cada quadro renderizado, na ordem:
 4. `_atualizar()` avança o mundo de zero a cinco vezes, sem espiral de atraso.
 5. `_desenhar()` apresenta uma vez o cenário, HUD e overlays.
 
-### Combate (`_atualizar_jogando`)
+#### Combate (`_atualizar_jogando`)
 
 1. Lê o teclado e move/atira (`Jogador.atualizar` / `atirar`).
 2. Faz **spawn** de inimigos da `fila_onda` (1 a cada ~35 frames).
@@ -384,7 +384,7 @@ A cada quadro renderizado, na ordem:
 5. `_atualizar_powerups()` — coleta e aplica efeitos.
 6. Se não há onda/inimigos/boss → `_iniciar_nivel(nivel + 1)`.
 
-### Níveis e dimensões
+#### Níveis e dimensões
 
 - `cenario_do_nivel(nivel)` → `min((nivel-1)//5 + 1, 6)`.
 - A cada `5` níveis nasce uma **entidade RIFT** (boss) da dimensão atual.
@@ -392,7 +392,7 @@ A cada quadro renderizado, na ordem:
   espiral → flash branco → troca da `Dimensao` → revelação. O estado da animação
   fica em `src/runtime/presentation/dimension_transition.py` e avança pelo loop.
 
-### Fim de jogo (`_fim_de_jogo`)
+#### Fim de jogo (`_fim_de_jogo`)
 
 Salva recorde, calcula moedas ganhas (bonus por dimensão + entidades RIFT **da
 partida atual**), atualiza estatísticas, sincroniza a loja e vai para
@@ -400,7 +400,7 @@ partida atual**), atualiza estatísticas, sincroniza a loja e vai para
 
 ---
 
-## Modelo de dados
+### Modelo de dados
 
 Tudo é persistido como JSON. **Não há banco de dados.** No Windows, os
 arquivos ficam em `%LOCALAPPDATA%\VoidShift`; no Linux, em
@@ -422,7 +422,7 @@ atomicamente e mantém a versão anterior em `.bak` para recuperação.
 
 ---
 
-## Convenções do código
+### Convenções do código
 
 - **Idioma:** Português (nomes, docstrings e comentários). Mantenha assim.
 - **Imports:** use caminhos absolutos para os módulos canônicos (`src.runtime`,
@@ -448,7 +448,7 @@ atomicamente e mantém a versão anterior em `.bak` para recuperação.
 
 ---
 
-## Performance
+### Performance
 
 O jogo roda a 60 FPS; as regras abaixo mantêm isso:
 
@@ -473,48 +473,48 @@ regressões severas na busca de colisões.
 
 ---
 
-## Como estender
+### Como estender
 
-### Minibosses aleatórios
+#### Minibosses aleatórios
 
 Sete protocolos corporativos podem aparecer a cada três ondas comuns, com
 sorteio ponderado, filtro por dimensão e sem repetição consecutiva. O sistema
 também aceita intervalo por segundos e seed. Veja [minibosses](docs/minibosses.md)
 para catálogo, testes, integração, persistência e parâmetros de balanceamento.
 
-### Nova arma
+#### Nova arma
 1. Adicione um dict em `ARMARIA` (`src/runtime/domain/entities/weapons.py`) com `nivel`, `cor`,
    `raio`, `vel`, `dano`, `cooldown`, `tipo`.
 2. Implemente o disparo em `Jogador.atirar` (novo branch de `tipo`).
 3. Se o projétil tiver comportamento visual novo, adicione um `tipo` em
    `Projetil.desenhar`.
 
-### Novo inimigo
+#### Novo inimigo
 1. Adicione o tipo em `TIPOS` e a forma em `FORMAS` (`src/runtime/domain/entities/enemies.py`).
 2. Implemente o movimento em `Inimigo.atualizar` e o ataque em `_atacar`.
 3. Inclua o tipo na lista `inimigos` de um cenário em `scenarios.py`.
 
-### Novo inimigo especial
+#### Novo inimigo especial
 1. Adicione entradas em `CARGA_POR_TIRO`, `CORES` e no dict de `base`/
    `mov` em `InimigoEspecial`.
 2. Implemente a ação ao carregar em `acoes_carregado` e o desenho em
    `desenhar`.
 
-### Novo cenário
+#### Novo cenário
 1. Adicione um dict em `CENARIOS` (`src/runtime/domain/world/scenarios.py`) — cores, camadas de
    estrelas, efeito, inimigos, especiais.
 2. Se o efeito for novo, implemente em `Cenario._atualizar_efeito` /
    `_desenhar_efeito`.
 3. Adicione o boss correspondente em `BOSSES_POR_CENARIO` (`src/runtime/domain/entities/bosses.py`).
 
-### Nova skin
+#### Nova skin
 1. Adicione um dict em `SKINS` (`src/runtime/domain/entities/player.py`) com `id`, `preco`, `cor`,
    `efeito`, `descricao`.
 2. Implemente o efeito visual em `Skin.desenhar`/`_desenhar_*`.
 
 ---
 
-## HUD de combate
+### HUD de combate
 
 O HUD fica em `src/runtime/presentation/hud.py` (`HudJogo`) e é desenhado pelo core
 em `_desenhar_hud()`. O mundo continua na resolução lógica; o HUD é renderizado
@@ -574,30 +574,22 @@ python -m tools.preview_hud --save     # salva images/preview_hud.png
 
 ---
 
-## Testes
+### Testes
 
 ```bash
 python -m pytest tests/         # suíte completa, headless
-python -m ruff check main.py src/core/application.py \
-  src/runtime/application/timing.py src/runtime/diagnostics/frame_metrics.py \
-  src/runtime/domain/spatial.py src/runtime/presentation/equipment_overlay.py \
-  src/shared/persistence.py src/shared/user_data.py \
-  src/infrastructure/graphics/renderer.py tools/build_desktop.py \
-  tools/benchmark_runtime.py tests/test_application_entrypoint.py \
-  tests/test_cross_platform.py tests/test_runtime_module_layout.py \
-  tests/test_spatial_index.py tests/test_timing_metrics.py
+python -m ruff check src/ tools/ tests/  # varredura completa; há achados antigos
 python tests/run_all.py          # smoke tests standalone
 ```
 
-O workflow `quality.yml` aplica o mesmo comando Ruff em push e pull request.
-Uma varredura completa do repositório também encontra apontamentos antigos em
-módulos legados fora do conjunto de CI; eles não foram corrigidos aqui para
-manter esta tarefa sem mudanças de gameplay.
+O workflow `quality.yml` verifica com Ruff todos os arquivos Python alterados
+no push ou pull request. A varredura completa acima ainda encontra apontamentos
+antigos em módulos legados; a limpeza está planejada em branch separada.
 
 O `tests/conftest.py` configura SDL dummy e `INCARNATE_DATA_DIR` temporário
 antes de importar o jogo. `SPACEFURY_DATA_DIR` continua testado como fallback
-para scripts antigos. A suíte contém **546 casos**: **545 passam e 1 teste
-OpenGL real é ignorado** quando não há display/driver configurado.
+para scripts antigos. Nesta branch, a suíte contém **602 casos: 601 passam e 1
+teste OpenGL real é ignorado** quando não há display/driver configurado.
 
 | Arquivo(s) | Cobertura |
 | --- | --- |
@@ -614,10 +606,9 @@ OpenGL real é ignorado** quando não há display/driver configurado.
 | `test_comic_visual.py`, `test_gpu_renderer.py`, `test_gpu_shader_integration.py`, `test_theme_geometry_smooth.py` | Tema, renderização comic, fallback CPU e integração OpenGL. |
 | `test_src_migration.py`, `test_runtime_module_layout.py` | Fachadas compatíveis e organização de módulos canônicos. |
 
-A contagem acima é do último teste completo local na branch. O teste OpenGL é
-executado em ambiente com Xvfb/Mesa pelo workflow de qualidade.
+O teste OpenGL é executado em ambiente com Xvfb/Mesa pelo workflow de qualidade.
 
-## Visual comic (1.1.0)
+### Visual comic (1.1.0)
 
 O estilo comic inclui contornos em cache, tons chapados, hachuras, papel,
 retícula, bursts e UI angular. Em **Configurações → Estilo visual**, alterne
