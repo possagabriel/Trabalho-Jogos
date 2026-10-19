@@ -391,6 +391,7 @@ class ControladorCombate:
     def atualizar_powerups(self) -> None:
         """Atualiza quedas e aplica as coletas do jogador."""
         sessao = self.sessao
+        moedas_antes = sessao.jogador.moedas_jogo
         restantes = []
         for powerup in sessao.powerups:
             powerup.atualizar()
@@ -404,3 +405,5 @@ class ControladorCombate:
                 continue
             restantes.append(powerup)
         sessao.powerups[:] = restantes
+        if sessao.jogador.moedas_jogo > moedas_antes:
+            sessao.progressao_controller.creditar_moedas_partida()
