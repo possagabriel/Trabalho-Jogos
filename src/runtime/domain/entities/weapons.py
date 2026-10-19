@@ -132,6 +132,20 @@ class Projetil:
             return 0.0, -1.0
         return self.vel_x / velocidade, self.vel_y / velocidade
 
+    def _desenhar_gauss(self, tela: pygame.Surface, x: int, y: int, cor: Cor) -> None:
+        """Desenha os trilhos do Gauss alinhados à direção atual."""
+        dx, dy = self._direcao_visual()
+        ponta = (x + dx * 9, y + dy * 9)
+        cauda = (x - dx * 26, y - dy * 26)
+        desenhar_glow(tela, cor, (x, y), 16, 0.5)
+        for lado in (-1, 1):
+            desvio = (dy * lado * 3, -dx * lado * 3)
+            linha_suave(tela, cor,
+                         (cauda[0] + desvio[0], cauda[1] + desvio[1]),
+                         (ponta[0] + desvio[0], ponta[1] + desvio[1]), 2)
+        linha_suave(tela, BRANCO, (x - dx * 13, y - dy * 13), ponta, 2)
+        desenhar_circulo(tela, BRANCO, ponta, 2, brilho=1.8)
+
     def desenhar(self, tela: pygame.Surface) -> None:
         if opcoes_atuais().ativo:
             trilha_tinta(tela, (self.x, self.y), (self.vel_x, self.vel_y), self.cor)
@@ -168,17 +182,7 @@ class Projetil:
             linha_suave(tela, cor, (x, y), (x, y + 60), 3)
             linha_suave(tela, BRANCO, (x, y), (x, y + 60), 1)
         elif self.tipo == "gauss":
-            dx, dy = self._direcao_visual()
-            ponta = (x + dx * 9, y + dy * 9)
-            cauda = (x - dx * 26, y - dy * 26)
-            desenhar_glow(tela, cor, (x, y), 16, 0.5)
-            for lado in (-1, 1):
-                desvio = (dy * lado * 3, -dx * lado * 3)
-                linha_suave(tela, cor,
-                             (cauda[0] + desvio[0], cauda[1] + desvio[1]),
-                             (ponta[0] + desvio[0], ponta[1] + desvio[1]), 2)
-            linha_suave(tela, BRANCO, (x - dx * 13, y - dy * 13), ponta, 2)
-            desenhar_circulo(tela, BRANCO, ponta, 2, brilho=1.8)
+            self._desenhar_gauss(tela, x, y, cor)
         elif self.tipo == "nova":
             pulso = 1 + 0.25 * math.sin(self.tempo * 0.5)
             desenhar_glow(tela, LARANJA, (x, y), (self.raio + 10) * pulso,

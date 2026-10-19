@@ -18,6 +18,7 @@ from src.runtime.infrastructure.persistence.save_system import SistemaProgressao
 if TYPE_CHECKING:
     from src.domain.systems.profile_service import ProfileService
     from src.runtime.controllers.miniboss import ControladorMiniboss
+    from src.runtime.controllers.progression import ControladorProgressao
     from src.runtime.domain.entities.minibosses import Miniboss
 
 
@@ -36,6 +37,7 @@ class SessaoCombate(Protocol):
     boss: Boss | None
     miniboss: Miniboss | None
     miniboss_controller: ControladorMiniboss
+    progressao_controller: ControladorProgressao
     projeteis: list[Projetil]
     powerups: list[PowerUp]
     mensagens: list[MensagemFlutuante]
