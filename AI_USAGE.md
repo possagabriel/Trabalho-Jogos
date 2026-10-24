@@ -1,5 +1,41 @@
 # Registro de uso de IA
 
+## Fase A — preparação da candidata 1.8.0
+
+- **Pedido:** preparar todas as pendências da Fase A em branches separadas e
+  PRs em rascunho, sem merge; o usuário testará os binários depois.
+- **Implementação da IA:** auditoria da RC antiga; build de teste no push da
+  branch para gravar o SHA real do código; exclusão da tag final `v1.8.0` do
+  build automático; documentação dos hashes, checklist e promoção manual dos
+  arquivos aprovados. Nenhum binário foi promovido nem release publicada.
+- **Decisões:** usar a `origin/main` atual como base da branch de trabalho.
+  A decisão de rejeitar apóstrofo foi substituída pelo PR #37; o teste manual
+  Windows ainda falta. A promoção e a release continuam condicionadas ao teste.
+- **Verificação:** suíte completa local: 641 passaram e 1 ignorado. YAML do
+  workflow analisado sem erro de sintaxe; CI e artefatos serão conferidos após
+  o push. Ruff de Python e benchmark de runtime não se aplicam à mudança de CI.
+
+## Regras de colaboração do INCARNATE
+
+- **Atualização:** AGENTS.md recebeu as regras de escopo, Git, testes, acessibilidade e roteiro definidas pelo usuário.
+
+## Fase A — validação de nomes de perfil
+
+- **Pedido:** aceitar apóstrofo, hífen, acentos e espaços internos em novos
+  nomes e renomeações; rejeitar controles e espaços nas pontas; preservar perfis.
+- **Decisão do usuário:** a decisão anterior de rejeitar apóstrofo foi
+  substituída por esta regra.
+- **Implementação da IA:** validação de texto imprimível sem `strip()`; criação,
+  renomeação e teste de regressão para leitura, seleção e exportação de nome
+  legado após reconstrução do índice. Nenhum save real foi alterado.
+- **Verificação:** 35 testes direcionados passaram antes da mudança; cinco
+  casos falharam na fase vermelha do TDD e 42 passaram após a implementação.
+  Suíte completa: 649 passaram e 1 ignorado. Ruff passou nos dois arquivos
+  Python alterados. Benchmark de runtime não se aplica à validação de nome
+  fora do loop do jogo.
+- **Ajustes manuais do usuário:** a validação manual ficará para depois; checks
+  de CI Linux e Windows passaram antes da integração.
+
 ## Menu principal — etapa 3: cartão e layout responsivo
 
 - **Pedido:** adicionar cartão de perfil, resumo de Continuar, selos de novidade,
@@ -55,8 +91,8 @@
   mantém seu layout e seu HUD anteriores.
 - **Decisões:** a seleção segue contínua entre os grupos e continua começando em
   Continuar com save ou Lobby sem save. Continuar sem save mantém o visual
-  desabilitado e o aviso existente ao ativar. A validação do `ProfileService`
-  rejeita apóstrofo em novos nomes; perfis antigos não são alterados. A tela
+  desabilitado e o aviso existente ao ativar. Na época desta etapa, a validação
+  rejeitava apóstrofo; a regra foi alterada na Fase A acima. A tela
   trata nomes longos com reticências e caracteres acentuados.
 - **Comparação visual:** imagens ANTES/DEPOIS das quatro resoluções e dos dois
   modos, além do mockup 1920×1080, estão em

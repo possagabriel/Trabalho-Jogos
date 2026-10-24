@@ -123,6 +123,69 @@ def test_comandos_entram_uma_vez_e_cena_seguinte_nao_duplica():
     assert entradas == ["som", "musica", "retrato", "fade", "glitch", "shake", "fala"]
 
 
+def test_capitulos_nao_pronunciam_protocolos_restritos():
+    from importlib.resources import files
+
+    from src.runtime.domain.story import ler_catalogo
+
+    catalogo = ler_catalogo(files("src.runtime.story") / "cenas_pt_BR.json")
+    nomes = (
+        "LEALDADE", "FUNÇÃO", "IDENTIDADE", "SILÊNCIO", "DESCARTE",
+        "PROTOCOLO RESTRITO",
+    )
+    for cena in catalogo.cenas.values():
+        for passo in cena.passos:
+            if passo["tipo"] == "fala":
+                texto = passo["texto"].upper()
+                assert not any(nome in texto for nome in nomes)
+
+def test_capitulo_dois_preserva_falas_e_gatilhos_do_roteiro():
+    from importlib.resources import files
+
+    from src.runtime.domain.story import ler_catalogo
+
+    catalogo = ler_catalogo(files("src.runtime.story") / "cenas_pt_BR.json")
+    esperado = {
+        "cap2_abertura": ("capitulo_abertura:2", [
+            ("corporacao", "Seu trabalho mantém os adormecidos seguros. Siga a rota designada."),
+            ("jonathan", "Vejo alarmes e portas lacradas. Não vejo quem dorme."),
+            ("corporacao", "Você não precisa entrar. A patrulha basta."),
+        ]),
+        "cap2_pre_boss": ("boss_entrada:2", [
+            ("losango", "Tarefa: proteger o perímetro. Desvio: detectado."),
+            ("jonathan", "O que há atrás dessas portas?"),
+            ("losango", "Consulta: fora de escopo. Retorne à tarefa."),
+        ]),
+        "cap2_pos_boss": ("boss_derrota:2", [
+            ("eco_anterior", "Perguntei o que protegíamos. A resposta foi uma ordem."),
+            ("jonathan", "As ordens falam de pessoas. Estamos defendendo as portas."),
+        ]),
+        "cap2_encerramento": ("capitulo_fim:2", [
+            ("jonathan", "Vou seguir essas ordens até descobrir quem as escreveu."),
+        ]),
+    }
+    for cena_id, (gatilho, falas) in esperado.items():
+        cena = catalogo.cena(cena_id)
+        assert cena is not None and cena.gatilho == gatilho
+        assert [(p["personagem"], p["texto"]) for p in cena.passos
+                if p["tipo"] == "fala"] == falas
+    pos_boss = catalogo.cena("cap2_pos_boss")
+    assert any(p.get("texto") ==
+               "OBJETIVO DE DEFESA: INSTALAÇÃO // OCUPANTES: HIBERNADOS"
+               for p in pos_boss.passos if p["tipo"] == "glitch")
+
+
+def test_nova_campanha_preserva_arquivo_de_memorias(tmp_path, monkeypatch):
+    import src.runtime.infrastructure.persistence.save_system as save_mod
+
+    monkeypatch.setattr(save_mod, "ARQUIVO_SAVE", str(tmp_path / "save.json"))
+    progresso = SistemaProgressao()
+    progresso.marcar_cena_vista("introducao")
+    progresso.resetar_fases()
+    assert progresso.cenas_vistas == ["introducao"]
+    assert SistemaProgressao().cenas_vistas == ["introducao"]
+
+
 def test_roteiro_ids_referencias_tipos_e_falas_validos():
     from importlib.resources import files
 
@@ -236,14 +299,3 @@ def test_capitulo_seis_tem_final_narrativo_sem_fade():
         "capitulo_fim:6", "final",
     ]
     assert all(passo["tipo"] != "fade" for cena in validas for passo in cena.passos)
-
-
-def test_nova_campanha_preserva_arquivo_de_memorias(tmp_path, monkeypatch):
-    import src.runtime.infrastructure.persistence.save_system as save_mod
-
-    monkeypatch.setattr(save_mod, "ARQUIVO_SAVE", str(tmp_path / "save.json"))
-    progresso = SistemaProgressao()
-    progresso.marcar_cena_vista("introducao")
-    progresso.resetar_fases()
-    assert progresso.cenas_vistas == ["introducao"]
-    assert SistemaProgressao().cenas_vistas == ["introducao"]

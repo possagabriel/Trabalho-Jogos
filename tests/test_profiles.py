@@ -16,29 +16,63 @@ def service(tmp_path):
 
 
 @pytest.mark.parametrize("name", [
-    "", "   ", "A/ B", "A@B", "A'B", "A\nB", "A\tB", "X" * 17,
+    "", "   ", " Ana", "Ana ", "A\nB", "A\tB", "A\0B", "A\u200bB", "A😀B", "A★B", "A_B", "X" * 17,
 ])
 def test_invalid_names(service, name):
     with pytest.raises(ValueError):
         service.create(name)
 
 
-def test_names_unicode_trim_duplicates_and_limit(service):
-    first = service.create("  José da Silva  ")
+def test_names_unicode_duplicates_and_limit(service):
+    first = service.create("José da Silva")
     assert first.name == "José da Silva"
     with pytest.raises(ValueError):
         service.create("josé DA SILVA")
     assert service.create("Á" * 16).name == "Á" * 16
     with pytest.raises(ValueError):
         service.rename(first.id, "á" * 16)
-    assert service.rename(first.id, " JOÃO ").name == "JOÃO"
+    assert service.rename(first.id, "JOÃO").name == "JOÃO"
 
 
-def test_apostrophe_is_rejected_without_changing_existing_profile(service):
-    profile = service.create("GABRIEL")
-    with pytest.raises(ValueError, match="Caractere inválido"):
-        service.rename(profile.id, "GABRIEL'")
-    assert service.repository.load(profile.id).name == "GABRIEL"
+@pytest.mark.parametrize("name", [
+    "O'Brien", "Ana-Maria", "José da Silva", "Ana  Maria", "Ana 42",
+])
+def test_create_accepts_letters_numbers_spaces_apostrophe_and_hyphen(service, name):
+    profile = service.create(name)
+    assert service.repository.load(profile.id).name == name
+
+
+def test_rename_accepts_apostrophe_and_preserves_name_on_invalid_attempt(service):
+    profile = service.create("Ana")
+    assert service.rename(profile.id, "D'Ávila-Sul").name == "D'Ávila-Sul"
+    assert service.repository.read_index()["profiles"][0]["name"] == "D'Ávila-Sul"
+    with pytest.raises(ValueError):
+        service.rename(profile.id, " D'Ávila-Sul")
+    with pytest.raises(ValueError):
+        service.rename(profile.id, "Ana★")
+    assert service.repository.load(profile.id).name == "D'Ávila-Sul"
+
+
+def test_name_normalizes_accents_without_trimming(service):
+    assert service.create("Jose\u0301").name == "José"
+
+
+def test_legacy_apostrophe_name_survives_index_rebuild_and_export(tmp_path):
+    repository = JsonProfileRepository(tmp_path)
+    service = ProfileService(repository)
+    profile = service.create("Ana")
+    raw = profile.to_dict()
+    raw["name"] = "D'Ávila"
+    repository.write_raw(profile.id, raw)
+    repository.index_path.unlink()
+
+    reopened = ProfileService(JsonProfileRepository(tmp_path))
+    assert reopened.list_profiles()[0].name == "D'Ávila"
+    assert reopened.select(profile.id).name == "D'Ávila"
+    exported = tmp_path / "legado-exportado.json"
+    assert reopened.export_active(exported)
+    assert json.loads(exported.read_text(encoding="utf-8"))["name"] == "D'Ávila"
+    assert reopened.repository.load(profile.id).name == "D'Ávila"
 
 
 def test_crud_limit_and_active_delete(service):

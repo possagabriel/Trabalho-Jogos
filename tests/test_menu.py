@@ -542,10 +542,11 @@ def test_nova_estrutura_tem_cinco_itens_nos_dois_estilos():
 
 def test_hubs_preservam_destinos_antigos_em_no_maximo_duas_acoes():
     jogo, menu = novo_menu()
-    menu._abrir_jogar()
-    assert menu.jogar_hub.entries == (
-        ("CONTINUAR", "continuar"), ("LOBBY", "lobby"))
-    menu.jogar_hub.ativar(0)
+    with mock.patch.object(menu, "_tem_save", return_value=True):
+        menu._abrir_jogar()
+        assert menu.jogar_hub.entries == (
+            ("CONTINUAR", "continuar"), ("LOBBY", "lobby"))
+        menu.jogar_hub.ativar(0)
     assert menu.subestado == "CONTINUAR"
     menu._abrir_jogar()
     menu.jogar_hub.ativar(1)
@@ -567,9 +568,98 @@ def test_hub_jogar_sem_save_foca_lobby_e_avisa_ao_ativar_continuar():
     with mock.patch.object(menu, "_tem_save", return_value=False):
         menu._abrir_jogar()
         assert menu.jogar_hub.selection == 1
-        menu.jogar_hub.ativar(0)
+        menu.jogar_hub.selection = 0
+        menu.jogar_hub.tratar_tecla(pygame.event.Event(
+            pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+    assert menu.subestado == "JOGAR"
+    assert menu.jogar_hub.selection == 0
     assert any(item["tipo"] == "erro"
                for item in menu.notificacoes.notificacoes)
+
+
+@pytest.mark.parametrize("entrada", ["teclado", "mouse"])
+def test_continuar_sem_save_desabilitado_em_ambas_as_entradas(entrada):
+    _, menu = novo_menu()
+    with mock.patch.object(menu, "_tem_save", return_value=False):
+        menu._abrir_jogar()
+        hub = menu.jogar_hub
+        if entrada == "teclado":
+            hub.selection = 0
+            hub.tratar_tecla(pygame.event.Event(
+                pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+        else:
+            hub.tratar_clique(hub._rects()[0].center)
+    assert menu.subestado == "JOGAR"
+    assert any(item["tipo"] == "erro"
+               for item in menu.notificacoes.notificacoes)
+
+
+@pytest.mark.parametrize("resolucao", ["900x700", "1280x720"])
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_alvos_do_hub_nao_se_sobrepoem(resolucao, estilo):
+    jogo, menu = novo_menu()
+    jogo.config["resolucao"] = resolucao
+    jogo.config["estilo_visual"] = estilo
+    for hub in (menu.jogar_hub, menu.perfil_hub):
+        retangulos = [*hub._rects(), hub._back_rect()]
+        for indice, primeiro in enumerate(retangulos):
+            assert all(not primeiro.colliderect(outro)
+                       for outro in retangulos[indice + 1:])
+
+
+def test_hubs_mantem_a_mesma_estrutura_nos_dois_estilos():
+    jogo, menu = novo_menu()
+    estruturas = []
+    for estilo in ("ORIGINAL", "COMIC"):
+        jogo.config["estilo_visual"] = estilo
+        estruturas.append((
+            tuple(item.texto for item in menu.opcoes),
+            menu.jogar_hub.entries, menu.perfil_hub.entries,
+            tuple(rect.size for rect in menu.jogar_hub._rects()),
+            tuple(rect.size for rect in menu.perfil_hub._rects()),
+        ))
+    assert estruturas[0] == estruturas[1]
+
+
+@pytest.mark.parametrize("entrada", ["teclado", "mouse"])
+def test_grafo_de_destinos_antigos_em_ate_duas_acoes(entrada):
+    rotas = (
+        ("CONTINUAR", 0, 0, "CONTINUAR"),
+        ("LOBBY", 0, 1, "FASES"),
+        ("HANGAR", 1, None, "LOJA"),
+        ("PILOTOS", 2, 0, "PERFIS"),
+        ("RECORDES", 2, 1, "RECORDES"),
+        ("MEMÓRIAS", 2, 2, "ARQUIVO"),
+        ("CONFIGURAÇÕES", 3, None, "CONFIG"),
+        ("SAIR", 4, None, "MENU"),
+    )
+    for _, indice_raiz, indice_hub, destino in rotas:
+        jogo, menu = novo_menu()
+        with mock.patch.object(menu, "_tem_save", return_value=True):
+            if entrada == "teclado":
+                for _ in range(indice_raiz):
+                    menu.tela_principal.tratar_tecla(pygame.event.Event(
+                        pygame.KEYDOWN, {"key": pygame.K_DOWN, "unicode": ""}))
+                menu.tela_principal.tratar_tecla(pygame.event.Event(
+                    pygame.KEYDOWN, {"key": pygame.K_RETURN, "unicode": ""}))
+            else:
+                rect = menu.opcoes[indice_raiz].get_rect(
+                    menu.x_opcoes, menu.fonte_opcao, menu.layout)
+                menu.tela_principal.tratar_clique(rect.center)
+            if indice_hub is not None:
+                hub = menu.jogar_hub if indice_raiz == 0 else menu.perfil_hub
+                if entrada == "teclado":
+                    for _ in range(indice_hub):
+                        hub.tratar_tecla(pygame.event.Event(
+                            pygame.KEYDOWN, {"key": pygame.K_DOWN}))
+                    hub.tratar_tecla(pygame.event.Event(
+                        pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+                else:
+                    hub.tratar_clique(hub._rects()[indice_hub].center)
+        if destino == "MENU":
+            assert menu.dialogo is not None and menu.dialogo.ativo
+        else:
+            assert menu.subestado == destino
 
 
 def test_escape_dos_hubs_e_destinos_restaura_foco_de_origem():
@@ -581,6 +671,14 @@ def test_escape_dos_hubs_e_destinos_restaura_foco_de_origem():
     assert menu.subestado == "MENU"
     assert menu.opcao_selecionada == 2
 
+    menu.opcao_selecionada = 0
+    menu._abrir_jogar()
+    menu.jogar_hub.tratar_tecla(pygame.event.Event(
+        pygame.KEYDOWN, {"key": pygame.K_ESCAPE}))
+    assert menu.subestado == "MENU"
+    assert menu.opcao_selecionada == 0
+
+    menu.opcao_selecionada = 2
     menu._abrir_perfil_hub()
     menu.perfil_hub.ativar(1)
     menu.telas["RECORDES"].tratar_tecla(pygame.event.Event(
