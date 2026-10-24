@@ -189,5 +189,6 @@ de merge e a compatibilidade de dados estiverem definidas.
 - Base: `origin/main` `63ae5dc`.
 - Nenhum código de jogo foi alterado.
 - Testes, Ruff e benchmark: não aplicáveis a esta entrega documental.
-- Nenhuma tag, PR de merge ou alteração na main foi criada.
+- Nenhuma tag ou alteração na main foi criada. A proposta está na PR #43, em
+  rascunho; não fazer merge.
 - **Parada para aprovação do usuário antes de iniciar a Fase A.**
