@@ -2,13 +2,50 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 MAX_MONEY = 2**63 - 1
+
+
+def _migrar_modos(progress: dict[str, Any]) -> None:
+    """Cria cartões de modo a partir do save antigo sem remover campos."""
+    progress.setdefault("modo_ultimo", "linear")
+    progress.setdefault("modos", {})
+    modes = progress["modos"]
+    if not isinstance(modes, dict):
+        return
+    legacy = progress.get("legacy", {})
+    player = legacy.get("jogador", {}) if isinstance(legacy, dict) else {}
+    statistics = legacy.get("estatisticas", {}) if isinstance(legacy, dict) else {}
+    campaign = player.get("progresso_campanha", {}) if isinstance(player, dict) else {}
+    statistics = statistics if isinstance(statistics, dict) else {}
+    campaign = campaign if isinstance(campaign, dict) else {}
+    bosses = progress.get("bosses_por_tipo", {})
+    linear_bosses = (sum(value for value in bosses.values()
+                         if type(value) is int and value > 0)
+                     if isinstance(bosses, dict) else
+                     player.get("bosses_derrotados", 0)
+                     if isinstance(player, dict) else 0)
+    modes.setdefault("linear", {
+        "nivel": progress.get("nivel_maximo", 1),
+        "dimensao": progress.get("dimensao_maxima", 1),
+        "bosses": linear_bosses,
+        "moedas": progress.get("moedas", player.get("moedas", 0)
+                               if isinstance(player, dict) else 0),
+        "tempo": progress.get("tempo_total", statistics.get("tempo_total", 0)),
+        "fase_atual": campaign.get("fase_atual", "lealdade"),
+        "nivel_atual": campaign.get("nivel_atual", 1),
+    })
+    modes.setdefault("mundo_aberto", {
+        "regioes_libertas": 0, "ecos": 0, "bosses": 0,
+        "moedas": 0, "tempo": 0, "checkpoint": "inicio",
+        "posicao": [520.0, 900.0], "partidas_jogadas": 0,
+    })
 
 
 def migrate_schema(data: dict[str, Any]) -> dict[str, Any]:
@@ -34,6 +71,11 @@ def migrate_schema(data: dict[str, Any]) -> dict[str, Any]:
             if isinstance(progress, dict):
                 progress.setdefault("novidades_pendentes", {"hangar": []})
             result["schema_version"] = 3
+        elif version == 3:
+            progress = result.setdefault("progress", {})
+            if isinstance(progress, dict):
+                _migrar_modos(progress)
+            result["schema_version"] = 4
         version += 1
     return result
 
@@ -53,6 +95,18 @@ def initial_progress() -> dict[str, Any]:
         "melhorias_escolhidas": {}, "cenas_vistas": [], "memorias_desbloqueadas": [],
         "novidades_vistas": {"memorias": [], "hangar": []},
         "novidades_pendentes": {"hangar": []},
+        "modo_ultimo": "linear",
+        "modos": {
+            "linear": {
+                "nivel": 1, "dimensao": 1, "bosses": 0, "moedas": 0,
+                "tempo": 0, "fase_atual": "lealdade", "nivel_atual": 1,
+            },
+            "mundo_aberto": {
+                "regioes_libertas": 0, "ecos": 0, "bosses": 0,
+                "moedas": 0, "tempo": 0, "checkpoint": "inicio",
+                "posicao": [520.0, 900.0], "partidas_jogadas": 0,
+            },
+        },
         "partidas_jogadas": 0, "tempo_total": 0, "inimigos_derrotados": 0,
         "mortes": 0, "recordes": [], "legacy": {},
     }
@@ -87,6 +141,40 @@ class Profile:
         if not isinstance(old_progress, dict):
             raise ValueError("Progresso inválido")
         progress.update(old_progress)
+        last_mode = progress.get("modo_ultimo")
+        if not isinstance(last_mode, str) or last_mode not in {
+                "linear", "mundo_aberto"}:
+            progress["modo_ultimo"] = "linear"
+        defaults = initial_progress()["modos"]
+        modes = progress.get("modos")
+        if not isinstance(modes, dict):
+            modes = {}
+        progress["modos"] = {}
+        for mode, mode_defaults in defaults.items():
+            mode_data = modes.get(mode, {})
+            state = {**mode_defaults, **(
+                mode_data if isinstance(mode_data, dict) else {})}
+            for key, default in mode_defaults.items():
+                value = state.get(key)
+                if type(default) is int and (
+                        type(value) is not int or value < 0):
+                    state[key] = default
+                elif type(default) is float and (
+                        type(value) not in (int, float)
+                        or not math.isfinite(value) or value < 0):
+                    state[key] = default
+                elif isinstance(default, str) and not isinstance(value, str):
+                    state[key] = default
+            position = state.get("posicao")
+            if mode == "mundo_aberto":
+                if (not isinstance(position, (list, tuple)) or len(position) != 2
+                        or any(type(value) not in (int, float)
+                               or not math.isfinite(value) or value < 0
+                               for value in position)):
+                    state["posicao"] = list(mode_defaults["posicao"])
+                else:
+                    state["posicao"] = [float(value) for value in position]
+            progress["modos"][mode] = state
         return cls(
             str(data["id"]), str(data["name"]),
             str(data.get("created_at") or now_iso()),
