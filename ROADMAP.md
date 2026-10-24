@@ -24,6 +24,11 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- A RC `v1.8.0-rc1` aponta para `f383926` e não inclui `LICENSE` nem os
+  avisos OFL nos pacotes. A branch `ci/fase-a-promocao-binarios` prepara
+  artefatos atualizados da main para teste Windows; nenhum merge ou release
+  final foi autorizado. Ver
+  [procedimento de promoção](docs/release-v1.8.0-promocao.md).
 - Candidata `v1.8.0-rc1`: builds de instalador/executável Linux e Windows
   passaram. Executar o checklist Windows antes da tag `v1.8.0` e da release
   oficial. Instalação limpa, atualização, jogo, perfis e desinstalação ainda
@@ -42,13 +47,9 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 - Tutorial: há dicas na tela de carregamento, mas a busca no runtime não
   identificou um fluxo completo de tutorial contextual. Conferir a divergência
   com a entrada antiga do CHANGELOG antes de implementar.
-- Limpeza do Ruff em `chore/ruff-baseline`: a contagem histórica de 275 caiu
-  para 177 achados na configuração atual (104 F401, 44 I001, 11 E741, 7 E501,
-  6 W292 e 5 F841). O CI verifica todos os arquivos Python alterados e a lista
-  de módulos já limpa; não significa que o repositório inteiro esteja limpo.
-- Licença do jogo: MIT está declarada no metadata e foi proposta, mas falta
-  aprovação/aplicação do arquivo LICENSE. Fontes Orbitron/Rajdhani usam OFL;
-  incluir os avisos completos de licença na distribuição em tarefa própria.
+- A limpeza Ruff e a inclusão da licença MIT/OFL já chegaram à main pelos
+  PRs #29 e #30. Verificar sua presença nos novos binários antes da release;
+  a RC antiga não contém esses arquivos.
 
 ## Lista de melhorias de game design e engenharia
 
