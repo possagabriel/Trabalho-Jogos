@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - O build de teste da 1.8.0 registra o commit real do push da branch; a tag
   final `v1.8.0` fica fora da recompilação automática para permitir publicar
   exatamente os binários e hashes aprovados no teste manual.
+- AGENTS.md consolida escopo de leitura, fluxo Git, validação, acessibilidade e regras de roteiro do INCARNATE.
+- Menu B2: cinco itens e hubs Jogar/Perfil mantêm os destinos antigos em até duas ações; a etapa 1 está integrada, e Continuar sem save fica desabilitado com aviso.
 - Nomes de perfil agora aceitam apóstrofo e outros caracteres imprimíveis na
   criação e renomeação; espaços nas pontas e controles são rejeitados. Perfis
   legados continuam legíveis e exportáveis.

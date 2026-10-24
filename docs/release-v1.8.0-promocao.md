@@ -1,8 +1,9 @@
 # Fase A — preparar binários verificáveis para 1.8.0
 
-Plano e procedimento de revisão. Esta branch parte da `origin/main` atual,
-independe dos PRs #34 e #35 e não altera gameplay, versão do pacote, hitboxes
-ou balanceamento. Não cria tags, não publica Release e não faz merge.
+Plano e procedimento de revisão. Esta branch parte da `origin/main` e não
+altera gameplay, versão do pacote, hitboxes ou balanceamento. O usuário
+autorizou o merge do PR de preparação; a publicação da versão final continua
+dependendo do teste manual dos binários Windows.
 
 ## Problema
 
@@ -53,16 +54,12 @@ O SHA de um evento `pull_request` é descrito na
 
 ## Trava de publicação
 
-Nenhum dos passos abaixo será executado nesta tarefa antes do resultado
-manual Windows e autorização específica:
-
-- merge do PR;
-- criação de tag de segurança, candidata ou final;
-- criação/edição de Release pública;
-- anexação ou substituição de assets publicados.
-
-Depois dos testes, confirmar que os hashes dos arquivos a anexar são os mesmos
-dos downloads aprovados. A tag `v1.8.0` deve apontar para o SHA declarado
-pelos dois pacotes e estar contida na `origin/main` aprovada. O workflow não
-compilará novamente ao receber essa tag. Registrar no ROADMAP, README,
-CHANGELOG e AI_USAGE o resultado real; não declarar release concluída antes.
+O merge desta branch foi autorizado pelo usuário. Isso não autoriza criar
+tags, publicar ou editar uma Release, nem anexar ou substituir assets públicos.
+A `v1.8.0` e uma nova RC continuam bloqueadas até o usuário testar os binários
+Windows manualmente. Depois do teste, conferir que os hashes dos arquivos
+publicados são os mesmos dos downloads aprovados. A tag `v1.8.0` deve apontar
+para o SHA declarado pelos dois pacotes e estar contida na `origin/main`
+aprovada. O workflow não compilará novamente ao receber essa tag. Registrar
+no ROADMAP, README, CHANGELOG e AI_USAGE o resultado real; não declarar release
+concluída antes.

@@ -14,7 +14,10 @@
 - **Verificação:** suíte completa local: 641 passaram e 1 ignorado. YAML do
   workflow analisado sem erro de sintaxe; CI e artefatos serão conferidos após
   o push. Ruff de Python e benchmark de runtime não se aplicam à mudança de CI.
-- **Ajustes manuais do usuário:** teste funcional Windows ficará para depois.
+
+## Regras de colaboração do INCARNATE
+
+- **Atualização:** AGENTS.md recebeu as regras de escopo, Git, testes, acessibilidade e roteiro definidas pelo usuário.
 
 ## Fase A — validação de nomes de perfil
 
@@ -30,8 +33,8 @@
   Suíte completa: 649 passaram e 1 ignorado. Ruff passou nos dois arquivos
   Python alterados. Benchmark de runtime não se aplica à validação de nome
   fora do loop do jogo.
-- **Ajustes manuais do usuário:** teste local ficará para depois; checks de CI
-  Linux e Windows passaram antes da integração.
+- **Ajustes manuais do usuário:** a validação manual ficará para depois; checks
+  de CI Linux e Windows passaram antes da integração.
 
 ## Menu principal — etapa 3: cartão e layout responsivo
 
