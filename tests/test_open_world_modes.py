@@ -82,9 +82,17 @@ def test_disparo_reutiliza_arma_e_direciona_para_frente_no_mundo():
     game = SimpleNamespace(
         jogador=Jogador(),
         posicao_mira=lambda: None,
+        menu_equipamento=False,
         config={"dispersao_duplo_graus": 12, "dispersao_espiral_graus": 14},
         mira=SimpleNamespace(ativar_pulso=lambda: None),
         sons=SimpleNamespace(tocar=lambda _som: None),
+        miniboss_controller=SimpleNamespace(
+            atualizar=lambda _dt: None, colidir_jogador=lambda: None),
+        combate_controller=SimpleNamespace(
+            atualizar_projeteis=lambda: None,
+            atualizar_powerups=lambda: None,
+            aplicar_dano_jogador=lambda: None),
+        _fim_de_jogo=lambda: None,
     )
 
     world.update(1 / 60, Teclas(pygame.K_SPACE), {}, game)

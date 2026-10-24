@@ -19,6 +19,7 @@ from src.infrastructure.graphics.comic_theme import (
 from src.runtime.domain.entities.bosses import Boss
 from src.runtime.domain.entities.enemies import Inimigo
 from src.runtime.domain.entities.minibosses.registry import criar_miniboss
+from src.runtime.domain.entities.powerups import PowerUp
 from src.runtime.domain.entities.weapons import Projetil
 from src.runtime.domain.world.scenarios import Cenario
 from src.runtime.domain.world.scroll import EstadoAvanco
@@ -60,11 +61,17 @@ class OpenWorldRuntime:
         self.miniboss = criar_miniboss(
             "censor", 1, self._cenario, random.Random(4101))
         self.miniboss.entrando = False
+        self._miniboss_world = (1090.0, 873.0)
         self.boss = Boss(5, self._cenario)
         self.boss.x, self.boss.y = self.BOSS_LAIR
         self.boss.entrando = False
         self.boss.angulo = 0.0
+        self.miniboss_active = False
+        self.miniboss_defeated = False
+        self.boss_active = False
+        self.boss_defeated = False
         self.projectiles: list[Projetil] = []
+        self.powerups: list[PowerUp] = []
         self._aim_screen: tuple[int, int] | None = None
         self._minimap = pygame.Surface((204, 144), pygame.SRCALPHA)
         self._font_edge = fonte_texto(28)
@@ -168,6 +175,8 @@ class OpenWorldRuntime:
 
     def _update_combat(self, dt: float, keys: Any, controls: dict[str, int],
                        game) -> None:
+        if game.menu_equipamento:
+            return
         player = game.jogador
         player.x, player.y = LARGURA // 2, ALTURA // 2
         player.cooldown_tiro = max(0, player.cooldown_tiro - 1)
@@ -192,14 +201,98 @@ class OpenWorldRuntime:
                 game.sons.tocar("tiro")
 
         self._place_hostiles_in_world()
-        for shot in self.projectiles[:]:
-            shot.x += shot.vel_x * dt * 60
-            shot.y += shot.vel_y * dt * 60
-            shot.tempo += dt * 60
-            hit = self._hit_hostile(shot)
-            outside = not (0 <= shot.x <= self.width and 0 <= shot.y <= self.height)
-            if hit or outside:
-                self.projectiles.remove(shot)
+        self._update_linear_encounters(dt, game)
+
+    def _update_linear_encounters(self, dt: float, game) -> None:
+        """Usa os mesmos encontros e controladores, projetados na câmera livre."""
+        self._activate_encounters(game)
+        self._sync_encounter_targets(dt, game)
+        if game.boss is not None:
+            game.projeteis.extend(self.boss.atualizar(game.jogador))
+        for shot in self.projectiles:
+            shot.x, shot.y = self._screen_position((shot.x, shot.y))
+        game.projeteis.extend(self.projectiles)
+        self.projectiles = []
+        game.combate_controller.atualizar_projeteis()
+        game.combate_controller.atualizar_powerups()
+        self._finish_encounter_frame(game)
+
+    def _activate_encounters(self, game) -> None:
+        """Arma encounters ao chegar perto de seus pontos no mapa."""
+        if (not self.miniboss_defeated and not self.miniboss_active
+                and math.hypot(self.x - self.miniboss.x,
+                               self.y - self.miniboss.y) < 205):
+            self.miniboss_active = True
+            game.sons.tocar("boss")
+        if (not self.boss_defeated and not self.boss_active
+                and math.hypot(self.x - self.BOSS_LAIR[0],
+                               self.y - self.BOSS_LAIR[1]) < 320):
+            self.boss_active = True
+            self.boss.x, self.boss.y = LARGURA // 2, -self.boss.raio - 20
+            self.boss.entrando = True
+            game.boss_intro = 130
+            game.sons.tocar("boss")
+
+    def _sync_encounter_targets(self, dt: float, game) -> None:
+        """Projeta alvos e atualiza a IA dos encontros lineares."""
+        self._place_hostiles_in_world()
+        game.projeteis = []
+        game.inimigos = []
+        game.powerups = self.powerups
+        for powerup in game.powerups:
+            powerup.x, powerup.y = self._screen_position((powerup.x, powerup.y))
+        for enemy, *_ in self.enemies:
+            if enemy.vida <= 0:
+                continue
+            enemy.x, enemy.y = self._screen_position((enemy.x, enemy.y))
+            game.inimigos.append(enemy)
+
+        game.cenario = self._cenario
+        game.boss = self.boss if self.boss_active and not self.boss_defeated else None
+        game.miniboss = (
+            self.miniboss if self.miniboss_active and not self.miniboss_defeated
+            else None
+        )
+        if game.miniboss is not None:
+            self.miniboss.x, self.miniboss.y = self._screen_position(
+                (self.miniboss.x, self.miniboss.y))
+            game.miniboss_controller.atualizar(dt)
+            if game.miniboss is None or self.miniboss.vida <= 0:
+                self.miniboss_defeated = True
+
+    def _finish_encounter_frame(self, game) -> None:
+        """Converte projéteis e alvos de volta para coordenadas do mundo."""
+        player = game.jogador
+        if self.boss_active and self.boss.vida <= 0:
+            self.boss_defeated = True
+        if (self.miniboss.vida <= 0
+                or (game.miniboss is None and self.miniboss_active)):
+            self.miniboss_defeated = True
+        if game.miniboss is not None:
+            game.miniboss_controller.colidir_jogador()
+        for enemy in game.inimigos:
+            if enemy.rect.colliderect(player.rect):
+                game.combate_controller.aplicar_dano_jogador()
+                break
+        if game.boss is not None and game.boss.rect.colliderect(player.rect):
+            game.combate_controller.aplicar_dano_jogador()
+
+        for shot in game.projeteis:
+            shot.x += self.camera_x
+            shot.y += self.camera_y
+        self.projectiles = game.projeteis
+        for powerup in game.powerups:
+            powerup.x += self.camera_x
+            powerup.y += self.camera_y
+        self.powerups = game.powerups
+        self.enemies = [entry for entry in self.enemies if entry[0].vida > 0]
+        if self.miniboss_active:
+            self.miniboss.x += self.camera_x
+            self.miniboss.y += self.camera_y
+            self._miniboss_world = (self.miniboss.x, self.miniboss.y)
+        self._place_hostiles_in_world()
+        if not player.vivo:
+            game._fim_de_jogo()
 
     def _bounce_from_void(self) -> None:
         margin = 58.0
@@ -239,6 +332,18 @@ class OpenWorldRuntime:
             "tempo": round(self.elapsed),
         }
 
+    def activate_special(self, game) -> bool:
+        """Encaminha o especial ao controlador linear e converte o tiro ao mapa."""
+        game.projeteis = []
+        if not game.combate_controller.ativar_especial():
+            return False
+        for shot in game.projeteis:
+            shot.x += self.camera_x
+            shot.y += self.camera_y
+        self.projectiles.extend(game.projeteis)
+        game.projeteis = self.projectiles
+        return True
+
     def render(self, surface: pygame.Surface, player=None) -> None:
         """Desenha fundo cacheável por semente, parallax, limites e nave."""
         self._cenario.desenhar(surface)
@@ -275,6 +380,7 @@ class OpenWorldRuntime:
 
         self._draw_speed_lines(surface)
         self._draw_boss_lair(surface)
+        self._draw_powerups(surface)
         self._draw_projectiles(surface)
         self._draw_ship(surface, player)
         self._draw_region_label(surface)
@@ -286,21 +392,13 @@ class OpenWorldRuntime:
             enemy.y = base_y + math.cos(self.elapsed * 0.48 + phase) * orbit * 0.55
         mini_x = 1090 + math.sin(self.elapsed * 0.42) * 95
         mini_y = 825 + math.cos(self.elapsed * 0.58) * 48
-        self.miniboss.x, self.miniboss.y = mini_x, mini_y
-        self.boss.x, self.boss.y = self.BOSS_LAIR
-
-    def _hit_hostile(self, shot: Projetil) -> bool:
-        for enemy, *_ in self.enemies:
-            if enemy.vida > 0 and enemy.rect.collidepoint(shot.x, shot.y):
-                enemy.sofrer_dano(shot.dano)
-                return True
-        if self.miniboss.vida > 0 and self.miniboss.rect.collidepoint(shot.x, shot.y):
-            self.miniboss.sofrer_dano(shot.dano)
-            return True
-        if self.boss.vida > 0 and self.boss.rect.collidepoint(shot.x, shot.y):
-            self.boss.sofrer_dano(shot.dano)
-            return True
-        return False
+        if not self.miniboss_active:
+            self.miniboss.x, self.miniboss.y = mini_x, mini_y
+            self._miniboss_world = (mini_x, mini_y)
+        else:
+            self.miniboss.x, self.miniboss.y = self._miniboss_world
+        if not self.boss_active:
+            self.boss.x, self.boss.y = self.BOSS_LAIR
 
     def _draw_projectiles(self, surface: pygame.Surface) -> None:
         for shot in self.projectiles:
@@ -310,6 +408,15 @@ class OpenWorldRuntime:
             if -50 <= screen_x <= LARGURA + 50 and -50 <= screen_y <= ALTURA + 50:
                 shot.desenhar(surface)
             shot.x, shot.y = world_x, world_y
+
+    def _draw_powerups(self, surface: pygame.Surface) -> None:
+        for powerup in self.powerups:
+            world_x, world_y = powerup.x, powerup.y
+            powerup.x, powerup.y = self._screen_position((world_x, world_y))
+            if (-40 <= powerup.x <= LARGURA + 40
+                    and -40 <= powerup.y <= ALTURA + 40):
+                powerup.desenhar(surface)
+            powerup.x, powerup.y = world_x, world_y
 
     def _draw_speed_lines(self, surface: pygame.Surface) -> None:
         speed = math.hypot(self.vx, self.vy)
@@ -349,18 +456,32 @@ class OpenWorldRuntime:
     def _draw_hostiles(self, surface: pygame.Surface) -> None:
         comic = opcoes_atuais().ativo
         for enemy, base_x, base_y, orbit, phase in self.enemies:
+            world_x, world_y = enemy.x, enemy.y
             enemy.x, enemy.y = self._screen_position((enemy.x, enemy.y))
             if (enemy.vida > 0 and -60 <= enemy.x <= LARGURA + 60
                     and -60 <= enemy.y <= ALTURA + 60):
                 enemy.desenhar(surface)
+            enemy.x, enemy.y = world_x, world_y
 
+        world_mini = self._miniboss_world
         self.miniboss.x, self.miniboss.y = self._screen_position(
-            (self.miniboss.x, self.miniboss.y))
-        if (-100 <= self.miniboss.x <= LARGURA + 100
+            world_mini)
+        if (not self.miniboss_defeated
+                and -100 <= self.miniboss.x <= LARGURA + 100
                 and -100 <= self.miniboss.y <= ALTURA + 100):
             self.miniboss.desenhar(surface)
             label = self._mini_comic_label if comic else self._mini_label
             surface.blit(label, (self.miniboss.x - 70, self.miniboss.y - 60))
+        self.miniboss.x, self.miniboss.y = world_mini
+
+    def project_targets_for_ui(self, game) -> None:
+        """Mantém mira hover e indicadores alinhados aos alvos na tela."""
+        game.inimigos = [enemy for enemy, *_ in self.enemies if enemy.vida > 0]
+        for enemy in game.inimigos:
+            enemy.x, enemy.y = self._screen_position((enemy.x, enemy.y))
+        if game.miniboss is not None:
+            game.miniboss.x, game.miniboss.y = self._screen_position(
+                self._miniboss_world)
 
     def _draw_boss_lair(self, surface: pygame.Surface) -> None:
         x, y = self._screen_position(self.BOSS_LAIR)
@@ -377,10 +498,14 @@ class OpenWorldRuntime:
             point = (round(x + math.cos(angle) * (radius + 14)),
                      round(y + math.sin(angle) * (radius + 14)))
             pygame.draw.circle(surface, edge, point, 5)
-        self.boss.x, self.boss.y = x, y
-        self.boss.angulo = self.elapsed * 0.18
-        if (-150 <= x <= LARGURA + 150 and -150 <= y <= ALTURA + 150):
-            self.boss.desenhar(surface)
+        if self.boss_active:
+            if not self.boss_defeated:
+                self.boss.desenhar(surface)
+        elif not self.boss_defeated:
+            self.boss.x, self.boss.y = x, y
+            self.boss.angulo = self.elapsed * 0.18
+            if (-150 <= x <= LARGURA + 150 and -150 <= y <= ALTURA + 150):
+                self.boss.desenhar(surface)
         label = self._boss_comic_label if comic else self._boss_label
         surface.blit(label, (x - label.get_width() // 2, y + radius + 22))
 

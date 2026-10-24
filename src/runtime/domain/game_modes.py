@@ -85,6 +85,7 @@ class OpenWorldModeStrategy:
         if game.profile_service.active is None:
             return False
         self.world = OpenWorldRuntime(visual_config=game.config)
+        self._prepare_linear_encounters(game)
         game.modo_atual = self.mode_id
         game.profile_service.set_last_mode(self.mode_id)
         modes = game.profile_service.active.progress.get("modos", {})
@@ -123,6 +124,7 @@ class OpenWorldModeStrategy:
         except (TypeError, ValueError):
             return False
         self.world = OpenWorldRuntime(point, elapsed, game.config)
+        self._prepare_linear_encounters(game)
         game.modo_atual = self.mode_id
         game.profile_service.set_last_mode(self.mode_id)
         game.tempo_partida = elapsed
@@ -130,12 +132,29 @@ class OpenWorldModeStrategy:
         return True
 
     def update(self, game: Jogo, dt: float) -> None:
-        if self.world is None or game.estado is not EstadoJogo.JOGANDO:
+        if (self.world is None or game.estado is not EstadoJogo.JOGANDO
+                or game.menu_equipamento):
             return
         self.world.update(dt, pygame.key.get_pressed(), game.controles, game)
         game.tempo_partida = self.world.elapsed
 
+    @staticmethod
+    def _prepare_linear_encounters(game: Jogo) -> None:
+        """Inicializa os controladores existentes para o mundo aberto."""
+        game.miniboss_controller.reiniciar()
+        game.boss = None
+        game.inimigos = []
+        game.projeteis = []
+        game.powerups = []
+        game.ondas_miniboss = 0
+        game.boss_intro = 0
+
     def handle_event(self, game: Jogo, event: pygame.event.Event) -> bool:
+        if (game.estado is EstadoJogo.JOGANDO and not game.menu_equipamento
+                and event.type == pygame.KEYDOWN and event.key == pygame.K_e
+                and self.world is not None):
+            self.world.activate_special(game)
+            return True
         if (game.estado is EstadoJogo.JOGANDO
                 and event.type == pygame.KEYDOWN and event.key in (
                 pygame.K_ESCAPE, pygame.K_p,
@@ -153,6 +172,10 @@ class OpenWorldModeStrategy:
         with usar_visual(
                 game.config, acabamento_gpu=game.shader_comic_ativo()):
             self.world.render(surface, game.jogador)
+            game.hud.desenhar(surface, game, tempo=self.world.elapsed)
+            with game._desenhar_na_interface():
+                game._desenhar_interface_jogo()
+        self.world.project_targets_for_ui(game)
         return True
 
     def save(self, game: Jogo) -> None:
