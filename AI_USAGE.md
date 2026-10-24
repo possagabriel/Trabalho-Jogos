@@ -1,5 +1,22 @@
 # Registro de uso de IA
 
+## Fase A — validação de nomes de perfil
+
+- **Pedido:** aceitar apóstrofo, hífen, acentos e espaços internos em novos
+  nomes e renomeações; rejeitar controles e espaços nas pontas; preservar perfis.
+- **Decisão do usuário:** a decisão anterior de rejeitar apóstrofo foi
+  substituída por esta regra.
+- **Implementação da IA:** validação de texto imprimível sem `strip()`; criação,
+  renomeação e teste de regressão para leitura, seleção e exportação de nome
+  legado após reconstrução do índice. Nenhum save real foi alterado.
+- **Verificação:** 35 testes direcionados passaram antes da mudança; cinco
+  casos falharam na fase vermelha do TDD e 42 passaram após a implementação.
+  Suíte completa: 649 passaram e 1 ignorado. Ruff passou nos dois arquivos
+  Python alterados. Benchmark de runtime não se aplica à validação de nome
+  fora do loop do jogo.
+- **Ajustes manuais do usuário:** teste local ficará para depois; PR em
+  rascunho e sem merge.
+
 ## Menu principal — etapa 3: cartão e layout responsivo
 
 - **Pedido:** adicionar cartão de perfil, resumo de Continuar, selos de novidade,
@@ -55,8 +72,8 @@
   mantém seu layout e seu HUD anteriores.
 - **Decisões:** a seleção segue contínua entre os grupos e continua começando em
   Continuar com save ou Lobby sem save. Continuar sem save mantém o visual
-  desabilitado e o aviso existente ao ativar. A validação do `ProfileService`
-  rejeita apóstrofo em novos nomes; perfis antigos não são alterados. A tela
+  desabilitado e o aviso existente ao ativar. Na época desta etapa, a validação
+  rejeitava apóstrofo; a regra foi alterada na Fase A acima. A tela
   trata nomes longos com reticências e caracteres acentuados.
 - **Comparação visual:** imagens ANTES/DEPOIS das quatro resoluções e dos dois
   modos, além do mockup 1920×1080, estão em

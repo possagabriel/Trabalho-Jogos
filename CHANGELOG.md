@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Nomes de perfil agora aceitam apóstrofo e outros caracteres imprimíveis na
+  criação e renomeação; espaços nas pontas e controles são rejeitados. Perfis
+  legados continuam legíveis e exportáveis.
 - O menu ganhou cartão de perfil alimentado pelo `ProfileService`, resumo real
   do ponto inicial de Continuar e selos persistentes para Memórias e itens do
   Hangar que ficaram compráveis. O schema de perfil migra automaticamente para v3.
@@ -33,8 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Menu lê sua versão de `project.version` no `pyproject.toml`.
 - Menu ORIGINAL mantém títulos, botões e textos de rodapé dentro das margens,
   com contraste reforçado, rótulos ajustáveis e Continue desabilitado sem save.
-- O rodapé trunca nomes longos sem alterar perfis existentes; a validação atual
-  continua rejeitando apóstrofos em nomes novos e renomeações.
+- O rodapé trunca nomes longos sem alterar perfis existentes. A restrição antiga
+  de apóstrofo em novos nomes foi revista na seção Unreleased.
 
 ### Added
 - Licença MIT do projeto e avisos OFL 1.1 de Orbitron e Rajdhani nos pacotes.
