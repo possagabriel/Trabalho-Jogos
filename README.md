@@ -138,9 +138,11 @@ contadas por perfil, mas seus efeitos terminam ao fim da partida.
 
 ### Menu principal e navegação
 
-O menu tem cinco destinos: **Jogar** abre **Continuar** e **Lobby**; **Hangar**
-abre compra e equipamento de skins; **Perfil** reúne as abas **Pilotos**,
-**Recordes** e **Memórias**; **Configurações** e **Sair** completam a navegação.
+O menu principal tem cinco itens numerados: **01 Jogar**, **02 Hangar**,
+**03 Perfil**, **04 Configurações** e **05 Sair** (ação secundária). Jogar abre
+**Continuar** e **Lobby**; Hangar abre compra e equipamento de skins; Perfil
+reúne **Pilotos**, **Recordes** e **Memórias**; **Configurações** e **Sair**
+completam a navegação.
 Setas ou W/S movem o foco, Enter ativa e Esc volta ao menu mantendo o foco de
 origem. No menu principal, Esc abre a confirmação de saída. Cada destino das
 telas antigas fica a até dois passos do menu. Sem save, Continuar aparece

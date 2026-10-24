@@ -39,7 +39,7 @@ class MenuHubScreen:
         width = layout.px(620 if narrow else 700)
         height = layout.px((350 if self.kind == "PERFIL" else 280)
                            if narrow else
-                           (355 if self.kind == "PERFIL" else 285))
+                           (385 if self.kind == "PERFIL" else 310))
         return pygame.Rect(
             layout.x(0.5) - width // 2,
             layout.y(0.5) - height // 2,
@@ -164,6 +164,7 @@ class MenuHubScreen:
             if not menu._tem_save():
                 menu._som("erro")
                 menu.notificacoes.adicionar("Nenhum save encontrado!", "erro")
+                return
             menu._abrir_continuar()
         elif action == "lobby":
             menu._abrir_lobby()
