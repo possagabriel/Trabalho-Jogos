@@ -24,13 +24,19 @@ class ControladorLoop:
     def atualizar(self) -> None:
         """Atualiza o estado ativo e os efeitos que independem da tela."""
         jogo = self.jogo
+        strategy = jogo.estrategia_modo
+        if strategy is not None:
+            strategy.update(jogo, PASSO_FIXO)
+        world_managed = bool(strategy and strategy.handles_gameplay)
         if jogo.profile_service.save_error and not getattr(jogo, "_aviso_save_exibido", False):
             jogo.menu.notificacoes.adicionar("Falha ao salvar perfil", "erro")
             jogo._aviso_save_exibido = True
         elif not jogo.profile_service.save_error:
             jogo._aviso_save_exibido = False
         if jogo.estado is EstadoJogo.JOGANDO:
-            if jogo.progressao_controller.transicao is not None:
+            if world_managed:
+                pass
+            elif jogo.progressao_controller.transicao is not None:
                 jogo.progressao_controller.atualizar_transicao()
             else:
                 jogo.tempo_partida += PASSO_FIXO
@@ -53,7 +59,7 @@ class ControladorLoop:
             jogo.menu.atualizar()
         # O fundo de combate e suas partículas não são visíveis no menu.
         # Evitar esse trabalho fora da partida reduz uso de CPU em idle.
-        mundo_visivel = jogo.estado in (
+        mundo_visivel = not world_managed and jogo.estado in (
             EstadoJogo.JOGANDO, EstadoJogo.MELHORIA,
             EstadoJogo.PAUSA, EstadoJogo.GAME_OVER)
         if (mundo_visivel and not jogo.menu_equipamento
@@ -102,6 +108,12 @@ class ControladorLoop:
                 return False
             if jogo.estado is EstadoJogo.CUTSCENE:
                 jogo.cutscene_controller.tratar_evento(evento)
+                continue
+            strategy = jogo.estrategia_modo
+            if (jogo.estado in (EstadoJogo.JOGANDO, EstadoJogo.MELHORIA,
+                                EstadoJogo.PAUSA, EstadoJogo.GAME_OVER)
+                    and strategy is not None
+                    and strategy.handle_event(jogo, evento)):
                 continue
             if jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
                 if not jogo.menu.tratar_eventos(evento):

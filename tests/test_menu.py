@@ -559,12 +559,11 @@ def test_hubs_preservam_destinos_antigos_em_no_maximo_duas_acoes():
     with mock.patch.object(menu, "_tem_save", return_value=True):
         menu._abrir_jogar()
         assert menu.jogar_hub.entries == (
-            ("CONTINUAR", "continuar"), ("LOBBY", "lobby"))
-        menu.jogar_hub.ativar(0)
-    assert menu.subestado == "CONTINUAR"
-    menu._abrir_jogar()
+            ("CONTINUAR", "continuar"), ("LINEAR", "linear"),
+            ("MUNDO ABERTO", "mundo_aberto"))
     menu.jogar_hub.ativar(1)
     assert menu.subestado == "FASES"
+    assert jogo.modo_atual == "linear"
 
     menu._voltar_menu()
     menu._abrir_perfil_hub()
@@ -589,6 +588,56 @@ def test_hub_jogar_sem_save_foca_lobby_e_avisa_ao_ativar_continuar():
     assert menu.jogar_hub.selection == 0
     assert any(item["tipo"] == "erro"
                for item in menu.notificacoes.notificacoes)
+
+
+def test_hub_jogar_mostra_progresso_e_inicia_modo_aberto():
+    jogo, menu = novo_menu()
+    jogo.profile_service.update_progress(
+        partidas_jogadas=2, dimensao_maxima=3, nivel_maximo=13,
+        bosses_por_tipo={"HEXAGONO": 2}, moedas=170, tempo_total=3661,
+    )
+    assert jogo.profile_service.mode_progress_summary("linear") == {
+        "started": True, "dimension": 3, "level": 13,
+        "bosses": 2, "coins": 170, "play_time": 3661,
+    }
+    assert jogo.profile_service.mode_progress_summary("mundo_aberto") == {
+        "started": False, "regions": 0, "echoes": 0, "bosses": 0,
+        "coins": 0, "play_time": 0,
+    }
+
+    menu._abrir_jogar()
+    menu.jogar_hub.ativar(2)
+
+    assert menu.subestado == "JOGAR"
+    assert jogo.modo_atual == "mundo_aberto"
+    assert jogo.estado == EstadoJogo.JOGANDO
+
+
+def test_mundo_aberto_salva_e_continua_do_ponto_do_perfil():
+    jogo, menu = novo_menu()
+    strategy = menu.mode_strategies["mundo_aberto"]
+
+    assert strategy.start_new(jogo) is True
+    strategy.world.x = 1240
+    strategy.world.y = 710
+    strategy.world.elapsed = 95
+    strategy.save(jogo)
+    jogo.estado = EstadoJogo.MENU
+    menu.subestado = "MENU"
+    menu._abrir_jogar()
+    assert menu._tem_save() is True
+
+    menu.jogar_hub.ativar(0)
+
+    assert jogo.modo_atual == "mundo_aberto"
+    assert jogo.estado == EstadoJogo.JOGANDO
+    assert (strategy.world.x, strategy.world.y, strategy.world.elapsed) == (
+        1240, 710, 95,
+    )
+    assert jogo.profile_service.continue_summary() == {
+        "mode": "mundo_aberto", "dimension": "espaco_profundo",
+        "level": "inicio", "total_play_time": 95,
+    }
 
 
 @pytest.mark.parametrize("entrada", ["teclado", "mouse"])
@@ -649,7 +698,9 @@ def test_grafo_de_destinos_antigos_em_ate_duas_acoes(entrada):
     )
     for _, indice_raiz, indice_hub, destino in rotas:
         jogo, menu = novo_menu()
-        with mock.patch.object(menu, "_tem_save", return_value=True):
+        jogo.profile_service.active.progress["modo_ultimo"] = "linear"
+        with (mock.patch.object(menu, "_tem_save", return_value=True),
+              mock.patch.object(jogo.progresso, "existe_save", return_value=True)):
             if entrada == "teclado":
                 for _ in range(indice_raiz):
                     menu.tela_principal.tratar_tecla(pygame.event.Event(
@@ -670,10 +721,12 @@ def test_grafo_de_destinos_antigos_em_ate_duas_acoes(entrada):
                         pygame.KEYDOWN, {"key": pygame.K_RETURN}))
                 else:
                     hub.tratar_clique(hub._rects()[indice_hub].center)
-        if destino == "MENU":
-            assert menu.dialogo is not None and menu.dialogo.ativo
-        else:
-            assert menu.subestado == destino
+            if destino == "CONTINUAR":
+                assert menu.transicao_missao.em_andamento() is True
+            elif destino == "MENU":
+                assert menu.dialogo is not None and menu.dialogo.ativo
+            else:
+                assert menu.subestado == destino
 
 
 def test_escape_dos_hubs_e_destinos_restaura_foco_de_origem():
@@ -802,7 +855,8 @@ def test_layout_4_3_e_hub_continuar_mostram_resumo_real(estilo):
     with usar_visual({"estilo_visual": estilo}):
         menu.jogar_hub.desenhar(surface)
     assert jogo.profile_service.continue_summary() == {
-        "dimension": 1, "level": 1, "total_play_time": 3661,
+        "mode": "linear", "dimension": 1, "level": 1,
+        "total_play_time": 3661,
     }
     assert menu.jogar_hub._panel().width == jogo.layout.px(620)
 
