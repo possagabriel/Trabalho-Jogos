@@ -24,6 +24,7 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- F0: [design do mundo aberto](docs/design/mundo-aberto.md) registrado em `docs/design-mundo-aberto`, com decisões confirmadas na seção 15; F1 aguarda A, B e C concluídas, testes/aprovação do usuário e integração autorizada; nenhuma implementação iniciada.
 - Candidata `v1.8.0-rc1`: builds de instalador/executável Linux e Windows
   passaram. Executar o checklist Windows antes da tag `v1.8.0` e da release
   oficial. Instalação limpa, atualização, jogo, perfis e desinstalação ainda

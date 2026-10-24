@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- F0: Codex transcreveu a proposta fornecida pelo usuário para `docs/design/mundo-aberto.md` e substituiu a seção 15 pelas quatro decisões confirmadas; apenas documentação, sem iniciar F1 ou alterar gameplay.
+
 ## Menu principal — etapa 3: cartão e layout responsivo
 
 - **Pedido:** adicionar cartão de perfil, resumo de Continuar, selos de novidade,
