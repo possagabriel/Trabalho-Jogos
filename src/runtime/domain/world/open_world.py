@@ -263,11 +263,12 @@ class OpenWorldRuntime:
         if player is not None:
             player.x, player.y = center
             if self.vx or self.vy:
-                player.angulo_mira = math.degrees(math.atan2(-self.vx, self.vy))
+                player.angulo_mira = math.degrees(
+                    math.atan2(self.vx, -self.vy)) % 360
             else:
                 player.angulo_mira = None
             player.desenhar(surface, intensidade_propulsor=min(
-                1.0, math.hypot(self.vx, self.vy) / self.SPEED))
+                1.0, 0.35 + math.hypot(self.vx, self.vy) / self.SPEED * 0.65))
             return
         angle = math.atan2(self.vy, self.vx) if self.vx or self.vy else 0.0
         cosine, sine = math.cos(angle), math.sin(angle)
