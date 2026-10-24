@@ -191,4 +191,6 @@ de merge e a compatibilidade de dados estiverem definidas.
 - Testes, Ruff e benchmark: não aplicáveis a esta entrega documental.
 - Nenhuma tag ou alteração na main foi criada. A proposta está na PR #43, em
   rascunho; não fazer merge.
+- A divisão operacional entre OpenCode e Codex está em
+  [cooperacao-codex-opencode.md](cooperacao-codex-opencode.md).
 - **Parada para aprovação do usuário antes de iniciar a Fase A.**
