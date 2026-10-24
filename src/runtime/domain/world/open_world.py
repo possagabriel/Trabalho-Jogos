@@ -9,6 +9,10 @@ from typing import Any
 import pygame
 
 from src.core.constants import ALTURA, LARGURA
+from src.runtime.domain.entities.bosses import Boss
+from src.runtime.domain.entities.enemies import Inimigo
+from src.runtime.domain.entities.minibosses.registry import criar_miniboss
+from src.runtime.domain.world.scenarios import Cenario
 from src.runtime.infrastructure.graphics.fonts import fonte_texto
 
 
@@ -20,6 +24,7 @@ class OpenWorldRuntime:
     REGION_SIZE = (2800.0, 1800.0)
     SPAWN = (520.0, 900.0)
     SPEED = 360.0
+    BOSS_LAIR = (2260.0, 900.0)
 
     def __init__(self, position: tuple[float, float] | None = None,
                  elapsed: float = 0.0) -> None:
@@ -34,12 +39,36 @@ class OpenWorldRuntime:
         self.elapsed = max(0.0, float(elapsed))
         self._stars = self._build_stars()
         self._landmarks = self._build_landmarks()
+        self._cenario = Cenario(1)
+        self.enemies = self._create_enemies()
+        self.miniboss = criar_miniboss(
+            "censor", 1, self._cenario, random.Random(4101))
+        self.boss = Boss(5, self._cenario)
+        self.boss.x, self.boss.y = self.BOSS_LAIR
+        self.boss.entrando = False
+        self.boss.angulo = 0.0
         self._font_edge = fonte_texto(28)
         self._font_region = fonte_texto(24)
+        self._font_marker = fonte_texto(17)
         self._edge_label = self._font_edge.render(
             "VAZIO", True, (210, 170, 245))
         self._region_label = self._font_region.render(
             f"REGIÃO // {self.REGION_NAME}", True, (145, 180, 217))
+        self._boss_label = self._font_marker.render(
+            "TOCA // HEXAGONO", True, (255, 202, 102))
+        self._mini_label = self._font_marker.render(
+            "CENSOR // PATRULHA", True, (255, 124, 201))
+
+    @staticmethod
+    def _create_enemies() -> list[tuple[Inimigo, float, float, float, float]]:
+        """Cria patrulhas fixas usando as mesmas entidades visuais do modo linear."""
+        return [
+            (Inimigo("scout", 1, x=790, y=780), 790, 780, 52, 0.0),
+            (Inimigo("soldado", 1, x=980, y=1040), 980, 1040, 44, 1.7),
+            (Inimigo("estelar", 1, x=360, y=650), 360, 650, 62, 3.1),
+            (Inimigo("bomba", 1, x=1180, y=720), 1180, 720, 35, 4.4),
+            (Inimigo("abissal", 1, x=1340, y=980), 1340, 980, 54, 5.2),
+        ]
 
     @staticmethod
     def _build_stars() -> tuple[tuple[tuple[float, float, int], ...], ...]:
@@ -125,7 +154,7 @@ class OpenWorldRuntime:
             "tempo": round(self.elapsed),
         }
 
-    def render(self, surface: pygame.Surface) -> None:
+    def render(self, surface: pygame.Surface, player=None) -> None:
         """Desenha fundo cacheável por semente, parallax, limites e nave."""
         surface.fill((5, 8, 26))
         parallax = (0.12, 0.32, 0.68)
@@ -137,6 +166,7 @@ class OpenWorldRuntime:
                 if -3 <= sx < LARGURA + 3 and -3 <= sy < ALTURA + 3:
                     pygame.draw.circle(surface, color, (sx, sy), radius)
         self._draw_landmarks(surface)
+        self._draw_hostiles(surface)
 
         world_rect = pygame.Rect(
             round(-self.camera_x), round(-self.camera_y),
@@ -154,7 +184,8 @@ class OpenWorldRuntime:
                 surface.blit(self._edge_label, (label_x, label_y))
 
         self._draw_speed_lines(surface)
-        self._draw_ship(surface)
+        self._draw_boss_lair(surface)
+        self._draw_ship(surface, player)
         self._draw_region_label(surface)
 
     def _draw_speed_lines(self, surface: pygame.Surface) -> None:
@@ -188,8 +219,56 @@ class OpenWorldRuntime:
                  radius * 4, max(4, radius // 2)), 2,
             )
 
-    def _draw_ship(self, surface: pygame.Surface) -> None:
+    def _screen_position(self, position: tuple[float, float]) -> tuple[int, int]:
+        return (round(position[0] - self.camera_x),
+                round(position[1] - self.camera_y))
+
+    def _draw_hostiles(self, surface: pygame.Surface) -> None:
+        for enemy, base_x, base_y, orbit, phase in self.enemies:
+            enemy.x = base_x + math.sin(self.elapsed * 0.65 + phase) * orbit
+            enemy.y = base_y + math.cos(self.elapsed * 0.48 + phase) * orbit * 0.55
+            enemy.x, enemy.y = self._screen_position((enemy.x, enemy.y))
+            if -60 <= enemy.x <= LARGURA + 60 and -60 <= enemy.y <= ALTURA + 60:
+                enemy.desenhar(surface)
+
+        mini_x = 1090 + math.sin(self.elapsed * 0.42) * 95
+        mini_y = 825 + math.cos(self.elapsed * 0.58) * 48
+        self.miniboss.x, self.miniboss.y = self._screen_position((mini_x, mini_y))
+        if (-100 <= self.miniboss.x <= LARGURA + 100
+                and -100 <= self.miniboss.y <= ALTURA + 100):
+            self.miniboss.desenhar(surface)
+            surface.blit(self._mini_label, (self.miniboss.x - 70,
+                                            self.miniboss.y - 60))
+
+    def _draw_boss_lair(self, surface: pygame.Surface) -> None:
+        x, y = self._screen_position(self.BOSS_LAIR)
+        radius = 92
+        pygame.draw.circle(surface, (115, 52, 155), (x, y), radius + 30, 2)
+        pygame.draw.circle(surface, (36, 13, 67), (x, y), radius)
+        pygame.draw.circle(surface, (230, 160, 255), (x, y), radius, 3)
+        for index in range(3):
+            angle = self.elapsed * 0.22 + index * math.tau / 3
+            point = (round(x + math.cos(angle) * (radius + 14)),
+                     round(y + math.sin(angle) * (radius + 14)))
+            pygame.draw.circle(surface, (192, 122, 255), point, 5)
+        self.boss.x, self.boss.y = x, y
+        self.boss.angulo = self.elapsed * 0.18
+        if (-150 <= x <= LARGURA + 150 and -150 <= y <= ALTURA + 150):
+            self.boss.desenhar(surface)
+        surface.blit(self._boss_label, (x - self._boss_label.get_width() // 2,
+                                       y + radius + 22))
+
+    def _draw_ship(self, surface: pygame.Surface, player=None) -> None:
         center = (LARGURA // 2, ALTURA // 2)
+        if player is not None:
+            player.x, player.y = center
+            if self.vx or self.vy:
+                player.angulo_mira = math.degrees(math.atan2(-self.vx, self.vy))
+            else:
+                player.angulo_mira = None
+            player.desenhar(surface, intensidade_propulsor=min(
+                1.0, math.hypot(self.vx, self.vy) / self.SPEED))
+            return
         angle = math.atan2(self.vy, self.vx) if self.vx or self.vy else 0.0
         cosine, sine = math.cos(angle), math.sin(angle)
         local = ((19, 0), (-13, -12), (-6, 0), (-13, 12))

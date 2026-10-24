@@ -149,7 +149,7 @@ class OpenWorldModeStrategy:
         if game.estado not in (EstadoJogo.JOGANDO, EstadoJogo.PAUSA,
                                EstadoJogo.GAME_OVER):
             return False
-        self.world.render(surface)
+        self.world.render(surface, game.jogador)
         return True
 
     def save(self, game: Jogo) -> None:

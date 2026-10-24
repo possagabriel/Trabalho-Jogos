@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pygame
 
+from src.core.constants import ALTURA, LARGURA
+from src.runtime.domain.entities.player import Jogador
 from src.runtime.domain.world.open_world import OpenWorldRuntime
 
 pygame.font.init()
@@ -48,3 +50,16 @@ def test_estado_salvo_contém_região_posição_e_checkpoint():
         "checkpoint": "inicio",
         "tempo": 90,
     }
+
+
+def test_mundo_usa_entidades_visuais_do_modo_linear():
+    world = OpenWorldRuntime()
+    player = Jogador()
+    surface = pygame.Surface((LARGURA, ALTURA))
+
+    world.render(surface, player)
+
+    assert len(world.enemies) >= 3
+    assert world.miniboss.nome.startswith("CENSOR")
+    assert world.boss.nome == "HEXAGONO"
+    assert (player.x, player.y) == (LARGURA // 2, ALTURA // 2)
