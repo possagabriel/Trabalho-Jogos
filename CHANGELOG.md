@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   continua rejeitando apóstrofos em nomes novos e renomeações.
 
 ### Added
+- Roteiro aprovado dos capítulos 3–6, sete encontros de minibosses e final narrativo no catálogo de produção, com testes de IDs, referências, tipos e gatilhos; a partida continua após o final.
 - Licença MIT do projeto e avisos OFL 1.1 de Orbitron e Rajdhani nos pacotes.
 - README resume o aviso SmartScreen/antivírus e a verificação SHA-256.
 

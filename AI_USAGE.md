@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- E3–E6: Codex inseriu no JSON o roteiro fornecido pelo usuário, sem reescrever falas nem alterar o motor; glitch precede falas indicadas, registros longos usam diálogo e o eco de Jonathan usa seu retrato (sem dublagem); testes primeiro, 27 testes de cenas e Ruff passaram; branch isolada, sem PR/merge por solicitação.
+
 ## Menu principal — etapa 3: cartão e layout responsivo
 
 - **Pedido:** adicionar cartão de perfil, resumo de Continuar, selos de novidade,

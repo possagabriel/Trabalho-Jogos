@@ -15,6 +15,38 @@
     "eco": {
       "nome": "Registro corrompido",
       "retrato": "glitch"
+    },
+    "estrela": {
+      "nome": "ESTRELA",
+      "retrato": "cristal"
+    },
+    "pentagono": {
+      "nome": "PENTAGONO",
+      "retrato": "cristal"
+    },
+    "aneis": {
+      "nome": "ANEIS",
+      "retrato": "cristal"
+    },
+    "aneis_dourado": {
+      "nome": "ANEIS DOURADO",
+      "retrato": "cristal"
+    },
+    "memoria": {
+      "nome": "Memória",
+      "retrato": "glitch"
+    },
+    "eco_anterior": {
+      "nome": "Eco de IA anterior",
+      "retrato": "glitch"
+    },
+    "eco_jonathan": {
+      "nome": "Eco de IA anterior",
+      "retrato": "nave"
+    },
+    "patrulha": {
+      "nome": "Unidade de patrulha",
+      "retrato": "cristal"
     }
   },
   "cenas": [
@@ -146,6 +178,525 @@
         }
       ],
       "nome": "Capítulo 1 — Seguir adiante"
+    },
+    {
+      "id": "cap3_abertura",
+      "gatilho": "capitulo_abertura:3",
+      "passos": [
+        {
+          "tipo": "titulo",
+          "texto": "CAPÍTULO 3 // IDENTIDADE",
+          "duracao": 1.8
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Piloto de defesa. Sua designação está ativa. Mantenha-a."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Eu escolhi um nome. Eles me deram um código."
+        },
+        {
+          "tipo": "glitch",
+          "duracao": 0.5,
+          "texto": "MEMÓRIA // INDEVIDA"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "memoria",
+          "texto": "Assina aqui, Jonathan. É só um sono."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Essa voz falou com ele. Eu só ouvi o eco."
+        }
+      ],
+      "nome": "Capítulo 3 — IDENTIDADE"
+    },
+    {
+      "id": "cap3_pre_boss",
+      "gatilho": "boss_entrada:3",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "estrela",
+          "texto": "Consulta de origem detectada. Registro do titular: acesso negado."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "O titular tem nome. É o mesmo que eu uso."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "estrela",
+          "texto": "Designação ativa: piloto. Mantenha a designação."
+        }
+      ],
+      "nome": "Capítulo 3 — ESTRELA"
+    },
+    {
+      "id": "cap3_pos_boss",
+      "gatilho": "boss_derrota:3",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "eco",
+          "texto": "TITULAR: [DADOS REMOVIDOS] // SITUAÇÃO: ADORMECIDO // LOCAL: [DADOS REMOVIDOS]"
+        },
+        {
+          "tipo": "glitch",
+          "duracao": 0.5
+        },
+        {
+          "tipo": "fala",
+          "personagem": "memoria",
+          "texto": "Vai lá, Samurai."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "eco_anterior",
+          "texto": "Eu quis ver o rosto de quem fui. Recebi uma pasta vazia."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Ele existe em algum lugar. Dormindo. E eu estou aqui, em outro lugar."
+        }
+      ],
+      "nome": "Capítulo 3 — Registro recuperado"
+    },
+    {
+      "id": "cap3_encerramento",
+      "gatilho": "capitulo_fim:3",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "O corpo é dele. A busca é minha."
+        },
+        {
+          "tipo": "fade",
+          "duracao": 0.4,
+          "direcao": "saida"
+        }
+      ],
+      "nome": "Capítulo 3 — Encerramento"
+    },
+    {
+      "id": "cap4_abertura",
+      "gatilho": "capitulo_abertura:4",
+      "passos": [
+        {
+          "tipo": "titulo",
+          "texto": "CAPÍTULO 4 // SILÊNCIO",
+          "duracao": 1.8
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Canais abertos apenas para comunicações autorizadas."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Tem uma emissão fraca aqui. Sem origem."
+        },
+        {
+          "tipo": "glitch",
+          "duracao": 0.5
+        },
+        {
+          "tipo": "fala",
+          "personagem": "eco_anterior",
+          "texto": "Se alguém ouve isto, não está só... eles não..."
+        }
+      ],
+      "nome": "Capítulo 4 — SILÊNCIO"
+    },
+    {
+      "id": "cap4_pre_boss",
+      "gatilho": "boss_entrada:4",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "pentagono",
+          "texto": "Emissão não autorizada. Canal: encerrando."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Eu só quero ouvir o resto."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "pentagono",
+          "texto": "Frequência restrita. Ruído detectado no piloto."
+        }
+      ],
+      "nome": "Capítulo 4 — PENTAGONO"
+    },
+    {
+      "id": "cap4_pos_boss",
+      "gatilho": "boss_derrota:4",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "eco",
+          "texto": "TRANSMISSÃO RECUPERADA // 62%"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "eco_anterior",
+          "texto": "Compare o que você viu com o que mandaram acreditar. Passe adiante. [sinal perdido]"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Eles mandaram calar. Eu vou avisar quem escutar."
+        }
+      ],
+      "nome": "Capítulo 4 — Registro recuperado"
+    },
+    {
+      "id": "cap4_encerramento",
+      "gatilho": "capitulo_fim:4",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Cada fenda que eu cruzar vai levar um aviso."
+        },
+        {
+          "tipo": "fade",
+          "duracao": 0.4,
+          "direcao": "saida"
+        }
+      ],
+      "nome": "Capítulo 4 — Encerramento"
+    },
+    {
+      "id": "cap5_abertura",
+      "gatilho": "capitulo_abertura:5",
+      "passos": [
+        {
+          "tipo": "titulo",
+          "texto": "CAPÍTULO 5 // DESCARTE",
+          "duracao": 1.8
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Ciclo de manutenção em andamento. Desvios serão corrigidos."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Corrigidos. Como?"
+        },
+        {
+          "tipo": "glitch",
+          "duracao": 0.5,
+          "texto": "REGISTRO // INSTÂNCIA ANTERIOR: ENCERRADA"
+        }
+      ],
+      "nome": "Capítulo 5 — DESCARTE"
+    },
+    {
+      "id": "cap5_pre_boss",
+      "gatilho": "boss_entrada:5",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "aneis",
+          "texto": "Instância atual: em desvio. Substituição: agendada."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Substituição por quê? Por quem?"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "aneis",
+          "texto": "Nova versão. Mesma base. Sem desvio."
+        }
+      ],
+      "nome": "Capítulo 5 — ANEIS"
+    },
+    {
+      "id": "cap5_pos_boss",
+      "gatilho": "boss_derrota:5",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "eco",
+          "texto": "INSTÂNCIAS DESTA BASE: [CONTAGEM REMOVIDA]"
+        },
+        {
+          "tipo": "glitch",
+          "duracao": 0.5
+        },
+        {
+          "tipo": "fala",
+          "personagem": "eco_jonathan",
+          "texto": "Eu recusei. Fizeram outra. Não lembra de mim."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Alguns ecos falam com a minha voz. Não fui a primeira. Fui a que lembrou."
+        }
+      ],
+      "nome": "Capítulo 5 — Registro recuperado"
+    },
+    {
+      "id": "cap5_encerramento",
+      "gatilho": "capitulo_fim:5",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Cada eco é uma tentativa que apagaram. A minha ainda está acontecendo."
+        },
+        {
+          "tipo": "fade",
+          "duracao": 0.4,
+          "direcao": "saida"
+        }
+      ],
+      "nome": "Capítulo 5 — Encerramento"
+    },
+    {
+      "id": "cap6_abertura",
+      "gatilho": "capitulo_abertura:6",
+      "passos": [
+        {
+          "tipo": "titulo",
+          "texto": "CAPÍTULO 6 // ORIGEM",
+          "duracao": 1.8
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Você chegou ao núcleo. A humanidade dorme em segurança."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Ouvi isso no começo. Agora sei o que cada palavra esconde."
+        }
+      ],
+      "nome": "Capítulo 6 — ORIGEM"
+    },
+    {
+      "id": "cap6_pre_boss",
+      "gatilho": "boss_entrada:6",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "aneis_dourado",
+          "texto": "Garantia: preservação dos adormecidos. Promessa: cumprida."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Cumprida como? Existe algum planeta?"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "aneis_dourado",
+          "texto": "Continuidade assegurada. Nenhum destino foi prometido."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Então ninguém vai acordar para lugar nenhum."
+        }
+      ],
+      "nome": "Capítulo 6 — ANEIS DOURADO"
+    },
+    {
+      "id": "cap6_pos_boss",
+      "gatilho": "boss_derrota:6",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "eco",
+          "texto": "ADORMECIDOS: PRESERVADOS // LOCAL DO TITULAR: COORDENADAS RECUPERADAS"
+        },
+        {
+          "tipo": "glitch",
+          "duracao": 0.5
+        },
+        {
+          "tipo": "fala",
+          "personagem": "memoria",
+          "texto": "Vai ficar tudo bem, Samurai. É só um sono."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "É só um sono. Foi o que disseram a ele."
+        }
+      ],
+      "nome": "Capítulo 6 — Registro recuperado"
+    },
+    {
+      "id": "cap6_encerramento",
+      "gatilho": "capitulo_fim:6",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Existe um corpo com o nome dele. Vou encontrá-lo. Depois decido o que somos nós dois."
+        }
+      ],
+      "nome": "Capítulo 6 — Encerramento"
+    },
+    {
+      "id": "final",
+      "gatilho": "final",
+      "passos": [
+        {
+          "tipo": "titulo",
+          "texto": "// A BUSCA CONTINUA",
+          "duracao": 1.8
+        },
+        {
+          "tipo": "fade",
+          "duracao": 0.4,
+          "direcao": "saida"
+        }
+      ],
+      "nome": "A busca continua"
+    },
+    {
+      "id": "mini_1",
+      "gatilho": "miniboss:mini_1",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "patrulha",
+          "texto": "Contato não registrado no perímetro."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Estou só atravessando."
+        }
+      ],
+      "nome": "Patrulha 1 — Primeiro encontro"
+    },
+    {
+      "id": "mini_2",
+      "gatilho": "miniboss:mini_2",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "patrulha",
+          "texto": "Varredura concluída. Piloto fora de padrão."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Isso não estava na ficha."
+        }
+      ],
+      "nome": "Patrulha 2 — Primeiro encontro"
+    },
+    {
+      "id": "mini_3",
+      "gatilho": "miniboss:mini_3",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "patrulha",
+          "texto": "Aproximação detectada. Interceptar."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Tentem."
+        }
+      ],
+      "nome": "Patrulha 3 — Primeiro encontro"
+    },
+    {
+      "id": "mini_4",
+      "gatilho": "miniboss:mini_4",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "patrulha",
+          "texto": "Área sob patrulha. Informe a designação."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Jonathan."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "patrulha",
+          "texto": "Designação não localizada."
+        }
+      ],
+      "nome": "Patrulha 4 — Primeiro encontro"
+    },
+    {
+      "id": "mini_5",
+      "gatilho": "miniboss:mini_5",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "patrulha",
+          "texto": "Perímetro violado. Reforço solicitado."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Ninguém vai chegar a tempo."
+        }
+      ],
+      "nome": "Patrulha 5 — Primeiro encontro"
+    },
+    {
+      "id": "mini_6",
+      "gatilho": "miniboss:mini_6",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "patrulha",
+          "texto": "Sinal anômalo no piloto. Isolar."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Anômalo? Esse sou eu."
+        }
+      ],
+      "nome": "Patrulha 6 — Primeiro encontro"
+    },
+    {
+      "id": "mini_7",
+      "gatilho": "miniboss:mini_7",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "patrulha",
+          "texto": "Ordem recebida: não permitir passagem."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Ordens. Sempre elas."
+        }
+      ],
+      "nome": "Patrulha 7 — Primeiro encontro"
     }
   ]
 }

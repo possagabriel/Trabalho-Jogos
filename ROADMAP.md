@@ -24,6 +24,7 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- E3–E6: `feat/roteiro-capitulos-3-6` adiciona o texto aprovado, sete minibosses e final; 27 testes de cenas e Ruff passaram; sem alteração do motor, aguardando teste manual e sem PR por decisão do usuário (capítulo 2 permanece separado no PR #40).
 - Candidata `v1.8.0-rc1`: builds de instalador/executável Linux e Windows
   passaram. Executar o checklist Windows antes da tag `v1.8.0` e da release
   oficial. Instalação limpa, atualização, jogo, perfis e desinstalação ainda
@@ -33,9 +34,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Trabalho que falta
 
-- Roteiro: revisar o próximo capítulo e implementar os capítulos 3 a 6,
-  falas de minibosses e encerramento final. O JSON atual contém a introdução
-  e o capítulo 1; o motor já suporta os gatilhos necessários.
+- Roteiro: validar os capítulos 3 a 6, minibosses e final desta branch antes de integrar;
+  o capítulo 2 depende da aprovação separada do PR #40.
 - Polimento visual: etapas 2, 3 e 4 e os contornos da etapa 5 já estão na main.
   Conferir ícones e todos os estados de UI da etapa 5 em uma revisão visual
   posterior; não reimplementar HUD/fundos que já foram integrados.
