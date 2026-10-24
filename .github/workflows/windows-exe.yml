@@ -7,8 +7,11 @@ on:
     branches:
       - main
       - "fix/**"
+      - "ci/fase-a-promocao-binarios"
     tags:
       - "v*"
+      # O 1.8.0 será publicado com os mesmos artefatos validados no push da branch.
+      - "!v1.8.0"
 
 jobs:
   empacotar-windows:

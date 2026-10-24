@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- O build de teste da 1.8.0 registra o commit real do push da branch; a tag
+  final `v1.8.0` fica fora da recompilação automática para permitir publicar
+  exatamente os binários e hashes aprovados no teste manual.
 - O menu ganhou cartão de perfil alimentado pelo `ProfileService`, resumo real
   do ponto inicial de Continuar e selos persistentes para Memórias e itens do
   Hangar que ficaram compráveis. O schema de perfil migra automaticamente para v3.
