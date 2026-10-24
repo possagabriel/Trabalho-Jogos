@@ -1,5 +1,9 @@
 # Registro de uso de IA
 
+## Regras de colaboração do INCARNATE
+
+- **Atualização:** AGENTS.md recebeu as regras de escopo, Git, testes, acessibilidade e roteiro definidas pelo usuário.
+
 ## Fase A — validação de nomes de perfil
 
 - **Pedido:** aceitar apóstrofo, hífen, acentos e espaços internos em novos
@@ -14,8 +18,8 @@
   Suíte completa: 649 passaram e 1 ignorado. Ruff passou nos dois arquivos
   Python alterados. Benchmark de runtime não se aplica à validação de nome
   fora do loop do jogo.
-- **Ajustes manuais do usuário:** teste local ficará para depois; PR em
-  rascunho e sem merge.
+- **Ajustes manuais do usuário:** a validação manual ficará para depois; checks
+  de CI Linux e Windows passaram antes da integração.
 
 ## Menu principal — etapa 3: cartão e layout responsivo
 

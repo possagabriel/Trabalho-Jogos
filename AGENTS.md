@@ -287,3 +287,14 @@ Sempre:
    Template Method (src/) ou `atualizar()`/`desenhar()` (game/), constantes
    em `constants.py`, UI pelo `layout.py`.
 6. Ao terminar, rode `pytest tests/` e garanta que a suite completa passa.
+
+## Regras operacionais específicas do INCARNATE
+
+- **Escopo de leitura:** leia somente os arquivos citados na tarefa e `ROADMAP.md`; nunca varra o repositório. Sem screenshots, benchmarks ou suíte completa, salvo pedido explícito. Rode apenas os testes dos módulos alterados e Ruff nos arquivos alterados.
+- **Respostas:** no máximo seis linhas, informando branch, mudança e como testar; sem relatórios.
+- **Git:** uma tarefa por branch, baseada na `origin/main` atualizada; publique a branch e abra PR em rascunho. Nunca faça merge, release, tag, force push, `reset --hard` ou apague branches, tags ou worktrees sem pedido. Preserve a main local do usuário.
+- **Código:** para lógica pura, escreva o teste primeiro. Não adicione dependências além de pygame. Use somente assets procedurais ou com licença livre registrada.
+- **Jogabilidade:** preserve o modo LINEAR. Não mude hitboxes nem balanceamento sem aprovação explícita. Mudanças visuais não alteram gameplay.
+- **Acessibilidade visual:** respeite a opção de reduzir efeitos; limite flashes a três por segundo; não dependa só de cor; mantenha contraste mínimo de 4,5:1 no texto essencial; evite texto cortado em 900×700 e 1920×1080.
+- **Roteiro:** nenhum personagem nomeia um Protocolo Restrito, salvo em título de capítulo ou texto corrompido por glitch. Cada boss mantém léxico próprio.
+- **Documentação:** ao concluir, registre uma linha de status em `ROADMAP.md`, `CHANGELOG.md` e `AI_USAGE.md`. Em dúvida de design, pare e pergunte em até duas linhas.

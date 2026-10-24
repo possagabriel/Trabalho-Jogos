@@ -1,6 +1,6 @@
 # ROADMAP — INCARNATE
 
-Estado auditado em 18/10/2026. PR #26 (polimento do repositório) e PR #27
+Estado auditado em 18/10/2026. As regras de trabalho do agente foram consolidadas em `AGENTS.md`. PR #26 (polimento do repositório) e PR #27
 (renomeação final) estão integrados na main. A candidata `v1.8.0-rc1` foi
 publicada e seus builds Linux e Windows passaram. A release oficial depende do
 checklist manual no Windows.
