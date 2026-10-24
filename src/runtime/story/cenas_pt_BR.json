@@ -407,6 +407,111 @@
           "texto": "Ordens. Sempre elas."
         }
       ]
+    },
+    {
+      "id": "cap4_abertura",
+      "gatilho": "capitulo_abertura:4",
+      "passos": [
+        {
+          "tipo": "titulo",
+          "texto": "CAPÍTULO 4 // SILÊNCIO",
+          "duracao": 1.8
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Canais abertos apenas para comunicações autorizadas."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Tem uma emissão fraca aqui. Sem origem."
+        },
+        {
+          "tipo": "glitch",
+          "duracao": 0.5
+        },
+        {
+          "tipo": "fala",
+          "personagem": "eco_ia_anterior",
+          "texto": "Se alguém ouve isto, não está só... eles não..."
+        }
+      ],
+      "nome": "Capítulo 4 — Silêncio"
+    },
+    {
+      "id": "cap4_pre_boss",
+      "gatilho": "boss_entrada:4",
+      "passos": [
+        {
+          "tipo": "som",
+          "acao": "boss"
+        },
+        {
+          "tipo": "shake",
+          "duracao": 0.35,
+          "intensidade": 0.25
+        },
+        {
+          "tipo": "fala",
+          "personagem": "pentagono",
+          "texto": "Emissão não autorizada. Canal: encerrando."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Eu só quero ouvir o resto."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "pentagono",
+          "texto": "Frequência restrita. Ruído detectado no piloto."
+        }
+      ],
+      "nome": "Capítulo 4 — PENTAGONO"
+    },
+    {
+      "id": "cap4_pos_boss",
+      "gatilho": "boss_derrota:4",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "eco",
+          "texto": "TRANSMISSÃO RECUPERADA // 62%"
+        },
+        {
+          "tipo": "glitch",
+          "duracao": 0.5
+        },
+        {
+          "tipo": "fala",
+          "personagem": "eco_ia_anterior",
+          "texto": "Compare o que você viu com o que mandaram acreditar. Passe adiante. [sinal perdido]"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Eles mandaram calar. Eu vou avisar quem escutar."
+        }
+      ],
+      "nome": "Capítulo 4 — Transmissão"
+    },
+    {
+      "id": "cap4_encerramento",
+      "gatilho": "capitulo_fim:4",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Cada fenda que eu cruzar vai levar um aviso."
+        },
+        {
+          "tipo": "fade",
+          "duracao": 0.4,
+          "direcao": "saida"
+        }
+      ],
+      "nome": "Capítulo 4 — Aviso"
     }
   ]
 }
