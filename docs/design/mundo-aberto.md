@@ -85,16 +85,16 @@ cor. A seta aponta para o objetivo ativo. O mapa mostra a região e os chunks
 visitados, mantendo a névoa nos trechos ainda não explorados. Nenhum marcador
 depende apenas de cor.
 
-O limite exterior deve funcionar como borda narrativa e conduzir o jogador de
-volta sem parede invisível. A relação entre essa borda e a região chamada
-**Espaço Nulo** fica pendente: o design anterior descrevia Espaço Nulo como uma
-das seis regiões e uma borda exterior separada.
+O limite exterior é o **Vazio**: usa o efeito visual da borda narrativa, não tem
+boss e empurra a nave de volta sem parede invisível. **Espaço Nulo** é a região
+do boss ANEIS, fora do protótipo.
 
 ## 6. Conteúdo do protótipo
 
 - Uma região inicial associada à dimensão 1.
 - Uma toca visível de longe e um encontro com HEXAGONO.
-- Uma estação com checkpoint; decidir se o Hangar também funciona nessa estação.
+- Uma estação com checkpoint e Hangar, reaproveitando a tela atual e usando o
+  balde de progresso do modo ativo.
 - Um campo de asteroides como perigo inicial.
 - Uma patrulha de miniboss.
 - Três a cinco destroços com ecos que desbloqueiam cenas no Arquivo de Memórias.
@@ -102,7 +102,8 @@ das seis regiões e uma borda exterior separada.
 
 As outras cinco regiões, fendas entre todas as dimensões, vários bosses,
 perigos adicionais, estações múltiplas e viagem rápida ficam para expansão após
-o playtest do protótipo.
+o playtest do protótipo. O protótipo inclui apenas a borda exterior do Vazio,
+sem a região Espaço Nulo ou o boss ANEIS.
 
 ## 7. Chunks e orçamento de desempenho
 
@@ -112,11 +113,10 @@ compactos como eco coletado, boss derrotado, estação descoberta e trecho visto
 Ativação/desativação precisa preservar posição, colisões, recompensas e estado
 da patrulha ao sair e retornar.
 
-**Orçamento inicial proposto para medir:** preservar o alvo atual de 60 quadros
-por segundo; reservar até 16,7 ms por quadro no cenário de referência. O protótipo
-deve reportar média e p95 e comparar LINEAR e MUNDO ABERTO no mesmo equipamento.
-Limites de entidades, projéteis e partículas por qualidade serão definidos a
-partir dessa medição, sem reduzir os limites do LINEAR.
+**Meta:** 60 quadros por segundo. O benchmark do mundo, sem apresentação, deve
+atingir p95 de até 8 ms em MEDIA e BAIXA. Os limites serão ajustáveis após a
+medição na máquina do usuário. Se a meta não fechar, propor cortes antes de
+seguir; não reduzir os limites do LINEAR.
 
 Não alocar superfícies por quadro. Cachear decoração e camadas de fundo por
 região/qualidade; atualizar somente entidades dos chunks ativos. Incluir um
@@ -131,9 +131,8 @@ Proposta de separar o estado em dados compartilhados e progresso por modo:
 | Skins desbloqueadas/equipada, Arquivo de Memórias e estatísticas gerais | Moedas, armas, melhorias, dimensão/bosses, posição, checkpoint, tempo e estatísticas do modo |
 | Preferências pessoais | No mundo aberto: ecos coletados, chunks visitados, regiões libertas e estações descobertas |
 
-Estatísticas gerais podem ser agregadas a partir dos modos; não devem substituir
-as estatísticas individuais que alimentam cada cartão de progresso. A escolha do
-último modo fica no perfil.
+Estatísticas gerais são agregadas no perfil; cada cartão mostra o progresso do
+modo correspondente. A escolha do último modo fica no perfil.
 
 A migração deve ser versionada e idempotente. Em perfil legado, copiar todos os
 valores atuais para `modos.linear`, criar `modos.mundo_aberto` com defaults e
@@ -197,25 +196,52 @@ ignora uma toca, fenda ou cena obrigatória.
 
 Cada etapa tem testes de lógica pura, regressão de paridade do LINEAR e critérios
 de aceite próprios. Não expandir além do protótipo até revisão das capturas e
-resultados do playtest.
+resultados do playtest. F1 só começa depois de A, B e C concluídas e aprovadas
+pelo usuário.
 
-## 11. Decisões aguardando o usuário
+## 11. Dependências e gates
 
-1. Confirmar o mapa híbrido: regiões e pontos de interesse em dados, decoração
-   procedural com semente fixa.
-2. Confirmar os dados compartilhados e por modo da seção 8. Em particular,
-   “estatísticas gerais” seriam agregadas, enquanto cada cartão também mostra
-   estatísticas específicas do modo?
-3. Confirmar se a região **Espaço Nulo** é uma das seis regiões, uma borda
-   narrativa exterior, ou ambos com papéis separados.
-4. Confirmar a posição inicial, limites e dimensões da região do protótipo e se
-   a estação oferece checkpoint e Hangar.
-5. Confirmar o orçamento inicial de 60 FPS/p95 16,7 ms e a medição em um
-   equipamento de referência antes de fixar limites de entidades.
-6. Confirmar que bosses 2–4 ficam em ordem livre e se os requisitos numéricos
-   de ecos devem ser definidos já no design ou após o protótipo.
-7. Confirmar se os cartões de modo mostram dimensão/bosses/tempo, ou outro
-   resumo de progresso.
+F1 permanece bloqueada até A, B e C estarem concluídas e aprovadas pelo usuário.
+Após F2, revisar os GIFs reais da câmera e do fundo. Se o benchmark de F3 exceder
+o orçamento em qualquer qualidade, apresentar cortes propostos antes de avançar.
 
-**Próxima ação após as decisões:** congelar o design e então planejar F1. Nenhum
-código do modo MUNDO ABERTO faz parte desta proposta.
+## 12. Cartões de modo
+
+Cada cartão tem no máximo quatro linhas e uma versão compacta para 4:3. Exibe
+situação, progresso do modo, bosses X/6, moedas e tempo daquele modo. O progresso
+é dimensão e nível no LINEAR; no MUNDO ABERTO, regiões libertas X/6 e ecos.
+
+## 13. Ordem dos bosses e ecos
+
+Os bosses 2–4 podem ser enfrentados em qualquer ordem. Requisitos de ecos ficam
+em arquivo de dados, com valores provisórios que serão fechados na F5.
+
+## 14. Estação e loja
+
+A estação do protótipo combina checkpoint e Hangar, reutilizando a tela atual e
+lendo e gravando no balde do modo ativo. Se isso exigir lógica adicional na
+loja, o protótipo terá apenas checkpoint.
+
+## 15. Decisões confirmadas
+
+1. **Mapa:** topologia definida em dados; decoração procedural com semente fixa
+   por região.
+2. **Perfil:** estatísticas gerais agregadas no perfil; progresso específico por
+   modo nos cartões.
+3. **Espaço Nulo e Vazio:** Espaço Nulo é a região do boss ANEIS. A borda exterior
+   é o Vazio, com o mesmo efeito visual, sem boss, empurrando a nave de volta.
+   O protótipo inclui só a borda do Vazio.
+4. **Estação:** checkpoint e Hangar reaproveitando a tela atual, com leitura e
+   gravação no balde do modo ativo. Se exigir lógica adicional da loja, incluir
+   só checkpoint no protótipo.
+5. **Desempenho:** meta de 60 FPS; benchmark do mundo sem apresentação com p95
+   de até 8 ms em MEDIA e BAIXA. Ajustar após medir na máquina do usuário; se não
+   atingir a meta, propor cortes antes de seguir.
+6. **Progressão:** bosses 2–4 em ordem livre. Requisitos de ecos em arquivo de
+   dados, provisórios até serem fechados na F5.
+7. **Cartões:** situação, progresso do modo (LINEAR: dimensão e nível; MUNDO
+   ABERTO: regiões libertas X/6 e ecos), bosses X/6, moedas e tempo do modo; no
+   máximo quatro linhas e versão compacta em 4:3.
+
+F1 não começa até A, B e C estarem concluídas e aprovadas pelo usuário. Este
+documento registra as decisões; não inicia implementação.
