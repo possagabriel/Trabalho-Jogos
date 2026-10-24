@@ -284,6 +284,7 @@ class CamadaMarcos:
         escala = QUALIDADE_MARCOS[self.qualidade]["escala"]
         diametro = max(64, min(round(int(spec["tamanho"]) * escala), self._limite_tamanho))
         surface = pygame.Surface((diametro, diametro), pygame.SRCALPHA)
+        surface.fill((0, 0, 0, 0))
         cor = _misturar(tuple(spec["cor"]))
         desenhador = _DESENHADORES[spec["forma"]]
         if spec["forma"] == "destrocos":

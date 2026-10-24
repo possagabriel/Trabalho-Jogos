@@ -280,7 +280,7 @@ def _arc(surf, centro, raio, inicio, fim, cor, espessura, alpha=255):
 
 
 def _medidor_circular(tela, layout, centro, raio, fracao, cor,
-                      rotulo=None, valor=None):
+                      rotulo=None, valor=None, rotulo_abaixo=False):
     """Gauge circular com arco de fundo, ticks e arco de valor com brilho.
 
     Desenha diretamente na superfície de destino, sem alocar temporários
@@ -322,20 +322,37 @@ def _medidor_circular(tela, layout, centro, raio, fracao, cor,
         py = local[1] + math.sin(fim) * (r - layout.px(3))
         desenhar_circulo(tela, cor, (px, py), layout.px(2))
 
+    surf_v = None
     if valor is not None:
         fonte = _fonte_com_altura_efetiva(
             layout, 16, TEXTO_ESSENCIAL_MIN_PX, titulo=True)
         surf_v = fonte.render(valor, True, BRANCO_HUD)
-        _blit_alfa(tela, surf_v, surf_v.get_rect(
-            center=(centro[0], centro[1] - layout.px(8))))
+    surf_r = None
     if rotulo:
         fonte = _fonte_com_altura_efetiva(
             layout, 11, TEXTO_SECUNDARIO_MIN_PX)
         cor = cor_com_contraste(
             CINZA_HUD, FUNDO_TEXTO_HUD, CONTRASTE_TEXTO_HUD_AJUSTE)
         surf_r = fonte.render(rotulo, True, cor)
+
+    if rotulo_abaixo and surf_r is not None:
+        if surf_v is not None:
+            _blit_alfa(tela, surf_v, surf_v.get_rect(center=centro))
         _blit_alfa(tela, surf_r, surf_r.get_rect(center=(
-            centro[0], centro[1] + layout.px(14))))
+            centro[0], centro[1] + raio + layout.px(4))))
+    elif surf_v is not None and surf_r is not None:
+        gap = layout.px(7)
+        total = surf_v.get_height() + gap + surf_r.get_height()
+        topo = centro[1] - total // 2
+        _blit_alfa(tela, surf_v, surf_v.get_rect(
+            center=(centro[0], topo + surf_v.get_height() // 2)))
+        _blit_alfa(tela, surf_r, surf_r.get_rect(
+            center=(centro[0], topo + surf_v.get_height() + gap
+                    + surf_r.get_height() // 2)))
+    elif surf_v is not None:
+        _blit_alfa(tela, surf_v, surf_v.get_rect(center=centro))
+    elif surf_r is not None:
+        _blit_alfa(tela, surf_r, surf_r.get_rect(center=centro))
 
 
 def _icone_nave(tela, centro, escala, cor=BRANCO_HUD):
@@ -717,13 +734,13 @@ class HudJogo:
 
         regiao = _render(self._f_titulo_xs, d["regiao"], self._paleta["primaria"])
         _blit_alfa(tela, regiao, regiao.get_rect(center=(
-            cx, y + layout.px(54 if self.compacto else 38))),
+            cx, y + layout.px(46 if self.compacto else 38))),
                    230)
 
         # progresso da fase (extremamente discreto)
         largura = layout.px(280)
         barra = pygame.Rect(cx - largura // 2,
-                            y + layout.px(70 if self.compacto else 50),
+                            y + layout.px(70 if self.compacto else 54),
                             largura, layout.px(4))
         _barra_fina(tela, layout, barra, d["progresso"], self._paleta["primaria"],
                     brilho=False)
@@ -741,7 +758,8 @@ class HudJogo:
         else:
             cor = self._paleta["primaria"]
         _medidor_circular(tela, layout, centro, raio, fracao, cor,
-                          rotulo="IMPULSO", valor=f"{int(fracao * 100)}%")
+                          rotulo="IMPULSO", valor=f"{int(fracao * 100)}%",
+                          rotulo_abaixo=self.compacto)
 
         # velocidade
         vx = centro[0]

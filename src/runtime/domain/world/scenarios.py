@@ -49,6 +49,23 @@ _FUNDO_POR_CENARIO = {
 
 _CACHE_FUNDO = {"imagens": {}, "carregada": False}
 
+# O fundo e atmosfera; inimigos, projéteis e mira precisam dominar a leitura.
+# O tratamento é aplicado uma vez na composição estática, sem custo por quadro.
+_VEU_FUNDO_COR = (7, 10, 24)
+_VEU_FUNDO_DESSATURACAO = 165
+_VEU_FUNDO_ALFA = 120
+
+
+def _reduzir_contraste_fundo(fundo):
+    """Dessatura e escurece a paisagem para preservar o contraste da ação."""
+    cinza = pygame.transform.grayscale(fundo)
+    cinza.set_alpha(_VEU_FUNDO_DESSATURACAO)
+    fundo.blit(cinza, (0, 0))
+    veu = pygame.Surface(fundo.get_size())
+    veu.fill(_VEU_FUNDO_COR)
+    veu.set_alpha(_VEU_FUNDO_ALFA)
+    fundo.blit(veu, (0, 0))
+
 
 def _ajustar_cover(img, larg, alt):
     """Redimensiona com scale-to-cover e corta centralmente para (larg, alt).
@@ -220,6 +237,7 @@ class Cenario:
         nebulosas = []
         for _ in range(6):
             surf = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+            surf.fill((0, 0, 0, 0))
             x = random.randint(0, LARGURA)
             y = random.randint(0, ALTURA)
             raio = random.randint(80, 180)
@@ -252,11 +270,13 @@ class Cenario:
         for nebulosa in self.nebulosas:
             fundo.blit(nebulosa, (0, 0))
         self._desenhar_paisagem_original(fundo)
+        _reduzir_contraste_fundo(fundo)
         return fundo
 
     def _desenhar_paisagem_original(self, fundo):
         """Acrescenta silhuetas e linhas proprias sem custo por quadro."""
         camada = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+        camada.fill((0, 0, 0, 0))
         cor = self.cores_principais[0]
         if self.id == 1:
             # Rotas orbitais e fragmentos em torno do planeta distante.
@@ -452,6 +472,7 @@ class Cenario:
             larg = int(largura)
             if larg not in _CACHE_RAIOS:
                 surf = pygame.Surface((larg, ALTURA), pygame.SRCALPHA)
+                surf.fill((0, 0, 0, 0))
                 meio = larg / 2
                 for i in range(larg):
                     alfa = int(90 * (1 - abs(i - meio) / meio))
