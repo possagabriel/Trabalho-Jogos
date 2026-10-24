@@ -449,6 +449,17 @@ def test_teste_de_resolucao_nao_emite_som():
     menu._som.assert_not_called()
 
 
+def test_navegacao_no_seletor_de_resolucao_emite_som():
+    _, menu = novo_menu()
+    menu._som = mock.Mock()
+    menu.config_submodo = "resolucao"
+
+    menu._tecla_config(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_DOWN}))
+    menu._tecla_config(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_ESCAPE}))
+
+    assert menu._som.call_args_list == [mock.call("navegar"), mock.call("navegar")]
+
+
 def test_qualidade_visual_e_monitor_de_fps_sao_configuraveis():
     jogo, menu = novo_menu()
     jogo._aplicar_qualidade_grafica = mock.Mock()

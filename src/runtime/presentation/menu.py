@@ -2872,11 +2872,13 @@ class MenuPrincipal:
             if evento.key == pygame.K_ESCAPE:
                 self.config_submodo = None
                 self.sub_anim = 0.0
+                self._som("navegar")
             elif evento.key in (pygame.K_UP, pygame.K_DOWN):
                 n = len(RESOLUCOES)
                 passo = 1 if evento.key == pygame.K_DOWN else -1
                 self.resolucao_selecao = (self.resolucao_selecao + passo) % n
                 self._rolar_resolucao(self.resolucao_selecao)
+                self._som("navegar")
             elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                 self._aplicar_resolucao(self.resolucao_selecao)
             return True
