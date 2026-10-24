@@ -1,9 +1,8 @@
 # Fase A — preparar binários verificáveis para 1.8.0
 
-Plano e procedimento de revisão. Esta branch parte da `origin/main` e não
-altera gameplay, versão do pacote, hitboxes ou balanceamento. O usuário
-autorizou o merge do PR de preparação; a publicação da versão final continua
-dependendo do teste manual dos binários Windows.
+Plano e checklist da promoção. A PR #36 já está integrada; este documento não
+autoriza merge, tag, RC ou release. A publicação continua dependendo do teste
+manual dos binários Windows.
 
 ## Problema
 
@@ -13,53 +12,56 @@ gerado de uma tag `rc` mostra `1.8.0-rc1`. Reutilizá-lo como release final
 deixaria as licenças de fontes de fora. Criar `v1.8.0` no workflow atual faria
 uma nova compilação, que não seria o arquivo testado no Windows.
 
-## Decisão técnica para esta branch
+## Candidato congelado para teste manual
 
-1. Gerar os artefatos de teste pela execução **push** da branch desta tarefa.
-   Assim `github.sha` é o commit real da branch, e os dois arquivos
-   `BUILD-COMMIT` podem ser comparados a ele. Em `pull_request`, o SHA padrão
-   representa um merge temporário; não usar os artefatos desse evento para a
-   promoção. A versão do instalador no push de branch vem do
-   `pyproject.toml`, atualmente `1.8.0`.
-2. Fazer o workflow de executáveis rodar no push desta branch. Manter a execução
-   de PR para verificar integração, mas identificar o **push** como origem dos
-   arquivos que o usuário testará.
-3. Excluir especificamente a tag final `v1.8.0` do gatilho de build automático.
-   Depois de aprovação, criar a tag no **mesmo commit** que gerou os artefatos
-   aprovados e anexar os arquivos já testados à Release final por procedimento
-   manual. Outras tags continuam usando o comportamento existente.
-4. Se a branch mudar após o teste, invalidar o teste e entregar os artefatos
-   de um novo push. A integração futura precisa preservar o SHA do commit
-   testado na história da `main` (merge commit, sem squash/rebase). Criar tag de
-   segurança na `origin/main` antes do merge, quando ele for aprovado.
+Usar os artefatos do evento **push** do [build #40125004991](https://github.com/possagabriel/Trabalho-Jogos/actions/runs/40125004991),
+gerados em `f020cb0edbcd2f60fa08d7a8805313e326026c60`. Esse commit foi integrado
+na PR #36; a árvore do artefato é idêntica à `origin/main` em `0084abf`.
+Os checks de Linux, Windows, Ruff, OpenGL e empacotamento passaram. O instalador
+reporta versão `1.8.0` pelo `pyproject.toml`; não é uma RC publicada.
+
+Hashes conferidos localmente:
+
+- `INCARNATE-Setup.exe`: `b8dfa6c5081d256d72f8bc6803d7d50caf979b910ea0303f79b8ecc36551837c`
+- `INCARNATE.exe`: `47afde29527d4a8b4115cb5d6c5e65f3923f6905d91079973f559fc3c16dd752`
+- `INCARNATE-Linux-x86_64.tar.gz`: `cc3173585566392bf67f61deffcababbb7a158d1f03bc1bb60a5f93be24e3e99`
+
+Não substituir esses arquivos por um novo build depois do teste. A RC1 `f383926`
+é anterior à inclusão de `LICENSE` e OFL e não é candidata à promoção. RC2 e
+release final ficam para depois do resultado Windows e da aprovação explícita.
 
 Os filtros negativos de tags seguem a
 [documentação do GitHub Actions](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
 O SHA de um evento `pull_request` é descrito na
 [referência de eventos](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows).
 
-## Como validar os binários desta branch
+## Checklist manual no Windows
 
-- Na aba **Actions → Executáveis Desktop**, escolher a execução de evento
-  **push** da branch e conferir que Windows e Linux passaram. Baixar os
-  artefatos `INCARNATE-Windows` e `INCARNATE-Linux-x86_64` da mesma execução.
-- Comparar `BUILD-COMMIT-Windows.txt` e `BUILD-COMMIT-Linux.txt` com o SHA do
-  push. Verificar `SHA256SUMS.txt` com `Get-FileHash` no Windows e
-  `SHA256SUMS-Linux.txt` com `sha256sum -c` no Linux.
-- Conferir `licenses/OFL.txt` no instalador e no pacote Linux, a versão
-  `1.8.0` do instalador e os avisos de SmartScreen/SHA-256 do README.
-- Fazer instalação limpa, atualização de instalação anterior com cópia de
-  saves, partida curta, perfis e desinstalação. Registrar hash, SHA do commit,
-  resultado e edição do Windows. O teste funcional ainda cabe ao usuário.
+- Antes de atualizar, faça backup de `%LOCALAPPDATA%\VoidShift` (por padrão,
+  `C:\Users\<usuário>\AppData\Local\VoidShift`).
+- Baixe `INCARNATE-Windows` do build #40125004991; confira
+  `BUILD-COMMIT-Windows.txt` (`f020cb0…`) e compare os dois executáveis com
+  `SHA256SUMS.txt` usando `Get-FileHash` no PowerShell.
+- Instale em uma máquina limpa; abra pelo atalho e inicie uma partida curta.
+- Confira que o instalador informa `1.8.0` e que a instalação contém
+  `licenses\OFL.txt`.
+- Atualize uma instalação anterior; confira atalhos, abertura do jogo e
+  preservação dos perfis/saves do backup.
+- Crie ou selecione um perfil e confirme que os dados continuam disponíveis.
+- Desinstale e confirme que o jogo foi removido e os dados do usuário seguem
+  preservados para recuperação.
+- Anote edição/versão do Windows, hashes, resultado de cada item e qualquer
+  falha. O aviso SmartScreen/antivírus é esperado em binários sem reputação;
+  valide o SHA-256 antes de executar.
+
+No Linux, `sha256sum -c SHA256SUMS-Linux.txt` passou. O tar inclui
+`INCARNATE/licenses/OFL.txt`; o instalador Windows referencia
+`{app}\licenses\OFL.txt` no script Inno Setup. A confirmação do arquivo após
+instalação faz parte do teste manual.
 
 ## Trava de publicação
 
-O merge desta branch foi autorizado pelo usuário. Isso não autoriza criar
-tags, publicar ou editar uma Release, nem anexar ou substituir assets públicos.
-A `v1.8.0` e uma nova RC continuam bloqueadas até o usuário testar os binários
-Windows manualmente. Depois do teste, conferir que os hashes dos arquivos
-publicados são os mesmos dos downloads aprovados. A tag `v1.8.0` deve apontar
-para o SHA declarado pelos dois pacotes e estar contida na `origin/main`
-aprovada. O workflow não compilará novamente ao receber essa tag. Registrar
-no ROADMAP, README, CHANGELOG e AI_USAGE o resultado real; não declarar release
-concluída antes.
+Este documento não cria nem autoriza tag, merge ou release. A `v1.8.0` e uma
+nova RC continuam bloqueadas até o usuário testar os binários Windows e aprovar
+os próximos passos. Depois do teste, registrar o resultado real nos docs; não
+declarar release concluída antes da promoção explícita dos mesmos arquivos.

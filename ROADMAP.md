@@ -24,20 +24,18 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
-- A RC `v1.8.0-rc1` aponta para `f383926` e não inclui `LICENSE` nem os
-  avisos OFL nos pacotes. A branch `ci/fase-a-promocao-binarios` prepara
-  artefatos atualizados da main para teste Windows; merge da configuração de
-  build autorizado, mas release final e nova RC aguardam teste manual. Ver
+- A RC `v1.8.0-rc1` aponta para `f383926` e antecede `LICENSE` e os avisos OFL
+  nos pacotes. Os artefatos do build #40125004991, commit `f020cb0`, estão
+  integrados pela PR #36; checks e hashes passaram, mas o teste manual Windows
+  ainda falta. RC2, tag e release final aguardam esse teste. Ver
   [procedimento de promoção](docs/release-v1.8.0-promocao.md).
 - Nomes de perfil: o PR #37 integrado aceita apóstrofo, hífen, acentos e
   espaços internos, rejeitando controles e espaços nas pontas; perfis legados
   continuam legíveis e exportáveis.
 - B2: etapa 1 integrada (f22ddf4, PR #31); cinco itens e hubs Jogar/Perfil
   integrados via PR #42, com teste manual de navegação pendente.
-- Candidata `v1.8.0-rc1`: builds de instalador/executável Linux e Windows
-  passaram. Executar o checklist Windows antes da tag `v1.8.0` e da release
-  oficial. Instalação limpa, atualização, jogo, perfis e desinstalação ainda
-  precisam de validação manual no Windows.
+- Build candidato da PR #36: instalação limpa, atualização, jogo, perfis e
+  desinstalação ainda precisam de validação manual no Windows.
 - Confirmar a aparência e o comportamento dos atalhos na atualização de uma
   instalação antiga. AppId e diretórios de dados são preservados.
 
@@ -52,9 +50,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 - Tutorial: há dicas na tela de carregamento, mas a busca no runtime não
   identificou um fluxo completo de tutorial contextual. Conferir a divergência
   com a entrada antiga do CHANGELOG antes de implementar.
-- A limpeza Ruff e a inclusão da licença MIT/OFL já chegaram à main pelos
-  PRs #29 e #30. Verificar sua presença nos novos binários antes da release;
-  a RC antiga não contém esses arquivos.
+- A limpeza Ruff e a licença MIT/OFL chegaram à main pelos PRs #29 e #30; a
+  OFL foi conferida no pacote Linux e está configurada no instalador Windows.
 
 ## Lista de melhorias de game design e engenharia
 
