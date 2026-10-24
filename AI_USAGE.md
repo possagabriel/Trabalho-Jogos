@@ -2,18 +2,19 @@
 
 ## Fase A — preparação da candidata 1.8.0
 
-- **Pedido:** preparar todas as pendências da Fase A em branches separadas e
-  PRs em rascunho, sem merge; o usuário testará os binários depois.
-- **Implementação da IA:** auditoria da RC antiga; build de teste no push da
-  branch para gravar o SHA real do código; exclusão da tag final `v1.8.0` do
-  build automático; documentação dos hashes, checklist e promoção manual dos
-  arquivos aprovados. Nenhum binário foi promovido nem release publicada.
+- **Pedido:** inventariar a release 1.8.0 e PR #36, conferir artefatos e
+  preparar docs/checklist; não criar tag ou release antes do teste Windows.
+- **Implementação da IA:** auditoria da RC1 e dos artefatos do build
+  #40125004991 (`f020cb0`); conferência de hashes, BUILD-COMMIT e OFL;
+  documentação do checklist de Windows e promoção manual. Nenhum binário foi
+  promovido nem release publicada.
 - **Decisões:** usar a `origin/main` atual como base da branch de trabalho.
   A decisão de rejeitar apóstrofo foi substituída pelo PR #37; o teste manual
   Windows ainda falta. A promoção e a release continuam condicionadas ao teste.
-- **Verificação:** suíte completa local: 641 passaram e 1 ignorado. YAML do
-  workflow analisado sem erro de sintaxe; CI e artefatos serão conferidos após
-  o push. Ruff de Python e benchmark de runtime não se aplicam à mudança de CI.
+- **Verificação:** checks Linux/Windows, Ruff, OpenGL e empacotamento da PR #36
+  passaram. SHA-256 dos dois arquivos Windows conferidos; hash Linux validado
+  com `sha256sum -c`; OFL verificada no tar Linux e no script do instalador.
+  Teste funcional manual no Windows continua pendente.
 
 ## Regras de colaboração do INCARNATE
 

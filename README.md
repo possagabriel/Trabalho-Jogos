@@ -26,11 +26,12 @@ o nome INCARNATE; instalações antigas são atualizadas pelo mesmo AppId do
 Inno Setup. Consulte os guias
 de [Windows](docs/distribuicao-windows.md) e [Linux](docs/distribuicao-linux.md).
 O código está na versão 1.8.0. A candidata `v1.8.0-rc1` está disponível em
-[Releases](../../releases/tag/v1.8.0-rc1); a release oficial depende da
-validação manual no Windows descrita no [roadmap](ROADMAP.md).
-A RC antiga antecede os avisos completos das fontes nos pacotes. O procedimento
-para testar os novos binários antes da release está no
-[plano de promoção 1.8.0](docs/release-v1.8.0-promocao.md).
+[Releases](../../releases/tag/v1.8.0-rc1), mas antecede os avisos completos das
+fontes nos pacotes. Para testar os binários atualizados, use os artefatos da
+[execução de build #40125004991](https://github.com/possagabriel/Trabalho-Jogos/actions/runs/40125004991),
+gerados do commit `f020cb0`. RC2 e release final aguardam o teste manual no
+Windows. O [plano de promoção 1.8.0](docs/release-v1.8.0-promocao.md) tem os
+hashes e o checklist.
 
 No Windows, o SmartScreen ou o antivírus pode mostrar um aviso de reputação
 para um build sem assinatura reconhecida. Para conferir o download, baixe
