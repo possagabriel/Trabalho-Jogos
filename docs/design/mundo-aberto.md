@@ -197,7 +197,8 @@ ignora uma toca, fenda ou cena obrigatória.
 Cada etapa tem testes de lógica pura, regressão de paridade do LINEAR e critérios
 de aceite próprios. Não expandir além do protótipo até revisão das capturas e
 resultados do playtest. F1 só começa depois de A, B e C concluídas e aprovadas
-pelo usuário.
+pelo usuário. **Critério de sucesso do protótipo:** o jogador usa boost e sonar
+sem instrução e encontra um eco em até 2 minutos.
 
 ## 11. Dependências e gates
 
@@ -245,3 +246,113 @@ loja, o protótipo terá apenas checkpoint.
 
 F1 não começa até A, B e C estarem concluídas e aprovadas pelo usuário. Este
 documento registra as decisões; não inicia implementação.
+
+## 16. Melhorias propostas
+
+### Camada do protótipo (F2 a F5)
+
+#### Câmera com antecipação
+
+- Descrição: A câmera antecipa a nave na direção do movimento.<br>
+  A antecipação é suavizada e configurável.
+- Etapa: F2.
+- Risco: movimento de câmera excessivo pode causar desconforto ou esconder ameaças.
+- Como testar: comparar movimento parado, mudanças bruscas de direção e voo contínuo; conferir limite e opção de configuração.
+
+#### Boost de exploração
+
+- Descrição: Um boost curto aumenta a velocidade, inclina a nave e deixa rastros e linhas de velocidade.<br>
+  A recarga limita o uso, e pontos do mapa dependem dele para serem alcançados.
+- Etapa: F3.
+- Risco: recarga ou alcance inadequados podem bloquear o avanço ou tornar o deslocamento trivial.
+- Como testar: alcançar os pontos previstos, medir a recarga em jogo e validar leitura dos projéteis durante o boost.
+
+#### Sonar de memória
+
+- Descrição: Uma tecla dispara um pulso com recarga que revela destroços e ecos próximos.<br>
+  O brilho varia com a distância e cada marcador também tem forma própria; o sonar substitui parte do radar.
+- Etapa: F5.
+- Risco: alcance, recarga ou brilho podem deixar ecos fáceis demais ou difíceis de localizar.
+- Como testar: sem instrução, pedir ao jogador que use o pulso para encontrar um eco e verificar a leitura por forma e distância.
+
+#### Perigo de região
+
+- Descrição: Cada região terá um perigo com comportamento próprio.<br>
+  No protótipo, o perigo é somente um campo de asteroides.
+- Etapa: F3.
+- Risco: densidade ou dano excessivos podem bloquear rotas e encobrir o combate.
+- Como testar: atravessar o campo por rotas distintas, conferir colisões e confirmar que projéteis permanecem visíveis.
+
+### Camada 2 (depois do playtest)
+
+#### Zonas de calma
+
+- Descrição: Trechos seguros alternam com as zonas de perigo.<br>
+  A pausa entre encontros dá espaço para navegação e leitura do mundo.
+- Etapa: Camada 2, depois do playtest.
+- Risco: zonas seguras longas podem reduzir o ritmo da exploração.
+- Como testar: observar pausas e encontros em percursos completos e ajustar a distância entre zonas.
+
+#### Eventos de região
+
+- Descrição: Regiões podem ter tempestades, caçadores ou cápsulas de memória.<br>
+  Eventos aparecem no espaço e oferecem mudanças temporárias ou descobertas.
+- Etapa: Camada 2, depois do playtest.
+- Risco: eventos simultâneos podem sobrecarregar o HUD e competir com objetivos principais.
+- Como testar: percorrer cada região com um evento ativo e verificar aviso, legibilidade e encerramento.
+
+#### Upgrades de movimento
+
+- Descrição: Melhorias de movimento podem abrir caminhos e pontos de exploração.<br>
+  Esses caminhos funcionam como chaves de acesso no mapa.
+- Etapa: Camada 2, depois do playtest.
+- Risco: requisitos de movimento podem impedir retorno ou criar bloqueios sem indicação.
+- Como testar: tentar cada rota antes e depois do upgrade e conferir sinalização e retorno à rota principal.
+
+#### Região libertada
+
+- Descrição: Libertar uma região muda suas cores, seu fundo e a fala da Voz do Protocolo.<br>
+  A mudança comunica o resultado sem alterar os critérios de acesso confirmados.
+- Etapa: Camada 2, depois do playtest.
+- Risco: mudança visual pouco clara pode não comunicar a libertação ou reduzir contraste.
+- Como testar: comparar a mesma região antes e depois da libertação, em COMIC e ORIGINAL, com efeitos reduzidos.
+
+#### Ecos como mini-histórias
+
+- Descrição: Cada eco pode contar uma mini-história de duas a três falas.<br>
+  Os registros ampliam contexto sem antecipar revelações fora de ordem.
+- Etapa: Camada 2, depois do playtest.
+- Risco: falas longas ou revelações antecipadas podem interromper a exploração e confundir a sequência narrativa.
+- Como testar: conferir duração de leitura, ordem de revelações e compreensão após coletar ecos opcionais.
+
+#### Trecho de aproximação às tocas
+
+- Descrição: Cada toca pode ter um trecho curto antes do encontro com o boss.<br>
+  A aproximação prepara a arena sem alongar a entrada.
+- Etapa: Camada 2, depois do playtest.
+- Risco: repetição ou duração excessiva pode atrasar a luta.
+- Como testar: entrar e sair da toca, medir a duração e verificar que a luta começa corretamente após a aproximação.
+
+#### Marcadores do jogador no mapa
+
+- Descrição: O jogador pode criar marcadores próprios no mapa.<br>
+  Os marcadores registram rotas, pontos de interesse e locais para revisitar.
+- Etapa: Camada 2, depois do playtest.
+- Risco: excesso de marcadores pode poluir o mapa ou dificultar a leitura dos objetivos.
+- Como testar: criar, mover e remover marcadores em regiões visitadas e não visitadas; conferir persistência e legibilidade.
+
+#### Morte e retorno à estação
+
+- Descrição: Ao morrer, o jogador retorna à última estação ativada.<br>
+  A volta pode aplicar uma pequena perda, comunicada antes de confirmar a escolha.
+- Etapa: Camada 2, depois do playtest.
+- Risco: perda ambígua ou desproporcional pode punir exploração e desestimular o retorno.
+- Como testar: morrer após ativar uma estação, conferir ponto de retorno, perda aplicada e mensagem apresentada.
+
+### Princípios de implementação
+
+- Densidade acima de tamanho: deve haver algo para ver ou fazer a cada 20 a 30 segundos.
+- Todo efeito respeita a opção “reduzir efeitos” e o limite máximo de 3 flashes por segundo.
+- Rastros e brilhos nunca escondem projéteis.
+- Nenhum personagem nomeia um Protocolo Restrito em fala.
+- O modo LINEAR não muda.
