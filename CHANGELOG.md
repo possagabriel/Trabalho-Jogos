@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - AGENTS.md consolida escopo de leitura, fluxo Git, validação, acessibilidade e regras de roteiro do INCARNATE.
+- Menu B2: cinco itens e hubs de navegação mantêm os destinos antigos em até duas ações; etapa 1 está integrada na main, e Continuar sem save fica desabilitado com aviso.
 - Nomes de perfil agora aceitam apóstrofo e outros caracteres imprimíveis na
   criação e renomeação; espaços nas pontas e controles são rejeitados. Perfis
   legados continuam legíveis e exportáveis.
