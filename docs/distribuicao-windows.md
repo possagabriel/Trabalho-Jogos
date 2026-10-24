@@ -54,6 +54,15 @@ Compare o valor `Hash` com a linha `INCARNATE-Setup.exe` de `SHA256SUMS.txt`.
 O arquivo `licenses\OFL.txt` instalado junto ao jogo contém a licença e os
 avisos de copyright das fontes.
 
+## Testar binários da branch de preparação 1.8.0
+
+Enquanto `v1.8.0` não for publicada, use os artefatos da execução **push** de
+`ci/fase-a-promocao-binarios` em **Actions → Executáveis Desktop**. O evento
+`pull_request` compila um merge temporário e não serve como origem dos bytes
+a promover. Baixe `INCARNATE-Windows`, compare `BUILD-COMMIT-Windows.txt` com o
+SHA do push e valide os hashes em `SHA256SUMS.txt`. Os passos completos de
+teste e promoção estão no [plano da Fase A](release-v1.8.0-promocao.md).
+
 ## Assinatura e aviso do SmartScreen
 
 O aviso de arquivo potencialmente perigoso não pode ser removido por código.

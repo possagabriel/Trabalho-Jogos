@@ -28,6 +28,9 @@ de [Windows](docs/distribuicao-windows.md) e [Linux](docs/distribuicao-linux.md)
 O código está na versão 1.8.0. A candidata `v1.8.0-rc1` está disponível em
 [Releases](../../releases/tag/v1.8.0-rc1); a release oficial depende da
 validação manual no Windows descrita no [roadmap](ROADMAP.md).
+A RC antiga antecede os avisos completos das fontes nos pacotes. O procedimento
+para testar os novos binários antes da release está no
+[plano de promoção 1.8.0](docs/release-v1.8.0-promocao.md).
 
 No Windows, o SmartScreen ou o antivírus pode mostrar um aviso de reputação
 para um build sem assinatura reconhecida. Para conferir o download, baixe
