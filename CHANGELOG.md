@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   de apóstrofo em novos nomes foi revista na seção Unreleased.
 
 ### Added
+- Documento de design do mundo aberto com mapa em dados, bosses 2–4 em ordem livre, títulos sem número nesse modo, modo extra e viagem rápida após o protótipo; implementação ainda pendente.
 - Licença MIT do projeto e avisos OFL 1.1 de Orbitron e Rajdhani nos pacotes.
 - README resume o aviso SmartScreen/antivírus e a verificação SHA-256.
 
