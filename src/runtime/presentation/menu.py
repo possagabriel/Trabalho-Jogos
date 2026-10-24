@@ -101,7 +101,7 @@ from src.runtime.infrastructure.persistence.save_system import ARQUIVO_RECORDES,
 from src.runtime.infrastructure.persistence.shop import LojaSkins
 from src.runtime.presentation.menu_scene import (
     DestaqueMenu,
-    FundoCinematico,
+    FundoMenuParallax,
     HudMenu,
     NaveMenu,
     TransicaoMissao,
@@ -600,7 +600,7 @@ class MenuPrincipal:
         self.jogo = jogo
         self.layout = layout or Layout()
         self.subestado = "MENU"
-        self.fundo = FundoCinematico(self.layout)
+        self.fundo = FundoMenuParallax(self.layout)
         self.hud = HudMenu(self.layout)
         self.nave = NaveMenu()
         self.destaque = DestaqueMenu(self.layout)

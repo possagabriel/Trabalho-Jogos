@@ -344,8 +344,11 @@ def test_paineis_amplos_dos_submenus_compartilham_alinhamento():
 
 
 def test_construcao_carregou_fundo_do_menu():
+    from game.menu_scene import FundoMenuParallax
+
     _, menu = novo_menu()
-    assert menu.fundo.fundo_imagem is not None or menu.fundo.gradiente
+    assert isinstance(menu.fundo, FundoMenuParallax)
+    assert menu.fundo.qualidade == "BAIXA"
 
 
 def test_escolher_resolucao_preserva_tela_cheia_ativa():

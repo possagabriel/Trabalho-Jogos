@@ -74,6 +74,13 @@ def test_camadas_por_qualidade_e_pool_limitado(qualidade: str, esperado: int) ->
     assert fundo.particulas_ativas == 0
 
 
+def test_parallax_sem_linhas_nao_prepara_speedlines() -> None:
+    cenario = Cenario(1)
+    fundo = ParallaxBackground(cenario, "BAIXA", (0, 1), linhas_ativas=False)
+    fundo.desenhar(pygame.Surface((LARGURA, ALTURA)))
+    assert fundo._linhas is None
+
+
 def test_boss_publica_eventos_sem_alterar_vida_ataques_e_recompensas(
     tmp_path, monkeypatch,
 ) -> None:

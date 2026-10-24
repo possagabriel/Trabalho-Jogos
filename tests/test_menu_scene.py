@@ -29,6 +29,7 @@ from game.layout import Layout  # noqa: E402
 from game.menu_scene import (  # noqa: E402
     DestaqueMenu,
     FundoCinematico,
+    FundoMenuParallax,
     HudMenu,
     NaveMenu,
     TransicaoMissao,
@@ -94,6 +95,75 @@ def test_fundo_atualiza_e_desenha():
     for _ in range(60):
         fundo.atualizar()
         fundo.desenhar(tela)
+
+
+# ---------------------------------------------------------------------------
+# FundoMenuParallax
+# ---------------------------------------------------------------------------
+
+def test_fundo_menu_compila_parallax_uma_vez_em_baixa():
+    pygame.init()
+    cenario = mock.Mock()
+    cenario.parallax = mock.Mock()
+    with mock.patch("game.menu_scene.Cenario", return_value=cenario) as fabrica:
+        fundo = FundoMenuParallax(Layout(1280, 720))
+        tela = pygame.Surface((1280, 720))
+        fundo.desenhar(tela)
+        fundo.desenhar(tela)
+
+    fabrica.assert_called_once()
+    cenario.configurar_avanco.assert_called_once_with(
+        "BAIXA", (0.0, 1.0), False, True,
+        {"avanco_marcos": False, "avanco_ritmo_variavel": False})
+    cenario.parallax.desenhar.assert_called_once()
+    assert fundo.qualidade == "BAIXA"
+    assert fundo.cache_estatico is True
+
+
+def test_fundo_menu_recompila_ao_trocar_layout():
+    pygame.init()
+    cenario = mock.Mock()
+    cenario.parallax = mock.Mock()
+    with mock.patch("game.menu_scene.Cenario", return_value=cenario):
+        fundo = FundoMenuParallax(Layout(1280, 720))
+        fundo.desenhar(pygame.Surface((1280, 720)))
+        assert fundo.cache_estatico is True
+
+        fundo.set_layout(Layout(900, 700))
+        assert fundo.cache_estatico is False
+        fundo.desenhar(pygame.Surface((900, 700)))
+        assert fundo.cache_estatico is True
+
+
+def test_fundo_menu_recompoe_ao_trocar_estilo_apos_layout():
+    pygame.init()
+    cenario = mock.Mock()
+    cenario.parallax = mock.Mock()
+    with mock.patch("game.menu_scene.Cenario", return_value=cenario) as fabrica, \
+            mock.patch.object(
+                FundoMenuParallax, "_chave_estilo",
+                side_effect=[("original",), ("comic",)]):
+        fundo = FundoMenuParallax(Layout(900, 700))
+        fundo.desenhar(pygame.Surface((900, 700)))
+        fundo.set_layout(Layout(1280, 720))
+        fundo.desenhar(pygame.Surface((1280, 720)))
+
+    assert fabrica.call_count == 2
+
+
+def test_fundo_menu_cacheia_tingimento_de_cutscene():
+    pygame.init()
+    cenario = mock.Mock()
+    cenario.parallax = mock.Mock()
+    with mock.patch("game.menu_scene.Cenario", return_value=cenario):
+        fundo = FundoMenuParallax(Layout(900, 700))
+        tela = pygame.Surface((900, 700))
+        with mock.patch(
+                "src.runtime.presentation.cutscene_raster.filtrar_fundo_cutscene",
+                return_value=pygame.Surface((900, 700))) as filtro:
+            fundo.desenhar(tela, (120, 160, 255))
+            fundo.desenhar(tela, (120, 160, 255))
+        filtro.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
