@@ -139,19 +139,18 @@ Regras:
 - Devolver relatório curto, com comandos e falhas literais.
 - Em dúvida, parar e perguntar ao usuário; não inventar escopo.
 
-## 7. Primeiro ciclo
+## 7. Estado após integração dos PRs #36–#42
 
-1. Usuário aprova este plano e as decisões da seção 6 do roadmap.
-2. **Codex assume A** (release), em worktree próprio:
-   - resolver/rebaseda PR #36 ou propor nova branch de release;
-   - conferir build, hashes, LICENSE/OFL e checklist Windows;
-   - atualizar docs/release, README, `CHANGELOG` e `AI_USAGE`;
-   - não criar tag, não fazer merge.
-3. **OpenCode revisa A** e prepara o plano técnico de B4 e a auditoria C/D, sem
-   iniciar código de B antes da aprovação de A.
-4. Usuário fornece o resultado Windows e aprova a tag `v1.8.0`.
-5. Só então OpenCode inicia B4; Codex faz a auditoria documental de B1–B3 em
-   paralelo.
+1. A integração técnica da Fase A (PR #36) está na main. O teste manual dos
+   binários no Windows ainda está pendente; não criar tag ou release final até
+   o usuário testar e aprovar.
+2. B2 (PR #42) está integrado. B4 e a Fase C continuam dependendo da aprovação
+   e dos testes do usuário; não iniciar F1 antes de A, B e C.
+3. O PR #43 atualiza o Passo 0, registra o estado posterior aos merges e as
+   decisões confirmadas do mundo aberto. O PR #34 permanece fechado e
+   substituído pelo #43.
+4. Branches de roteiro E e design F continuam separadas e não integradas.
+   Usar o handoff do OpenCode e trabalhar uma tarefa por branch.
 
 ## 8. Critério para considerar a cooperação saudável
 

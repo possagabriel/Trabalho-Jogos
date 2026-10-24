@@ -1,9 +1,9 @@
 # Plano de fases do INCARNATE — Passo 0
 
 Levantamento feito em 24/10/2026 sobre `origin/main` em `63ae5dc` (merge do
-PR #42). Este documento é uma **proposta para aprovação**. Nenhuma fase de
-implementação foi iniciada por ele. O [ROADMAP](../ROADMAP.md) continua sendo a
-memória do projeto e deve ser atualizado a cada integração, junto de
+PR #42). Esse inventário é um retrato daquela revisão; o estado posterior e as
+decisões confirmadas estão na seção 9. O [ROADMAP](../ROADMAP.md) continua
+sendo a memória do projeto e deve ser atualizado a cada integração, junto de
 `CHANGELOG.md` e `AI_USAGE.md`.
 
 ## 1. Inventário
@@ -157,8 +157,8 @@ de merge e a compatibilidade de dados estiverem definidas.
    capturas antes/depois?
 7. **E:** o capítulo 3 será revisado a partir de `docs/roteiro-capitulo-3.md` e
    a branch 3–6 será dividida em quatro PRs?
-8. **F:** o design de mundo aberto continua com as decisões da seção 15 do
-   documento atual, após confronto com B/C/D?
+8. **F:** as decisões de mapa em dados, bosses 2–4 em ordem livre, modo extra
+   e viagem rápida após o protótipo foram confirmadas pelo usuário; ver seção 9.
 
 ## 7. Critérios comuns
 
@@ -189,8 +189,33 @@ de merge e a compatibilidade de dados estiverem definidas.
 - Base: `origin/main` `63ae5dc`.
 - Nenhum código de jogo foi alterado.
 - Testes, Ruff e benchmark: não aplicáveis a esta entrega documental.
-- Nenhuma tag ou alteração na main foi criada. A proposta está na PR #43, em
-  rascunho; não fazer merge.
+- A proposta está na PR #43. O usuário autorizou o merge dos PRs existentes;
+  essa autorização não libera tag ou release final.
 - A divisão operacional entre OpenCode e Codex está em
   [cooperacao-codex-opencode.md](cooperacao-codex-opencode.md).
-- **Parada para aprovação do usuário antes de iniciar a Fase A.**
+- Fases de implementação continuam sujeitas às dependências e aprovações do
+  usuário; o pedido de merge dos PRs não inicia uma fase nova.
+
+## 9. Atualização após o inventário e decisões confirmadas
+
+Após o retrato da seção 1, os PRs #36, #37, #40, #41 e #42 foram integrados na
+main (`0084abf`). A etapa B2 está integrada; o menu B4 e a Fase C continuam
+pendentes. O PR #34 permanece fechado e foi substituído por este Passo 0. A
+branch com os capítulos 3–6 e a branch do design do mundo aberto continuam
+sem integração. A Fase A de código está integrada, mas o teste manual Windows
+dos binários segue pendente; não criar tag, RC nova ou release final antes
+desse teste e da autorização do usuário.
+
+As decisões do usuário para F são:
+
+1. Mapa desenhado em dados; decoração procedural com semente fixa por região.
+2. Bosses 2–4 em ordem livre, com dificuldade equivalente ou escalada por
+   bosses derrotados e recompensas equilibradas. No mundo aberto, os títulos
+   mostram só o nome do capítulo (por exemplo, `// IDENTIDADE`), sem número.
+3. Mundo aberto é modo extra, com o mesmo destaque do LINEAR na escolha;
+   reavaliar após o playtest do protótipo.
+4. Viagem rápida fica fora do protótipo, para depois dele.
+
+F1 só começa depois de A, B e C concluídas. O design deve estar disponível na
+main antes da F1; a branch documental `docs/design-mundo-aberto` ainda não tem
+PR.
