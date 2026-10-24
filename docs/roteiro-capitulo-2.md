@@ -1,7 +1,7 @@
 # CAPÍTULO 2 // FUNÇÃO
 
-Texto fornecido pelo usuário em 24/10/2026. Referência de roteiro para a Fase E;
-ainda não integrado ao JSON de produção.
+Texto fornecido pelo usuário em 24/10/2026. Integrado ao JSON de produção na branch
+`feat/roteiro-capitulo-2`.
 
 ## Abertura
 
