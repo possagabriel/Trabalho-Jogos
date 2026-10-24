@@ -78,10 +78,22 @@ class ControladorRenderizacao:
 
     def _compor(self) -> None:
         jogo = self.jogo
+        strategy = jogo.estrategia_modo
+        mode_rendered = bool(
+            strategy and strategy.handles_gameplay
+            and strategy.render(jogo, jogo.tela))
         jogo._hud_nativo_pronto = False
         self.sincronizar_cursor()
         jogo.tela_ui.fill((0, 0, 0, 0))
-        if jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
+        if mode_rendered and jogo.estado is EstadoJogo.PAUSA:
+            with usar_visual(jogo.config), jogo._desenhar_na_interface():
+                jogo._desenhar_pausa()
+        elif mode_rendered and jogo.estado is EstadoJogo.GAME_OVER:
+            with usar_visual(jogo.config), jogo._desenhar_na_interface():
+                jogo._desenhar_game_over()
+        elif mode_rendered:
+            pass
+        elif jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
             jogo.tela.fill(VOID_BLACK)
             with usar_visual(jogo.config):
                 jogo.menu.desenhar(jogo.tela_ui)

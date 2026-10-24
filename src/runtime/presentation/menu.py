@@ -82,6 +82,11 @@ from src.infrastructure.ui.layout import (
     Layout,
 )
 from src.runtime.domain.entities.player import Jogador
+from src.runtime.domain.game_modes import (
+    LinearModeStrategy,
+    ModeStrategy,
+    OpenWorldModeStrategy,
+)
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_botao_cartoon,
     desenhar_cantos,
@@ -681,6 +686,10 @@ class MenuPrincipal:
             "ARQUIVO": TelaArquivoMemorias(self),
         }
         self.phase_screen = PhaseSelectScreen(jogo, layout=self.layout)
+        self.mode_strategies: dict[str, ModeStrategy] = {
+            "linear": LinearModeStrategy(),
+            "mundo_aberto": OpenWorldModeStrategy(),
+        }
 
     # ------------------------------------------------------------------ fontes
 

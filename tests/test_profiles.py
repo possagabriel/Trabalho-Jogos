@@ -194,7 +194,47 @@ def test_menu_summaries_use_profile_service_and_continue_start_point(service):
         "bosses_defeated": 2, "coins": 420, "play_time": 7325,
     }
     assert service.continue_summary() == {
-        "dimension": 1, "level": 1, "total_play_time": 7325,
+        "mode": "linear", "dimension": 1, "level": 1,
+        "total_play_time": 7325,
+    }
+
+
+def test_schema_v3_adiciona_resumos_dos_modos_sem_perder_save_linear():
+    from src.domain.profiles import Profile
+
+    old = Profile.from_dict({
+        "schema_version": 3, "id": "linear-v3", "name": "Linear",
+        "progress": {
+            "moedas": 42, "nivel_maximo": 13, "dimensao_maxima": 3,
+            "tempo_total": 900, "legacy": {
+                "jogador": {"progresso_campanha": {
+                    "fase_atual": "identidade", "nivel_atual": 13,
+                }},
+            },
+        },
+    })
+
+    assert old.to_dict()["schema_version"] == 4
+    assert old.progress["modo_ultimo"] == "linear"
+    assert old.progress["modos"]["linear"]["nivel"] == 13
+    assert old.progress["modos"]["linear"]["moedas"] == 42
+    assert old.progress["modos"]["linear"]["fase_atual"] == "identidade"
+    assert old.progress["modos"]["mundo_aberto"]["regioes_libertas"] == 0
+
+
+def test_continue_summary_reflete_fase_e_nivel_realmente_salvos(service):
+    profile = service.create("Ponto salvo")
+    service.select(profile.id)
+    service.update_progress(
+        partidas_jogadas=1,
+        legacy={"jogador": {"progresso_campanha": {
+            "fase_atual": "identidade", "nivel_atual": 13,
+        }}},
+    )
+
+    assert service.continue_summary() == {
+        "mode": "linear", "dimension": 3, "level": 13,
+        "total_play_time": 0,
     }
 
 

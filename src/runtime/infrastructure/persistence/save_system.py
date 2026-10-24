@@ -314,6 +314,27 @@ class ProgressoPerfil(SistemaProgressao):
             "inimigos_derrotados": self.dados["estatisticas"].get("inimigos_derrotados", 0),
             "legacy": self.dados,
         })
+        modes = progress.setdefault("modos", {})
+        if not isinstance(modes, dict):
+            modes = {}
+            progress["modos"] = modes
+        linear = modes.setdefault("linear", {})
+        if not isinstance(linear, dict):
+            linear = {}
+            modes["linear"] = linear
+        bosses = progress.get("bosses_por_tipo", {})
+        campaign = self.campanha
+        linear.update({
+            "nivel": jog["nivel_maximo"],
+            "dimensao": max(jog.get("cenarios_desbloqueados", [1]) or [1]),
+            "bosses": sum(value for value in bosses.values()
+                          if type(value) is int and value > 0)
+            if isinstance(bosses, dict) else 0,
+            "moedas": jog["moedas"],
+            "tempo": self.dados["estatisticas"].get("tempo_total", 0),
+            "fase_atual": campaign.get("fase_atual", "lealdade"),
+            "nivel_atual": campaign.get("nivel_atual", 1),
+        })
         return self.service._save()
 
     def existe_save(self) -> bool:
@@ -322,6 +343,10 @@ class ProgressoPerfil(SistemaProgressao):
         if profile is None:
             return False
         progress = profile.progress
+        if progress.get("modo_ultimo") == "mundo_aberto":
+            modes = progress.get("modos", {})
+            world = modes.get("mundo_aberto", {}) if isinstance(modes, dict) else {}
+            return bool(isinstance(world, dict) and world.get("partidas_jogadas", 0))
         partidas = progress.get("partidas_jogadas", 0)
         return bool((type(partidas) is int and partidas > 0)
                     or progress.get("legacy"))

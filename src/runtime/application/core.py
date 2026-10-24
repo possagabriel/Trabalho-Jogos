@@ -55,6 +55,7 @@ from src.runtime.domain.entities.enemies import (
 from src.runtime.domain.entities.player import Jogador
 from src.runtime.domain.entities.powerups import PowerUp, sortear_tipo
 from src.runtime.domain.entities.weapons import Projetil
+from src.runtime.domain.game_modes import ModeStrategy
 from src.runtime.domain.world.particles import MensagemFlutuante, SistemaParticulas
 from src.runtime.domain.world.scenarios import CENARIOS, Cenario, cenario_do_nivel
 from src.runtime.infrastructure.assets import carregar_imagem_alpha
@@ -215,6 +216,7 @@ class Jogo:
         self.hud = HudJogo(self.layout)
         self.tela_melhorias = TelaMelhorias(self.layout)
         self.menu = MenuPrincipal(self, self.layout)
+        self.modo_atual = self._modo_salvo()
         self.menu.subestado = "PERFIS"
         # --- estado do menu de pausa ---
         self._pausa_selecao = 0
@@ -261,6 +263,7 @@ class Jogo:
         self.menu.opcoes[0].desabilitado = False
         self.menu.destaque.y = self.menu.opcoes[self.menu.opcao_selecionada].y
         self.menu.destaque.alvo = self.menu.destaque.y
+        self.modo_atual = self._modo_salvo()
         self.menu.subestado = "MENU"
         self._novo_jogo(self.nome_jogador, zerar_estado=False)
         self.estado = EstadoJogo.MENU
@@ -751,7 +754,24 @@ class Jogo:
         self.progressao_controller.preparar_jogo()
 
     def _salvar_tudo(self):
-        self.progressao_controller.salvar_tudo()
+        strategy = self.estrategia_modo
+        if strategy is not None:
+            strategy.save(self)
+        else:
+            self.progressao_controller.salvar_tudo()
+
+    def _modo_salvo(self) -> str:
+        """Lê o último modo válido, usando LINEAR para perfis anteriores."""
+        profile = self.profile_service.active
+        mode = profile.progress.get("modo_ultimo") if profile else "linear"
+        return (mode if isinstance(mode, str) and mode in {
+            "linear", "mundo_aberto"} else "linear")
+
+    @property
+    def estrategia_modo(self) -> ModeStrategy | None:
+        """Retorna a Strategy associada ao último modo selecionado."""
+        menu = getattr(self, "menu", None)
+        return menu.mode_strategies.get(self.modo_atual) if menu else None
 
     # ----- niveis e ondas -----
 
