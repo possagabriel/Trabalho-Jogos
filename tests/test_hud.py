@@ -161,6 +161,31 @@ def test_fontes_hud_respeitam_minimos_em_janela_pequena():
             TEXTO_ESSENCIAL_MIN_PX)
 
 
+def test_medidor_separa_valor_e_rotulo(monkeypatch):
+    pygame.init()
+    registros = []
+
+    def capturar_blit(_tela, surf, pos, alfa=255):
+        registros.append(pygame.Rect(pos))
+
+    monkeypatch.setattr(hud_runtime, "_blit_alfa", capturar_blit)
+    for largura, altura, rotulo_abaixo in ((900, 506, True), (1280, 720, False)):
+        registros.clear()
+        layout = Layout(largura, altura)
+        tela = pygame.Surface((largura, altura), pygame.SRCALPHA)
+        centro = (layout.px(82), altura - layout.px(120))
+        hud_runtime._medidor_circular(
+            tela, layout, centro, layout.px(38), 0.8, (255, 112, 72),
+            rotulo="IMPULSO", valor="80%", rotulo_abaixo=rotulo_abaixo,
+        )
+
+        assert len(registros) == 2
+        rect_valor, rect_rotulo = registros
+        assert rect_rotulo.top >= rect_valor.bottom + layout.px(3)
+        if not rotulo_abaixo:
+            assert rect_rotulo.top >= centro[1]
+
+
 def test_lettering_comic_respeita_minimos_em_janela_pequena():
     pygame.init()
     pygame.display.set_mode((900, 506))
