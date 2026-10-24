@@ -101,7 +101,7 @@ from src.runtime.infrastructure.persistence.save_system import ARQUIVO_RECORDES,
 from src.runtime.infrastructure.persistence.shop import LojaSkins
 from src.runtime.presentation.menu_scene import (
     DestaqueMenu,
-    FundoCinematico,
+    FundoMenuParallax,
     HudMenu,
     NaveMenu,
     TransicaoMissao,
@@ -600,7 +600,7 @@ class MenuPrincipal:
         self.jogo = jogo
         self.layout = layout or Layout()
         self.subestado = "MENU"
-        self.fundo = FundoCinematico(self.layout)
+        self.fundo = FundoMenuParallax(self.layout)
         self.hud = HudMenu(self.layout)
         self.nave = NaveMenu()
         self.destaque = DestaqueMenu(self.layout)
@@ -2872,11 +2872,13 @@ class MenuPrincipal:
             if evento.key == pygame.K_ESCAPE:
                 self.config_submodo = None
                 self.sub_anim = 0.0
+                self._som("navegar")
             elif evento.key in (pygame.K_UP, pygame.K_DOWN):
                 n = len(RESOLUCOES)
                 passo = 1 if evento.key == pygame.K_DOWN else -1
                 self.resolucao_selecao = (self.resolucao_selecao + passo) % n
                 self._rolar_resolucao(self.resolucao_selecao)
+                self._som("navegar")
             elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                 self._aplicar_resolucao(self.resolucao_selecao)
             return True
