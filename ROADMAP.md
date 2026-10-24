@@ -24,7 +24,7 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
-- B2: navegação de cinco itens e hubs Jogar/Perfil mantêm os destinos antigos; teste manual dos fluxos e do foco restaurado pendente.
+- B2: etapa 1 integrada na main (f22ddf4, PR #31); esta branch completa os cinco itens e hubs Jogar/Perfil, preserva destinos e corrige CONTINUAR sem save; teste manual pendente.
 - Candidata `v1.8.0-rc1`: builds de instalador/executável Linux e Windows
   passaram. Executar o checklist Windows antes da tag `v1.8.0` e da release
   oficial. Instalação limpa, atualização, jogo, perfis e desinstalação ainda

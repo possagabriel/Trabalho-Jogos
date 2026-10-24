@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- O menu principal tem cinco itens e hubs de navegação; Continuar sem save permanece desabilitado com aviso, e os destinos mantêm acesso em até duas ações.
+- Menu B2: cinco itens e hubs de navegação mantêm os destinos antigos em até duas ações; etapa 1 está integrada na main, e Continuar sem save fica desabilitado com aviso.
 - O menu ganhou cartão de perfil alimentado pelo `ProfileService`, resumo real
   do ponto inicial de Continuar e selos persistentes para Memórias e itens do
   Hangar que ficaram compráveis. O schema de perfil migra automaticamente para v3.
