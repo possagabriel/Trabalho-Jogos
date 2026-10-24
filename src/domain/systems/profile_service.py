@@ -41,8 +41,8 @@ class ProfileService:
             raise ValueError("Nome vazio ou longo demais")
         if name[0].isspace() or name[-1].isspace():
             raise ValueError("Espaços nas pontas não permitidos")
-        if not name.isprintable():
-            raise ValueError("Caractere de controle não permitido")
+        if any(not caractere.isalnum() and caractere not in " '-" for caractere in name):
+            raise ValueError("Caractere não permitido no nome")
         return name
 
     def _unique(self, name: str, except_id: str | None = None) -> None:

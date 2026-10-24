@@ -16,7 +16,7 @@ def service(tmp_path):
 
 
 @pytest.mark.parametrize("name", [
-    "", "   ", " Ana", "Ana ", "A\nB", "A\tB", "A\0B", "A\u200bB", "X" * 17,
+    "", "   ", " Ana", "Ana ", "A\nB", "A\tB", "A\0B", "A\u200bB", "A😀B", "A★B", "A_B", "X" * 17,
 ])
 def test_invalid_names(service, name):
     with pytest.raises(ValueError):
@@ -35,9 +35,9 @@ def test_names_unicode_duplicates_and_limit(service):
 
 
 @pytest.mark.parametrize("name", [
-    "O'Brien", "Ana-Maria", "José da Silva", "Ana  Maria", "A/B@C",
+    "O'Brien", "Ana-Maria", "José da Silva", "Ana  Maria", "Ana 42",
 ])
-def test_create_accepts_printable_names(service, name):
+def test_create_accepts_letters_numbers_spaces_apostrophe_and_hyphen(service, name):
     profile = service.create(name)
     assert service.repository.load(profile.id).name == name
 
@@ -48,6 +48,8 @@ def test_rename_accepts_apostrophe_and_preserves_name_on_invalid_attempt(service
     assert service.repository.read_index()["profiles"][0]["name"] == "D'Ávila-Sul"
     with pytest.raises(ValueError):
         service.rename(profile.id, " D'Ávila-Sul")
+    with pytest.raises(ValueError):
+        service.rename(profile.id, "Ana★")
     assert service.repository.load(profile.id).name == "D'Ávila-Sul"
 
 
