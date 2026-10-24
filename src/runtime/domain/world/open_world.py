@@ -31,10 +31,18 @@ class OpenWorldRuntime:
 
     REGION_ID = "espaco_profundo"
     REGION_NAME = "ESPAÇO PROFUNDO"
-    REGION_SIZE = (2800.0, 1800.0)
-    SPAWN = (520.0, 900.0)
+    REGION_SIZE = (6400.0, 4400.0)
+    SPAWN = (720.0, 2200.0)
     SPEED = 360.0
-    BOSS_LAIR = (2260.0, 900.0)
+    BOSS_LAIR = (5700.0, 2200.0)
+    SECTORS = (
+        ("ESTRELA", (1100.0, 1100.0), (105, 72, 127)),
+        ("PENTAGONO", (3200.0, 1100.0), (65, 115, 154)),
+        ("ANEIS", (5300.0, 1100.0), (125, 91, 66)),
+        ("CRISTAL", (1100.0, 3300.0), (72, 133, 150)),
+        ("ABISMO", (3200.0, 3300.0), (90, 76, 140)),
+        ("NÚCLEO", (5300.0, 3300.0), (131, 75, 112)),
+    )
 
     def __init__(self, position: tuple[float, float] | None = None,
                  elapsed: float = 0.0,
@@ -50,6 +58,7 @@ class OpenWorldRuntime:
         self.elapsed = max(0.0, float(elapsed))
         self._stars = self._build_stars()
         self._landmarks = self._build_landmarks()
+        self._rifts = self._build_rifts()
         self._cenario = Cenario(1)
         try:
             quality = visual_config["avanco_qualidade"] if visual_config else "MEDIA"
@@ -61,7 +70,7 @@ class OpenWorldRuntime:
         self.miniboss = criar_miniboss(
             "censor", 1, self._cenario, random.Random(4101))
         self.miniboss.entrando = False
-        self._miniboss_world = (1090.0, 873.0)
+        self._miniboss_world = (2100.0, 1100.0)
         self.boss = Boss(5, self._cenario)
         self.boss.x, self.boss.y = self.BOSS_LAIR
         self.boss.entrando = False
@@ -93,6 +102,10 @@ class OpenWorldRuntime:
             "MAPA // REGIÃO", True, (205, 220, 245))
         self._minimap_comic_label = self._font_marker.render(
             "MAPA // REGIÃO", True, PAPEL)
+        self._sector_labels = tuple(
+            (name, self._font_marker.render(name, True, color))
+            for name, _center, color in self.SECTORS
+        )
 
     @staticmethod
     def _create_enemies() -> list[tuple[Inimigo, float, float, float, float]]:
@@ -101,10 +114,14 @@ class OpenWorldRuntime:
         tipos = ("scout", "soldado", "estelar", "bomba", "abissal",
                  "cristalino", "guardiao", "flamifero")
         patrulhas = []
-        for index in range(24):
-            setor = index % 6
-            base_x = 300 + setor * 440 + rng.uniform(-110, 110)
-            base_y = 280 + (index // 6) * 390 + rng.uniform(-100, 100)
+        for index in range(72):
+            sector = index % len(OpenWorldRuntime.SECTORS)
+            _name, center, _color = OpenWorldRuntime.SECTORS[sector]
+            within_sector = index // len(OpenWorldRuntime.SECTORS)
+            angle = within_sector * 2.399963 + rng.uniform(-0.2, 0.2)
+            distance = 110 + (within_sector % 4) * 94 + rng.uniform(-28, 28)
+            base_x = center[0] + math.cos(angle) * distance
+            base_y = center[1] + math.sin(angle) * distance
             orbit = rng.uniform(28, 76)
             phase = rng.uniform(0, math.tau)
             enemy = Inimigo(tipos[index % len(tipos)], 1,
@@ -113,13 +130,13 @@ class OpenWorldRuntime:
             patrulhas.append((enemy, base_x, base_y, orbit, phase))
         return patrulhas
 
-    @staticmethod
-    def _build_stars() -> tuple[tuple[tuple[float, float, int], ...], ...]:
+    def _build_stars(self) -> tuple[tuple[tuple[float, float, int], ...], ...]:
         rng = random.Random(4101)
         layers = []
         for count, low, high in ((95, 1, 1), (58, 1, 2), (24, 2, 3)):
             layers.append(tuple(
-                (rng.uniform(-1200, 4000), rng.uniform(-900, 2700),
+                (rng.uniform(-1200, self.width + 1200),
+                 rng.uniform(-900, self.height + 900),
                  rng.randint(low, high))
                 for _ in range(count)
             ))
@@ -132,7 +149,17 @@ class OpenWorldRuntime:
             (rng.uniform(350, self.width - 350),
              rng.uniform(280, self.height - 280),
              rng.randint(22, 46), palette[index % len(palette)])
-            for index in range(3)
+            for index in range(18)
+        )
+
+    @staticmethod
+    def _build_rifts() -> tuple[tuple[float, float, int], ...]:
+        """Cria fendas fixas que marcam as passagens entre os setores."""
+        return (
+            (2150.0, 1100.0, 54), (4250.0, 1100.0, 68),
+            (2150.0, 3300.0, 62), (4250.0, 3300.0, 50),
+            (1100.0, 2200.0, 66), (3200.0, 2200.0, 58),
+            (5300.0, 2200.0, 72),
         )
 
     def update(self, dt: float, keys: Any, controls: dict[str, int], game=None) -> None:
@@ -361,6 +388,7 @@ class OpenWorldRuntime:
                 if -3 <= sx < LARGURA + 3 and -3 <= sy < ALTURA + 3:
                     pygame.draw.circle(surface, color, (sx, sy), radius)
         self._draw_landmarks(surface)
+        self._draw_sectors(surface)
         self._draw_hostiles(surface)
 
         world_rect = pygame.Rect(
@@ -380,6 +408,7 @@ class OpenWorldRuntime:
 
         self._draw_speed_lines(surface)
         self._draw_boss_lair(surface)
+        self._draw_objective_marker(surface)
         self._draw_powerups(surface)
         self._draw_projectiles(surface)
         self._draw_ship(surface, player)
@@ -390,8 +419,8 @@ class OpenWorldRuntime:
         for enemy, base_x, base_y, orbit, phase in self.enemies:
             enemy.x = base_x + math.sin(self.elapsed * 0.65 + phase) * orbit
             enemy.y = base_y + math.cos(self.elapsed * 0.48 + phase) * orbit * 0.55
-        mini_x = 1090 + math.sin(self.elapsed * 0.42) * 95
-        mini_y = 825 + math.cos(self.elapsed * 0.58) * 48
+        mini_x = 2100 + math.sin(self.elapsed * 0.42) * 95
+        mini_y = 1100 + math.cos(self.elapsed * 0.58) * 48
         if not self.miniboss_active:
             self.miniboss.x, self.miniboss.y = mini_x, mini_y
             self._miniboss_world = (mini_x, mini_y)
@@ -447,6 +476,37 @@ class OpenWorldRuntime:
                 surface, (138, 151, 201),
                 (center[0] - radius * 2, center[1] - radius // 3,
                  radius * 4, max(4, radius // 2)), 2,
+            )
+
+    def _draw_sectors(self, surface: pygame.Surface) -> None:
+        """Dá identidade visual aos seis setores e às fendas de passagem."""
+        comic = opcoes_atuais().ativo
+        for (_name, center, color), (_label_name, label) in zip(
+                self.SECTORS, self._sector_labels):
+            x, y = self._screen_position(center)
+            radius = 410
+            if not (-radius <= x <= LARGURA + radius
+                    and -radius <= y <= ALTURA + radius):
+                continue
+            edge = LARANJA if comic else color
+            pygame.draw.circle(surface, edge, (x, y), radius, 2)
+            pygame.draw.circle(surface, edge, (x, y), 7, 1)
+            surface.blit(label, (x - label.get_width() // 2,
+                                 y - radius + 18))
+
+        edge = LARANJA if comic else (94, 213, 238)
+        for world_x, world_y, radius in self._rifts:
+            x, y = self._screen_position((world_x, world_y))
+            if not (-radius <= x <= LARGURA + radius
+                    and -radius <= y <= ALTURA + radius):
+                continue
+            pygame.draw.ellipse(
+                surface, edge,
+                (x - radius, y - radius // 2, radius * 2, radius), 2,
+            )
+            pygame.draw.ellipse(
+                surface, (207, 140, 255),
+                (x - radius // 2, y - radius, radius, radius * 2), 1,
             )
 
     def _screen_position(self, position: tuple[float, float]) -> tuple[int, int]:
@@ -509,6 +569,31 @@ class OpenWorldRuntime:
         label = self._boss_comic_label if comic else self._boss_label
         surface.blit(label, (x - label.get_width() // 2, y + radius + 22))
 
+    def _draw_objective_marker(self, surface: pygame.Surface) -> None:
+        """Aponta para a toca do boss quando ela está fora da câmera."""
+        if self.boss_defeated:
+            return
+        target_x, target_y = self._screen_position(self.BOSS_LAIR)
+        if 48 <= target_x <= LARGURA - 48 and 48 <= target_y <= ALTURA - 48:
+            return
+        center_x, center_y = LARGURA // 2, ALTURA // 2
+        dx, dy = target_x - center_x, target_y - center_y
+        angle = math.atan2(dy, dx)
+        distance_x = (LARGURA // 2 - 76) / max(abs(math.cos(angle)), 0.001)
+        distance_y = (ALTURA // 2 - 76) / max(abs(math.sin(angle)), 0.001)
+        distance = min(distance_x, distance_y)
+        x = round(center_x + math.cos(angle) * distance)
+        y = round(center_y + math.sin(angle) * distance)
+        tip = (round(x + math.cos(angle) * 15),
+               round(y + math.sin(angle) * 15))
+        back_angle = angle + math.pi
+        left = (round(x + math.cos(back_angle + 0.55) * 12),
+                round(y + math.sin(back_angle + 0.55) * 12))
+        right = (round(x + math.cos(back_angle - 0.55) * 12),
+                 round(y + math.sin(back_angle - 0.55) * 12))
+        color = LARANJA if opcoes_atuais().ativo else (255, 202, 102)
+        pygame.draw.polygon(surface, color, (tip, left, right))
+
     def _draw_ship(self, surface: pygame.Surface, player=None) -> None:
         center = (LARGURA // 2, ALTURA // 2)
         if player is not None:
@@ -561,6 +646,13 @@ class OpenWorldRuntime:
         def point(position: tuple[float, float]) -> tuple[int, int]:
             return (area.left + round(position[0] / self.width * area.width),
                     area.top + round(position[1] / self.height * area.height))
+
+        for _name, center, _color in self.SECTORS:
+            pygame.draw.circle(self._minimap, (118, 126, 157),
+                               point(center), 4, 1)
+        for x, y, _radius in self._rifts:
+            pygame.draw.circle(self._minimap, (156, 103, 192),
+                               point((x, y)), 2)
 
         view = pygame.Rect(
             area.left + round(self.camera_x / self.width * area.width),
