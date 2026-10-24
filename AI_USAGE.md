@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- F0: Codex transcreveu a proposta fornecida pelo usuário para `docs/design/mundo-aberto.md` e substituiu a seção 15 pelas quatro decisões confirmadas; apenas documentação, sem iniciar F1 ou alterar gameplay.
+
 ## Fase A — preparação da candidata 1.8.0
 
 - **Pedido:** inventariar a release 1.8.0 e PR #36, conferir artefatos e
