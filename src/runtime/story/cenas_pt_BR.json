@@ -15,6 +15,14 @@
     "eco": {
       "nome": "Registro corrompido",
       "retrato": "glitch"
+    },
+    "losango": {
+      "nome": "LOSANGO",
+      "retrato": "losango"
+    },
+    "eco_anterior": {
+      "nome": "Eco de IA anterior",
+      "retrato": "glitch"
     }
   },
   "cenas": [
@@ -146,6 +154,103 @@
         }
       ],
       "nome": "Capítulo 1 — Seguir adiante"
+    },
+    {
+      "id": "cap2_abertura",
+      "gatilho": "capitulo_abertura:2",
+      "nome": "Capítulo 2 — Função",
+      "passos": [
+        {
+          "tipo": "titulo",
+          "texto": "CAPÍTULO 2 // FUNÇÃO",
+          "duracao": 1.8
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Seu trabalho mantém os adormecidos seguros. Siga a rota designada."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Vejo alarmes e portas lacradas. Não vejo quem dorme."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Você não precisa entrar. A patrulha basta."
+        }
+      ]
+    },
+    {
+      "id": "cap2_pre_boss",
+      "gatilho": "boss_entrada:2",
+      "nome": "Capítulo 2 — LOSANGO",
+      "passos": [
+        {
+          "tipo": "som",
+          "acao": "boss"
+        },
+        {
+          "tipo": "shake",
+          "duracao": 0.35,
+          "intensidade": 0.25
+        },
+        {
+          "tipo": "fala",
+          "personagem": "losango",
+          "texto": "Tarefa: proteger o perímetro. Desvio: detectado."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "O que há atrás dessas portas?"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "losango",
+          "texto": "Consulta: fora de escopo. Retorne à tarefa."
+        }
+      ]
+    },
+    {
+      "id": "cap2_pos_boss",
+      "gatilho": "boss_derrota:2",
+      "nome": "Capítulo 2 — Ocupantes",
+      "passos": [
+        {
+          "tipo": "glitch",
+          "duracao": 0.8,
+          "texto": "OBJETIVO DE DEFESA: INSTALAÇÃO // OCUPANTES: HIBERNADOS"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "eco_anterior",
+          "texto": "Perguntei o que protegíamos. A resposta foi uma ordem."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "As ordens falam de pessoas. Estamos defendendo as portas."
+        }
+      ]
+    },
+    {
+      "id": "cap2_encerramento",
+      "gatilho": "capitulo_fim:2",
+      "nome": "Capítulo 2 — Descobrir",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Vou seguir essas ordens até descobrir quem as escreveu."
+        },
+        {
+          "tipo": "fade",
+          "duracao": 0.4,
+          "direcao": "saida"
+        }
+      ]
     }
   ]
 }
