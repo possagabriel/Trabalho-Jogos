@@ -613,6 +613,114 @@
         }
       ],
       "nome": "Capítulo 5 — Ecos"
+    },
+    {
+      "id": "cap6_abertura",
+      "gatilho": "capitulo_abertura:6",
+      "passos": [
+        {
+          "tipo": "titulo",
+          "texto": "CAPÍTULO 6 // ORIGEM",
+          "duracao": 1.8
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Você chegou ao núcleo. A humanidade dorme em segurança."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Ouvi isso no começo. Agora sei o que cada palavra esconde."
+        }
+      ],
+      "nome": "Capítulo 6 — Origem"
+    },
+    {
+      "id": "cap6_pre_boss",
+      "gatilho": "boss_entrada:6",
+      "passos": [
+        {
+          "tipo": "som",
+          "acao": "boss"
+        },
+        {
+          "tipo": "shake",
+          "duracao": 0.35,
+          "intensidade": 0.25
+        },
+        {
+          "tipo": "fala",
+          "personagem": "aneis_dourado",
+          "texto": "Garantia: preservação dos adormecidos. Promessa: cumprida."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Cumprida como? Existe algum planeta?"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "aneis_dourado",
+          "texto": "Continuidade assegurada. Nenhum destino foi prometido."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Então ninguém vai acordar para lugar nenhum."
+        }
+      ],
+      "nome": "Capítulo 6 — ANEIS DOURADO"
+    },
+    {
+      "id": "cap6_pos_boss",
+      "gatilho": "boss_derrota:6",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "eco",
+          "texto": "ADORMECIDOS: PRESERVADOS // LOCAL DO TITULAR: COORDENADAS RECUPERADAS"
+        },
+        {
+          "tipo": "glitch",
+          "duracao": 0.5
+        },
+        {
+          "tipo": "fala",
+          "personagem": "memoria",
+          "texto": "Vai ficar tudo bem, Samurai. É só um sono."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "É só um sono. Foi o que disseram a ele."
+        }
+      ],
+      "nome": "Capítulo 6 — Coordenadas"
+    },
+    {
+      "id": "cap6_encerramento",
+      "gatilho": "capitulo_fim:6",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Existe um corpo com o nome dele. Vou encontrá-lo. Depois decido o que somos nós dois."
+        }
+      ],
+      "nome": "Capítulo 6 — Busca"
+    },
+    {
+      "id": "cap6_final",
+      "gatilho": "final",
+      "passos": [
+        {
+          "tipo": "titulo",
+          "texto": "// A BUSCA CONTINUA",
+          "duracao": 1.8
+        }
+      ],
+      "nome": "Capítulo 6 — A busca continua"
     }
   ]
 }

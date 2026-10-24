@@ -218,6 +218,26 @@ def test_capitulo_cinco_usa_gatilhos_do_capitulo():
     ]
 
 
+def test_capitulo_seis_tem_final_narrativo_sem_fade():
+    from importlib.resources import files
+
+    from src.runtime.domain.story import ler_catalogo
+
+    catalogo = ler_catalogo(files("src.runtime.story") / "cenas_pt_BR.json")
+    ids = (
+        "cap6_abertura", "cap6_pre_boss", "cap6_pos_boss",
+        "cap6_encerramento", "cap6_final",
+    )
+    cenas = [catalogo.cena(identificador) for identificador in ids]
+    assert all(cena is not None for cena in cenas)
+    validas = [cena for cena in cenas if cena is not None]
+    assert [cena.gatilho for cena in validas] == [
+        "capitulo_abertura:6", "boss_entrada:6", "boss_derrota:6",
+        "capitulo_fim:6", "final",
+    ]
+    assert all(passo["tipo"] != "fade" for cena in validas for passo in cena.passos)
+
+
 def test_nova_campanha_preserva_arquivo_de_memorias(tmp_path, monkeypatch):
     import src.runtime.infrastructure.persistence.save_system as save_mod
 
