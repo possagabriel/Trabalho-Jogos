@@ -33,9 +33,12 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Trabalho que falta
 
-- Roteiro: revisar o próximo capítulo e implementar os capítulos 3 a 6,
-  falas de minibosses e encerramento final. O JSON atual contém a introdução
-  e o capítulo 1; o motor já suporta os gatilhos necessários.
+- Roteiro: o texto de [CAPÍTULO 2 // FUNÇÃO](docs/roteiro-capitulo-2.md) foi
+  fornecido pelo usuário em 24/10/2026 e ainda não está no JSON de produção.
+  Conferir sua versão aprovada, integrar o capítulo 2 e depois revisar e
+  implementar os capítulos 3 a 6, falas de minibosses e encerramento final.
+  O JSON atual contém a introdução e o capítulo 1; o motor já suporta os
+  gatilhos necessários.
 - Polimento visual: etapas 2, 3 e 4 e os contornos da etapa 5 já estão na main.
   Conferir ícones e todos os estados de UI da etapa 5 em uma revisão visual
   posterior; não reimplementar HUD/fundos que já foram integrados.

@@ -31,8 +31,10 @@ estado a cada integração, junto com `CHANGELOG.md` e `AI_USAGE.md`.
   falta verificar a cobertura de eventos. `ParallaxBackground` existe no mundo,
   mas não há evidência de uso no menu principal. A etapa 4 segue candidata.
 - O JSON de produção `src/runtime/story/cenas_pt_BR.json` contém introdução e
-  capítulo 1; não contém capítulo 2. O pedido diz que o capítulo 2 foi
-  integrado. Conferir se há roteiro aprovado fora da main antes de iniciar E.
+  capítulo 1; não contém capítulo 2. O usuário forneceu o texto completo de
+  [CAPÍTULO 2 // FUNÇÃO](roteiro-capitulo-2.md) após o inventário. É fonte de
+  roteiro para E, ainda sem integração no motor. Conferir se há uma versão
+  aprovada fora da main antes de adaptar o texto ao JSON.
 - O ROADMAP indica que HUD/tipografia, fundos por dimensão e contornos já foram
   integrados nas versões 1.6 a 1.8. D deve auditar e concluir ícones, estados e
   sequências pendentes; não refazer as etapas que já passaram.
@@ -49,15 +51,15 @@ estado a cada integração, junto com `CHANGELOG.md` e `AI_USAGE.md`.
 | B | Aceitação do menu já integrado; etapa 4 e correções comprovadas | A integrada; captura real antes/depois da etapa 3 já integrada e nova parada visual | Médio com C: `src/runtime/presentation/menu.py`, tema e layout |
 | C | Inventário de telas, kit e migração uma tela por vez | B integrada; aprovar tela-piloto antes das demais | Alto com B/D/F: menu, telas e navegação |
 | D | Resto do polimento visual, após auditoria de paridade | C integrada; aprovar cada etapa, inclusive a decisão sobre texto/HUD na resolução final | Médio/alto com C/G: HUD, fontes, cenários, caches e compositor |
-| E | Roteiro capítulos 2? e 3 a 6, minibosses e final | Conferir capítulo 2 e aprovar cada capítulo; capítulo 6 antes das revelações de F | Baixo com B/C/D; médio com F se mudar o catálogo/gatilhos |
+| E | Integrar capítulo 2 fornecido; roteiro 3 a 6, minibosses e final | Conferir versão aprovada do capítulo 2 e aprovar cada capítulo; capítulo 6 antes das revelações de F | Baixo com B/C/D; médio com F se mudar o catálogo/gatilhos |
 | F | MUNDO ABERTO mantendo LINEAR idêntico | E integrada por padrão; documento de design e decisões de mapa/save antes de código; protótipo e GIFs após câmera/fundo | Muito alto: runtime, persistência, câmera, eventos, performance |
 | G | Assinatura gráfica por dimensão | F integrada e regiões disponíveis; aprovar protótipo de duas dimensões + nave | Alto com D/F: cenários, sprites, renderização CPU/GPU e legibilidade |
 
 Manter A → B → C → D → E → F → G como ordem padrão de integração, pois C
 define a interface que F exibirá, e E define a progressão narrativa de F. A
-única antecipação sugerida é **auditar imediatamente o capítulo 2**, ainda no
-planejamento, para não construir F sobre uma premissa incorreta. Se o usuário
-autorizar intercalar E, fazê-lo em PRs/branches de roteiro separados por capítulo,
+única antecipação sugerida é **conferir a origem do capítulo 2**, já registrado
+como texto de referência, para não construir F sobre uma premissa incorreta. Se
+houver autorização para intercalar E, fazê-lo em PRs/branches separados por capítulo,
 sempre sobre a `origin/main` que já contiver a fase anterior aprovada. Não
 misturar mudanças de UI, motor e roteiro na mesma branch. O conflito estimado
 é por arquivos e contratos conhecidos; será reavaliado ao abrir cada fase.
@@ -130,7 +132,9 @@ intocados sem autorização específica.
 
 ### E — roteiro
 
-Resolver primeiro a lacuna do capítulo 2. Revisar um capítulo por vez: 3
+Resolver primeiro a ausência do capítulo 2 no JSON, usando o
+[texto recebido](roteiro-capitulo-2.md) após conferir sua versão aprovada.
+Revisar um capítulo por vez: 3
 (Identidade/ESTRELA/fragmentos do Jonathan humano), 4 (Silêncio/PENTAGONO/
 mensagem interrompida), 5 (Descarte/ANEIS/cópias) e 6 (origem do Protocolo
 Cristal/ANEIS DOURADO/final narrativo sem encerrar a partida). Acrescentar falas
