@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Protocol
 import pygame
 
 from src.core.constants import EstadoJogo
+from src.infrastructure.graphics.comic_theme import usar_visual
 
 if TYPE_CHECKING:
     from src.runtime.application.core import Jogo
@@ -83,7 +84,7 @@ class OpenWorldModeStrategy:
 
         if game.profile_service.active is None:
             return False
-        self.world = OpenWorldRuntime()
+        self.world = OpenWorldRuntime(visual_config=game.config)
         game.modo_atual = self.mode_id
         game.profile_service.set_last_mode(self.mode_id)
         modes = game.profile_service.active.progress.get("modos", {})
@@ -121,7 +122,7 @@ class OpenWorldModeStrategy:
             elapsed = max(0.0, float(state.get("tempo", 0)))
         except (TypeError, ValueError):
             return False
-        self.world = OpenWorldRuntime(point, elapsed)
+        self.world = OpenWorldRuntime(point, elapsed, game.config)
         game.modo_atual = self.mode_id
         game.profile_service.set_last_mode(self.mode_id)
         game.tempo_partida = elapsed
@@ -131,7 +132,7 @@ class OpenWorldModeStrategy:
     def update(self, game: Jogo, dt: float) -> None:
         if self.world is None or game.estado is not EstadoJogo.JOGANDO:
             return
-        self.world.update(dt, pygame.key.get_pressed(), game.controles)
+        self.world.update(dt, pygame.key.get_pressed(), game.controles, game)
         game.tempo_partida = self.world.elapsed
 
     def handle_event(self, game: Jogo, event: pygame.event.Event) -> bool:
@@ -149,7 +150,9 @@ class OpenWorldModeStrategy:
         if game.estado not in (EstadoJogo.JOGANDO, EstadoJogo.PAUSA,
                                EstadoJogo.GAME_OVER):
             return False
-        self.world.render(surface, game.jogador)
+        with usar_visual(
+                game.config, acabamento_gpu=game.shader_comic_ativo()):
+            self.world.render(surface, game.jogador)
         return True
 
     def save(self, game: Jogo) -> None:

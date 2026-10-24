@@ -4,15 +4,24 @@ from __future__ import annotations
 
 import math
 import random
+from collections.abc import Mapping
 from typing import Any
 
 import pygame
 
 from src.core.constants import ALTURA, LARGURA
+from src.infrastructure.graphics.comic_theme import (
+    CIANO,
+    LARANJA,
+    PAPEL,
+    opcoes_atuais,
+)
 from src.runtime.domain.entities.bosses import Boss
 from src.runtime.domain.entities.enemies import Inimigo
 from src.runtime.domain.entities.minibosses.registry import criar_miniboss
+from src.runtime.domain.entities.weapons import Projetil
 from src.runtime.domain.world.scenarios import Cenario
+from src.runtime.domain.world.scroll import EstadoAvanco
 from src.runtime.infrastructure.graphics.fonts import fonte_texto
 
 
@@ -27,7 +36,8 @@ class OpenWorldRuntime:
     BOSS_LAIR = (2260.0, 900.0)
 
     def __init__(self, position: tuple[float, float] | None = None,
-                 elapsed: float = 0.0) -> None:
+                 elapsed: float = 0.0,
+                 visual_config: Mapping[str, Any] | None = None) -> None:
         self.width, self.height = self.REGION_SIZE
         self.x, self.y = position or self.SPAWN
         self.x = max(0.0, min(self.width, float(self.x)))
@@ -40,13 +50,23 @@ class OpenWorldRuntime:
         self._stars = self._build_stars()
         self._landmarks = self._build_landmarks()
         self._cenario = Cenario(1)
+        try:
+            quality = visual_config["avanco_qualidade"] if visual_config else "MEDIA"
+        except (KeyError, TypeError):
+            quality = "MEDIA"
+        self._cenario.configurar_avanco(
+            quality, (0.0, 1.0), True, True, visual_config or {}, 4101)
         self.enemies = self._create_enemies()
         self.miniboss = criar_miniboss(
             "censor", 1, self._cenario, random.Random(4101))
+        self.miniboss.entrando = False
         self.boss = Boss(5, self._cenario)
         self.boss.x, self.boss.y = self.BOSS_LAIR
         self.boss.entrando = False
         self.boss.angulo = 0.0
+        self.projectiles: list[Projetil] = []
+        self._aim_screen: tuple[int, int] | None = None
+        self._minimap = pygame.Surface((204, 144), pygame.SRCALPHA)
         self._font_edge = fonte_texto(28)
         self._font_region = fonte_texto(24)
         self._font_marker = fonte_texto(17)
@@ -56,19 +76,35 @@ class OpenWorldRuntime:
             f"REGIÃO // {self.REGION_NAME}", True, (145, 180, 217))
         self._boss_label = self._font_marker.render(
             "TOCA // HEXAGONO", True, (255, 202, 102))
+        self._boss_comic_label = self._font_marker.render(
+            "TOCA // HEXAGONO", True, LARANJA)
         self._mini_label = self._font_marker.render(
             "CENSOR // PATRULHA", True, (255, 124, 201))
+        self._mini_comic_label = self._font_marker.render(
+            "CENSOR // PATRULHA", True, PAPEL)
+        self._minimap_label = self._font_marker.render(
+            "MAPA // REGIÃO", True, (205, 220, 245))
+        self._minimap_comic_label = self._font_marker.render(
+            "MAPA // REGIÃO", True, PAPEL)
 
     @staticmethod
     def _create_enemies() -> list[tuple[Inimigo, float, float, float, float]]:
         """Cria patrulhas fixas usando as mesmas entidades visuais do modo linear."""
-        return [
-            (Inimigo("scout", 1, x=790, y=780), 790, 780, 52, 0.0),
-            (Inimigo("soldado", 1, x=980, y=1040), 980, 1040, 44, 1.7),
-            (Inimigo("estelar", 1, x=360, y=650), 360, 650, 62, 3.1),
-            (Inimigo("bomba", 1, x=1180, y=720), 1180, 720, 35, 4.4),
-            (Inimigo("abissal", 1, x=1340, y=980), 1340, 980, 54, 5.2),
-        ]
+        rng = random.Random(4102)
+        tipos = ("scout", "soldado", "estelar", "bomba", "abissal",
+                 "cristalino", "guardiao", "flamifero")
+        patrulhas = []
+        for index in range(24):
+            setor = index % 6
+            base_x = 300 + setor * 440 + rng.uniform(-110, 110)
+            base_y = 280 + (index // 6) * 390 + rng.uniform(-100, 100)
+            orbit = rng.uniform(28, 76)
+            phase = rng.uniform(0, math.tau)
+            enemy = Inimigo(tipos[index % len(tipos)], 1,
+                            x=base_x, y=base_y)
+            enemy.angulo = phase
+            patrulhas.append((enemy, base_x, base_y, orbit, phase))
+        return patrulhas
 
     @staticmethod
     def _build_stars() -> tuple[tuple[tuple[float, float, int], ...], ...]:
@@ -92,7 +128,7 @@ class OpenWorldRuntime:
             for index in range(3)
         )
 
-    def update(self, dt: float, keys: Any, controls: dict[str, int]) -> None:
+    def update(self, dt: float, keys: Any, controls: dict[str, int], game=None) -> None:
         """Move a nave, suaviza a câmera e rebate no limite do mundo."""
         dt = max(0.0, min(float(dt), 0.05))
         left = keys[controls.get("esquerda", pygame.K_LEFT)] or keys[pygame.K_a]
@@ -105,16 +141,65 @@ class OpenWorldRuntime:
         if magnitude:
             dx /= magnitude
             dy /= magnitude
+        old_x, old_y = self.x, self.y
         self.vx = dx * self.SPEED
         self.vy = dy * self.SPEED
         self._apply_void_force()
         self.x += self.vx * dt
         self.y += self.vy * dt
         self._bounce_from_void()
+        self._update_parallax(dt, self.x - old_x, self.y - old_y)
         smoothing = 1.0 - math.exp(-7.5 * dt)
         self.camera_x += (self.x - LARGURA / 2 - self.camera_x) * smoothing
         self.camera_y += (self.y - ALTURA / 2 - self.camera_y) * smoothing
         self.elapsed += dt
+        if game is not None:
+            self._update_combat(dt, keys, controls, game)
+
+    def _update_parallax(self, dt: float, dx: float, dy: float) -> None:
+        if self._cenario.parallax is None:
+            return
+        distance = math.hypot(dx, dy)
+        self._cenario.parallax.direcao = (-dx, -dy) if distance else (0.0, 1.0)
+        speed = distance / dt if dt > 0 else 0.0
+        self._cenario.parallax.atualizar(
+            speed, speed, dt, EstadoAvanco.AVANCANDO, 0.0, 1.0,
+            min(1.0, self.elapsed / 600), "JOGANDO")
+
+    def _update_combat(self, dt: float, keys: Any, controls: dict[str, int],
+                       game) -> None:
+        player = game.jogador
+        player.x, player.y = LARGURA // 2, ALTURA // 2
+        player.cooldown_tiro = max(0, player.cooldown_tiro - 1)
+        self._aim_screen = game.posicao_mira()
+        player.atualizar_mira(self._aim_screen)
+        fire_key = controls.get("atirar", 0)
+        mouse_fire = self._aim_screen is not None and pygame.mouse.get_pressed()[0]
+        if (keys[pygame.K_SPACE] or keys[pygame.K_z]
+                or (fire_key and keys[fire_key]) or mouse_fire):
+            aim = self._aim_screen or (LARGURA // 2, ALTURA // 4)
+            shots = player.atirar(
+                alvo=aim,
+                dispersao_duplo_graus=game.config["dispersao_duplo_graus"],
+                dispersao_espiral_graus=game.config["dispersao_espiral_graus"],
+            )
+            for shot in shots:
+                shot.x += self.camera_x
+                shot.y += self.camera_y
+            self.projectiles.extend(shots)
+            if shots:
+                game.mira.ativar_pulso()
+                game.sons.tocar("tiro")
+
+        self._place_hostiles_in_world()
+        for shot in self.projectiles[:]:
+            shot.x += shot.vel_x * dt * 60
+            shot.y += shot.vel_y * dt * 60
+            shot.tempo += dt * 60
+            hit = self._hit_hostile(shot)
+            outside = not (0 <= shot.x <= self.width and 0 <= shot.y <= self.height)
+            if hit or outside:
+                self.projectiles.remove(shot)
 
     def _bounce_from_void(self) -> None:
         margin = 58.0
@@ -156,9 +241,14 @@ class OpenWorldRuntime:
 
     def render(self, surface: pygame.Surface, player=None) -> None:
         """Desenha fundo cacheável por semente, parallax, limites e nave."""
-        surface.fill((5, 8, 26))
+        self._cenario.desenhar(surface)
+        self._place_hostiles_in_world()
         parallax = (0.12, 0.32, 0.68)
-        colors = ((55, 69, 112), (110, 138, 205), (200, 220, 255))
+        colors = (
+            ((98, 82, 64), (171, 145, 104), PAPEL)
+            if opcoes_atuais().ativo
+            else ((55, 69, 112), (110, 138, 205), (200, 220, 255))
+        )
         for stars, factor, color in zip(self._stars, parallax, colors):
             for x, y, radius in stars:
                 sx = int(x - self.camera_x * factor)
@@ -185,8 +275,41 @@ class OpenWorldRuntime:
 
         self._draw_speed_lines(surface)
         self._draw_boss_lair(surface)
+        self._draw_projectiles(surface)
         self._draw_ship(surface, player)
         self._draw_region_label(surface)
+        self._draw_minimap(surface)
+
+    def _place_hostiles_in_world(self) -> None:
+        for enemy, base_x, base_y, orbit, phase in self.enemies:
+            enemy.x = base_x + math.sin(self.elapsed * 0.65 + phase) * orbit
+            enemy.y = base_y + math.cos(self.elapsed * 0.48 + phase) * orbit * 0.55
+        mini_x = 1090 + math.sin(self.elapsed * 0.42) * 95
+        mini_y = 825 + math.cos(self.elapsed * 0.58) * 48
+        self.miniboss.x, self.miniboss.y = mini_x, mini_y
+        self.boss.x, self.boss.y = self.BOSS_LAIR
+
+    def _hit_hostile(self, shot: Projetil) -> bool:
+        for enemy, *_ in self.enemies:
+            if enemy.vida > 0 and enemy.rect.collidepoint(shot.x, shot.y):
+                enemy.sofrer_dano(shot.dano)
+                return True
+        if self.miniboss.vida > 0 and self.miniboss.rect.collidepoint(shot.x, shot.y):
+            self.miniboss.sofrer_dano(shot.dano)
+            return True
+        if self.boss.vida > 0 and self.boss.rect.collidepoint(shot.x, shot.y):
+            self.boss.sofrer_dano(shot.dano)
+            return True
+        return False
+
+    def _draw_projectiles(self, surface: pygame.Surface) -> None:
+        for shot in self.projectiles:
+            world_x, world_y = shot.x, shot.y
+            screen_x, screen_y = self._screen_position((world_x, world_y))
+            shot.x, shot.y = screen_x, screen_y
+            if -50 <= screen_x <= LARGURA + 50 and -50 <= screen_y <= ALTURA + 50:
+                shot.desenhar(surface)
+            shot.x, shot.y = world_x, world_y
 
     def _draw_speed_lines(self, surface: pygame.Surface) -> None:
         speed = math.hypot(self.vx, self.vy)
@@ -224,45 +347,51 @@ class OpenWorldRuntime:
                 round(position[1] - self.camera_y))
 
     def _draw_hostiles(self, surface: pygame.Surface) -> None:
+        comic = opcoes_atuais().ativo
         for enemy, base_x, base_y, orbit, phase in self.enemies:
-            enemy.x = base_x + math.sin(self.elapsed * 0.65 + phase) * orbit
-            enemy.y = base_y + math.cos(self.elapsed * 0.48 + phase) * orbit * 0.55
             enemy.x, enemy.y = self._screen_position((enemy.x, enemy.y))
-            if -60 <= enemy.x <= LARGURA + 60 and -60 <= enemy.y <= ALTURA + 60:
+            if (enemy.vida > 0 and -60 <= enemy.x <= LARGURA + 60
+                    and -60 <= enemy.y <= ALTURA + 60):
                 enemy.desenhar(surface)
 
-        mini_x = 1090 + math.sin(self.elapsed * 0.42) * 95
-        mini_y = 825 + math.cos(self.elapsed * 0.58) * 48
-        self.miniboss.x, self.miniboss.y = self._screen_position((mini_x, mini_y))
+        self.miniboss.x, self.miniboss.y = self._screen_position(
+            (self.miniboss.x, self.miniboss.y))
         if (-100 <= self.miniboss.x <= LARGURA + 100
                 and -100 <= self.miniboss.y <= ALTURA + 100):
             self.miniboss.desenhar(surface)
-            surface.blit(self._mini_label, (self.miniboss.x - 70,
-                                            self.miniboss.y - 60))
+            label = self._mini_comic_label if comic else self._mini_label
+            surface.blit(label, (self.miniboss.x - 70, self.miniboss.y - 60))
 
     def _draw_boss_lair(self, surface: pygame.Surface) -> None:
         x, y = self._screen_position(self.BOSS_LAIR)
         radius = 92
-        pygame.draw.circle(surface, (115, 52, 155), (x, y), radius + 30, 2)
-        pygame.draw.circle(surface, (36, 13, 67), (x, y), radius)
-        pygame.draw.circle(surface, (230, 160, 255), (x, y), radius, 3)
+        comic = opcoes_atuais().ativo
+        glow = (144, 76, 48) if comic else (115, 52, 155)
+        core = (38, 30, 27) if comic else (36, 13, 67)
+        edge = LARANJA if comic else (230, 160, 255)
+        pygame.draw.circle(surface, glow, (x, y), radius + 30, 2)
+        pygame.draw.circle(surface, core, (x, y), radius)
+        pygame.draw.circle(surface, edge, (x, y), radius, 3)
         for index in range(3):
             angle = self.elapsed * 0.22 + index * math.tau / 3
             point = (round(x + math.cos(angle) * (radius + 14)),
                      round(y + math.sin(angle) * (radius + 14)))
-            pygame.draw.circle(surface, (192, 122, 255), point, 5)
+            pygame.draw.circle(surface, edge, point, 5)
         self.boss.x, self.boss.y = x, y
         self.boss.angulo = self.elapsed * 0.18
         if (-150 <= x <= LARGURA + 150 and -150 <= y <= ALTURA + 150):
             self.boss.desenhar(surface)
-        surface.blit(self._boss_label, (x - self._boss_label.get_width() // 2,
-                                       y + radius + 22))
+        label = self._boss_comic_label if comic else self._boss_label
+        surface.blit(label, (x - label.get_width() // 2, y + radius + 22))
 
     def _draw_ship(self, surface: pygame.Surface, player=None) -> None:
         center = (LARGURA // 2, ALTURA // 2)
         if player is not None:
             player.x, player.y = center
-            if self.vx or self.vy:
+            player.tilt += (self.vx / self.SPEED * 5 - player.tilt) * 0.15
+            if self._aim_screen is not None:
+                player.atualizar_mira(self._aim_screen)
+            elif self.vx or self.vy:
                 player.angulo_mira = math.degrees(
                     math.atan2(self.vx, -self.vy)) % 360
             else:
@@ -281,3 +410,50 @@ class OpenWorldRuntime:
 
     def _draw_region_label(self, surface: pygame.Surface) -> None:
         surface.blit(self._region_label, (24, 20))
+
+    def _draw_minimap(self, surface: pygame.Surface) -> None:
+        self._place_hostiles_in_world()
+        comic = opcoes_atuais().ativo
+        panel = (39, 33, 29, 238) if comic else (4, 9, 24, 218)
+        frame = LARANJA if comic else (78, 129, 173)
+        grid = (91, 76, 61) if comic else (31, 48, 74)
+        player_color = CIANO if comic else (110, 245, 255)
+        self._minimap.fill(panel)
+        pygame.draw.rect(self._minimap, frame, (0, 0, 204, 144), 2)
+        label = self._minimap_comic_label if comic else self._minimap_label
+        self._minimap.blit(label, (10, 5))
+        area = pygame.Rect(10, 29, 184, 103)
+        pygame.draw.rect(self._minimap, (49, 42, 37) if comic else (15, 26, 49), area)
+        pygame.draw.rect(self._minimap, frame, area, 1)
+        for fraction in (1 / 3, 2 / 3):
+            x = area.left + round(area.width * fraction)
+            y = area.top + round(area.height * fraction)
+            pygame.draw.line(self._minimap, grid,
+                             (x, area.top), (x, area.bottom), 1)
+            pygame.draw.line(self._minimap, grid,
+                             (area.left, y), (area.right, y), 1)
+
+        def point(position: tuple[float, float]) -> tuple[int, int]:
+            return (area.left + round(position[0] / self.width * area.width),
+                    area.top + round(position[1] / self.height * area.height))
+
+        view = pygame.Rect(
+            area.left + round(self.camera_x / self.width * area.width),
+            area.top + round(self.camera_y / self.height * area.height),
+            max(2, round(LARGURA / self.width * area.width)),
+            max(2, round(ALTURA / self.height * area.height)),
+        )
+        pygame.draw.rect(self._minimap, frame, view.clip(area), 1)
+        for enemy, *_ in self.enemies:
+            if enemy.vida > 0:
+                pygame.draw.circle(self._minimap, enemy.cor,
+                                   point((enemy.x, enemy.y)), 2)
+        if self.miniboss.vida > 0:
+            pygame.draw.circle(self._minimap, (255, 104, 190),
+                               point((self.miniboss.x, self.miniboss.y)), 4)
+        if self.boss.vida > 0:
+            pygame.draw.circle(self._minimap, (255, 210, 100),
+                               point(self.BOSS_LAIR), 5)
+        pygame.draw.circle(self._minimap, player_color,
+                           point((self.x, self.y)), 4)
+        surface.blit(self._minimap, (LARGURA - 220, 20))
