@@ -1,5 +1,18 @@
 # Registro de uso de IA
 
+## Fase A — validação de nomes de perfil
+
+- **Pedido:** decidir a política de apóstrofo sem modificar perfis existentes.
+- **Decisão do usuário:** manter a rejeição para criação e renomeação.
+- **Implementação da IA:** sem mudança no serviço ou nos saves; teste de
+  regressão para leitura, seleção e exportação de nome legado com apóstrofo,
+  inclusive após reconstrução do índice.
+- **Verificação:** testes direcionados antes: 29 passaram; depois: 30 passaram.
+  Suíte completa: 642 passaram, 1 ignorado. Ruff passou no arquivo Python
+  alterado. Benchmark não se aplica a teste e documentação.
+- **Ajustes manuais do usuário:** teste local ficará para depois; PR em
+  rascunho e sem merge.
+
 ## Menu principal — etapa 3: cartão e layout responsivo
 
 - **Pedido:** adicionar cartão de perfil, resumo de Continuar, selos de novidade,

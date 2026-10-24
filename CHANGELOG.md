@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- A regra atual de nomes de perfil permanece: apóstrofo é rejeitado em criação
+  e renomeação; perfis legados com o caractere continuam legíveis e exportáveis.
 - O menu ganhou cartão de perfil alimentado pelo `ProfileService`, resumo real
   do ponto inicial de Continuar e selos persistentes para Memórias e itens do
   Hangar que ficaram compráveis. O schema de perfil migra automaticamente para v3.

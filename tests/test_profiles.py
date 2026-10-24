@@ -41,6 +41,26 @@ def test_apostrophe_is_rejected_without_changing_existing_profile(service):
     assert service.repository.load(profile.id).name == "GABRIEL"
 
 
+def test_legacy_apostrophe_name_survives_index_rebuild_and_export(tmp_path):
+    repository = JsonProfileRepository(tmp_path)
+    service = ProfileService(repository)
+    profile = service.create("Ana")
+    raw = profile.to_dict()
+    raw["name"] = "D'Ávila"
+    repository.write_raw(profile.id, raw)
+    repository.index_path.unlink()
+
+    reopened = ProfileService(JsonProfileRepository(tmp_path))
+    assert reopened.list_profiles()[0].name == "D'Ávila"
+    assert reopened.select(profile.id).name == "D'Ávila"
+    exported = tmp_path / "legado-exportado.json"
+    assert reopened.export_active(exported)
+    assert json.loads(exported.read_text(encoding="utf-8"))["name"] == "D'Ávila"
+    with pytest.raises(ValueError, match="Caractere inválido"):
+        reopened.rename(profile.id, "O'Brien")
+    assert reopened.repository.load(profile.id).name == "D'Ávila"
+
+
 def test_crud_limit_and_active_delete(service):
     profiles = [service.create(f"P{i}") for i in range(5)]
     with pytest.raises(ValueError):
