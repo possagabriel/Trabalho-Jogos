@@ -24,7 +24,8 @@ class MenuHubScreen:
     @property
     def entries(self) -> tuple[tuple[str, str], ...]:
         if self.kind == "JOGAR":
-            return (("CONTINUAR", "continuar"), ("LOBBY", "lobby"))
+            return (("CONTINUAR", "continuar"), ("LINEAR", "linear"),
+                    ("MUNDO ABERTO", "mundo_aberto"))
         return (("PILOTOS", "pilotos"), ("RECORDES", "recordes"),
                 ("MEMÓRIAS", "memorias"))
 
@@ -37,9 +38,9 @@ class MenuHubScreen:
         layout = self.menu.layout
         narrow = self.menu._layout_4_3()
         width = layout.px(620 if narrow else 700)
-        height = layout.px((350 if self.kind == "PERFIL" else 280)
+        height = layout.px((350 if self.kind == "PERFIL" else 420)
                            if narrow else
-                           (385 if self.kind == "PERFIL" else 310))
+                           (385 if self.kind == "PERFIL" else 370))
         return pygame.Rect(
             layout.x(0.5) - width // 2,
             layout.y(0.5) - height // 2,
@@ -89,27 +90,7 @@ class MenuHubScreen:
             pygame.draw.rect(surface, (8, 13, 32), rect, border_radius=10)
             pygame.draw.rect(surface, color, rect, 3 if selected else 1,
                              border_radius=10)
-            text = menu.fonte_opcao.render(label, True, color)
-            summary = (menu.jogo.profile_service.continue_summary()
-                       if action == "continuar" and not disabled and selected else None)
-            if summary:
-                surface.blit(text, text.get_rect(
-                    center=(rect.centerx, rect.centery - menu.layout.px(10))))
-                total = summary["total_play_time"]
-                hours, remainder = divmod(total, 3600)
-                minutes = remainder // 60
-                short = (f"Dimensão {summary['dimension']} · Nível {summary['level']}"
-                         f" · tempo total {hours:02d}h{minutes:02d}")
-                font = menu.layout.fonte_texto(MENU_RESUMO_CONTINUAR_FONT_SIZE)
-                key = (id(font), short, (210, 220, 240))
-                detail = self._text_cache.get(key)
-                if detail is None:
-                    detail = font.render(short, True, (210, 220, 240))
-                    self._text_cache[key] = detail
-                surface.blit(detail, detail.get_rect(
-                    center=(rect.centerx, rect.centery + menu.layout.px(15))))
-            else:
-                surface.blit(text, text.get_rect(center=rect.center))
+            self._desenhar_cartao(surface, rect, label, action, color)
             if self.kind == "PERFIL" and action == "memorias" \
                     and menu._novidades("memorias"):
                 self._badge(surface, rect, theme["terciaria"])
@@ -132,6 +113,55 @@ class MenuHubScreen:
         pygame.draw.rect(surface, color, badge, border_radius=7)
         text = menu.fonte_pequena.render("NOVO", True, (255, 255, 255))
         surface.blit(text, text.get_rect(center=badge.center))
+
+    def _desenhar_cartao(self, surface: pygame.Surface, rect: pygame.Rect,
+                         label: str, action: str,
+                         color: tuple[int, int, int]) -> None:
+        menu = self.menu
+        heading = menu.fonte_opcao.render(label, True, color)
+        if self.kind != "JOGAR":
+            surface.blit(heading, heading.get_rect(center=rect.center))
+            return
+        details = self._detalhes_cartao(action)
+        font = menu.layout.fonte_texto(
+            max(14, MENU_RESUMO_CONTINUAR_FONT_SIZE - 4))
+        surface.blit(heading, heading.get_rect(
+            center=(rect.centerx, rect.y + menu.layout.px(15))))
+        for index, detail in enumerate(details):
+            detail_surface = self._text_cache.get(
+                (id(font), detail, (210, 220, 240)))
+            if detail_surface is None:
+                detail_surface = font.render(detail, True, (210, 220, 240))
+                self._text_cache[(id(font), detail, (210, 220, 240))] = detail_surface
+            surface.blit(detail_surface, detail_surface.get_rect(
+                center=(rect.centerx, rect.y + menu.layout.px(37 + index * 17))))
+
+    def _detalhes_cartao(self, action: str) -> tuple[str, str]:
+        service = self.menu.jogo.profile_service
+        if action == "continuar":
+            summary = service.continue_summary() or {}
+            if not self.menu._tem_save():
+                return ("SEM PARTIDA SALVA", "ESCOLHA UM MODO PARA COMEÇAR")
+            mode = summary.get("mode", "linear").replace("_", " ").upper()
+            if summary.get("mode") == "mundo_aberto":
+                return (f"MODO {mode}",
+                        f"CHECKPOINT {summary.get('level', 'início')}")
+            return (f"MODO {mode} · DIM. {summary.get('dimension', 1)}",
+                    f"NÍVEL {summary.get('level', 1)}")
+        mode = "linear" if action == "linear" else "mundo_aberto"
+        summary = service.mode_progress_summary(mode) or {}
+        hours, remainder = divmod(summary.get("play_time", 0), 3600)
+        minutes = remainder // 60
+        coins = f"{summary.get('coins', 0):,}".replace(",", ".")
+        if action == "linear":
+            status = "CONTINUAR" if summary.get("started") else "NOVO"
+            return (f"{status} · DIM. {summary.get('dimension', 1)} · NÍVEL "
+                    f"{summary.get('level', 1)} · BOSSES {summary.get('bosses', 0)}/6",
+                    f"MOEDAS {coins} · TEMPO {hours:02d}h{minutes:02d}")
+        status = "CONTINUAR" if summary.get("started") else "NOVO"
+        return (f"{status} · REGIÕES {summary.get('regions', 0)}/6 · ECOS "
+                f"{summary.get('echoes', 0)} · BOSSES {summary.get('bosses', 0)}/6",
+                f"MOEDAS {coins} · TEMPO {hours:02d}h{minutes:02d}")
 
     def tratar_tecla(self, event: pygame.event.Event) -> bool:
         if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
@@ -165,9 +195,17 @@ class MenuHubScreen:
                 menu._som("erro")
                 menu.notificacoes.adicionar("Nenhum save encontrado!", "erro")
                 return
-            menu._abrir_continuar()
-        elif action == "lobby":
-            menu._abrir_lobby()
+            summary = menu.jogo.profile_service.continue_summary() or {}
+            strategy = menu.mode_strategies.get(summary.get("mode", "linear"))
+            if strategy is None or not strategy.continue_game(menu.jogo):
+                menu._som("erro")
+                menu.notificacoes.adicionar("Modo salvo indisponível", "erro")
+        elif action in {"linear", "mundo_aberto"}:
+            strategy = menu.mode_strategies[action]
+            if not strategy.start_new(menu.jogo):
+                menu._som("erro")
+                menu.notificacoes.adicionar(
+                    "Mundo Aberto estará disponível na próxima etapa.", "info")
         elif action == "pilotos":
             menu._abrir_perfis()
         elif action == "recordes":

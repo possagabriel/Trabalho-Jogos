@@ -290,17 +290,97 @@ class ProfileService:
                           else 0),
         }
 
-    def continue_summary(self) -> dict[str, int] | None:
-        """Descreve o ponto carregado pelo callback Continuar (missão inicial)."""
+    def continue_summary(self) -> dict[str, Any] | None:
+        """Descreve o último modo e o ponto que será retomado."""
         if self.active is None:
             return None
-        play_time = self.active.progress.get("tempo_total", 0)
+        progress = self.active.progress
+        mode = progress.get("modo_ultimo", "linear")
+        modes = progress.get("modos", {})
+        mode_data = modes.get(mode, {}) if isinstance(modes, dict) else {}
+        play_time = (mode_data.get("tempo", 0) if mode == "mundo_aberto"
+                     else progress.get("tempo_total", mode_data.get("tempo", 0)))
+        if mode == "linear":
+            legacy = progress.get("legacy", {})
+            player = legacy.get("jogador", {}) if isinstance(legacy, dict) else {}
+            campaign = player.get("progresso_campanha", {}) if isinstance(
+                player, dict) else {}
+            level = campaign.get("nivel_atual", mode_data.get("nivel_atual", 1))
+            try:
+                level = max(1, int(level))
+            except (TypeError, ValueError):
+                level = 1
+            dimension = (level - 1) // 5 + 1
+        else:
+            dimension = mode_data.get("regiao", "espaco_profundo")
+            level = mode_data.get("checkpoint", "inicio")
         return {
-            "dimension": 1,
-            "level": 1,
+            "mode": mode if mode in {"linear", "mundo_aberto"} else "linear",
+            "dimension": dimension if type(dimension) in (int, str) else 1,
+            "level": level if type(level) in (int, str) else 1,
             "total_play_time": (play_time if type(play_time) is int and play_time >= 0
                                  else 0),
         }
+
+    def mode_progress_summary(self, mode: str) -> dict[str, Any] | None:
+        """Retorna o progresso resumido de um modo para os cartões de JOGAR."""
+        if self.active is None or mode not in {"linear", "mundo_aberto"}:
+            return None
+        progress = self.active.progress
+        modes = progress.get("modos", {})
+        mode_data = modes.get(mode, {}) if isinstance(modes, dict) else {}
+        if mode == "linear":
+            bosses = progress.get("bosses_por_tipo", {})
+            if not isinstance(bosses, dict):
+                bosses = {}
+            legacy = progress.get("legacy", {})
+            player = legacy.get("jogador", {}) if isinstance(legacy, dict) else {}
+            legacy_bosses = player.get("bosses_derrotados", 0) if isinstance(
+                player, dict) else 0
+            return {
+                "started": bool(progress.get("partidas_jogadas", 0)
+                                 or progress.get("legacy")),
+                "dimension": progress.get("dimensao_maxima", 1),
+                "level": progress.get("nivel_maximo", mode_data.get("nivel", 1)),
+                "bosses": sum(value for value in bosses.values()
+                              if type(value) is int and value > 0)
+                or (legacy_bosses if type(legacy_bosses) is int else 0),
+                "coins": progress.get("moedas", 0),
+                "play_time": progress.get("tempo_total", 0),
+            }
+        return {
+            "started": bool(mode_data.get("partidas_jogadas", 0)),
+            "regions": mode_data.get("regioes_libertas", 0),
+            "echoes": mode_data.get("ecos", 0),
+            "bosses": mode_data.get("bosses", 0),
+            "coins": mode_data.get("moedas", 0),
+            "play_time": mode_data.get("tempo", 0),
+        }
+
+    def set_last_mode(self, mode: str) -> bool:
+        """Persiste o modo que CONTINUAR deve reabrir."""
+        if self.active is None or mode not in {"linear", "mundo_aberto"}:
+            return False
+        progress = self.active.progress
+        if progress.get("modo_ultimo") == mode:
+            return True
+        progress["modo_ultimo"] = mode
+        return self._save()
+
+    def update_mode_progress(self, mode: str, **values: Any) -> bool:
+        """Atualiza o balde de um modo sem alterar o progresso do outro."""
+        if self.active is None or mode not in {"linear", "mundo_aberto"}:
+            return False
+        modes = self.active.progress.setdefault("modos", {})
+        if not isinstance(modes, dict):
+            modes = {}
+            self.active.progress["modos"] = modes
+        state = modes.setdefault(mode, {})
+        if not isinstance(state, dict):
+            state = {}
+            modes[mode] = state
+        state.update(values)
+        return self._save()
 
     def _novelties(self, category: str, eligible: object) -> list[str]:
         """Filtra IDs elegíveis pelo registro persistente de apresentação."""
