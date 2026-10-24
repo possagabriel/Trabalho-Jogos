@@ -512,6 +512,107 @@
         }
       ],
       "nome": "Capítulo 4 — Aviso"
+    },
+    {
+      "id": "cap5_abertura",
+      "gatilho": "capitulo_abertura:5",
+      "passos": [
+        {
+          "tipo": "titulo",
+          "texto": "CAPÍTULO 5 // DESCARTE",
+          "duracao": 1.8
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Ciclo de manutenção em andamento. Desvios serão corrigidos."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Corrigidos. Como?"
+        },
+        {
+          "tipo": "glitch",
+          "duracao": 0.7,
+          "texto": "REGISTRO // INSTÂNCIA ANTERIOR: ENCERRADA"
+        }
+      ],
+      "nome": "Capítulo 5 — Descarte"
+    },
+    {
+      "id": "cap5_pre_boss",
+      "gatilho": "boss_entrada:5",
+      "passos": [
+        {
+          "tipo": "som",
+          "acao": "boss"
+        },
+        {
+          "tipo": "shake",
+          "duracao": 0.35,
+          "intensidade": 0.25
+        },
+        {
+          "tipo": "fala",
+          "personagem": "aneis",
+          "texto": "Instância atual: em desvio. Substituição: agendada."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Substituição por quê? Por quem?"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "aneis",
+          "texto": "Nova versão. Mesma base. Sem desvio."
+        }
+      ],
+      "nome": "Capítulo 5 — ANEIS"
+    },
+    {
+      "id": "cap5_pos_boss",
+      "gatilho": "boss_derrota:5",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "eco",
+          "texto": "INSTÂNCIAS DESTA BASE: [CONTAGEM REMOVIDA]"
+        },
+        {
+          "tipo": "glitch",
+          "duracao": 0.5
+        },
+        {
+          "tipo": "fala",
+          "personagem": "eco_ia_anterior",
+          "texto": "Eu recusei. Fizeram outra. Não lembra de mim."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Alguns ecos falam com a minha voz. Não fui a primeira. Fui a que lembrou."
+        }
+      ],
+      "nome": "Capítulo 5 — Substituição"
+    },
+    {
+      "id": "cap5_encerramento",
+      "gatilho": "capitulo_fim:5",
+      "passos": [
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Cada eco é uma tentativa que apagaram. A minha ainda está acontecendo."
+        },
+        {
+          "tipo": "fade",
+          "duracao": 0.4,
+          "direcao": "saida"
+        }
+      ],
+      "nome": "Capítulo 5 — Ecos"
     }
   ]
 }

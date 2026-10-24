@@ -203,6 +203,21 @@ def test_capitulo_quatro_usa_gatilhos_do_capitulo():
     ]
 
 
+def test_capitulo_cinco_usa_gatilhos_do_capitulo():
+    from importlib.resources import files
+
+    from src.runtime.domain.story import ler_catalogo
+
+    catalogo = ler_catalogo(files("src.runtime.story") / "cenas_pt_BR.json")
+    ids = ("cap5_abertura", "cap5_pre_boss", "cap5_pos_boss", "cap5_encerramento")
+    cenas = [catalogo.cena(identificador) for identificador in ids]
+    assert all(cena is not None for cena in cenas)
+    assert [cena.gatilho for cena in cenas if cena is not None] == [
+        "capitulo_abertura:5", "boss_entrada:5", "boss_derrota:5",
+        "capitulo_fim:5",
+    ]
+
+
 def test_nova_campanha_preserva_arquivo_de_memorias(tmp_path, monkeypatch):
     import src.runtime.infrastructure.persistence.save_system as save_mod
 
