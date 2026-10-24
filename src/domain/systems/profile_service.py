@@ -36,11 +36,13 @@ class ProfileService:
     def _name(self, value: str) -> str:
         if not isinstance(value, str):
             raise ValueError("Nome inválido")
-        name = unicodedata.normalize("NFC", value.strip())
+        name = unicodedata.normalize("NFC", value)
         if not name or len(name) > self.max_name_length:
             raise ValueError("Nome vazio ou longo demais")
-        if any(not (ch.isalnum() or ch in " _-") for ch in name):
-            raise ValueError("Caractere inválido")
+        if name[0].isspace() or name[-1].isspace():
+            raise ValueError("Espaços nas pontas não permitidos")
+        if not name.isprintable():
+            raise ValueError("Caractere de controle não permitido")
         return name
 
     def _unique(self, name: str, except_id: str | None = None) -> None:

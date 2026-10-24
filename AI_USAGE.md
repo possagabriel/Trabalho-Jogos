@@ -2,14 +2,18 @@
 
 ## Fase A — validação de nomes de perfil
 
-- **Pedido:** decidir a política de apóstrofo sem modificar perfis existentes.
-- **Decisão do usuário:** manter a rejeição para criação e renomeação.
-- **Implementação da IA:** sem mudança no serviço ou nos saves; teste de
-  regressão para leitura, seleção e exportação de nome legado com apóstrofo,
-  inclusive após reconstrução do índice.
-- **Verificação:** testes direcionados antes: 29 passaram; depois: 30 passaram.
-  Suíte completa: 642 passaram, 1 ignorado. Ruff passou no arquivo Python
-  alterado. Benchmark não se aplica a teste e documentação.
+- **Pedido:** aceitar apóstrofo, hífen, acentos e espaços internos em novos
+  nomes e renomeações; rejeitar controles e espaços nas pontas; preservar perfis.
+- **Decisão do usuário:** a decisão anterior de rejeitar apóstrofo foi
+  substituída por esta regra.
+- **Implementação da IA:** validação de texto imprimível sem `strip()`; criação,
+  renomeação e teste de regressão para leitura, seleção e exportação de nome
+  legado após reconstrução do índice. Nenhum save real foi alterado.
+- **Verificação:** 35 testes direcionados passaram antes da mudança; cinco
+  casos falharam na fase vermelha do TDD e 42 passaram após a implementação.
+  Suíte completa: 649 passaram e 1 ignorado. Ruff passou nos dois arquivos
+  Python alterados. Benchmark de runtime não se aplica à validação de nome
+  fora do loop do jogo.
 - **Ajustes manuais do usuário:** teste local ficará para depois; PR em
   rascunho e sem merge.
 
@@ -68,8 +72,8 @@
   mantém seu layout e seu HUD anteriores.
 - **Decisões:** a seleção segue contínua entre os grupos e continua começando em
   Continuar com save ou Lobby sem save. Continuar sem save mantém o visual
-  desabilitado e o aviso existente ao ativar. A validação do `ProfileService`
-  rejeita apóstrofo em novos nomes; perfis antigos não são alterados. A tela
+  desabilitado e o aviso existente ao ativar. Na época desta etapa, a validação
+  rejeitava apóstrofo; a regra foi alterada na Fase A acima. A tela
   trata nomes longos com reticências e caracteres acentuados.
 - **Comparação visual:** imagens ANTES/DEPOIS das quatro resoluções e dos dois
   modos, além do mockup 1920×1080, estão em

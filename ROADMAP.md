@@ -24,10 +24,11 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
-- Nomes de perfil: manter apóstrofo rejeitado em criação e renomeação,
-  conforme decisão do usuário. Teste de regressão na branch
-  `test/fase-a-nomes-perfil` cobre nome legado com apóstrofo após reconstruir
-  o índice, selecionar e exportar; não reescreve perfis reais.
+- Nomes de perfil: a decisão atual é aceitar apóstrofo e outros caracteres
+  imprimíveis em criação/renomeação, rejeitando controles e espaços nas pontas.
+  A branch `test/fase-a-nomes-perfil` contém a validação e testes de regressão
+  para nome legado após reconstruir o índice, selecionar e exportar. Perfis
+  reais não são reescritos.
 - Candidata `v1.8.0-rc1`: builds de instalador/executável Linux e Windows
   passaram. Executar o checklist Windows antes da tag `v1.8.0` e da release
   oficial. Instalação limpa, atualização, jogo, perfis e desinstalação ainda

@@ -120,8 +120,9 @@ gravações. O nome pode ser editado depois. A seleção usa controles padrão
 antes de carregar um perfil. Uma gravação que falhe deixa a alteração pendente
 em memória; o jogo avisa na tela e o F3 mostra perfil, ID curto, última
 gravação e pendência.
-Nomes novos e renomeações não aceitam apóstrofo. Um perfil antigo que já tenha
-esse caractere continua legível; seu nome não é alterado automaticamente.
+Nomes novos e renomeações aceitam apóstrofo, hífen, acentos e espaços internos.
+Espaços nas pontas e caracteres de controle são rejeitados. Um perfil antigo
+continua legível; seu nome não é alterado automaticamente.
 
 Para verificar na prática, defina `INCARNATE_DATA_DIR` para uma pasta de teste
 e execute `python incarnate.py`. Crie dois perfis, ganhe ou gaste moedas no primeiro,
