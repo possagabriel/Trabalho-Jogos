@@ -1,5 +1,9 @@
 # Registro de uso de IA
 
+## Regras de colaboração do INCARNATE
+
+- **Atualização:** AGENTS.md recebeu as regras de escopo, Git, testes, acessibilidade e roteiro definidas pelo usuário.
+
 ## Menu principal — etapa 3: cartão e layout responsivo
 
 - **Pedido:** adicionar cartão de perfil, resumo de Continuar, selos de novidade,
