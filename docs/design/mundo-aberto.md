@@ -1,119 +1,251 @@
-# Mundo aberto: design (INCARNATE)
+# Fase F — LINEAR e MUNDO ABERTO
 
-Status: proposta v0. Os valores numéricos são pontos de partida, não promessas: confirmar com benchmark e playtest. As decisões da seção 15 estão confirmadas.
+**Estado:** proposta para decisão do usuário. Não iniciar código até as
+decisões da seção 11 serem respondidas.
 
 ## 1. Objetivo e limites
 
-- Segundo modo de jogo, ao lado do LINEAR. O LINEAR continua idêntico ao atual.
-- Protótipo antes do conteúdo completo: 1 região, 1 toca de boss, 3 a 5 destroços, 1 estação, 1 perigo, 1 patrulha.
-- Estrutura do mundo em arquivo de dados. Sem dependências novas além do pygame.
+Adicionar **MUNDO ABERTO** como modo opcional ao lado do **LINEAR**. O modo
+LINEAR deve manter o fluxo, a progressão, o combate e o resultado visual atuais.
+Os modos compartilham sistemas de combate e apresentação onde isso não altera
+o comportamento do LINEAR.
 
-## 2. Fluxo de menu
+O protótipo cobre uma região, uma toca de boss, uma estação, um perigo, uma
+patrulha de miniboss e 3 a 5 destroços. A viagem rápida fica fora do protótipo.
+Não adicionar dependências além das já usadas pelo jogo.
 
-- JOGAR abre uma tela de escolha com dois cartões: LINEAR e MUNDO ABERTO, cada um com descrição curta e o progresso do perfil naquele modo ("Novo" se não houver).
-- CONTINUAR retoma o último modo jogado. Esc volta com o foco restaurado.
+## 2. Fluxo de jogo
 
-## 3. Arquitetura
+- **JOGAR** abre cartões para LINEAR e MUNDO ABERTO. Cada cartão resume o
+  progresso daquele modo no perfil ativo; um modo sem partida mostra “Novo”.
+- **CONTINUAR** retoma o último modo usado e seu ponto salvo.
+- Esc retorna à tela anterior com o foco restaurado.
+- Uma partida nova no LINEAR continua usando a progressão linear atual.
+- Uma partida nova no MUNDO ABERTO inicia no checkpoint inicial da região do
+  protótipo.
 
-- GameMode (Strategy): LinearMode (código atual, sem mudança) e OpenWorldMode. Interface mínima: iniciar(perfil), atualizar(dt), desenhar(), tratar_evento(), salvar().
-- Compartilhados entre os modos: combate, armas, bosses, diálogos, áudio, perfis e o barramento de eventos (BOSS_SPAWNED, BOSS_DEFEATED, GAME_START).
-- WorldCamera: segue a nave com suavização e trava na arena do boss.
-- WorldMap: carregado de dados e dividido em chunks (1 chunk = 1 tela lógica, 1280x720). Só os 3x3 chunks ao redor da câmera têm entidades ativas. Dos demais guarda-se apenas o estado persistente (coletado, derrotado, descoberto).
-- Fundo: o ParallaxBackground recebe o deslocamento da câmera (x e y) em vez de uma velocidade fixa. O ScrollController continua só no LINEAR. Na arena, a "frenagem" é câmera travada e parallax parado (reaproveita o estado PARADO).
-- Eventos novos: ECO_COLETADO, TOCA_ENTRADA, ESTACAO_ATIVADA, REGIAO_TROCADA.
+## 3. Estratégia de modos e sistemas compartilhados
 
-## 4. Mapa: decisão
+Proposta: um contrato pequeno de modo com operações de iniciar, atualizar,
+desenhar, receber eventos e salvar. O adaptador LINEAR chama o fluxo atual sem
+reimplementar seus controladores. O MUNDO ABERTO fornece mapa, câmera,
+exploração e estado de região próprios.
 
-- Opção A: desenhado em dados. Opção B: procedural com semente.
-- Recomendação: A para a estrutura (regiões, tocas, estações, destroços), porque controla história e dificuldade. B só para decoração (asteroides, estrelas), com semente fixa por região.
+Compartilhar combate, armas, entidades, bosses, minibosses, áudio, cutscenes,
+perfis, catálogo de Memórias e preferências. O modo escolhido controla apenas
+progressão, mundo, posição, checkpoint e regras próprias. Os eventos existentes
+de início e derrota/entrada de boss devem acionar as cutscenes; novos eventos
+ficam limitados a interações do mundo, como coletar eco, ativar estação e cruzar
+fenda.
 
-## 5. Regiões
+O critério de paridade do LINEAR é comparar o fluxo anterior e o adaptador novo:
+mesmas entradas, mesma sequência de fases, mesmos bosses, recompensas, saves,
+cutscenes e comportamento de pausa. Nenhuma regra do LINEAR deve depender do
+mapa aberto.
 
-- 6 regiões, uma por dimensão, em grade 3x2 (sugestão):
-  - Linha de cima: Nebulosa em Chamas, Floresta de Cristais, Plano Divino.
-  - Linha de baixo: Espaço Profundo (início), Oceano Cósmico, Espaço Nulo.
-- Tamanho a calibrar pelo tempo: atravessar uma região deve levar cerca de 60 a 90 s de voo.
-- Fendas nas fronteiras entre regiões vizinhas (transição visual de cerca de 1 s, reaproveitando a transição dimensional). Plano Divino fica fechado até o boss 5 cair.
-- Borda do mapa: o "Vazio" (a imagem se desfazendo) empurra a nave de volta com suavidade, sem parede invisível. Não é o mesmo que a região Espaço Nulo.
+## 4. Mapa: dados versus geração procedural
 
-## 6. Bosses e tocas
+| Opção | Benefícios | Custos e riscos |
+| --- | --- | --- |
+| Mapa desenhado em dados | Posição de história, bosses, estações e destroços é controlável; fácil revisar e testar requisitos de acesso | Mais trabalho manual para compor e manter as regiões |
+| Mapa procedural com semente | Variação reproduzível e expansão mais barata | Pode criar rotas ruins, bloquear a leitura da história ou produzir dificuldade desigual |
 
-| Boss | Região | Acesso (valores iniciais) |
-|---|---|---|
-| HEXAGONO | Espaço Profundo | livre |
-| LOSANGO | Nebulosa em Chamas | HEXAGONO derrotado + 1 eco |
-| ESTRELA | Oceano Cósmico | HEXAGONO derrotado + 2 ecos |
-| PENTAGONO | Floresta de Cristais | HEXAGONO derrotado + 3 ecos |
-| ANEIS | Espaço Nulo | LOSANGO, ESTRELA e PENTAGONO derrotados + 5 ecos |
-| ANEIS DOURADO | Plano Divino | ANEIS derrotado + 7 ecos |
+**Recomendação para decisão:** autoria em dados para a topologia e os pontos de
+interesse; geração por semente fixa para decoração. Cada região declara limites,
+saídas, fendas, toca, estação, destroços e perigos. A semente só altera
+asteroides, estrelas e pequenos detalhes sem colisão ou significado narrativo.
 
-- Os bosses 2, 3 e 4 podem ser feitos em qualquer ordem. Antes de liberar, conferir que as cenas desses capítulos não referenciam umas às outras (hoje não referenciam).
-- Meta de conteúdo: pelo menos 7 ecos no mapa completo, com alguns opcionais.
-- Toca: estrutura visível de longe que cresce ao se aproximar. A entrada é uma fenda. A arena trava a câmera e freia o fundo, e as cenas pré e pós-boss saem dos eventos existentes, como no LINEAR.
-- Vencer o boss "liberta" a região (paleta mais clara, menos perigos).
+```json
+{
+  "id": "espaco_profundo",
+  "dimensao": 1,
+  "limites": [0, 0, 3840, 2160],
+  "semente_decoracao": 4101,
+  "fendas": [],
+  "pontos": []
+}
+```
 
-## 7. Exploração
+O exemplo ilustra a estrutura, não fixa tamanho, coordenadas ou IDs finais.
 
-- Destroços de IAs anteriores guardam um eco (registro corrompido): ao tocar, toca uma cena curta (motor atual, id eco_*) e desbloqueia uma memória no Arquivo, com selo NOVO.
-- Cascos abandonados raros (1 por região, opcional) desbloqueiam uma skin.
-- Estações: checkpoint e hangar. Viagem rápida entre estações descobertas (fora do protótipo).
-- Minibosses patrulham (1 a 2 por região) e reaparecem quando se entra na região de novo.
-- Perigos: campo de asteroides (dano de contato), nebulosa (dano gradual), poço de gravidade (puxa a nave). Protótipo: só asteroides.
-- Armas achadas no mundo ficam fora do protótipo.
+## 5. Regiões, câmera e exploração
 
-## 8. Navegação
+O mundo completo terá seis regiões relacionadas às seis dimensões. Uma região
+tem limites contínuos, entradas/saídas e decoração própria. Fendas nas
+fronteiras conectam regiões. A câmera acompanha a nave com suavização; o fundo,
+marcos e linhas de velocidade respondem à posição e à velocidade da nave.
 
-- Radar na borda da tela com marcadores diferenciados por FORMA e cor (toca, estação, destroço descoberto, objetivo). Mostra só o que foi descoberto.
-- Seta para o objetivo atual.
-- Mapa (tecla M) com névoa por chunk visitado.
-- Sem poluir o HUD atual.
+As tocas de boss devem ser reconhecíveis de longe e crescer visualmente com a
+aproximação. Ao entrar, a câmera conduz o jogador à arena, o avanço visual
+freia e os eventos existentes acionam as cenas de entrada e derrota. Sair da
+arena retoma o movimento do mundo.
 
-## 9. Visual e movimento
+O radar diferencia toca, estação, destroço descoberto e objetivo por forma e
+cor. A seta aponta para o objetivo ativo. O mapa mostra a região e os chunks
+visitados, mantendo a névoa nos trechos ainda não explorados. Nenhum marcador
+depende apenas de cor.
 
-- Parallax por posição da câmera (3 a 5 camadas, fatores distintos), marcos grandes com escala por distância, linhas de velocidade na direção do voo proporcionais à velocidade.
-- Em qualidade BAIXA, o fundo é estático em cache. "Reduzir efeitos" é respeitado. No máximo 3 flashes por segundo.
+O limite exterior é o **Vazio**: usa o efeito visual da borda narrativa, não tem
+boss e empurra a nave de volta sem parede invisível. **Espaço Nulo** é a região
+do boss ANEIS, fora do protótipo.
 
-## 10. Dados e perfil
+## 6. Conteúdo do protótipo
 
-- Compartilhado entre modos: skins, memórias (Arquivo), estatísticas gerais e preferências pessoais.
-- Por modo: moedas, armas, melhorias, posição/checkpoint, bosses derrotados e tempo de jogo.
-- Só do mundo aberto: ecos coletados, chunks visitados, estações descobertas e regiões libertas.
-- Migração versionada: no perfil antigo, `modos.linear` recebe os valores atuais e `modos.mundo_aberto` nasce vazio com padrões. Nada se perde. A transferência de perfis inclui os campos novos. Arquivos legados ficam intactos.
+- Uma região inicial associada à dimensão 1.
+- Uma toca visível de longe e um encontro com HEXAGONO.
+- Uma estação com checkpoint e Hangar, reaproveitando a tela atual e usando o
+  balde de progresso do modo ativo.
+- Um campo de asteroides como perigo inicial.
+- Uma patrulha de miniboss.
+- Três a cinco destroços com ecos que desbloqueiam cenas no Arquivo de Memórias.
+- Radar, seta de objetivo e mapa com névoa por chunk.
 
-## 11. Desempenho (metas iniciais, confirmar medindo)
+As outras cinco regiões, fendas entre todas as dimensões, vários bosses,
+perigos adicionais, estações múltiplas e viagem rápida ficam para expansão após
+o playtest do protótipo. O protótipo inclui apenas a borda exterior do Vazio,
+sem a região Espaço Nulo ou o boss ANEIS.
 
-- Chunks ativos: 3x3. Limite de entidades ativas por qualidade (BAIXA, MEDIA, ALTA) em config.
-- Pooling de projéteis e partículas, cache de camadas, sem alocação por frame.
-- Medir média e p95 com o benchmark de scroll adaptado, antes e depois.
+## 7. Chunks e orçamento de desempenho
 
-## 12. Etapas e critérios de aceite
+Particionar o mundo em chunks fixos relativos à câmera. Manter ativos somente
+os chunks dentro de uma vizinhança 3×3; fora dela, persistir apenas estados
+compactos como eco coletado, boss derrotado, estação descoberta e trecho visto.
+Ativação/desativação precisa preservar posição, colisões, recompensas e estado
+da patrulha ao sair e retornar.
 
-- F1: GameMode e tela de escolha em JOGAR, com o LINEAR idêntico (suíte atual verde e o LINEAR usa o mesmo fluxo de antes).
-- F2: câmera e fundo em movimento real num mundo vazio, parallax por posição e borda "Vazio".
-- F3: região do protótipo com chunks, radar, 1 perigo, 1 patrulha e 1 estação (checkpoint).
-- F4: toca do HEXAGONO com arena, frenagem e cenas pelos eventos existentes, e fenda de entrada.
-- F5: destroços e ecos ligados ao Arquivo (selo NOVO), persistência por modo e migração de perfis.
-- Cada etapa traz testes da lógica pura: chunks ativos, travas da câmera, requisitos de acesso, migração. O F3 de debug mostra modo, região, chunk, entidades ativas e posição da câmera.
+**Meta:** 60 quadros por segundo. O benchmark do mundo, sem apresentação, deve
+atingir p95 de até 8 ms em MEDIA e BAIXA. Os limites serão ajustáveis após a
+medição na máquina do usuário. Se a meta não fechar, propor cortes antes de
+seguir; não reduzir os limites do LINEAR.
 
-## 13. Riscos
+Não alocar superfícies por quadro. Cachear decoração e camadas de fundo por
+região/qualidade; atualizar somente entidades dos chunks ativos. Incluir um
+overlay de depuração com modo, região, chunk, câmera e contagem de entidades.
 
-1. Balanceamento sem ordem fixa.
-2. Jogador se perder: radar, seta e mapa.
-3. Legibilidade de projéteis sobre fundos diferentes.
-4. Escopo: protótipo primeiro.
-5. Loop atual acoplado ao LINEAR: por isso o F1 vem antes.
-6. Conflito com os menus e o kit de UI: só começar depois de A, B e C.
+## 8. Perfil e migração de saves
 
-## 14. Critério de sucesso do protótipo
+Proposta de separar o estado em dados compartilhados e progresso por modo:
 
-Três pessoas, sem instruções, encontram a toca do boss em até 5 minutos, entendem o radar e não ficam perdidas por mais de 2 minutos. Também usam o boost e o sonar sem instrução e encontram um eco em até 2 minutos.
+| Compartilhado no perfil | Próprio de cada modo |
+| --- | --- |
+| Skins desbloqueadas/equipada, Arquivo de Memórias e estatísticas gerais | Moedas, armas, melhorias, dimensão/bosses, posição, checkpoint, tempo e estatísticas do modo |
+| Preferências pessoais | No mundo aberto: ecos coletados, chunks visitados, regiões libertas e estações descobertas |
 
-## 15. Decisões (confirmadas)
+Estatísticas gerais são agregadas no perfil; cada cartão mostra o progresso do
+modo correspondente. A escolha do último modo fica no perfil.
 
-1. Mapa: opção A (desenhado em dados). Decoração procedural com semente fixa por região.
-2. Ordem dos bosses 2 a 4: livre. Condições: dificuldade equivalente entre os três (ou escalada pelo número de bosses derrotados) e recompensas que não tornem um deles trivial. No mundo aberto, o título do capítulo mostra só o nome (ex.: "// IDENTIDADE"), sem número.
-3. Mundo aberto: modo extra ao lado do LINEAR, com o mesmo destaque na tela de escolha. Reavaliar depois do playtest do protótipo.
-4. Viagem rápida: fora do protótipo, depois dele.
+A migração deve ser versionada e idempotente. Em perfil legado, copiar todos os
+valores atuais para `modos.linear`, criar `modos.mundo_aberto` com defaults e
+preservar os campos antigos durante a transição. Perfis transferidos levam o
+schema novo e não perdem dados. O arquivo legado permanece intacto até uma
+gravação bem-sucedida no formato novo; falhas de escrita mantêm o progresso em
+memória e exibem aviso.
+
+Forma de schema proposta, sujeita a revisão:
+
+```json
+{
+  "schema_version": 2,
+  "modo_ultimo": "linear",
+  "compartilhado": {
+    "skins": [],
+    "memorias": [],
+    "estatisticas_gerais": {}
+  },
+  "modos": {
+    "linear": {},
+    "mundo_aberto": {
+      "regiao": "espaco_profundo",
+      "posicao": [0, 0],
+      "checkpoint": "inicio",
+      "ecos": [],
+      "chunks_visitados": []
+    }
+  }
+}
+```
+
+O schema final deve ser decidido antes de código de persistência.
+
+## 9. História e progressão
+
+Requisitos de boss e ecos são dados do mapa, não condicionais espalhadas pelo
+loop. Os bosses 2–4 podem ser enfrentados em qualquer ordem, com dificuldade e
+recompensas equivalentes ou escaladas pelo número de bosses derrotados. Tocas
+bloqueadas indicam visualmente o requisito faltante. Os eventos de boss
+existentes mantêm as cutscenes atuais; destroços acionam cenas curtas uma vez e
+desbloqueiam a memória correspondente.
+
+As revelações de história dependem de flags explícitas de progressão. O mundo
+não antecipa informação de capítulos ainda não concluídos. Viagem rápida não
+ignora uma toca, fenda ou cena obrigatória.
+
+## 10. Etapas e paradas
+
+1. **F1 — Modos:** escolha LINEAR/MUNDO ABERTO, cartões de progresso,
+   `CONTINUAR` pelo último modo e adaptador Strategy. Paridade do LINEAR.
+2. **F2 — Câmera e fundo:** mundo vazio, movimento livre, câmera, fundo e
+   parallax por posição, limites e borda narrativa. **Parada obrigatória:** GIFs
+   reais da câmera e do fundo para revisão do usuário.
+3. **F3 — Região:** chunks, estação/checkpoint, perigo, patrulha, radar, seta e
+   mapa com névoa; orçamento de desempenho medido.
+4. **F4 — Toca:** aproximação visível, entrada/frenagem de arena e cutscenes
+   existentes do HEXAGONO.
+5. **F5 — Ecos e saves:** destroços, Memórias, progressão persistida por modo,
+   migração versionada e transferência de perfil.
+
+Cada etapa tem testes de lógica pura, regressão de paridade do LINEAR e critérios
+de aceite próprios. Não expandir além do protótipo até revisão das capturas e
+resultados do playtest. F1 só começa depois de A, B e C concluídas e aprovadas
+pelo usuário. **Critério de sucesso do protótipo:** o jogador usa boost e sonar
+sem instrução e encontra um eco em até 2 minutos.
+
+## 11. Dependências e gates
+
+F1 permanece bloqueada até A, B e C estarem concluídas e aprovadas pelo usuário.
+Após F2, revisar os GIFs reais da câmera e do fundo. Se o benchmark de F3 exceder
+o orçamento em qualquer qualidade, apresentar cortes propostos antes de avançar.
+
+## 12. Cartões de modo
+
+Cada cartão tem no máximo quatro linhas e uma versão compacta para 4:3. Exibe
+situação, progresso do modo, bosses X/6, moedas e tempo daquele modo. O progresso
+é dimensão e nível no LINEAR; no MUNDO ABERTO, regiões libertas X/6 e ecos.
+
+## 13. Ordem dos bosses e ecos
+
+Os bosses 2–4 podem ser enfrentados em qualquer ordem. Requisitos de ecos ficam
+em arquivo de dados, com valores provisórios que serão fechados na F5.
+
+## 14. Estação e loja
+
+A estação do protótipo combina checkpoint e Hangar, reutilizando a tela atual e
+lendo e gravando no balde do modo ativo. Se isso exigir lógica adicional na
+loja, o protótipo terá apenas checkpoint.
+
+## 15. Decisões confirmadas
+
+1. **Mapa:** topologia definida em dados; decoração procedural com semente fixa
+   por região.
+2. **Perfil:** estatísticas gerais agregadas no perfil; progresso específico por
+   modo nos cartões.
+3. **Espaço Nulo e Vazio:** Espaço Nulo é a região do boss ANEIS. A borda exterior
+   é o Vazio, com o mesmo efeito visual, sem boss, empurrando a nave de volta.
+   O protótipo inclui só a borda do Vazio.
+4. **Estação:** checkpoint e Hangar reaproveitando a tela atual, com leitura e
+   gravação no balde do modo ativo. Se exigir lógica adicional da loja, incluir
+   só checkpoint no protótipo.
+5. **Desempenho:** meta de 60 FPS; benchmark do mundo sem apresentação com p95
+   de até 8 ms em MEDIA e BAIXA. Ajustar após medir na máquina do usuário; se não
+   atingir a meta, propor cortes antes de seguir.
+6. **Progressão:** bosses 2–4 em ordem livre. Requisitos de ecos em arquivo de
+   dados, provisórios até serem fechados na F5.
+7. **Cartões:** situação, progresso do modo (LINEAR: dimensão e nível; MUNDO
+   ABERTO: regiões libertas X/6 e ecos), bosses X/6, moedas e tempo do modo; no
+   máximo quatro linhas e versão compacta em 4:3.
+
+F1 não começa até A, B e C estarem concluídas e aprovadas pelo usuário. Este
+documento registra as decisões; não inicia implementação.
 
 ## 16. Melhorias propostas
 

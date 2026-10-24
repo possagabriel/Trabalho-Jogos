@@ -26,6 +26,13 @@ _CACHE_ALPHA = {}
 _SCALA_AA = 2  # fator de supersampling para anti-aliasing
 
 
+def _novo_alpha(tamanho):
+    """Cria uma surface transparente limpa, sem reaproveitar pixels antigos."""
+    surf = pygame.Surface(tamanho, pygame.SRCALPHA)
+    surf.fill((0, 0, 0, 0))
+    return surf
+
+
 def _armazenar_cache(cache, chave, valor, limite):
     """Armazena ``valor`` e descarta a entrada mais antiga ao atingir o limite.
 
@@ -135,7 +142,7 @@ def luz_radial(cor, raio, intensidade=1.0):
     if chave in _CACHE_GLOW:
         return _CACHE_GLOW[chave]
     ext = max(1, int(raio * 2.2))
-    surf = pygame.Surface((ext * 2, ext * 2), pygame.SRCALPHA)
+    surf = _novo_alpha((ext * 2, ext * 2))
     cx = cy = ext
     cor3 = tuple(cor[:3])
     for r in range(ext, 0, -1):
@@ -178,8 +185,7 @@ def luz_retangular(
     if chave in _CACHE_GLOW_RETANGULAR:
         return _CACHE_GLOW_RETANGULAR[chave]
 
-    surf = pygame.Surface((largura + raio * 2, altura + raio * 2),
-                          pygame.SRCALPHA)
+    surf = _novo_alpha((largura + raio * 2, altura + raio * 2))
     for distancia in range(raio, -1, -1):
         progresso = 1 - distancia / (raio + 1)
         alfa = int(min(255, 140 * intensidade * progresso ** 2))
@@ -235,7 +241,7 @@ def circulo_suave(cor, raio, espessura=0, brilho=1.0):
     if espessura <= 0:
         # gradiente radial: nucleo solido + halo suave
         ext = raio + 6
-        surf = pygame.Surface((ext * 2, ext * 2), pygame.SRCALPHA)
+        surf = _novo_alpha((ext * 2, ext * 2))
         cx = cy = ext
         pygame.draw.circle(surf, cor3 + (255,), (cx, cy), raio)
         for r in range(raio + 1, ext):
@@ -245,7 +251,7 @@ def circulo_suave(cor, raio, espessura=0, brilho=1.0):
                 pygame.draw.circle(surf, cor3 + (alfa,), (cx, cy), r)
     else:
         ext = raio + espessura + 8
-        surf = pygame.Surface((ext * 2, ext * 2), pygame.SRCALPHA)
+        surf = _novo_alpha((ext * 2, ext * 2))
         cx = cy = ext
         for i in range(espessura, 0, -1):
             alfa = int(255 * (i / espessura))
@@ -295,7 +301,7 @@ def poligono_suave(cor, pontos, espessura=0, brilho=1.0):
     alt = max(1, int(max_y - min_y))
 
     # supersampling
-    big = pygame.Surface((larg * _SCALA_AA, alt * _SCALA_AA), pygame.SRCALPHA)
+    big = _novo_alpha((larg * _SCALA_AA, alt * _SCALA_AA))
     pts_big = [((p[0] - min_x) * _SCALA_AA, (p[1] - min_y) * _SCALA_AA)
                for p in pts]
     if esp <= 0:
@@ -364,7 +370,7 @@ def texto_suave(fonte, texto, cor, glow_cor=None, glow_raio=4,
     base = fonte.render(texto, True, cor_rgb)
     larg = base.get_width() + glow_raio * 2 + 6
     alt = base.get_height() + glow_raio * 2 + 6
-    surf = pygame.Surface((larg, alt), pygame.SRCALPHA)
+    surf = _novo_alpha((larg, alt))
     ox = oy = glow_raio + 3
 
     if sombra:
@@ -416,8 +422,8 @@ def retangulo_suave(tela, cor, rect, raio_canto=8, espessura=0, brilho=1.0,
     # desenha em superficie maior e reduz para suavizar bordas
     escala = _SCALA_AA
     pad = 6
-    big = pygame.Surface(((rect.w + pad * 2) * escala,
-                          (rect.h + pad * 2) * escala), pygame.SRCALPHA)
+    big = _novo_alpha(((rect.w + pad * 2) * escala,
+                       (rect.h + pad * 2) * escala))
     big_rect = pygame.Rect(pad * escala, pad * escala,
                            rect.w * escala, rect.h * escala)
     if espessura <= 0:

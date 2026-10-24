@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- O build de teste da 1.8.0 registra o commit real do push da branch; a tag
+  final `v1.8.0` fica fora da recompilação automática para permitir publicar
+  exatamente os binários e hashes aprovados no teste manual.
+- Fase A: artefatos do build #40125004991 (`f020cb0`) tiveram SHA-256 e OFL
+  conferidos; aguardam teste manual Windows antes de RC2, tag ou release.
+- AGENTS.md consolida escopo de leitura, fluxo Git, validação, acessibilidade e regras de roteiro do INCARNATE.
+- Menu B2: cinco itens e hubs Jogar/Perfil mantêm os destinos antigos em até duas ações; a etapa 1 está integrada, e Continuar sem save fica desabilitado com aviso.
+- Nomes de perfil agora aceitam apóstrofo e outros caracteres imprimíveis na
+  criação e renomeação; espaços nas pontas e controles são rejeitados. Perfis
+  legados continuam legíveis e exportáveis.
 - O menu ganhou cartão de perfil alimentado pelo `ProfileService`, resumo real
   do ponto inicial de Continuar e selos persistentes para Memórias e itens do
   Hangar que ficaram compráveis. O schema de perfil migra automaticamente para v3.
@@ -33,8 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Menu lê sua versão de `project.version` no `pyproject.toml`.
 - Menu ORIGINAL mantém títulos, botões e textos de rodapé dentro das margens,
   com contraste reforçado, rótulos ajustáveis e Continue desabilitado sem save.
-- O rodapé trunca nomes longos sem alterar perfis existentes; a validação atual
-  continua rejeitando apóstrofos em nomes novos e renomeações.
+- O rodapé trunca nomes longos sem alterar perfis existentes. A restrição antiga
+  de apóstrofo em novos nomes foi revista na seção Unreleased.
 
 ### Added
 - Documento de design do mundo aberto com mapa em dados, bosses 2–4 em ordem livre, títulos sem número nesse modo, modo extra e viagem rápida após o protótipo; implementação ainda pendente.

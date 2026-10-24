@@ -20,11 +20,12 @@ import random
 
 import pygame
 
-from src.core.constants import NEGRO
+from src.core.constants import ALTURA, LARGURA, NEGRO
 from src.infrastructure.graphics.comic_render import desenhar_fundo
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.infrastructure.ui.layout import Layout
 from src.runtime.domain.entities.player import Jogador
+from src.runtime.domain.world.scenarios import Cenario
 from src.runtime.infrastructure.assets import carregar_imagem
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_cantos,
@@ -315,6 +316,117 @@ class FundoCinematico:
             pygame.draw.line(tela, cor, (int(m["x"]), int(m["y"])),
                              (int(m["x"] - m["vx"] * 7),
                               int(m["y"] - m["vy"] * 7)), 2)
+
+
+class FundoMenuParallax:
+    """Fundo do menu composto uma vez com ``ParallaxBackground`` em BAIXA.
+
+    O gameplay anima as camadas a cada quadro; o menu reutiliza a mesma
+    composição do cenário 1 como superfície estática em cache. A troca de
+    resolução apenas reescala o cache, e os filtros de cutscene são guardados
+    por cor para não repetir a posterização por quadro.
+    """
+
+    QUALIDADE = "BAIXA"
+    CENARIO_ID = 1
+
+    def __init__(self, layout=None):
+        self._layout = layout or Layout()
+        self._nativa: pygame.Surface | None = None
+        self._nativa_estilo: tuple | None = None
+        self._cache: pygame.Surface | None = None
+        self._cache_tamanho = (0, 0)
+        self._cache_estilo: tuple | None = None
+        self._tingidos: dict[tuple[int, int, int], pygame.Surface] = {}
+
+    def set_layout(self, layout: Layout) -> None:
+        """Atualiza o canvas lógico sem recompilar a composição nativa."""
+        if layout is self._layout and self._cache is not None:
+            return
+        self._layout = layout
+        self._descartar_cache()
+
+    def _descartar_cache(self) -> None:
+        self._cache = None
+        self._cache_tamanho = (0, 0)
+        self._cache_estilo = None
+        self._tingidos.clear()
+
+    @staticmethod
+    def _chave_estilo() -> tuple:
+        opcoes = opcoes_atuais()
+        return (opcoes.ativo, opcoes.qualidade, opcoes.papel,
+                opcoes.halftone, opcoes.hachuras, opcoes.line_boil)
+
+    def _compor_nativa(self, estilo: tuple) -> pygame.Surface:
+        if self._nativa is None or self._nativa_estilo != estilo:
+            cenario = Cenario(self.CENARIO_ID)
+            cenario.configurar_avanco(
+                self.QUALIDADE, (0.0, 1.0), False, True,
+                {"avanco_marcos": False, "avanco_ritmo_variavel": False})
+            nativa = pygame.Surface((LARGURA, ALTURA))
+            nativa.fill(NEGRO)
+            cenario.parallax.desenhar(nativa)
+            self._nativa = nativa
+            self._nativa_estilo = estilo
+        return self._nativa
+
+    def _recortar_cover(self, base: pygame.Surface) -> pygame.Surface:
+        largura, altura = self._layout.largura, self._layout.altura
+        if (largura, altura) == base.get_size():
+            return base
+        largura_base, altura_base = base.get_size()
+        escala = max(largura / largura_base, altura / altura_base)
+        redimensionada = pygame.transform.smoothscale(
+            base, (max(largura, int(largura_base * escala)),
+                   max(altura, int(altura_base * escala))))
+        x = (redimensionada.get_width() - largura) // 2
+        y = (redimensionada.get_height() - altura) // 2
+        return redimensionada.subsurface((x, y, largura, altura)).copy()
+
+    def _cache_estatico(self) -> pygame.Surface:
+        tamanho = (self._layout.largura, self._layout.altura)
+        estilo = self._chave_estilo()
+        if (self._cache is None or self._cache_tamanho != tamanho
+                or self._cache_estilo != estilo):
+            self._cache = self._recortar_cover(self._compor_nativa(estilo))
+            self._cache_tamanho = tamanho
+            self._cache_estilo = estilo
+            self._tingidos.clear()
+        return self._cache
+
+    @property
+    def cache_estatico(self) -> bool:
+        """Indica se a composição já foi preparada neste layout."""
+        return self._cache is not None
+
+    @property
+    def qualidade(self) -> str:
+        """Qualidade fixa usada na composição do fundo do menu."""
+        return self.QUALIDADE
+
+    def atualizar(self) -> None:
+        """O fundo do menu é estático; não há camadas para animar."""
+
+    def desenhar(
+        self,
+        tela: pygame.Surface,
+        cor_fundo_cutscene: tuple[int, int, int] | None = None,
+    ) -> None:
+        """Desenha a composição cacheada, tingindo por cutscene se pedido."""
+        fundo = self._cache_estatico()
+        if cor_fundo_cutscene is not None:
+            chave = tuple(cor_fundo_cutscene)
+            tingido = self._tingidos.get(chave)
+            if tingido is None:
+                from src.runtime.presentation.cutscene_raster import (
+                    filtrar_fundo_cutscene,
+                )
+
+                tingido = filtrar_fundo_cutscene(self._cache_estatico(), chave)
+                self._tingidos[chave] = tingido
+            fundo = tingido
+        tela.blit(fundo, (0, 0))
 
 
 # ---------------------------------------------------------------------------

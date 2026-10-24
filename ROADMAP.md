@@ -1,6 +1,6 @@
 # ROADMAP — INCARNATE
 
-Estado auditado em 18/10/2026. PR #26 (polimento do repositório) e PR #27
+Estado auditado em 18/10/2026. As regras de trabalho do agente foram consolidadas em `AGENTS.md`. PR #26 (polimento do repositório) e PR #27
 (renomeação final) estão integrados na main. A candidata `v1.8.0-rc1` foi
 publicada e seus builds Linux e Windows passaram. A release oficial depende do
 checklist manual no Windows.
@@ -24,11 +24,18 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
-- F0: [design do mundo aberto](docs/design/mundo-aberto.md) registrado em `docs/design-mundo-aberto`, com decisões confirmadas na seção 15; F1 aguarda A, B e C concluídas, testes/aprovação do usuário e integração autorizada; nenhuma implementação iniciada.
-- Candidata `v1.8.0-rc1`: builds de instalador/executável Linux e Windows
-  passaram. Executar o checklist Windows antes da tag `v1.8.0` e da release
-  oficial. Instalação limpa, atualização, jogo, perfis e desinstalação ainda
-  precisam de validação manual no Windows.
+- A RC `v1.8.0-rc1` aponta para `f383926` e antecede `LICENSE` e os avisos OFL
+  nos pacotes. Os artefatos do build #40125004991, commit `f020cb0`, estão
+  integrados pela PR #36; checks e hashes passaram, mas o teste manual Windows
+  ainda falta. RC2, tag e release final aguardam esse teste. Ver
+  [procedimento de promoção](docs/release-v1.8.0-promocao.md).
+- Nomes de perfil: o PR #37 integrado aceita apóstrofo, hífen, acentos e
+  espaços internos, rejeitando controles e espaços nas pontas; perfis legados
+  continuam legíveis e exportáveis.
+- B2: etapa 1 integrada (f22ddf4, PR #31); cinco itens e hubs Jogar/Perfil
+  integrados via PR #42, com teste manual de navegação pendente.
+- Build candidato da PR #36: instalação limpa, atualização, jogo, perfis e
+  desinstalação ainda precisam de validação manual no Windows.
 - Confirmar a aparência e o comportamento dos atalhos na atualização de uma
   instalação antiga. AppId e diretórios de dados são preservados.
 
@@ -43,13 +50,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 - Tutorial: há dicas na tela de carregamento, mas a busca no runtime não
   identificou um fluxo completo de tutorial contextual. Conferir a divergência
   com a entrada antiga do CHANGELOG antes de implementar.
-- Limpeza do Ruff em `chore/ruff-baseline`: a contagem histórica de 275 caiu
-  para 177 achados na configuração atual (104 F401, 44 I001, 11 E741, 7 E501,
-  6 W292 e 5 F841). O CI verifica todos os arquivos Python alterados e a lista
-  de módulos já limpa; não significa que o repositório inteiro esteja limpo.
-- Licença do jogo: MIT está declarada no metadata e foi proposta, mas falta
-  aprovação/aplicação do arquivo LICENSE. Fontes Orbitron/Rajdhani usam OFL;
-  incluir os avisos completos de licença na distribuição em tarefa própria.
+- A limpeza Ruff e a licença MIT/OFL chegaram à main pelos PRs #29 e #30; a
+  OFL foi conferida no pacote Linux e está configurada no instalador Windows.
 
 ## Lista de melhorias de game design e engenharia
 

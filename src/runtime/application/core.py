@@ -578,7 +578,7 @@ class Jogo:
             self._criar_layout_ui()
             self.hud.layout = self.layout
             self.menu.layout = self.layout
-            self.menu.fundo._layout = self.layout
+            self.menu.fundo.set_layout(self.layout)
             self.menu.hud._layout = self.layout
             self.menu.destaque._layout = self.layout
             self.menu.notificacoes._layout = self.layout

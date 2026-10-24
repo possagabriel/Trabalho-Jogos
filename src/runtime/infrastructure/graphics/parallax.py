@@ -296,10 +296,11 @@ class ParallaxBackground:
             )
             for progresso in (0.0, 0.25, 0.5, 0.75, 1.0)
         )
-        self._linhas = SpeedLines(
-            self._limite, cenario.cor_estrela, self.direcao,
-            8_100 + cenario.id, paletas,
-        )
+        if self.linhas_ativas:
+            self._linhas = SpeedLines(
+                self._limite, cenario.cor_estrela, self.direcao,
+                8_100 + cenario.id, paletas,
+            )
 
     def _base(self, cor_fundo_cutscene: tuple[int, int, int] | None = None) -> ScrollingLayer:
         opcoes = opcoes_atuais()

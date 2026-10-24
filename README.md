@@ -26,8 +26,12 @@ o nome INCARNATE; instalações antigas são atualizadas pelo mesmo AppId do
 Inno Setup. Consulte os guias
 de [Windows](docs/distribuicao-windows.md) e [Linux](docs/distribuicao-linux.md).
 O código está na versão 1.8.0. A candidata `v1.8.0-rc1` está disponível em
-[Releases](../../releases/tag/v1.8.0-rc1); a release oficial depende da
-validação manual no Windows descrita no [roadmap](ROADMAP.md).
+[Releases](../../releases/tag/v1.8.0-rc1), mas antecede os avisos completos das
+fontes nos pacotes. Para testar os binários atualizados, use os artefatos da
+[execução de build #40125004991](https://github.com/possagabriel/Trabalho-Jogos/actions/runs/40125004991),
+gerados do commit `f020cb0`. RC2 e release final aguardam o teste manual no
+Windows. O [plano de promoção 1.8.0](docs/release-v1.8.0-promocao.md) tem os
+hashes e o checklist.
 
 No Windows, o SmartScreen ou o antivírus pode mostrar um aviso de reputação
 para um build sem assinatura reconhecida. Para conferir o download, baixe
@@ -120,6 +124,9 @@ gravações. O nome pode ser editado depois. A seleção usa controles padrão
 antes de carregar um perfil. Uma gravação que falhe deixa a alteração pendente
 em memória; o jogo avisa na tela e o F3 mostra perfil, ID curto, última
 gravação e pendência.
+Nomes novos e renomeações aceitam apóstrofo, hífen, acentos e espaços internos.
+Espaços nas pontas e caracteres de controle são rejeitados. Um perfil antigo
+continua legível; seu nome não é alterado automaticamente.
 
 Para verificar na prática, defina `INCARNATE_DATA_DIR` para uma pasta de teste
 e execute `python incarnate.py`. Crie dois perfis, ganhe ou gaste moedas no primeiro,
@@ -138,9 +145,11 @@ contadas por perfil, mas seus efeitos terminam ao fim da partida.
 
 ### Menu principal e navegação
 
-O menu tem cinco destinos: **Jogar** abre **Continuar** e **Lobby**; **Hangar**
-abre compra e equipamento de skins; **Perfil** reúne as abas **Pilotos**,
-**Recordes** e **Memórias**; **Configurações** e **Sair** completam a navegação.
+O menu principal tem cinco itens numerados: **01 Jogar**, **02 Hangar**,
+**03 Perfil**, **04 Configurações** e **05 Sair** (ação secundária). Jogar abre
+**Continuar** e **Lobby**; Hangar abre compra e equipamento de skins; Perfil
+reúne **Pilotos**, **Recordes** e **Memórias**; **Configurações** e **Sair**
+completam a navegação.
 Setas ou W/S movem o foco, Enter ativa e Esc volta ao menu mantendo o foco de
 origem. No menu principal, Esc abre a confirmação de saída. Cada destino das
 telas antigas fica a até dois passos do menu. Sem save, Continuar aparece
