@@ -8,6 +8,7 @@ import pygame
 
 from src.core.constants import ALTURA, LARGURA, EstadoJogo
 from src.core.event_bus import GameEventType
+from src.core.settings import Configuracoes
 from src.runtime.controllers.render import ControladorRenderizacao
 from src.runtime.domain.entities.player import Jogador
 from src.runtime.domain.entities.weapons import Projetil
@@ -145,6 +146,17 @@ def test_boss_do_mundo_orbita_em_duas_dimensoes_e_vitoria_abre_a_proxima():
     assert world.dimension == 2
     assert world.boss.nome == "LOSANGO"
     assert (world.x, world.y) == world.SPAWN
+
+
+def test_vitoria_do_boss_aceita_configuracoes_reais_do_jogo():
+    pygame.font.init()
+    world = OpenWorldRuntime(visual_config=Configuracoes())
+    world.boss_defeated = True
+    world._pending_dimension = 2
+
+    assert world.advance_dimension()
+    assert world.dimension == 2
+    assert world._cenario.parallax is not None
 
 
 def test_eventos_de_boss_e_passagem_acionam_cutscenes_existentes(monkeypatch):
