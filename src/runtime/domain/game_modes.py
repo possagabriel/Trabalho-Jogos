@@ -123,7 +123,27 @@ class OpenWorldModeStrategy:
             elapsed = max(0.0, float(state.get("tempo", 0)))
         except (TypeError, ValueError):
             return False
-        self.world = OpenWorldRuntime(point, elapsed, game.config)
+        map_version = state.get("map_version", 1)
+        if type(map_version) is not int or map_version < 2:
+            point = (point[0] * 3, point[1] * 3)
+        dimension = state.get("dimensao", 1)
+        if type(dimension) is not int or not 1 <= dimension <= 6:
+            region = state.get("regiao", "espaco_profundo")
+            dimension = (OpenWorldRuntime.REGION_IDS.index(region) + 1
+                         if region in OpenWorldRuntime.REGION_IDS else 1)
+        bosses = state.get("bosses", 0)
+        cooldowns = state.get("asteroides", {})
+        self.world = OpenWorldRuntime(
+            point, elapsed, game.config, dimension,
+            bosses if type(bosses) is int else 0,
+            cooldowns if isinstance(cooldowns, dict) else {},
+        )
+        pending = state.get("proxima_dimensao", 0)
+        if type(pending) is int and dimension < pending <= 6:
+            self.world._pending_dimension = pending
+            self.world.boss_defeated = True
+        elif state.get("boss_derrotado") is True:
+            self.world.boss_defeated = True
         self._prepare_linear_encounters(game)
         game.modo_atual = self.mode_id
         game.profile_service.set_last_mode(self.mode_id)
@@ -133,10 +153,20 @@ class OpenWorldModeStrategy:
 
     def update(self, game: Jogo, dt: float) -> None:
         if (self.world is None or game.estado is not EstadoJogo.JOGANDO
-                or game.menu_equipamento):
+                or game.menu_equipamento or self.world.map_open):
             return
+        if (self.world._pending_dimension is not None
+                and not game.cutscene_controller.ativo):
+            self.world.advance_dimension(game)
+            if game.estado is not EstadoJogo.JOGANDO:
+                self.save(game)
+                self.world.progress_dirty = False
+                return
         self.world.update(dt, pygame.key.get_pressed(), game.controles, game)
         game.tempo_partida = self.world.elapsed
+        if self.world.progress_dirty:
+            self.save(game)
+            self.world.progress_dirty = False
 
     @staticmethod
     def _prepare_linear_encounters(game: Jogo) -> None:
@@ -150,6 +180,16 @@ class OpenWorldModeStrategy:
         game.boss_intro = 0
 
     def handle_event(self, game: Jogo, event: pygame.event.Event) -> bool:
+        if (self.world is not None and game.estado is EstadoJogo.JOGANDO
+                and event.type == pygame.KEYDOWN):
+            if event.key == pygame.K_m:
+                game.menu_equipamento = False
+                self.world.map_open = not self.world.map_open
+                return True
+            if self.world.map_open:
+                if event.key == pygame.K_ESCAPE:
+                    self.world.map_open = False
+                return True
         if (game.estado is EstadoJogo.JOGANDO and not game.menu_equipamento
                 and event.type == pygame.KEYDOWN and event.key == pygame.K_e
                 and self.world is not None):
@@ -171,6 +211,9 @@ class OpenWorldModeStrategy:
             return False
         with usar_visual(
                 game.config, acabamento_gpu=game.shader_comic_ativo()):
+            if self.world.map_open:
+                self.world.render_map(surface)
+                return True
             self.world.render(surface, game.jogador)
             game.hud.desenhar(surface, game, tempo=self.world.elapsed)
             with game._desenhar_na_interface():

@@ -1,5 +1,6 @@
 # Registro de uso de IA
 
+- Fase F: Codex ampliou o mundo aberto e o fundo por posição, conectou bosses/cutscenes e corrigiu turbo, nave e menu TAB; validou com testes direcionados e Ruff.
 - F0: Codex transcreveu a proposta fornecida pelo usuário para `docs/design/mundo-aberto.md` e substituiu a seção 15 pelas quatro decisões confirmadas; apenas documentação, sem iniciar F1 ou alterar gameplay.
 
 ## Fase A — preparação da candidata 1.8.0

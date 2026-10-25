@@ -10,6 +10,7 @@ from typing import Any
 import pygame
 
 from src.core.constants import ALTURA, LARGURA
+from src.core.event_bus import GameEventType, publicar_evento
 from src.infrastructure.graphics.comic_theme import (
     CIANO,
     LARANJA,
@@ -21,7 +22,9 @@ from src.runtime.domain.entities.enemies import Inimigo
 from src.runtime.domain.entities.minibosses.registry import criar_miniboss
 from src.runtime.domain.entities.powerups import PowerUp
 from src.runtime.domain.entities.weapons import Projetil
-from src.runtime.domain.world.scenarios import Cenario
+from src.runtime.domain.world.asteroid_field import AsteroidField
+from src.runtime.domain.world.region_background import SectorBackground
+from src.runtime.domain.world.scenarios import CENARIOS, Cenario
 from src.runtime.domain.world.scroll import EstadoAvanco
 from src.runtime.infrastructure.graphics.fonts import fonte_texto
 
@@ -31,50 +34,80 @@ class OpenWorldRuntime:
 
     REGION_ID = "espaco_profundo"
     REGION_NAME = "ESPAÇO PROFUNDO"
-    REGION_SIZE = (6400.0, 4400.0)
-    SPAWN = (720.0, 2200.0)
+    REGION_IDS = (
+        "espaco_profundo", "nebulosa_em_chamas", "oceano_cosmico",
+        "ruinas_cristalinas", "espaco_nulo", "nucleo_dourado",
+    )
+    REGION_SIZE = (19200.0, 13200.0)
+    SPAWN = (2160.0, 6600.0)
     SPEED = 360.0
-    BOSS_LAIR = (5700.0, 2200.0)
+    BOSS_LAIR = (17100.0, 6600.0)
     SECTORS = (
-        ("ESTRELA", (1100.0, 1100.0), (105, 72, 127)),
-        ("PENTAGONO", (3200.0, 1100.0), (65, 115, 154)),
-        ("ANEIS", (5300.0, 1100.0), (125, 91, 66)),
-        ("CRISTAL", (1100.0, 3300.0), (72, 133, 150)),
-        ("ABISMO", (3200.0, 3300.0), (90, 76, 140)),
-        ("NÚCLEO", (5300.0, 3300.0), (131, 75, 112)),
+        ("ESTRELA", (3300.0, 3300.0), (105, 72, 127)),
+        ("PENTAGONO", (9600.0, 3300.0), (65, 115, 154)),
+        ("ANEIS", (15900.0, 3300.0), (125, 91, 66)),
+        ("CRISTAL", (3300.0, 9900.0), (72, 133, 150)),
+        ("ABISMO", (9600.0, 9900.0), (90, 76, 140)),
+        ("NÚCLEO", (15900.0, 9900.0), (131, 75, 112)),
     )
 
     def __init__(self, position: tuple[float, float] | None = None,
                  elapsed: float = 0.0,
-                 visual_config: Mapping[str, Any] | None = None) -> None:
+                 visual_config: Mapping[str, Any] | None = None,
+                 dimension: int = 1, bosses: int = 0,
+                 cooldowns: Mapping[str, object] | None = None) -> None:
+        self.dimension = max(1, min(6, int(dimension)))
+        self.REGION_ID = self.REGION_IDS[self.dimension - 1]
+        self.REGION_NAME = CENARIOS[self.dimension - 1]["nome"]
+        self.visual_config = visual_config or {}
         self.width, self.height = self.REGION_SIZE
         self.x, self.y = position or self.SPAWN
         self.x = max(0.0, min(self.width, float(self.x)))
         self.y = max(0.0, min(self.height, float(self.y)))
         self.vx = 0.0
         self.vy = 0.0
+        self.turbo_ativo = False
         self.camera_x = self.x - LARGURA / 2
         self.camera_y = self.y - ALTURA / 2
         self.elapsed = max(0.0, float(elapsed))
+        self.map_open = False
+        self.progress_dirty = False
+        self.bosses_defeated = max(0, min(6, int(bosses)))
+        self.regions_liberated = self.bosses_defeated
+        self._pending_dimension: int | None = None
         self._stars = self._build_stars()
         self._landmarks = self._build_landmarks()
         self._rifts = self._build_rifts()
-        self._cenario = Cenario(1)
+        self.asteroids = AsteroidField(
+            self.width, self.height, seed=4101 + self.dimension,
+            protected=((self.SPAWN[0], self.SPAWN[1], 440),
+                       (self.BOSS_LAIR[0], self.BOSS_LAIR[1], 410)),
+        )
+        if cooldowns:
+            self.asteroids.restore(cooldowns, self.elapsed)
+        self.background = SectorBackground(
+            self.dimension, self.SECTORS, (self.x, self.y))
+        self._cenario = Cenario(self.dimension)
         try:
             quality = visual_config["avanco_qualidade"] if visual_config else "MEDIA"
         except (KeyError, TypeError):
             quality = "MEDIA"
         self._cenario.configurar_avanco(
-            quality, (0.0, 1.0), True, True, visual_config or {}, 4101)
+            quality, (0.0, 1.0), True, True, self.visual_config,
+            4101 + self.dimension)
         self.enemies = self._create_enemies()
         self.miniboss = criar_miniboss(
-            "censor", 1, self._cenario, random.Random(4101))
+            "censor", self.dimension, self._cenario,
+            random.Random(4101 + self.dimension))
         self.miniboss.entrando = False
-        self._miniboss_world = (2100.0, 1100.0)
-        self.boss = Boss(5, self._cenario)
+        self._miniboss_world = (6300.0, 3300.0)
+        self.boss = Boss(self.dimension * 5, self._cenario)
         self.boss.x, self.boss.y = self.BOSS_LAIR
         self.boss.entrando = False
         self.boss.angulo = 0.0
+        self._boss_world = self.BOSS_LAIR
+        self._boss_orbit = 0.0
+        self._boss_attack_timer = 1.6
         self.miniboss_active = False
         self.miniboss_defeated = False
         self.boss_active = False
@@ -91,9 +124,9 @@ class OpenWorldRuntime:
         self._region_label = self._font_region.render(
             f"REGIÃO // {self.REGION_NAME}", True, (145, 180, 217))
         self._boss_label = self._font_marker.render(
-            "TOCA // HEXAGONO", True, (255, 202, 102))
+            f"TOCA // {self.boss.nome}", True, (255, 202, 102))
         self._boss_comic_label = self._font_marker.render(
-            "TOCA // HEXAGONO", True, LARANJA)
+            f"TOCA // {self.boss.nome}", True, LARANJA)
         self._mini_label = self._font_marker.render(
             "CENSOR // PATRULHA", True, (255, 124, 201))
         self._mini_comic_label = self._font_marker.render(
@@ -102,38 +135,46 @@ class OpenWorldRuntime:
             "MAPA // REGIÃO", True, (205, 220, 245))
         self._minimap_comic_label = self._font_marker.render(
             "MAPA // REGIÃO", True, PAPEL)
+        self._map_title = self._font_region.render(
+            f"MAPA // {self.REGION_NAME} // DIMENSÃO {self.dimension}",
+            True, (225, 236, 250))
+        self._map_hint = self._font_marker.render(
+            "M / ESC: VOLTAR", True, (210, 224, 240))
         self._sector_labels = tuple(
             (name, self._font_marker.render(name, True, color))
             for name, _center, color in self.SECTORS
         )
 
-    @staticmethod
-    def _create_enemies() -> list[tuple[Inimigo, float, float, float, float]]:
-        """Cria patrulhas fixas usando as mesmas entidades visuais do modo linear."""
-        rng = random.Random(4102)
-        tipos = ("scout", "soldado", "estelar", "bomba", "abissal",
-                 "cristalino", "guardiao", "flamifero")
+    def _create_enemies(self) -> list[tuple[Inimigo, float, float, float, float]]:
+        """Espalha patrulhas determinísticas por todas as áreas do mapa."""
+        rng = random.Random(4102 + self.dimension)
+        tipos = tuple(CENARIOS[self.dimension - 1]["inimigos"])
         patrulhas = []
-        for index in range(72):
-            sector = index % len(OpenWorldRuntime.SECTORS)
-            _name, center, _color = OpenWorldRuntime.SECTORS[sector]
-            within_sector = index // len(OpenWorldRuntime.SECTORS)
-            angle = within_sector * 2.399963 + rng.uniform(-0.2, 0.2)
-            distance = 110 + (within_sector % 4) * 94 + rng.uniform(-28, 28)
-            base_x = center[0] + math.cos(angle) * distance
-            base_y = center[1] + math.sin(angle) * distance
-            orbit = rng.uniform(28, 76)
-            phase = rng.uniform(0, math.tau)
-            enemy = Inimigo(tipos[index % len(tipos)], 1,
-                            x=base_x, y=base_y)
-            enemy.angulo = phase
-            patrulhas.append((enemy, base_x, base_y, orbit, phase))
+        for row in range(12):
+            for column in range(18):
+                index = row * 18 + column
+                base_x = (column + rng.uniform(0.22, 0.78)) * (
+                    self.width / 18)
+                base_y = (row + rng.uniform(0.22, 0.78)) * (
+                    self.height / 12)
+                if any(math.hypot(base_x - px, base_y - py) < safe
+                       for px, py, safe in (
+                           (*self.SPAWN, 390),
+                           (*self.BOSS_LAIR, 420),
+                       )):
+                    continue
+                orbit = rng.uniform(28, 76)
+                phase = rng.uniform(0, math.tau)
+                enemy = Inimigo(tipos[index % len(tipos)], 1,
+                                x=base_x, y=base_y)
+                enemy.angulo = phase
+                patrulhas.append((enemy, base_x, base_y, orbit, phase))
         return patrulhas
 
     def _build_stars(self) -> tuple[tuple[tuple[float, float, int], ...], ...]:
-        rng = random.Random(4101)
+        rng = random.Random(4101 + self.dimension)
         layers = []
-        for count, low, high in ((95, 1, 1), (58, 1, 2), (24, 2, 3)):
+        for count, low, high in ((320, 1, 1), (190, 1, 2), (75, 2, 3)):
             layers.append(tuple(
                 (rng.uniform(-1200, self.width + 1200),
                  rng.uniform(-900, self.height + 900),
@@ -143,28 +184,32 @@ class OpenWorldRuntime:
         return tuple(layers)
 
     def _build_landmarks(self) -> tuple[tuple[float, float, int, tuple[int, int, int]], ...]:
-        rng = random.Random(4101 ^ 0x5A)
+        rng = random.Random((4101 + self.dimension) ^ 0x5A)
         palette = ((73, 74, 140), (56, 115, 150), (110, 66, 126))
         return tuple(
             (rng.uniform(350, self.width - 350),
              rng.uniform(280, self.height - 280),
              rng.randint(22, 46), palette[index % len(palette)])
-            for index in range(18)
+            for index in range(72)
         )
 
     @staticmethod
     def _build_rifts() -> tuple[tuple[float, float, int], ...]:
         """Cria fendas fixas que marcam as passagens entre os setores."""
         return (
-            (2150.0, 1100.0, 54), (4250.0, 1100.0, 68),
-            (2150.0, 3300.0, 62), (4250.0, 3300.0, 50),
-            (1100.0, 2200.0, 66), (3200.0, 2200.0, 58),
-            (5300.0, 2200.0, 72),
+            (6450.0, 3300.0, 54), (12750.0, 3300.0, 68),
+            (6450.0, 9900.0, 62), (12750.0, 9900.0, 50),
+            (3300.0, 6600.0, 66), (9600.0, 6600.0, 58),
+            (15900.0, 6600.0, 72),
         )
 
     def update(self, dt: float, keys: Any, controls: dict[str, int], game=None) -> None:
         """Move a nave, suaviza a câmera e rebate no limite do mundo."""
+        if self.map_open:
+            return
         dt = max(0.0, min(float(dt), 0.05))
+        if game is not None and hasattr(game, "jogador"):
+            self._tick_player(game.jogador)
         left = keys[controls.get("esquerda", pygame.K_LEFT)] or keys[pygame.K_a]
         right = keys[controls.get("direita", pygame.K_RIGHT)] or keys[pygame.K_d]
         up = keys[controls.get("cima", pygame.K_UP)] or keys[pygame.K_w]
@@ -175,20 +220,62 @@ class OpenWorldRuntime:
         if magnitude:
             dx /= magnitude
             dy /= magnitude
-        old_x, old_y = self.x, self.y
-        self.vx = dx * self.SPEED
-        self.vy = dy * self.SPEED
+        pressed = (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
+                   or keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL])
+        charge = getattr(game, "boost", 1.0)
+        self.turbo_ativo = bool(pressed and charge > 0 and magnitude)
+        if game is not None and hasattr(game, "boost"):
+            if self.turbo_ativo:
+                game.boost = max(0.0, game.boost - 0.008 * dt * 60)
+            else:
+                game.boost = min(1.0, game.boost + 0.006 * dt * 60)
+            if hasattr(game, "energia"):
+                game.energia = (max(0.0, game.energia - 1.6 * dt * 60)
+                                if self.turbo_ativo else
+                                min(100.0, game.energia + 0.7 * dt * 60))
+        speed = self.SPEED * (2.1 if self.turbo_ativo else 1.0)
+        self.vx = dx * speed
+        self.vy = dy * speed
         self._apply_void_force()
         self.x += self.vx * dt
         self.y += self.vy * dt
         self._bounce_from_void()
-        self._update_parallax(dt, self.x - old_x, self.y - old_y)
+        self._collide_ship_with_asteroids(game)
+        self.background.update(self.x, self.y, dt)
         smoothing = 1.0 - math.exp(-7.5 * dt)
         self.camera_x += (self.x - LARGURA / 2 - self.camera_x) * smoothing
         self.camera_y += (self.y - ALTURA / 2 - self.camera_y) * smoothing
         self.elapsed += dt
+        self.asteroids.update(self.elapsed)
         if game is not None:
             self._update_combat(dt, keys, controls, game)
+
+    @staticmethod
+    def _tick_player(player) -> None:
+        """Avança timers do jogador sem mover a nave no canvas lógico."""
+        if player.invencivel > 0:
+            player.invencivel -= 1
+        if player.cooldown_esquiva > 0:
+            player.cooldown_esquiva -= 1
+        player.combo.atualizar()
+
+    def _collide_ship_with_asteroids(self, game) -> None:
+        """Impede passagem pelo casco dos asteroides e aplica dano existente."""
+        radius = getattr(getattr(game, "jogador", None), "raio", 16)
+        for rock in self.asteroids.nearby(self.x, self.y, radius):
+            if not rock.active():
+                continue
+            dx, dy = self.x - rock.x, self.y - rock.y
+            distance = math.hypot(dx, dy)
+            penetration = rock.radius + radius - distance
+            if penetration <= 0:
+                continue
+            norm = distance or 1.0
+            self.x += (dx / norm if distance else 1.0) * penetration
+            self.y += dy / norm * penetration
+            if game is not None and hasattr(game, "combate_controller"):
+                game.combate_controller.aplicar_dano_jogador()
+            break
 
     def _update_parallax(self, dt: float, dx: float, dy: float) -> None:
         if self._cenario.parallax is None:
@@ -228,18 +315,21 @@ class OpenWorldRuntime:
                 game.sons.tocar("tiro")
 
         self._place_hostiles_in_world()
-        self._update_linear_encounters(dt, game)
+        self._update_world_encounters(dt, game)
 
-    def _update_linear_encounters(self, dt: float, game) -> None:
-        """Usa os mesmos encontros e controladores, projetados na câmera livre."""
+    def _update_world_encounters(self, dt: float, game) -> None:
+        """Mantém combate compartilhado com uma IA própria para o boss."""
         self._activate_encounters(game)
+        if getattr(getattr(game, "cutscene_controller", None), "ativo", False):
+            return
         self._sync_encounter_targets(dt, game)
         if game.boss is not None:
-            game.projeteis.extend(self.boss.atualizar(game.jogador))
+            game.projeteis.extend(self._update_world_boss(dt))
         for shot in self.projectiles:
             shot.x, shot.y = self._screen_position((shot.x, shot.y))
         game.projeteis.extend(self.projectiles)
         self.projectiles = []
+        self._resolve_asteroid_hits(game)
         game.combate_controller.atualizar_projeteis()
         game.combate_controller.atualizar_powerups()
         self._finish_encounter_frame(game)
@@ -255,10 +345,63 @@ class OpenWorldRuntime:
                 and math.hypot(self.x - self.BOSS_LAIR[0],
                                self.y - self.BOSS_LAIR[1]) < 320):
             self.boss_active = True
-            self.boss.x, self.boss.y = LARGURA // 2, -self.boss.raio - 20
-            self.boss.entrando = True
+            self._boss_world = self.BOSS_LAIR
+            self.boss.entrando = False
             game.boss_intro = 130
             game.sons.tocar("boss")
+            publicar_evento(
+                GameEventType.BOSS_SPAWNED, sessao=game,
+                boss=self.boss, cenario_id=self.dimension,
+                nivel=self.boss.nivel,
+            )
+
+    def _update_world_boss(self, dt: float) -> list[Projetil]:
+        """Orbita a toca em duas dimensões e mira a nave em salvas móveis."""
+        boss = self.boss
+        boss.t += 1
+        boss.flash = max(0, boss.flash - 1)
+        boss.pulso_fase = max(0, boss.pulso_fase - 1)
+        phase = boss.fase_atual
+        if phase != boss.fase_anterior:
+            boss.fase_anterior = phase
+            boss.pulso_fase = 75
+        boss.enraivecido = phase == 3
+        direction = -1 if self.dimension % 2 else 1
+        self._boss_orbit += dt * direction * (0.72 + phase * 0.16)
+        radius = 125 + 24 * phase + 9 * self.dimension
+        target_x = self.BOSS_LAIR[0] + math.cos(self._boss_orbit) * radius
+        target_y = self.BOSS_LAIR[1] + math.sin(self._boss_orbit * 1.3) * radius
+        follow = min(1.0, dt * (2.6 + phase * 0.6))
+        self._boss_world = (
+            self._boss_world[0] + (target_x - self._boss_world[0]) * follow,
+            self._boss_world[1] + (target_y - self._boss_world[1]) * follow,
+        )
+        boss.x, boss.y = self._screen_position(self._boss_world)
+        boss.angulo += dt * (0.9 + phase * 0.35)
+        self._boss_attack_timer -= dt
+        if self._boss_attack_timer > 0:
+            return []
+        self._boss_attack_timer = max(0.52, 1.8 - phase * 0.28
+                                      - self.dimension * 0.06)
+        player_x, player_y = LARGURA / 2, ALTURA / 2
+        direction = math.atan2(player_y - boss.y, player_x - boss.x)
+        count = 1 + phase * 2
+        speed = 3.2 + phase * 0.55
+        shots = [
+            Projetil(boss.x, boss.y,
+                     math.cos(direction + (index - count // 2) * 0.18) * speed,
+                     math.sin(direction + (index - count // 2) * 0.18) * speed,
+                     1, boss.cor, 5, origem="inimigo")
+            for index in range(count)
+        ]
+        if phase == 3 or self.dimension in (2, 4, 6):
+            shots.extend(
+                Projetil(boss.x, boss.y, math.cos(angle) * 2.8,
+                         math.sin(angle) * 2.8, 1, boss.cor, 4,
+                         origem="inimigo")
+                for angle in (index * math.tau / 8 for index in range(8))
+            )
+        return shots
 
     def _sync_encounter_targets(self, dt: float, game) -> None:
         """Projeta alvos e atualiza a IA dos encontros lineares."""
@@ -271,11 +414,16 @@ class OpenWorldRuntime:
         for enemy, *_ in self.enemies:
             if enemy.vida <= 0:
                 continue
+            if (abs(enemy.x - self.x) > LARGURA / 2 + 150
+                    or abs(enemy.y - self.y) > ALTURA / 2 + 150):
+                continue
             enemy.x, enemy.y = self._screen_position((enemy.x, enemy.y))
             game.inimigos.append(enemy)
 
         game.cenario = self._cenario
         game.boss = self.boss if self.boss_active and not self.boss_defeated else None
+        if game.boss is not None:
+            self.boss.x, self.boss.y = self._screen_position(self._boss_world)
         game.miniboss = (
             self.miniboss if self.miniboss_active and not self.miniboss_defeated
             else None
@@ -290,8 +438,14 @@ class OpenWorldRuntime:
     def _finish_encounter_frame(self, game) -> None:
         """Converte projéteis e alvos de volta para coordenadas do mundo."""
         player = game.jogador
-        if self.boss_active and self.boss.vida <= 0:
+        if self.boss_active and self.boss.vida <= 0 and not self.boss_defeated:
             self.boss_defeated = True
+            self.boss_active = False
+            self.bosses_defeated = min(6, self.bosses_defeated + 1)
+            self.regions_liberated = self.bosses_defeated
+            self._pending_dimension = (
+                self.dimension + 1 if self.dimension < 6 else None)
+            self.progress_dirty = True
         if (self.miniboss.vida <= 0
                 or (game.miniboss is None and self.miniboss_active)):
             self.miniboss_defeated = True
@@ -320,6 +474,48 @@ class OpenWorldRuntime:
         self._place_hostiles_in_world()
         if not player.vivo:
             game._fim_de_jogo()
+
+    @staticmethod
+    def _segment_distance(x: float, y: float, x1: float, y1: float,
+                          x2: float, y2: float) -> float:
+        """Distância de um obstáculo ao trajeto de um projétil no quadro."""
+        dx, dy = x2 - x1, y2 - y1
+        length_sq = dx * dx + dy * dy
+        if length_sq == 0:
+            return math.hypot(x - x1, y - y1)
+        fraction = max(0.0, min(1.0,
+                                ((x - x1) * dx + (y - y1) * dy) / length_sq))
+        return math.hypot(x - (x1 + fraction * dx),
+                          y - (y1 + fraction * dy))
+
+    def _resolve_asteroid_hits(self, game) -> None:
+        """Bloqueia tiros comuns e destrói asteroides no espaço do mundo."""
+        remaining = []
+        for shot in game.projeteis:
+            if shot.origem != "jogador":
+                remaining.append(shot)
+                continue
+            x1, y1 = shot.x + self.camera_x, shot.y + self.camera_y
+            x2, y2 = x1 + shot.vel_x, y1 + shot.vel_y
+            penetrating = shot.tipo in ("ion", "gauss", "nova", "bomba")
+            blocked = False
+            for rock in self.asteroids.nearby(x1, y1, math.hypot(
+                    shot.vel_x, shot.vel_y) + shot.raio):
+                if not rock.active() or id(rock) in shot.alvos_atingidos:
+                    continue
+                if self._segment_distance(rock.x, rock.y, x1, y1, x2, y2) > (
+                        rock.radius + shot.raio):
+                    continue
+                if self.asteroids.damage(rock, max(1, shot.dano), self.elapsed):
+                    game.sons.tocar("explosao")
+                    self.progress_dirty = True
+                shot.alvos_atingidos.add(id(rock))
+                if not penetrating:
+                    blocked = True
+                    break
+            if not blocked:
+                remaining.append(shot)
+        game.projeteis = remaining
 
     def _bounce_from_void(self) -> None:
         margin = 58.0
@@ -357,7 +553,80 @@ class OpenWorldRuntime:
             "posicao": [round(self.x, 2), round(self.y, 2)],
             "checkpoint": "inicio",
             "tempo": round(self.elapsed),
+            "map_version": 2,
+            "dimensao": self.dimension,
+            "bosses": self.bosses_defeated,
+            "regioes_libertas": self.regions_liberated,
+            "proxima_dimensao": self._pending_dimension or 0,
+            "boss_derrotado": self.boss_defeated,
+            "asteroides": self.asteroids.cooldowns(),
         }
+
+    def advance_dimension(self, game=None) -> bool:
+        """Troca a região após a cena de derrota e emite a próxima abertura."""
+        next_dimension = self._pending_dimension
+        if next_dimension is None:
+            return False
+        self._pending_dimension = None
+        self.dimension = next_dimension
+        self.REGION_ID = self.REGION_IDS[next_dimension - 1]
+        self.REGION_NAME = CENARIOS[next_dimension - 1]["nome"]
+        self.x, self.y = self.SPAWN
+        self.vx = self.vy = 0.0
+        self.camera_x = self.x - LARGURA / 2
+        self.camera_y = self.y - ALTURA / 2
+        self._stars = self._build_stars()
+        self._landmarks = self._build_landmarks()
+        self.asteroids = AsteroidField(
+            self.width, self.height, seed=4101 + next_dimension,
+            protected=((self.SPAWN[0], self.SPAWN[1], 440),
+                       (self.BOSS_LAIR[0], self.BOSS_LAIR[1], 410)),
+        )
+        self.background = SectorBackground(
+            next_dimension, self.SECTORS, (self.x, self.y))
+        self._cenario = Cenario(next_dimension)
+        quality = self.visual_config.get("avanco_qualidade", "MEDIA")
+        self._cenario.configurar_avanco(
+            quality, (0.0, 1.0), True, True, self.visual_config,
+            4101 + next_dimension)
+        self.enemies = self._create_enemies()
+        self.miniboss = criar_miniboss(
+            "censor", next_dimension, self._cenario,
+            random.Random(4101 + next_dimension))
+        self.miniboss.entrando = False
+        self._miniboss_world = (6300.0, 3300.0)
+        self.miniboss_active = self.miniboss_defeated = False
+        self.boss = Boss(next_dimension * 5, self._cenario)
+        self.boss.entrando = False
+        self.boss_active = self.boss_defeated = False
+        self._boss_world = self.BOSS_LAIR
+        self._boss_orbit = 0.0
+        self._boss_attack_timer = 1.6
+        self.projectiles.clear()
+        self.powerups.clear()
+        self._region_label = self._font_region.render(
+            f"REGIÃO // {self.REGION_NAME}", True, (145, 180, 217))
+        self._boss_label = self._font_marker.render(
+            f"TOCA // {self.boss.nome}", True, (255, 202, 102))
+        self._boss_comic_label = self._font_marker.render(
+            f"TOCA // {self.boss.nome}", True, LARANJA)
+        self._map_title = self._font_region.render(
+            f"MAPA // {self.REGION_NAME} // DIMENSÃO {self.dimension}",
+            True, (225, 236, 250))
+        self.progress_dirty = True
+        if game is not None:
+            game.cenario = self._cenario
+            game.boss = None
+            game.miniboss = None
+            game.projeteis = []
+            game.inimigos = []
+            game.powerups = []
+            game.miniboss_controller.reiniciar()
+            publicar_evento(
+                GameEventType.DIMENSION_CHANGED,
+                sessao=game, cenario_id=next_dimension,
+            )
+        return True
 
     def activate_special(self, game) -> bool:
         """Encaminha o especial ao controlador linear e converte o tiro ao mapa."""
@@ -373,7 +642,7 @@ class OpenWorldRuntime:
 
     def render(self, surface: pygame.Surface, player=None) -> None:
         """Desenha fundo cacheável por semente, parallax, limites e nave."""
-        self._cenario.desenhar(surface)
+        self.background.render(surface, opcoes_atuais().ativo)
         self._place_hostiles_in_world()
         parallax = (0.12, 0.32, 0.68)
         colors = (
@@ -383,29 +652,15 @@ class OpenWorldRuntime:
         )
         for stars, factor, color in zip(self._stars, parallax, colors):
             for x, y, radius in stars:
-                sx = int(x - self.camera_x * factor)
-                sy = int(y - self.camera_y * factor)
+                sx = round(LARGURA / 2 + (x - self.x) * factor)
+                sy = round(ALTURA / 2 + (y - self.y) * factor)
                 if -3 <= sx < LARGURA + 3 and -3 <= sy < ALTURA + 3:
                     pygame.draw.circle(surface, color, (sx, sy), radius)
         self._draw_landmarks(surface)
         self._draw_sectors(surface)
+        self._draw_asteroids(surface)
         self._draw_hostiles(surface)
-
-        world_rect = pygame.Rect(
-            round(-self.camera_x), round(-self.camera_y),
-            round(self.width), round(self.height),
-        )
-        if world_rect.colliderect(surface.get_rect()):
-            pygame.draw.rect(surface, (108, 37, 116), world_rect, 8)
-            inner = world_rect.inflate(-24, -24)
-            pygame.draw.rect(surface, (40, 172, 199), inner, 2)
-            if world_rect.top <= 48 <= world_rect.bottom:
-                label_x = max(8, min(LARGURA - self._edge_label.get_width() - 8,
-                                     world_rect.left + 18))
-                label_y = max(58, min(ALTURA - self._edge_label.get_height() - 8,
-                                      world_rect.top + 48))
-                surface.blit(self._edge_label, (label_x, label_y))
-
+        self._draw_void_border(surface)
         self._draw_speed_lines(surface)
         self._draw_boss_lair(surface)
         self._draw_objective_marker(surface)
@@ -415,12 +670,102 @@ class OpenWorldRuntime:
         self._draw_region_label(surface)
         self._draw_minimap(surface)
 
+    def _draw_asteroids(self, surface: pygame.Surface) -> None:
+        """Desenha apenas rochas dos chunks que tocam a câmera."""
+        comic = opcoes_atuais().ativo
+        fill = (71, 59, 53) if comic else (58, 72, 91)
+        edge = PAPEL if comic else (153, 191, 213)
+        for rock in self.asteroids.visible(self.camera_x, self.camera_y,
+                                           LARGURA, ALTURA):
+            if not rock.active():
+                continue
+            sx, sy = self._screen_position((rock.x, rock.y))
+            if not (-45 <= sx <= LARGURA + 45 and -45 <= sy <= ALTURA + 45):
+                continue
+            points = tuple((sx + dx, sy + dy) for dx, dy in rock.shape)
+            pygame.draw.polygon(surface, fill, points)
+            pygame.draw.polygon(surface, edge, points, 2)
+            pygame.draw.circle(surface, edge, (sx - rock.radius // 4, sy),
+                               max(2, rock.radius // 5), 1)
+
+    def _draw_void_border(self, surface: pygame.Surface) -> None:
+        """Mantém o Vazio na borda visível da tela perto do limite externo."""
+        near = (
+            self.x < LARGURA / 2 + 110,
+            self.x > self.width - LARGURA / 2 - 110,
+            self.y < ALTURA / 2 + 110,
+            self.y > self.height - ALTURA / 2 - 110,
+        )
+        if not any(near):
+            return
+        primary = LARANJA if opcoes_atuais().ativo else (170, 73, 183)
+        secondary = PAPEL if opcoes_atuais().ativo else (72, 190, 218)
+        if near[0]:
+            pygame.draw.line(surface, primary, (0, 0), (0, ALTURA), 8)
+            pygame.draw.line(surface, secondary, (14, 0), (14, ALTURA), 2)
+        if near[1]:
+            pygame.draw.line(surface, primary, (LARGURA - 1, 0),
+                             (LARGURA - 1, ALTURA), 8)
+            pygame.draw.line(surface, secondary, (LARGURA - 15, 0),
+                             (LARGURA - 15, ALTURA), 2)
+        if near[2]:
+            pygame.draw.line(surface, primary, (0, 0), (LARGURA, 0), 8)
+            pygame.draw.line(surface, secondary, (0, 14), (LARGURA, 14), 2)
+        if near[3]:
+            pygame.draw.line(surface, primary, (0, ALTURA - 1),
+                             (LARGURA, ALTURA - 1), 8)
+            pygame.draw.line(surface, secondary, (0, ALTURA - 15),
+                             (LARGURA, ALTURA - 15), 2)
+        surface.blit(self._edge_label, (24, ALTURA - 48))
+
+    def render_map(self, surface: pygame.Surface) -> None:
+        """Mostra todo o mundo no canvas lógico, ocupando a tela inteira."""
+        comic = opcoes_atuais().ativo
+        surface.fill((36, 33, 33) if comic else (5, 12, 29))
+        area = pygame.Rect(42, 68, LARGURA - 84, ALTURA - 120)
+        fill = (55, 51, 48) if comic else (13, 27, 49)
+        edge = LARANJA if comic else (105, 203, 234)
+        pygame.draw.rect(surface, fill, area)
+        pygame.draw.rect(surface, edge, area, 3)
+        surface.blit(self._map_title, (42, 20))
+        surface.blit(self._map_hint,
+                     (LARGURA - self._map_hint.get_width() - 42, ALTURA - 37))
+
+        def point(world_x: float, world_y: float) -> tuple[int, int]:
+            return (area.left + round(world_x / self.width * area.width),
+                    area.top + round(world_y / self.height * area.height))
+
+        for _name, center, color in self.SECTORS:
+            x, y = point(*center)
+            pygame.draw.circle(surface, PAPEL if comic else color,
+                               (x, y), 16, 2)
+            pygame.draw.circle(surface, edge, (x, y), 3)
+        for world_x, world_y, _radius in self._rifts:
+            x, y = point(world_x, world_y)
+            pygame.draw.rect(surface, edge, (x - 4, y - 7, 8, 14), 2)
+        rock_color = (153, 139, 120) if comic else (102, 138, 158)
+        for rock in self.asteroids.asteroids:
+            if rock.active():
+                pygame.draw.circle(surface, rock_color, point(rock.x, rock.y), 1)
+        if not self.boss_defeated:
+            bx, by = point(*self.BOSS_LAIR)
+            pygame.draw.polygon(surface, (255, 207, 115),
+                                ((bx, by - 9), (bx + 9, by),
+                                 (bx, by + 9), (bx - 9, by)), 2)
+        px, py = point(self.x, self.y)
+        pygame.draw.polygon(surface, CIANO,
+                            ((px, py - 11), (px - 8, py + 8),
+                             (px + 8, py + 8)))
+        pygame.draw.polygon(surface, PAPEL, ((px, py - 11),
+                                             (px - 8, py + 8),
+                                             (px + 8, py + 8)), 2)
+
     def _place_hostiles_in_world(self) -> None:
         for enemy, base_x, base_y, orbit, phase in self.enemies:
             enemy.x = base_x + math.sin(self.elapsed * 0.65 + phase) * orbit
             enemy.y = base_y + math.cos(self.elapsed * 0.48 + phase) * orbit * 0.55
-        mini_x = 2100 + math.sin(self.elapsed * 0.42) * 95
-        mini_y = 1100 + math.cos(self.elapsed * 0.58) * 48
+        mini_x = 6300 + math.sin(self.elapsed * 0.42) * 95
+        mini_y = 3300 + math.cos(self.elapsed * 0.58) * 48
         if not self.miniboss_active:
             self.miniboss.x, self.miniboss.y = mini_x, mini_y
             self._miniboss_world = (mini_x, mini_y)
@@ -452,11 +797,12 @@ class OpenWorldRuntime:
         if speed < 20:
             return
         direction = math.atan2(self.vy, self.vx)
-        for index in range(9):
-            t = self.elapsed * 0.9 + index / 9
+        count = 15 if self.turbo_ativo else 9
+        for index in range(count):
+            t = self.elapsed * 0.9 + index / count
             x = int((index * 113 + t * 173) % LARGURA)
             y = int((index * 79 + t * 131) % ALTURA)
-            length = 12 + int(speed / 32)
+            length = 12 + int(speed / 32) + (13 if self.turbo_ativo else 0)
             start = (x, y)
             end = (x - int(math.cos(direction) * length),
                    y - int(math.sin(direction) * length))
@@ -536,7 +882,12 @@ class OpenWorldRuntime:
 
     def project_targets_for_ui(self, game) -> None:
         """Mantém mira hover e indicadores alinhados aos alvos na tela."""
-        game.inimigos = [enemy for enemy, *_ in self.enemies if enemy.vida > 0]
+        game.inimigos = [
+            enemy for enemy, *_ in self.enemies
+            if enemy.vida > 0
+            and abs(enemy.x - self.x) <= LARGURA / 2 + 150
+            and abs(enemy.y - self.y) <= ALTURA / 2 + 150
+        ]
         for enemy in game.inimigos:
             enemy.x, enemy.y = self._screen_position((enemy.x, enemy.y))
         if game.miniboss is not None:
@@ -607,7 +958,8 @@ class OpenWorldRuntime:
             else:
                 player.angulo_mira = None
             player.desenhar(surface, intensidade_propulsor=min(
-                1.0, 0.35 + math.hypot(self.vx, self.vy) / self.SPEED * 0.65))
+                1.0, 0.35 + math.hypot(self.vx, self.vy) / self.SPEED * 0.65),
+                piscar=False)
             return
         angle = math.atan2(self.vy, self.vx) if self.vx or self.vy else 0.0
         cosine, sine = math.cos(angle), math.sin(angle)

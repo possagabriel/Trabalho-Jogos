@@ -217,9 +217,10 @@ class ControladorCombate:
         sessao.boss = None
         total = int(boss.pontos * sessao.jogador.combo.get_bonus())
         sessao.jogador.pontuacao += total
-        sessao.progresso.registrar_boss()
-        sessao.progresso.registrar_fase_concluida(boss.nivel)
-        sessao.progresso.salvar_arquivo()
+        if getattr(sessao, "modo_atual", "linear") != "mundo_aberto":
+            sessao.progresso.registrar_boss()
+            sessao.progresso.registrar_fase_concluida(boss.nivel)
+            sessao.progresso.salvar_arquivo()
         if sessao.profile_service.active:
             counts = dict(sessao.profile_service.active.progress["bosses_por_tipo"])
             counts[boss.nome] = counts.get(boss.nome, 0) + 1
@@ -246,7 +247,8 @@ class ControladorCombate:
             sessao.powerups.append(
                 PowerUp(sortear_tipo(), boss.x, boss.y + random.randint(-20, 20)))
         publicar_evento(GameEventType.BOSS_DEFEATED, sessao=sessao,
-                        boss=boss, nivel=boss.nivel, cenario_id=boss.cenario_id)
+                        boss=boss, nivel=boss.nivel, cenario_id=boss.cenario_id,
+                        modo=getattr(sessao, "modo_atual", "linear"))
 
     def atualizar_projeteis(self) -> None:
         """Atualiza movimento, colisao e remocao de todos os projeteis."""
