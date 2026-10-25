@@ -585,7 +585,10 @@ class OpenWorldRuntime:
         self.background = SectorBackground(
             next_dimension, self.SECTORS, (self.x, self.y))
         self._cenario = Cenario(next_dimension)
-        quality = self.visual_config.get("avanco_qualidade", "MEDIA")
+        try:
+            quality = self.visual_config["avanco_qualidade"]
+        except (KeyError, TypeError):
+            quality = "MEDIA"
         self._cenario.configurar_avanco(
             quality, (0.0, 1.0), True, True, self.visual_config,
             4101 + next_dimension)
