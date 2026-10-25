@@ -31,10 +31,10 @@ def test_decoracao_tem_semente_fixa_por_regiao():
     assert primeiro._stars == segundo._stars
     assert primeiro._landmarks == segundo._landmarks
     assert primeiro._rifts == segundo._rifts
-    assert primeiro.REGION_SIZE == (6400.0, 4400.0)
+    assert primeiro.REGION_SIZE == (19200.0, 13200.0)
     assert len(primeiro.SECTORS) == 6
     assert len(primeiro._rifts) == 7
-    assert len(primeiro._landmarks) == 18
+    assert len(primeiro._landmarks) == 72
 
 
 def test_camera_acompanha_movimento_e_vazio_repele_a_nave():
@@ -57,6 +57,13 @@ def test_estado_salvo_contém_região_posição_e_checkpoint():
         "posicao": [1200.0, 800.0],
         "checkpoint": "inicio",
         "tempo": 90,
+        "map_version": 2,
+        "dimensao": 1,
+        "bosses": 0,
+        "regioes_libertas": 0,
+        "proxima_dimensao": 0,
+        "boss_derrotado": False,
+        "asteroides": {},
     }
 
 
@@ -79,7 +86,7 @@ def test_mundo_usa_entidades_visuais_do_modo_linear():
     assert world.boss.nome == "HEXAGONO"
     assert (player.x, player.y) == (LARGURA // 2, ALTURA // 2)
     assert world._minimap.get_size() == (204, 144)
-    assert len(world.enemies) == 72
+    assert len(world.enemies) >= 200
 
 
 def test_disparo_reutiliza_arma_e_direciona_para_frente_no_mundo():

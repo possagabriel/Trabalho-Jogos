@@ -567,8 +567,9 @@ class Jogador:
 
     def desenhar(self, tela: pygame.Surface,
                  particulas: SistemaParticulas | None = None,
-                 intensidade_propulsor: float = 1.0) -> None:
-        if self.invencivel > 0 and (self.invencivel // 4) % 2 == 0:
+                 intensidade_propulsor: float = 1.0,
+                 piscar: bool = True) -> None:
+        if piscar and self.invencivel > 0 and (self.invencivel // 4) % 2 == 0:
             return
         if self.tempo_esquiva > 0:
             desenhar_glow(tela, CIANO, (self.x, self.y), self.raio + 18, 0.8)

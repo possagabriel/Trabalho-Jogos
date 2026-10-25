@@ -24,6 +24,7 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Mundo aberto ampliado em branch de validação: fundo por setor e posição, seis dimensões, boss próprio, asteroides persistentes, turbo, mapa em M, correções de HUD e cutscenes na passagem.
 - A RC `v1.8.0-rc1` aponta para `f383926` e antecede `LICENSE` e os avisos OFL
   nos pacotes. Os artefatos do build #40125004991, commit `f020cb0`, estão
   integrados pela PR #36; checks e hashes passaram, mas o teste manual Windows

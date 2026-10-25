@@ -129,6 +129,8 @@ class ControladorAvanco:
     def _ao_evento(self, evento: GameEvent) -> None:
         if evento.data.get("sessao") is not self._jogo():
             return
+        if getattr(self._jogo(), "modo_atual", "linear") == "mundo_aberto":
+            return
         tipo = evento.type
         if tipo is GameEventType.BOSS_SPAWNED:
             if bool(_ler(self.config, "avanco_parada_boss", True)):
