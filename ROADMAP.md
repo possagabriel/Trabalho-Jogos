@@ -24,6 +24,7 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Combate: Mutante transformado mostra vida real; íon direcional nasce na nave e o especial de intangibilidade entra no seletor tático.
 - Correção da passagem de dimensão no mundo aberto: configuração real do jogo aceita após derrotar o boss.
 - Mundo aberto ampliado em branch de validação: fundo por setor e posição, seis dimensões, boss próprio, asteroides persistentes, turbo, mapa em M, correções de HUD e cutscenes na passagem.
 - A RC `v1.8.0-rc1` aponta para `f383926` e antecede `LICENSE` e os avisos OFL

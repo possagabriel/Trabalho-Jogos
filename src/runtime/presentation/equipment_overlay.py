@@ -18,6 +18,7 @@ from src.runtime.presentation.ui import desenhar_cantos, desenhar_texto
 
 ESPECIAIS = {
     "bomba": {"nome": "BOMBA VORTEX", "descricao": "Dano em uma grande area"},
+    "intangivel": {"nome": "INTANGIBILIDADE", "descricao": "Atravessa perigos por 3 s"},
     "cura": {"nome": "REPARO +3", "descricao": "Recupera 3 pontos de vida"},
     "imortal": {"nome": "IMORTALIDADE", "descricao": "10 segundos sem receber dano"},
 }
