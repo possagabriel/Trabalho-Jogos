@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - O Mutante transformado exibe vida em vez de carga; o íon ganha feixe direcional e o seletor oferece intangibilidade temporária.
+- As cinco opções do menu principal agora usam o mesmo tamanho visual e de clique em ambos os estilos.
 - Corrige encerramento do jogo após derrotar o boss do mundo aberto ao carregar a próxima dimensão.
 - Mundo aberto amplia o mapa, varia o fundo por setor, distribui obstáculos com respawn e liga bosses, passagem de dimensão, mapa em M, turbo e correções da interface.
 - O build de teste da 1.8.0 registra o commit real do push da branch; a tag

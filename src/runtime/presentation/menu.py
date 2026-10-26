@@ -34,13 +34,11 @@ from src.infrastructure.graphics.comic_theme import LARANJA, PAPEL, opcoes_atuai
 from src.infrastructure.graphics.theme import (
     MENU_4_3_LARGURA_COLUNA,
     MENU_4_3_X_COLUNA_FRACAO,
-    MENU_4_3_Y_PRINCIPAIS,
-    MENU_4_3_Y_SECUNDARIOS,
+    MENU_4_3_Y_OPCOES,
     MENU_ALPHA_BOTAO_NORMAL,
     MENU_ALPHA_BOTAO_SELECIONADO,
     MENU_ALPHA_PAINEL_RODAPE,
-    MENU_ALTURA_PRINCIPAL,
-    MENU_ALTURA_SECUNDARIA,
+    MENU_ALTURA_OPCAO,
     MENU_COR_PAINEL_RODAPE,
     MENU_COR_TEXTO,
     MENU_COR_TEXTO_DESABILITADO,
@@ -69,8 +67,7 @@ from src.infrastructure.graphics.theme import (
     MENU_X_COLUNA_FRACAO,
     MENU_X_NAVE,
     MENU_Y_NAVE,
-    MENU_Y_PRINCIPAIS,
-    MENU_Y_SECUNDARIOS,
+    MENU_Y_OPCOES,
     tema_atual,
 )
 from src.infrastructure.ui.layout import (
@@ -768,17 +765,12 @@ class MenuPrincipal:
         largura = MENU_4_3_LARGURA_COLUNA if narrow else MENU_LARGURA_COLUNA
         x_proposto = self.layout.x(
             MENU_4_3_X_COLUNA_FRACAO if narrow else MENU_X_COLUNA_FRACAO)
-        primarias = MENU_4_3_Y_PRINCIPAIS if narrow else MENU_Y_PRINCIPAIS
-        secundarias = MENU_4_3_Y_SECUNDARIOS if narrow else MENU_Y_SECUNDARIOS
+        alturas = MENU_4_3_Y_OPCOES if narrow else MENU_Y_OPCOES
         for indice, opcao in enumerate(self.opcoes):
-            principal = indice < len(primarias)
-            frac_y = (primarias[indice] if principal else
-                      secundarias[indice - len(primarias)])
-            opcao.y = self.layout.y(frac_y)
+            opcao.y = self.layout.y(alturas[indice])
             opcao.largura_painel = largura
-            opcao.altura_painel = (MENU_ALTURA_PRINCIPAL if principal else
-                                   MENU_ALTURA_SECUNDARIA)
-            opcao.principal = principal
+            opcao.altura_painel = MENU_ALTURA_OPCAO
+            opcao.principal = True
         margem = self.layout.margem(MENU_MARGEM_SEGURANCA)
         x_maximo = self.layout.largura - self.layout.px(largura) - margem
         self.x_opcoes = min(x_proposto, x_maximo)

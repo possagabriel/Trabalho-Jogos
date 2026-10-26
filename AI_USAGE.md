@@ -1,6 +1,7 @@
 # Registro de uso de IA
 
 - Combate: Codex corrigiu o indicador do Mutante, refez a direção/colisão do íon e adicionou intangibilidade; validou com testes direcionados e Ruff.
+- Menu principal: Codex uniformizou as cinco opções e verificou geometria e interação em ORIGINAL, COMIC, 900x700 e 1920x1080.
 - Fase F: Codex reproduziu e corrigiu o crash da troca de dimensão com Configuracoes real; 29 testes direcionados e Ruff passaram.
 - Fase F: Codex ampliou o mundo aberto e o fundo por posição, conectou bosses/cutscenes e corrigiu turbo, nave e menu TAB; validou com testes direcionados e Ruff.
 - F0: Codex transcreveu a proposta fornecida pelo usuário para `docs/design/mundo-aberto.md` e substituiu a seção 15 pelas quatro decisões confirmadas; apenas documentação, sem iniciar F1 ou alterar gameplay.
