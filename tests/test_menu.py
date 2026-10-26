@@ -78,15 +78,13 @@ def test_construcao_subestado_e_opcoes():
     assert menu.x_opcoes <= menu.layout.largura
 
 
-def test_hierarquia_visual_mantem_tres_acoes_maiores_que_as_secundarias():
-    """As três ações principais mantêm botões maiores sem mudar a ordem."""
+def test_menu_principal_tem_cinco_acoes_do_mesmo_tamanho():
+    """Os cinco destinos mantêm painéis uniformes sem mudar a ordem."""
     jogo, menu = novo_menu()
     configurar_menu_original(jogo, menu)
     rects = [opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
              for opcao in menu.opcoes]
-    assert len({rect.width for rect in rects}) == 1
-    assert all(rects[index].height > rects[3].height
-               for index in range(3))
+    assert len({rect.size for rect in rects}) == 1
     assert all(b.top - a.bottom > 0 for a, b in zip(rects, rects[1:]))
     assert menu.destaque.y == menu.opcoes[0].y
     assert [option.texto for option in menu.opcoes] == ROTULOS_ESPERADOS
@@ -771,10 +769,12 @@ def test_botao_voltar_do_hub_funciona_com_mouse():
 
 
 @pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
-def test_menu_principal_compartilha_hierarquia_e_cartao_nos_dois_estilos(estilo):
+@pytest.mark.parametrize("resolucao", ["900x700", "1920x1080"])
+def test_menu_principal_compartilha_opcoes_uniformes_e_cartao(
+        estilo, resolucao):
     jogo, menu = novo_menu()
     jogo.config["estilo_visual"] = estilo
-    jogo.config["resolucao"] = "900x700"
+    jogo.config["resolucao"] = resolucao
     menu._estilo_layout_opcoes = None
     menu._aplicar_layout_opcoes()
     jogo.profile_service.rename(jogo.profile_service.active.id, "Árvore Estelar 9")
@@ -790,8 +790,13 @@ def test_menu_principal_compartilha_hierarquia_e_cartao_nos_dois_estilos(estilo)
     rects = [item.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
              for item in menu.opcoes]
     assert [item.texto for item in menu.opcoes] == ROTULOS_ESPERADOS
-    assert all(item.principal == (index < 3)
-               for index, item in enumerate(menu.opcoes))
+    assert all(item.principal for item in menu.opcoes)
+    assert len({rect.size for rect in rects}) == 1
+    assert all(rect.bottom <= seguinte.top
+               for rect, seguinte in zip(rects, rects[1:]))
+    assert all(0 <= rect.left < rect.right <= menu.layout.largura
+               and 0 <= rect.top < rect.bottom <= menu.layout.altura
+               for rect in rects)
     assert rects[0].width < menu.layout.largura
     font = menu.layout.fonte_titulo(20)
     name = menu.tela_principal._truncar_nome(font, "Árvore Estelar 9",

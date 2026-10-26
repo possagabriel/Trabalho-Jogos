@@ -16,9 +16,6 @@ from src.infrastructure.graphics.theme import (
     MENU_CARTAO_PERFIL_RECT_4_3,
     MENU_CARTAO_PERFIL_TEXTO,
     MENU_CARTAO_PERFIL_TEXTO_SECUNDARIO,
-    MENU_COR_DIVISOR,
-    MENU_LARGURA_COLUNA,
-    MENU_Y_DIVISOR,
     tema_atual,
 )
 from src.runtime.domain.entities.player import SKINS
@@ -42,12 +39,6 @@ class TelaPrincipalJogo:
         tema = tema_atual(menu.jogo.config["tema"])
         menu._desenhar_linhas_diagonais(tela, tema)
         menu._desenhar_bloco_titulo(tela, tema)
-        y_divisor = menu.layout.y(MENU_Y_DIVISOR)
-        pygame.draw.line(tela, MENU_COR_DIVISOR,
-                         (menu.x_opcoes, y_divisor),
-                         (menu.x_opcoes + menu.layout.px(MENU_LARGURA_COLUNA),
-                          y_divisor),
-                         max(1, menu.layout.px(1)))
         for indice, opcao in enumerate(menu.opcoes):
             progresso = menu._frac(0.34 + indice * 0.07, 0.42)
             deslocamento = int((1 - ease_out(progresso)) * menu.layout.px(18))
