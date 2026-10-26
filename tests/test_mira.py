@@ -80,11 +80,16 @@ def test_duplo_e_espiral_distribuem_em_torno_da_mira() -> None:
     assert any(tiro.vel_x != 0 for tiro in espiral)
 
 
-def test_ion_preserva_coluna_vertical_com_mira() -> None:
+def test_ion_segue_mira_horizontal_e_mantem_fallback_vertical() -> None:
     jogador = Jogador()
     jogador.arma_atual = 6
     tiro = jogador.atirar(alvo=(jogador.x + 100, jogador.y))[0]
-    assert (tiro.vel_x, tiro.vel_y, tiro.x) == (0, 0, jogador.x)
+    assert (tiro.vel_x, tiro.vel_y) == (1, 0)
+    assert (tiro.x, tiro.y) == (jogador.x + 20, jogador.y)
+    jogador.cooldown_tiro = 0
+    vertical = jogador.atirar()[0]
+    assert (vertical.vel_x, vertical.vel_y) == (0, -1)
+    assert (vertical.x, vertical.y) == (jogador.x, jogador.y - 20)
 
 
 def test_save_antigo_ativa_mira_por_padrao(tmp_path) -> None:

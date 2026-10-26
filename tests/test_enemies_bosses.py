@@ -23,6 +23,7 @@ sys.path.insert(0, RAIZ)
 
 import math  # noqa: E402
 import random  # noqa: E402
+from unittest.mock import patch  # noqa: E402
 
 import pygame  # noqa: E402
 
@@ -224,6 +225,21 @@ def test_especial_acoes_mutante():
     assert e.vida == vida + 60
     assert e.raio == 36
     assert e.ataque == "leque"
+
+
+def test_mutante_transformado_mostra_vida_em_vez_de_carga():
+    pygame.init()
+    tela = pygame.Surface((LARGURA, ALTURA))
+    e = InimigoEspecial("mutante", 3, cenario_id=1)
+    e.carga = e.carga_maxima
+    e.carregado = True
+    e.acoes_carregado()
+    e.vida -= 10
+
+    with patch("src.runtime.domain.entities.enemies.barra_vida_cartoon") as barra:
+        e.desenhar(tela)
+
+    assert barra.call_args.args[4:6] == (e.vida, e.vida_max)
 
 
 def test_especial_acoes_cristalino():

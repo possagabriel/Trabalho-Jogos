@@ -516,6 +516,8 @@ class HudJogo:
             "municao": municao,
             "boost": max(0.0, min(1.0, getattr(jogo, "boost", 1.0))),
             "especial": max(0.0, min(1.0, getattr(jogo, "especial", 0.0))),
+            "especial_atual": getattr(jogo, "especial_atual", "bomba"),
+            "tempo_intangivel": getattr(jog, "tempo_intangivel", 0),
             "energia": max(0.0, min(100.0, getattr(jogo, "energia", 100.0))),
             "vel": getattr(jog, "velocidade", 5.0),
             "esquiva": max(0.0, 1 - getattr(jog, "cooldown_esquiva", 0) /
@@ -847,15 +849,19 @@ class HudJogo:
         _barra_segmentada(tela, layout, barra, d["especial"], cor, 10,
                           raio_canto=2)
 
-        rotulo = _render(self._f_titulo_xs, "BOMBA", CINZA_HUD)
+        intangivel = d["especial_atual"] == "intangivel"
+        nome = "INTANGÍVEL" if intangivel else "BOMBA"
+        rotulo = _render(self._f_titulo_xs, nome, CINZA_HUD)
         _blit_alfa(tela, rotulo,
                    (barra.x + layout.px(6), barra.y + layout.px(12)), 200)
 
-        if pronto:
+        if pronto or d["tempo_intangivel"] > 0:
             pulso = 0.7 + 0.3 * math.sin(t * 4)
             desenhar_glow(tela, self._paleta["secundaria"], barra.center,
                           max(barra.w, barra.h), 0.5 * pulso)
-            surf = _render(self._f_titulo_xs, "BOMBA PRONTA",
+            status = (f"INTANGÍVEL {math.ceil(d['tempo_intangivel'] / 60)}s"
+                      if d["tempo_intangivel"] > 0 else f"{nome} PRONTA")
+            surf = _render(self._f_titulo_xs, status,
                            tuple(int(c * pulso)
                                  for c in self._paleta["secundaria"]))
             _blit_alfa(tela, surf,

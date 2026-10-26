@@ -255,12 +255,16 @@ class OpenWorldRuntime:
         """Avança timers do jogador sem mover a nave no canvas lógico."""
         if player.invencivel > 0:
             player.invencivel -= 1
+        if player.tempo_intangivel > 0:
+            player.tempo_intangivel -= 1
         if player.cooldown_esquiva > 0:
             player.cooldown_esquiva -= 1
         player.combo.atualizar()
 
     def _collide_ship_with_asteroids(self, game) -> None:
         """Impede passagem pelo casco dos asteroides e aplica dano existente."""
+        if getattr(getattr(game, "jogador", None), "tempo_intangivel", 0) > 0:
+            return
         radius = getattr(getattr(game, "jogador", None), "raio", 16)
         for rock in self.asteroids.nearby(self.x, self.y, radius):
             if not rock.active():
@@ -496,11 +500,16 @@ class OpenWorldRuntime:
                 remaining.append(shot)
                 continue
             x1, y1 = shot.x + self.camera_x, shot.y + self.camera_y
-            x2, y2 = x1 + shot.vel_x, y1 + shot.vel_y
+            if shot.tipo == "ion":
+                ponta_x, ponta_y = shot.ponta_ion()
+                x2, y2 = ponta_x + self.camera_x, ponta_y + self.camera_y
+            else:
+                x2, y2 = x1 + shot.vel_x, y1 + shot.vel_y
             penetrating = shot.tipo in ("ion", "gauss", "nova", "bomba")
             blocked = False
-            for rock in self.asteroids.nearby(x1, y1, math.hypot(
-                    shot.vel_x, shot.vel_y) + shot.raio):
+            for rock in self.asteroids.nearby(
+                    (x1 + x2) / 2, (y1 + y2) / 2,
+                    math.hypot(x2 - x1, y2 - y1) / 2 + shot.raio):
                 if not rock.active() or id(rock) in shot.alvos_atingidos:
                     continue
                 if self._segment_distance(rock.x, rock.y, x1, y1, x2, y2) > (

@@ -116,7 +116,7 @@ class Miniboss(Boss, ABC):
         """Resolve hitboxes especiais antes do casco; retorna colisão."""
         if self.estrategia.interceptar(self, proj):
             return True
-        if self.rect.colliderect(proj.rect):
+        if proj.atinge_rect(self.rect):
             self.sofrer_dano(proj.dano)
             return True
         return False

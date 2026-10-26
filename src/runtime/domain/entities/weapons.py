@@ -12,14 +12,12 @@ from src.infrastructure.graphics.comic_render import trilha_tinta
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.runtime.infrastructure.graphics.cel_shading import (
     circulo_com_contorno,
-    contorno_retangulo,
 )
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_circulo,
     desenhar_glow,
     desenhar_poligono,
     linha_suave,
-    retangulo_suave,
 )
 from src.runtime.infrastructure.graphics.style_tokens import (
     CONTORNO_PROJETIL_CLARO,
@@ -53,7 +51,7 @@ ARMARIA = [
      "papel": "três trajetórias curvas"},
     {"nome": "Canhao de Ions", "nivel": 20, "cor": AZUL_CLARO, "raio": 6,
      "vel": 0, "dano": 5, "cooldown": 48, "tipo": "ion",
-     "papel": "coluna de dano total"},
+     "papel": "feixe direcional penetrante"},
     {"nome": "Rifle Gauss", "nivel": 22, "cor": (180, 220, 255), "raio": 3,
      "vel": 14, "dano": 3, "cooldown": 16, "tipo": "gauss",
      "papel": "projétil perfurante"},
@@ -64,6 +62,9 @@ ARMARIA = [
 
 class Projetil:
     """Projetil disparado pelo jogador ou por inimigos."""
+
+    CRESCIMENTO_ION = 6
+    ALCANCE_ION = 2 * max(LARGURA, ALTURA)
 
     def __init__(self, x: float, y: float, vel_x: float, vel_y: float,
                  dano: int, cor: Cor, raio: float,
@@ -86,9 +87,29 @@ class Projetil:
     @property
     def rect(self) -> pygame.Rect:
         if self.tipo == "ion":
-            return pygame.Rect(int(self.x - 7), 0, 14, ALTURA)
+            ponta_x, ponta_y = self.ponta_ion()
+            left = math.floor(min(self.x, ponta_x) - 7)
+            top = math.floor(min(self.y, ponta_y) - 7)
+            right = math.ceil(max(self.x, ponta_x) + 7)
+            bottom = math.ceil(max(self.y, ponta_y) + 7)
+            return pygame.Rect(left, top, right - left, bottom - top)
         return pygame.Rect(int(self.x - self.raio), int(self.y - self.raio),
                            self.raio * 2, self.raio * 2)
+
+    def ponta_ion(self) -> tuple[float, float]:
+        """Devolve a ponta do feixe que cresce da nave rumo à mira."""
+        dx, dy = self._direcao_visual()
+        length = self.ALCANCE_ION * min(1.0, self.tempo / self.CRESCIMENTO_ION)
+        return self.x + dx * length, self.y + dy * length
+
+    def atinge_rect(self, alvo: pygame.Rect) -> bool:
+        """Testa a largura real do feixe, inclusive na diagonal."""
+        if self.tipo != "ion":
+            return self.rect.colliderect(alvo)
+        ponta = self.ponta_ion()
+        area = alvo.inflate(14, 14)
+        return bool(area.clipline((round(self.x), round(self.y)),
+                                  (round(ponta[0]), round(ponta[1]))))
 
     def atualizar(self) -> None:
         if self.tipo == "ion":
@@ -146,8 +167,20 @@ class Projetil:
         linha_suave(tela, BRANCO, (x - dx * 13, y - dy * 13), ponta, 2)
         desenhar_circulo(tela, BRANCO, ponta, 2, brilho=1.8)
 
+    def _desenhar_ion(self, tela: pygame.Surface, x: int, y: int, cor: Cor) -> None:
+        """Anima o feixe a partir do emissor, alinhado à mira."""
+        ponta = self.ponta_ion()
+        desenhar_glow(tela, cor, (x, y), 18, 0.45)
+        desenhar_circulo(tela, BRANCO, (x, y), 5, brilho=1.3)
+        if self.tempo > 0:
+            brilho = 0.5 + 0.2 * min(1.0, self.tempo / self.CRESCIMENTO_ION)
+            linha_suave(tela, AZUL_CLARO, (x, y), ponta, 18)
+            linha_suave(tela, cor, (x, y), ponta, 8)
+            linha_suave(tela, BRANCO, (x, y), ponta, 2)
+            desenhar_glow(tela, cor, ponta, 12, brilho)
+
     def desenhar(self, tela: pygame.Surface) -> None:
-        if opcoes_atuais().ativo:
+        if opcoes_atuais().ativo and self.tipo != "ion":
             trilha_tinta(tela, (self.x, self.y), (self.vel_x, self.vel_y), self.cor)
         x, y = int(self.x), int(self.y)
         cor = self._cor_atual()
@@ -169,14 +202,7 @@ class Projetil:
             linha_suave(tela, BRANCO, (x - dx * 9, y - dy * 9), ponta, 2)
             desenhar_circulo(tela, BRANCO, ponta, 2, brilho=1.7)
         elif self.tipo == "ion":
-            desenhar_glow(tela, (80, 110, 180), (x, ALTURA // 2),
-                          max(ALTURA, LARGURA) // 2, 0.5)
-            rect_ion = pygame.Rect(x - 9, 0, 18, ALTURA)
-            contorno_retangulo(tela, rect_ion, 2)
-            retangulo_suave(tela, (80, 110, 180), rect_ion, 6)
-            retangulo_suave(tela, cor, pygame.Rect(x - 3, 0, 6, ALTURA), 3,
-                            glow_cor=cor, glow_raio=20)
-            linha_suave(tela, BRANCO, (x - 1, 0), (x - 1, ALTURA), 2)
+            self._desenhar_ion(tela, x, y, cor)
         elif self.tipo == "feixe":
             desenhar_glow(tela, cor, (x, y + 30), 20, 0.6)
             linha_suave(tela, cor, (x, y), (x, y + 60), 3)

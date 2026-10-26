@@ -73,6 +73,37 @@ def test_tiro_destroi_obstaculo_e_save_preserva_recarga():
     assert not restored.asteroids.asteroids[rock.ident].active()
 
 
+def test_ion_horizontal_atinge_asteroide_no_mundo_aberto():
+    pygame.font.init()
+    world = OpenWorldRuntime()
+    rock = world.asteroids.asteroids[0]
+    world.camera_x = rock.x - LARGURA / 2
+    world.camera_y = rock.y - ALTURA / 2
+    shot = Projetil(LARGURA / 2 - 160, ALTURA / 2, 1, 0,
+                    rock.max_health, (200, 220, 255), 6, tipo="ion")
+    shot.atualizar()
+    game = SimpleNamespace(
+        projeteis=[shot], sons=SimpleNamespace(tocar=lambda _sound: None))
+
+    world._resolve_asteroid_hits(game)
+
+    assert not rock.active()
+    assert game.projeteis == [shot]
+
+
+def test_nave_intangivel_atravessa_asteroide():
+    pygame.font.init()
+    world = OpenWorldRuntime()
+    rock = world.asteroids.asteroids[0]
+    player = Jogador()
+    player.tempo_intangivel = 60
+    world.x, world.y = rock.x, rock.y
+
+    world._collide_ship_with_asteroids(SimpleNamespace(jogador=player))
+
+    assert (world.x, world.y) == (rock.x, rock.y)
+
+
 def test_turbo_move_mais_e_consumo_e_recarga_usam_medidor_existente():
     normal = OpenWorldRuntime()
     turbo = OpenWorldRuntime()

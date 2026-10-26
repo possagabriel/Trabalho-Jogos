@@ -401,6 +401,36 @@ def test_ion_atinge_cada_alvo_uma_vez_por_projetil():
     assert jogo.jogador.combo.combo_atual == 1
 
 
+def test_ion_horizontal_atinge_apenas_alvos_a_frente_do_feixe():
+    jogo = novo_jogo()
+    _limpar_campo(jogo)
+    alvo = Inimigo("scout", 1, x=600, y=300)
+    atras = Inimigo("scout", 1, x=300, y=300)
+    fora = Inimigo("scout", 1, x=600, y=400)
+    jogo.inimigos = [alvo, atras, fora]
+    jogo.projeteis = [Projetil(450, 300, 1, 0, 5,
+                              (200, 220, 255), 6, tipo="ion")]
+
+    jogo._atualizar_projeteis()
+
+    assert alvo.vida <= 0
+    assert atras.vida == atras.vida_max
+    assert fora.vida == fora.vida_max
+
+
+def test_especial_intangivel_consume_carga_e_nao_cria_bomba():
+    jogo = novo_jogo()
+    _limpar_campo(jogo)
+    assert "intangivel" in jogo.especiais_desbloqueados
+    jogo.especial_atual = "intangivel"
+    jogo.especial = 1.0
+
+    assert jogo._ativar_especial()
+    assert jogo.especial == 0.0
+    assert jogo.jogador.tempo_intangivel > 0
+    assert not jogo.projeteis
+
+
 def test_gauss_atravessa_mas_danifica():
     jogo = novo_jogo()
     _limpar_campo(jogo)

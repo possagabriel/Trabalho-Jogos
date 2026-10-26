@@ -43,6 +43,7 @@ class SessaoCombate(Protocol):
     mensagens: list[MensagemFlutuante]
     textos_acao: list[TextoAcao]
     especial: float
+    especial_atual: str
     flash: int
     inimigos_abates: int
     bosses_abates: int

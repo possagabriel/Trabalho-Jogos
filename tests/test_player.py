@@ -331,6 +331,31 @@ def test_jogador_invencivel_ignora_dano():
     assert jog.vida == 5
 
 
+def test_ion_sai_da_nave_na_direcao_da_mira_horizontal():
+    jog = novo_jogador()
+    jog.arma_atual = 6
+    tiros = jog.atirar((jog.x + 200, jog.y))
+
+    assert len(tiros) == 1
+    assert tiros[0].x > jog.x
+    assert tiros[0].y == jog.y
+    assert tiros[0].vel_x > 0
+    assert abs(tiros[0].vel_y) < 0.01
+
+
+def test_intangibilidade_ignora_dano_e_termina_apos_tempo():
+    jog = novo_jogador()
+    jog.ativar_intangibilidade()
+    vida = jog.vida
+
+    assert jog.sofrer_dano() is False
+    assert jog.vida == vida
+    for _ in range(jog.DURACAO_INTANGIBILIDADE):
+        jog.atualizar(_teclas())
+    assert jog.sofrer_dano() is True
+    assert jog.vida == vida - 1
+
+
 def test_jogador_morre_com_vida_zero():
     jog = novo_jogador()
     jog.vida = 1

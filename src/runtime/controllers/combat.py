@@ -56,10 +56,16 @@ class ControladorCombate:
         ]
 
     def ativar_especial(self) -> bool:
-        """Lanca a Bomba Vortex se a carga especial estiver completa."""
+        """Ativa o especial equipado quando a carga estiver completa."""
         sessao = self.sessao
         if sessao.especial < 1.0 or sessao.estado is not EstadoJogo.JOGANDO:
             return False
+        if sessao.especial_atual == "intangivel":
+            if not sessao.jogador.ativar_intangibilidade():
+                return False
+            sessao.especial = 0.0
+            sessao.sons.tocar("especial")
+            return True
         sessao.especial = 0.0
         x, y = sessao.jogador.x, sessao.jogador.y - 24
         sessao.projeteis.append(Projetil(x, y, 0, -3.5, 25, LARANJA, 20,
@@ -287,6 +293,8 @@ class ControladorCombate:
 
     def _aplicar_atracao_gravitacional(self, proj: Projetil) -> None:
         """Curva tiros proximos de inimigos com campo gravitacional."""
+        if proj.tipo == "ion":
+            return
         for inimigo in self.sessao.inimigos:
             atrai = inimigo.tipo == "distorcao" or (
                 isinstance(inimigo, InimigoEspecial) and inimigo.tipo_especial == "condutor")
@@ -316,7 +324,7 @@ class ControladorCombate:
         if acertou and not penetrante:
             return True
         for inimigo in self._candidatos(proj.rect):
-            if not proj.rect.colliderect(inimigo.rect):
+            if not proj.atinge_rect(inimigo.rect):
                 continue
             if penetrante and id(inimigo) in proj.alvos_atingidos:
                 continue
@@ -353,7 +361,7 @@ class ControladorCombate:
             acertou = True
             if not penetrante:
                 return True
-        if (sessao.boss and proj.rect.colliderect(sessao.boss.rect)
+        if (sessao.boss and proj.atinge_rect(sessao.boss.rect)
                 and (not penetrante or id(sessao.boss) not in proj.alvos_atingidos)):
             alvo, vida_antes = sessao.boss, sessao.boss.vida
             morreu = sessao.boss.sofrer_dano(proj.dano)

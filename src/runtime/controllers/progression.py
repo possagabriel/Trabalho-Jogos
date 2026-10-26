@@ -67,7 +67,7 @@ class ControladorProgressao:
         jogo._abates_contabilizados = 0
         jogo.boost, jogo.especial, jogo.energia = 1.0, 0.0, 100.0
         jogo.especial_atual = "bomba"
-        jogo.especiais_desbloqueados = ["bomba"]
+        jogo.especiais_desbloqueados = ["bomba", "intangivel"]
         jogo.menu_equipamento = False
         jogo.linha_equipamento = 0
         jogo.indice_equipamento = 0

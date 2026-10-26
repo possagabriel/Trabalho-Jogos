@@ -1052,12 +1052,7 @@ class Jogo:
                         self.indice_equipamento % len(especiais)]
 
     def _ativar_especial(self):
-        """Dispara o especial (tecla E): lança a Bomba Vortex.
-
-        Consome a carga do medidor de especial pronto. A bomba é grande, viaja
-        devagar e explode em área enorme causando dano massivo. Não afeta o
-        boss diretamente por colisão, mas a explosão em área sim.
-        """
+        """Ativa o especial equipado pela tecla E e consome a carga."""
         return self.combate_controller.ativar_especial()
 
     def _atualizar_projeteis(self):
