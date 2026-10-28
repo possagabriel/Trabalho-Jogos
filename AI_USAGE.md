@@ -1,5 +1,6 @@
 # Registro de uso de IA
 
+- Codex ajustou meteoros, minimapa e mapa do mundo aberto, removeu planetas pequenos e validou 80 testes direcionados e Ruff.
 - Passagem de fase: Codex incorporou à branch visual a correção de renderização
   e fade da cutscene; 125 testes direcionados passaram com Ruff limpo.
 - Fundo do mundo aberto: Codex suavizou a troca de setores e portais; testes

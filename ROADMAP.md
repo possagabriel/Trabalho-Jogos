@@ -24,6 +24,7 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Mundo aberto: chuva curta de meteoros, minimapa local e mapa legível; planetas pequenos removidos, aguardando teste visual.
 - Passagem de fase no mundo aberto: a branch visual também renderiza o novo
   fundo e o diálogo durante a cutscene, com fade que termina normalmente.
 - Fundo do mundo aberto: troca entre setores usa mistura suave, inclusive após

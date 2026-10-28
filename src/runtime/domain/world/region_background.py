@@ -88,13 +88,19 @@ def _nebulosa(surface: pygame.Surface, center: tuple[int, int],
 
 def _cometa(surface: pygame.Surface, head: tuple[int, int],
             color: tuple[int, int, int], length: int) -> None:
-    """Marca um cometa ou meteoroide com cauda direcional."""
+    """Marca um cometa ou meteoroide com núcleo quente e cauda afilada."""
     x, y = head
-    pygame.draw.line(surface, _misturar(color, (26, 34, 53), 0.55),
-                     (x - length, y + length // 3), (x, y), 5)
-    pygame.draw.line(surface, color,
-                     (x - length // 2, y + length // 6), (x, y), 2)
-    pygame.draw.circle(surface, color, head, 4)
+    distant = (x - length, y + length // 3)
+    near = (x - length // 3, y + length // 9)
+    pygame.draw.line(surface, _misturar(color, (26, 34, 53), 0.72),
+                     distant, head, 6)
+    pygame.draw.line(surface, _misturar(color, (240, 220, 190), 0.35),
+                     (x - length * 2 // 3, y + length * 2 // 9), head, 3)
+    pygame.draw.line(surface, (252, 229, 190), near, head, 1)
+    pygame.draw.circle(surface, _misturar(color, (246, 238, 217), 0.6), head, 4)
+    pygame.draw.circle(surface, (255, 245, 220), head, 2)
+    pygame.draw.circle(surface, color,
+                       (x - length // 2, y + length // 6 + 4), 1)
 
 
 def _galaxia(surface: pygame.Surface, center: tuple[int, int],
@@ -223,7 +229,6 @@ class SectorBackground:
             _estrela(surface, (970 + jitter, 430), 43, (230, 181, 94))
             _planeta(surface, (320 + jitter, 395), 126,
                      _misturar(accent, (145, 111, 91), 0.5), craters=True)
-            _planeta(surface, (495 + jitter, 245), 29, (129, 143, 158), craters=True)
             for _ in range(55):
                 x = rng.randrange(105, 575)
                 y = 500 + round(math.sin(x / 55) * 24) + rng.randrange(-16, 17)
@@ -243,9 +248,6 @@ class SectorBackground:
             _estrela(surface, (1100, 195), 115, (217, 142, 93))
             _planeta(surface, (420 + jitter, 410), 162,
                      _misturar(accent, (165, 132, 96), 0.55), rings=True)
-            for point, radius in (((700, 280), 24), ((785, 485), 17),
-                                  ((270, 170), 13)):
-                _planeta(surface, point, radius, (135, 146, 159), craters=True)
         elif sector == 3:
             _nebulosa(surface, (830, 350), _misturar(accent, (100, 133, 180), 0.4), rng)
             center = (780 + jitter, 360)
@@ -266,8 +268,6 @@ class SectorBackground:
             _nebulosa(surface, (380, 270), _misturar(accent, (98, 144, 177), 0.55), rng)
             _planeta(surface, (920 + jitter, 415), 142,
                      _misturar(accent, (110, 172, 198), 0.6), craters=True)
-            _planeta(surface, (1080 + jitter, 215), 35,
-                     (173, 199, 213), craters=True)
             _estrela(surface, (265, 470), 16, (153, 218, 234))
             _cometa(surface, (655, 130), (151, 216, 231), 135)
 

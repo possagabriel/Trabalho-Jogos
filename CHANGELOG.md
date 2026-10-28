@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Mundo aberto e menu ganham chuvas curtas de meteoros; minimapa local e mapa completo melhoram, e planetas pequenos saem dos fundos.
 - Fundos do mundo aberto fazem transição suave entre setores e portais, sem
   salto visual quando a nave muda de destino durante a mistura.
 - O Mutante transformado exibe vida em vez de carga; o íon ganha feixe direcional e o seletor oferece intangibilidade temporária.

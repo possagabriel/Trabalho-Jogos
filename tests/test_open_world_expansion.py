@@ -165,6 +165,15 @@ def test_mapa_em_tela_cheia_mostra_limites_e_nave():
     assert surface.get_at((px, py))[:3] != surface.get_at((0, 0))[:3]
 
 
+def test_minimapa_local_centraliza_nave_e_descarta_alvos_distantes():
+    area = pygame.Rect(10, 30, 240, 138)
+    center = (6000.0, 4000.0)
+
+    assert OpenWorldRuntime._local_map_point(center, center, area) == area.center
+    assert OpenWorldRuntime._local_map_point((6100.0, 4000.0), center, area)[0] > area.centerx
+    assert OpenWorldRuntime._local_map_point((9000.0, 4000.0), center, area) is None
+
+
 def test_boss_do_mundo_orbita_em_duas_dimensoes_e_vitoria_abre_a_proxima():
     world = OpenWorldRuntime()
     world.boss_active = True

@@ -29,12 +29,10 @@ def test_decoracao_tem_semente_fixa_por_regiao():
     segundo = OpenWorldRuntime()
 
     assert primeiro._stars == segundo._stars
-    assert primeiro._landmarks == segundo._landmarks
     assert primeiro._rifts == segundo._rifts
     assert primeiro.REGION_SIZE == (19200.0, 13200.0)
     assert len(primeiro.SECTORS) == 6
     assert len(primeiro._rifts) == 7
-    assert len(primeiro._landmarks) == 72
 
 
 def test_camera_acompanha_movimento_e_vazio_repele_a_nave():
@@ -85,7 +83,7 @@ def test_mundo_usa_entidades_visuais_do_modo_linear():
     assert world.miniboss.nome.startswith("CENSOR")
     assert world.boss.nome == "HEXAGONO"
     assert (player.x, player.y) == (LARGURA // 2, ALTURA // 2)
-    assert world._minimap.get_size() == (204, 144)
+    assert world._minimap.get_size() == (260, 180)
     assert len(world.enemies) >= 200
 
 
