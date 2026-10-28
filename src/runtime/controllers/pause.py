@@ -24,6 +24,8 @@ class ControladorPausa:
         """Encaminha a entrada para a pausa, seu dialogo ou configuracoes."""
         jogo = self.jogo
         if jogo._pausa_dialogo and jogo._pausa_dialogo.ativo:
+            if evento.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN):
+                jogo._pausa_mouse = evento.pos
             jogo._pausa_dialogo.tratar_evento(evento, mouse_pos=jogo._pausa_mouse)
             if not jogo._pausa_dialogo.ativo:
                 jogo._pausa_dialogo = None
@@ -46,8 +48,10 @@ class ControladorPausa:
             jogo._pausa_mouse = evento.pos
             self.atualizar_hover(evento.pos)
         elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-            if self.colidir_opcao(evento.pos) is not None:
-                self.executar_acao(jogo._pausa_selecao)
+            indice = self.colidir_opcao(evento.pos)
+            if indice is not None:
+                jogo._pausa_selecao = indice
+                self.executar_acao(indice)
 
     def tratar_evento_config(self, evento: pygame.event.Event) -> None:
         """Trata a navegacao do subpainel de configuracoes da pausa."""
@@ -147,3 +151,5 @@ class ControladorPausa:
         jogo.estado = "MENU"
         jogo.fade = 255
         jogo._salvar_tudo()
+        jogo.trauma = 0.0
+        jogo.menu._voltar_menu()
