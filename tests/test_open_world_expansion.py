@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+import random
 from types import SimpleNamespace
 
 import pygame
@@ -330,7 +332,7 @@ def test_borda_do_vazio_ocupa_a_borda_da_tela():
 
 
 def test_fundo_muda_com_a_area_do_mapa():
-    world = OpenWorldRuntime()
+    world = OpenWorldRuntime(position=OpenWorldRuntime.SECTORS[0][1])
     first = world.background.surface_for_sector(0, comic=False)
     second = world.background.surface_for_sector(1, comic=False)
 
@@ -342,19 +344,152 @@ def test_fundo_muda_com_a_area_do_mapa():
     assert world.background.target_sector == 1
 
 
-def test_fundo_conclui_transicao_antes_de_trocar_o_setor_alvo():
-    world = OpenWorldRuntime()
+def test_fundo_redireciona_transicao_sem_salto_visual():
+    pygame.font.init()
+    world = OpenWorldRuntime(position=OpenWorldRuntime.SECTORS[0][1])
     background = world.background
-    background.update(*world.SECTORS[1][1], 0.1)
-    background.update(*world.SECTORS[1][1], 0.2)
+    surface = pygame.Surface((LARGURA, ALTURA))
+    background.update(*world.SECTORS[1][1], 0.3)
     assert background.target_sector == 1
+    background.render(surface, comic=False)
+    previous = surface.get_at((10, 10))
 
-    background.update(*world.SECTORS[2][1], 0.1)
-    assert background.current_sector == 0
-    assert background.target_sector == 1
-    assert background.transition > 0.2
-
-    background.update(*world.SECTORS[2][1], 0.8)
     background.update(*world.SECTORS[2][1], 0.0)
-    assert background.current_sector == 1
+    background.render(surface, comic=False)
+    assert background.current_sector == 0
     assert background.target_sector == 2
+    assert all(abs(a - b) <= 2 for a, b in zip(previous[:3], surface.get_at((10, 10))[:3]))
+
+    background.update(*world.SECTORS[2][1], 1.2)
+    assert background.current_sector == 2
+    assert background.target_sector == 2
+
+
+def test_fundo_comeca_e_termina_a_troca_gradualmente(monkeypatch):
+    pygame.font.init()
+    world = OpenWorldRuntime(position=OpenWorldRuntime.SECTORS[0][1])
+    background = world.background
+    first = pygame.Surface((LARGURA, ALTURA))
+    second = pygame.Surface((LARGURA, ALTURA))
+    first.fill((220, 20, 20))
+    second.fill((20, 20, 220))
+    monkeypatch.setattr(background, "surface_for_sector",
+                        lambda sector, _comic: first if sector == 0 else second)
+    surface = pygame.Surface((LARGURA, ALTURA))
+
+    background.update(*world.SECTORS[1][1], 0.0)
+    background.update(*world.SECTORS[1][1], 0.2)
+    background.render(surface, comic=False)
+    early = surface.get_at((10, 10))
+    background.update(*world.SECTORS[1][1], 0.65)
+    background.render(surface, comic=False)
+    late = surface.get_at((10, 10))
+
+    assert early.r > 185
+    assert late.b > late.r
+    assert late.r > 20
+    assert late.b < 220
+    assert first.get_at((10, 10))[:3] == (220, 20, 20)
+    assert second.get_at((10, 10))[:3] == (20, 20, 220)
+
+
+def test_spawn_varia_e_fica_longe_de_boss_e_anomalias():
+    pygame.font.init()
+    worlds = [OpenWorldRuntime(rng=random.Random(seed)) for seed in range(12)]
+
+    assert len({world.SPAWN for world in worlds}) == len(worlds)
+    for world in worlds:
+        assert (world.x, world.y) == world.SPAWN
+        assert math.dist(world.SPAWN, world.BOSS_LAIR) > 900
+        assert all(math.dist(world.SPAWN, hole.position) > hole.influence
+                   for hole in world.anomalies.black_holes)
+        assert all(math.dist(world.SPAWN, portal.position) > 300
+                   for portal in world.anomalies.wormholes)
+        assert all(math.dist(world.SPAWN, (rock.x, rock.y)) > rock.radius + 80
+                   for rock in world.asteroids.nearby(*world.SPAWN, 120))
+        assert all(math.dist(world.SPAWN, (x, y)) > orbit + 300
+                   for _enemy, x, y, orbit, _phase in world.enemies)
+
+    first = worlds[0]
+    previous = first.SPAWN
+    first.boss_defeated = True
+    first._pending_dimension = 2
+    assert first.advance_dimension()
+    assert first.SPAWN != previous
+    assert (first.x, first.y) == first.SPAWN
+
+
+def test_buraco_negro_puxa_sem_prender_a_nave():
+    pygame.font.init()
+    world = OpenWorldRuntime(rng=random.Random(4))
+    hole = world.anomalies.black_holes[0]
+    world.x, world.y = hole.x - 500, hole.y
+    before = world.x
+
+    for _ in range(60):
+        world.update(1 / 60, Teclas(), {})
+
+    assert world.x > before
+    assert math.hypot(world.gravity_vx, world.gravity_vy) <= world.MAX_GRAVITY_SPEED
+    attracted = world.x
+    world.update(1 / 60, Teclas(pygame.K_LEFT), {})
+    assert world.x < attracted
+
+
+def test_buraco_de_minhoca_teleporta_sem_ricochete_e_salva_destino():
+    pygame.font.init()
+    world = OpenWorldRuntime(rng=random.Random(7))
+    entry, exit_portal = world.anomalies.wormholes[:2]
+    world.x, world.y = entry.position
+
+    world.update(1 / 60, Teclas(), {})
+
+    assert math.dist((world.x, world.y), exit_portal.position) < 220
+    assert world.background.target_sector == world.background._nearest(world.x, world.y)
+    assert world.background.transition < 1.0
+    assert all(math.dist((world.x, world.y), (rock.x, rock.y)) > rock.radius + 30
+               for rock in world.asteroids.nearby(world.x, world.y, 120))
+    destination = (world.x, world.y)
+    world.x, world.y = exit_portal.position
+    world.update(1 / 60, Teclas(), {})
+    assert math.dist((world.x, world.y), exit_portal.position) < 20
+    world.x, world.y = destination
+    state = world.save_state()
+    restored = OpenWorldRuntime(position=state["posicao"],
+                                dimension=state["dimensao"])
+    assert math.dist((restored.x, restored.y), destination) < 1
+
+
+def test_mapa_de_asteroides_nao_muda_ao_retornar_em_outra_posicao():
+    pygame.font.init()
+    world = OpenWorldRuntime(rng=random.Random(3))
+    rocks = [(rock.x, rock.y) for rock in world.asteroids.asteroids]
+    rock = world.asteroids.asteroids[0]
+
+    restored = OpenWorldRuntime(position=(rock.x + 100, rock.y),
+                                dimension=world.dimension)
+
+    assert [(item.x, item.y) for item in restored.asteroids.asteroids] == rocks
+    assert [(x, y) for _enemy, x, y, _orbit, _phase in restored.enemies] == [
+        (x, y) for _enemy, x, y, _orbit, _phase in world.enemies]
+
+
+def test_seis_setores_tem_fundos_e_marcos_distintos():
+    pygame.font.init()
+    world = OpenWorldRuntime()
+    backgrounds = [world.background.surface_for_sector(index, comic=False)
+                   for index in range(6)]
+
+    assert len({pygame.image.tobytes(surface, "RGB") for surface in backgrounds}) == 6
+    assert len(world.background.motifs) == 6
+    assert len(set(world.background.motifs)) == 6
+
+
+def test_mesmo_setor_muda_de_aparencia_em_cada_dimensao():
+    pygame.font.init()
+    worlds = [OpenWorldRuntime(dimension=dimension, rng=random.Random(9))
+              for dimension in range(1, 7)]
+    backgrounds = [world.background.surface_for_sector(0, comic=False)
+                   for world in worlds]
+
+    assert len({pygame.image.tobytes(surface, "RGB") for surface in backgrounds}) == 6

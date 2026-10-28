@@ -1,5 +1,11 @@
 # Registro de uso de IA
 
+- Passagem de fase: Codex incorporou à branch visual a correção de renderização
+  e fade da cutscene; 125 testes direcionados passaram com Ruff limpo.
+- Fundo do mundo aberto: Codex suavizou a troca de setores e portais; testes
+  direcionados validam a mistura e a mudança de destino sem salto visual.
+- Mundo aberto: Codex implementou spawn seguro, seis fundos procedurais e
+  anomalias gravitacionais/portais; testes direcionados cobrem teleporte e save.
 - Mundo aberto: Codex corrigiu a renderização da cutscene e o fade após boss;
   testes direcionados cobrem fundo, diálogo e revelação da nova dimensão.
 - Combate: Codex corrigiu o indicador do Mutante, refez a direção/colisão do íon e adicionou intangibilidade; validou com testes direcionados e Ruff.

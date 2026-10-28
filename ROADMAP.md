@@ -24,6 +24,12 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Passagem de fase no mundo aberto: a branch visual também renderiza o novo
+  fundo e o diálogo durante a cutscene, com fade que termina normalmente.
+- Fundo do mundo aberto: troca entre setores usa mistura suave, inclusive após
+  teleporte e mudança de destino durante a transição.
+- Mundo aberto: spawn seguro varia a cada partida/dimensão; seis setores têm
+  composições celestes próprias; gravidade e portais pareados estão em teste.
 - Mundo aberto: passagem após boss revela o fundo da dimensão seguinte e mantém
   diálogo visível durante a cutscene; regressões passaram, falta validar jogando.
 - Combate: Mutante transformado mostra vida real; íon direcional nasce na nave e o especial de intangibilidade entra no seletor tático.

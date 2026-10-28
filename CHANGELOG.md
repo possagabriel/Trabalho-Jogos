@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Fundos do mundo aberto fazem transição suave entre setores e portais, sem
+  salto visual quando a nave muda de destino durante a mistura.
 - O Mutante transformado exibe vida em vez de carga; o íon ganha feixe direcional e o seletor oferece intangibilidade temporária.
 - As cinco opções do menu principal agora usam o mesmo tamanho visual e de clique em ambos os estilos.
 - Corrige encerramento do jogo após derrotar o boss do mundo aberto ao carregar a próxima dimensão.
@@ -44,6 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - O README inclui capturas otimizadas do menu ORIGINAL em 1920×1080 e ultrawide.
 
 ### Fixed
+- A passagem de fase do mundo aberto volta a mostrar o fundo e o diálogo da
+  nova dimensão, com fade que deixa de cobrir a cutscene permanentemente.
 - Mundo aberto mostra o fundo da nova dimensão e o diálogo após derrotar o boss,
   sem manter a tela preta durante a cutscene.
 - Menu lê sua versão de `project.version` no `pyproject.toml`.
@@ -53,6 +57,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   de apóstrofo em novos nomes foi revista na seção Unreleased.
 
 ### Added
+- Mundo aberto ganha spawn aleatório seguro, fundos procedurais distintos com
+  estrelas, planetas, luas, asteroides, meteoroides, cometas, nebulosas e
+  galáxias, além de buracos negros gravitacionais e portais de teleporte.
 - Documento de design do mundo aberto com mapa em dados, bosses 2–4 em ordem livre, títulos sem número nesse modo, modo extra e viagem rápida após o protótipo; implementação ainda pendente.
 - Licença MIT do projeto e avisos OFL 1.1 de Orbitron e Rajdhani nos pacotes.
 - README resume o aviso SmartScreen/antivírus e a verificação SHA-256.

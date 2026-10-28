@@ -22,6 +22,7 @@ from src.runtime.domain.entities.enemies import Inimigo
 from src.runtime.domain.entities.minibosses.registry import criar_miniboss
 from src.runtime.domain.entities.powerups import PowerUp
 from src.runtime.domain.entities.weapons import Projetil
+from src.runtime.domain.world.anomalies import CosmicAnomalies
 from src.runtime.domain.world.asteroid_field import AsteroidField
 from src.runtime.domain.world.region_background import SectorBackground
 from src.runtime.domain.world.scenarios import CENARIOS, Cenario
@@ -41,6 +42,7 @@ class OpenWorldRuntime:
     REGION_SIZE = (19200.0, 13200.0)
     SPAWN = (2160.0, 6600.0)
     SPEED = 360.0
+    MAX_GRAVITY_SPEED = 170.0
     BOSS_LAIR = (17100.0, 6600.0)
     SECTORS = (
         ("ESTRELA", (3300.0, 3300.0), (105, 72, 127)),
@@ -55,17 +57,29 @@ class OpenWorldRuntime:
                  elapsed: float = 0.0,
                  visual_config: Mapping[str, Any] | None = None,
                  dimension: int = 1, bosses: int = 0,
-                 cooldowns: Mapping[str, object] | None = None) -> None:
+                 cooldowns: Mapping[str, object] | None = None,
+                 rng: random.Random | None = None) -> None:
         self.dimension = max(1, min(6, int(dimension)))
         self.REGION_ID = self.REGION_IDS[self.dimension - 1]
         self.REGION_NAME = CENARIOS[self.dimension - 1]["nome"]
         self.visual_config = visual_config or {}
         self.width, self.height = self.REGION_SIZE
+        self._rng = rng if rng is not None else random.Random()
+        self.anomalies = CosmicAnomalies(self.dimension)
+        self.asteroids = AsteroidField(
+            self.width, self.height, seed=4101 + self.dimension,
+            protected=self._protected_zones(),
+        )
+        self.enemies = self._create_enemies()
+        self.SPAWN = self._choose_spawn(position)
         self.x, self.y = position or self.SPAWN
         self.x = max(0.0, min(self.width, float(self.x)))
         self.y = max(0.0, min(self.height, float(self.y)))
         self.vx = 0.0
         self.vy = 0.0
+        self.gravity_vx = 0.0
+        self.gravity_vy = 0.0
+        self.wormhole_cooldown = 0.0
         self.turbo_ativo = False
         self.camera_x = self.x - LARGURA / 2
         self.camera_y = self.y - ALTURA / 2
@@ -78,11 +92,6 @@ class OpenWorldRuntime:
         self._stars = self._build_stars()
         self._landmarks = self._build_landmarks()
         self._rifts = self._build_rifts()
-        self.asteroids = AsteroidField(
-            self.width, self.height, seed=4101 + self.dimension,
-            protected=((self.SPAWN[0], self.SPAWN[1], 440),
-                       (self.BOSS_LAIR[0], self.BOSS_LAIR[1], 410)),
-        )
         if cooldowns:
             self.asteroids.restore(cooldowns, self.elapsed)
         self.background = SectorBackground(
@@ -95,7 +104,6 @@ class OpenWorldRuntime:
         self._cenario.configurar_avanco(
             quality, (0.0, 1.0), True, True, self.visual_config,
             4101 + self.dimension)
-        self.enemies = self._create_enemies()
         self.miniboss = criar_miniboss(
             "censor", self.dimension, self._cenario,
             random.Random(4101 + self.dimension))
@@ -145,11 +153,50 @@ class OpenWorldRuntime:
             for name, _center, color in self.SECTORS
         )
 
+    def _choose_spawn(self, position: tuple[float, float] | None = None
+                      ) -> tuple[float, float]:
+        """Escolhe uma área segura; posição salva tem prioridade na retomada."""
+        if position is not None:
+            return float(position[0]), float(position[1])
+        for _ in range(64):
+            center = self.SECTORS[self._rng.randrange(len(self.SECTORS))][1]
+            candidate = (center[0] + self._rng.uniform(-1050, 1050),
+                         center[1] + self._rng.uniform(-820, 820))
+            if math.dist(candidate, self.BOSS_LAIR) < 900:
+                continue
+            if any(math.dist(candidate, hole.position) < hole.influence + 100
+                   for hole in self.anomalies.black_holes):
+                continue
+            if any(math.dist(candidate, portal.position) < 300
+                   for portal in self.anomalies.wormholes):
+                continue
+            if any(math.dist(candidate, (rock.x, rock.y)) <= rock.radius + 80
+                   for rock in self.asteroids.nearby(*candidate, 120)):
+                continue
+            if any(math.dist(candidate, (x, y)) <= orbit + 300
+                   for _enemy, x, y, orbit, _phase in self.enemies):
+                continue
+            return candidate
+        return self.__class__.SPAWN
+
+    def _protected_zones(self) -> tuple[tuple[float, float, float], ...]:
+        """Reserva áreas fixas para manter IDs dos asteroides estáveis no save."""
+        return (
+            (*self.__class__.SPAWN, 440.0), (*self.BOSS_LAIR, 410.0),
+            *((*hole.position, hole.influence) for hole in self.anomalies.black_holes),
+            *((*portal.position, 320.0) for portal in self.anomalies.wormholes),
+        )
+
     def _create_enemies(self) -> list[tuple[Inimigo, float, float, float, float]]:
         """Espalha patrulhas determinísticas por todas as áreas do mapa."""
         rng = random.Random(4102 + self.dimension)
         tipos = tuple(CENARIOS[self.dimension - 1]["inimigos"])
         patrulhas = []
+        safe_positions = (
+            (*self.__class__.SPAWN, 390.0), (*self.BOSS_LAIR, 420.0),
+            *((*portal.position, 320.0) for portal in self.anomalies.wormholes),
+            *((*hole.position, 300.0) for hole in self.anomalies.black_holes),
+        )
         for row in range(12):
             for column in range(18):
                 index = row * 18 + column
@@ -158,10 +205,7 @@ class OpenWorldRuntime:
                 base_y = (row + rng.uniform(0.22, 0.78)) * (
                     self.height / 12)
                 if any(math.hypot(base_x - px, base_y - py) < safe
-                       for px, py, safe in (
-                           (*self.SPAWN, 390),
-                           (*self.BOSS_LAIR, 420),
-                       )):
+                       for px, py, safe in safe_positions):
                     continue
                 orbit = rng.uniform(28, 76)
                 phase = rng.uniform(0, math.tau)
@@ -234,12 +278,14 @@ class OpenWorldRuntime:
                                 if self.turbo_ativo else
                                 min(100.0, game.energia + 0.7 * dt * 60))
         speed = self.SPEED * (2.1 if self.turbo_ativo else 1.0)
-        self.vx = dx * speed
-        self.vy = dy * speed
+        self._update_gravity(dt)
+        self.vx = dx * speed + self.gravity_vx
+        self.vy = dy * speed + self.gravity_vy
         self._apply_void_force()
         self.x += self.vx * dt
         self.y += self.vy * dt
         self._bounce_from_void()
+        self._try_wormhole(dt)
         self._collide_ship_with_asteroids(game)
         self.background.update(self.x, self.y, dt)
         smoothing = 1.0 - math.exp(-7.5 * dt)
@@ -249,6 +295,34 @@ class OpenWorldRuntime:
         self.asteroids.update(self.elapsed)
         if game is not None:
             self._update_combat(dt, keys, controls, game)
+
+    def _update_gravity(self, dt: float) -> None:
+        """Integra a atração com amortecimento e velocidade limitada."""
+        ax, ay = self.anomalies.gravity(self.x, self.y)
+        damping = math.exp(-0.55 * dt)
+        self.gravity_vx = (self.gravity_vx + ax * dt) * damping
+        self.gravity_vy = (self.gravity_vy + ay * dt) * damping
+        magnitude = math.hypot(self.gravity_vx, self.gravity_vy)
+        if magnitude > self.MAX_GRAVITY_SPEED:
+            scale = self.MAX_GRAVITY_SPEED / magnitude
+            self.gravity_vx *= scale
+            self.gravity_vy *= scale
+
+    def _try_wormhole(self, dt: float) -> None:
+        """Teleporta uma vez e reposiciona a câmera sem travessia visual longa."""
+        self.wormhole_cooldown = max(0.0, self.wormhole_cooldown - dt)
+        destination = self.anomalies.destination(
+            self.x, self.y, self.wormhole_cooldown)
+        if destination is None:
+            return
+        self.x, self.y = destination
+        self.vx = self.vy = 0.0
+        self.gravity_vx = self.gravity_vy = 0.0
+        self.camera_x = self.x - LARGURA / 2
+        self.camera_y = self.y - ALTURA / 2
+        self.background.transition_to(self.x, self.y)
+        self.wormhole_cooldown = 1.5
+        self.progress_dirty = True
 
     @staticmethod
     def _tick_player(player) -> None:
@@ -580,17 +654,21 @@ class OpenWorldRuntime:
         self.dimension = next_dimension
         self.REGION_ID = self.REGION_IDS[next_dimension - 1]
         self.REGION_NAME = CENARIOS[next_dimension - 1]["nome"]
+        self.anomalies = CosmicAnomalies(next_dimension)
+        self.asteroids = AsteroidField(
+            self.width, self.height, seed=4101 + next_dimension,
+            protected=self._protected_zones(),
+        )
+        self.enemies = self._create_enemies()
+        self.SPAWN = self._choose_spawn()
         self.x, self.y = self.SPAWN
         self.vx = self.vy = 0.0
+        self.gravity_vx = self.gravity_vy = 0.0
+        self.wormhole_cooldown = 0.0
         self.camera_x = self.x - LARGURA / 2
         self.camera_y = self.y - ALTURA / 2
         self._stars = self._build_stars()
         self._landmarks = self._build_landmarks()
-        self.asteroids = AsteroidField(
-            self.width, self.height, seed=4101 + next_dimension,
-            protected=((self.SPAWN[0], self.SPAWN[1], 440),
-                       (self.BOSS_LAIR[0], self.BOSS_LAIR[1], 410)),
-        )
         self.background = SectorBackground(
             next_dimension, self.SECTORS, (self.x, self.y))
         self._cenario = Cenario(next_dimension)
@@ -601,7 +679,6 @@ class OpenWorldRuntime:
         self._cenario.configurar_avanco(
             quality, (0.0, 1.0), True, True, self.visual_config,
             4101 + next_dimension)
-        self.enemies = self._create_enemies()
         self.miniboss = criar_miniboss(
             "censor", next_dimension, self._cenario,
             random.Random(4101 + next_dimension))
@@ -670,6 +747,8 @@ class OpenWorldRuntime:
                     pygame.draw.circle(surface, color, (sx, sy), radius)
         self._draw_landmarks(surface)
         self._draw_sectors(surface)
+        self.anomalies.render(surface, self.camera_x, self.camera_y,
+                              opcoes_atuais().ativo)
         self._draw_asteroids(surface)
         self._draw_hostiles(surface)
         self._draw_void_border(surface)
@@ -755,6 +834,14 @@ class OpenWorldRuntime:
         for world_x, world_y, _radius in self._rifts:
             x, y = point(world_x, world_y)
             pygame.draw.rect(surface, edge, (x - 4, y - 7, 8, 14), 2)
+        for hole in self.anomalies.black_holes:
+            x, y = point(*hole.position)
+            pygame.draw.circle(surface, (230, 160, 104), (x, y), 7, 2)
+            pygame.draw.circle(surface, (8, 11, 24), (x, y), 4)
+        for portal in self.anomalies.wormholes:
+            x, y = point(*portal.position)
+            pygame.draw.ellipse(surface, (118, 216, 231),
+                                (x - 5, y - 9, 10, 18), 2)
         rock_color = (153, 139, 120) if comic else (102, 138, 158)
         for rock in self.asteroids.asteroids:
             if rock.active():
@@ -1035,6 +1122,13 @@ class OpenWorldRuntime:
         if self.boss.vida > 0:
             pygame.draw.circle(self._minimap, (255, 210, 100),
                                point(self.BOSS_LAIR), 5)
+        for hole in self.anomalies.black_holes:
+            pygame.draw.circle(self._minimap, (230, 160, 104),
+                               point(hole.position), 4, 2)
+        for portal in self.anomalies.wormholes:
+            x, y = point(portal.position)
+            pygame.draw.ellipse(self._minimap, (118, 216, 231),
+                                (x - 3, y - 5, 6, 10), 1)
         pygame.draw.circle(self._minimap, player_color,
                            point((self.x, self.y)), 4)
         surface.blit(self._minimap, (LARGURA - 220, 20))
