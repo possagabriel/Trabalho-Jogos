@@ -85,14 +85,8 @@ class ControladorRenderizacao:
             and strategy.render(jogo, jogo.tela))
         jogo._hud_nativo_pronto = False
         self.sincronizar_cursor()
-        if mode_rendered and jogo.estado is EstadoJogo.PAUSA:
-            with usar_visual(jogo.config), jogo._desenhar_na_interface():
-                jogo._desenhar_pausa()
-        elif mode_rendered and jogo.estado is EstadoJogo.GAME_OVER:
-            with usar_visual(jogo.config), jogo._desenhar_na_interface():
-                jogo._desenhar_game_over()
-        elif mode_rendered:
-            pass
+        if mode_rendered:
+            self._desenhar_sobre_modo()
         elif jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
             jogo.tela.fill(VOID_BLACK)
             with usar_visual(jogo.config):
@@ -132,6 +126,19 @@ class ControladorRenderizacao:
         self._desenhar_mira_e_debug()
         jogo._apresentar()
         pygame.display.flip()
+
+    def _desenhar_sobre_modo(self) -> None:
+        """Compoe as telas que ficam sobre o cenário do modo ativo."""
+        jogo = self.jogo
+        if jogo.estado is EstadoJogo.CUTSCENE:
+            jogo.cutscene_controller.caixa.desenhar(
+                jogo.tela, jogo.cutscene_controller, jogo.cenario.cor_transicao)
+        elif jogo.estado is EstadoJogo.PAUSA:
+            with usar_visual(jogo.config), jogo._desenhar_na_interface():
+                jogo._desenhar_pausa()
+        elif jogo.estado is EstadoJogo.GAME_OVER:
+            with usar_visual(jogo.config), jogo._desenhar_na_interface():
+                jogo._desenhar_game_over()
 
     def _desenhar_mira_e_debug(self) -> None:
         """Mantém mira e depuração sobre a interface, sem tremor de câmera."""

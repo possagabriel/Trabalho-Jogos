@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Mundo aberto: Codex corrigiu a renderização da cutscene e o fade após boss;
+  testes direcionados cobrem fundo, diálogo e revelação da nova dimensão.
 - Combate: Codex corrigiu o indicador do Mutante, refez a direção/colisão do íon e adicionou intangibilidade; validou com testes direcionados e Ruff.
 - Menu principal: Codex uniformizou as cinco opções e verificou geometria e interação em ORIGINAL, COMIC, 900x700 e 1920x1080.
 - Fase F: Codex reproduziu e corrigiu o crash da troca de dimensão com Configuracoes real; 29 testes direcionados e Ruff passaram.

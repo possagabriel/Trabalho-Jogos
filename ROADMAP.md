@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Mundo aberto: passagem após boss revela o fundo da dimensão seguinte e mantém
+  diálogo visível durante a cutscene; regressões passaram, falta validar jogando.
 - Combate: Mutante transformado mostra vida real; íon direcional nasce na nave e o especial de intangibilidade entra no seletor tático.
 - Menu principal: cinco opções com a mesma altura, largura, fonte e área clicável em ORIGINAL, COMIC e 4:3.
 - Correção da passagem de dimensão no mundo aberto: configuração real do jogo aceita após derrotar o boss.
