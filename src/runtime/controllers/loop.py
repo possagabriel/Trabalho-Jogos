@@ -48,6 +48,8 @@ class ControladorLoop:
                 PASSO_FIXO, concluido=True)
         elif jogo.estado is EstadoJogo.CUTSCENE:
             jogo.cutscene_controller.atualizar(PASSO_FIXO)
+            if world_managed and jogo.fade > 0:
+                jogo.fade = max(0, jogo.fade - 18)
             return
         elif jogo.estado is EstadoJogo.PREPARANDO:
             jogo.carregamento += INCREMENTO_CARREGAMENTO

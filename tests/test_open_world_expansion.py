@@ -9,6 +9,7 @@ import pygame
 from src.core.constants import ALTURA, LARGURA, EstadoJogo
 from src.core.event_bus import GameEventType
 from src.core.settings import Configuracoes
+from src.runtime.controllers.loop import ControladorLoop
 from src.runtime.controllers.render import ControladorRenderizacao
 from src.runtime.domain.entities.player import Jogador
 from src.runtime.domain.entities.weapons import Projetil
@@ -188,6 +189,84 @@ def test_vitoria_do_boss_aceita_configuracoes_reais_do_jogo():
     assert world.advance_dimension()
     assert world.dimension == 2
     assert world._cenario.parallax is not None
+
+
+def test_nova_dimensao_mostra_outro_fundo_durante_a_abertura():
+    pygame.font.init()
+    if not pygame.display.get_init():
+        pygame.display.init()
+    if pygame.display.get_surface() is None:
+        pygame.display.set_mode((1, 1))
+    world = OpenWorldRuntime()
+    first = world.background.surface_for_sector(0, comic=False).get_at((10, 10))
+    world.boss_defeated = True
+    world._pending_dimension = 2
+    assert world.advance_dimension()
+
+    strategy = OpenWorldModeStrategy()
+    strategy.world = world
+    surface = pygame.Surface((LARGURA, ALTURA))
+    game = SimpleNamespace(
+        estado=EstadoJogo.CUTSCENE, config=Configuracoes(),
+        shader_comic_ativo=lambda: False, jogador=Jogador(),
+    )
+
+    assert strategy.render(game, surface)
+    assert world.background.dimension == 2
+    assert world.background.surface_for_sector(0, comic=False).get_at((10, 10)) != first
+    assert surface.get_at((10, 10))[:3] != (0, 0, 0)
+
+
+def test_cutscene_do_mundo_aberto_desenha_dialogo_sobre_o_mundo(monkeypatch):
+    surface = pygame.Surface((LARGURA, ALTURA))
+    ui = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+    calls = []
+
+    def render(_game, target):
+        target.fill((35, 60, 90))
+        calls.append("mundo")
+        return True
+
+    def dialogue(target, _controller, _color):
+        target.set_at((20, 20), (220, 210, 190))
+        calls.append("dialogo")
+
+    game = SimpleNamespace(
+        tela=surface, tela_ui=ui, estado=EstadoJogo.CUTSCENE,
+        estrategia_modo=SimpleNamespace(handles_gameplay=True, render=render),
+        cutscene_controller=SimpleNamespace(
+            caixa=SimpleNamespace(desenhar=dialogue)),
+        cenario=SimpleNamespace(cor_transicao=(0, 0, 0)),
+        _desenhar_jogo=lambda **_kwargs: calls.append("linear"),
+        _apresentar=lambda: None,
+    )
+    controller = object.__new__(ControladorRenderizacao)
+    controller.jogo = game
+    controller.sincronizar_cursor = lambda: None
+    controller.aplicar_shake = lambda: None
+    controller._desenhar_overlays_logicos = lambda: None
+    controller._desenhar_mira_e_debug = lambda: None
+    monkeypatch.setattr(pygame.display, "flip", lambda: None)
+
+    controller._compor()
+
+    assert calls == ["mundo", "dialogo"]
+    assert surface.get_at((20, 20))[:3] == (220, 210, 190)
+
+
+def test_fade_da_cutscene_diminui_ate_revelar_a_proxima_dimensao():
+    game = SimpleNamespace(
+        estado=EstadoJogo.CUTSCENE, fade=255,
+        estrategia_modo=SimpleNamespace(handles_gameplay=True, update=lambda *_: None),
+        profile_service=SimpleNamespace(save_error=False),
+        cutscene_controller=SimpleNamespace(atualizar=lambda _dt: None),
+    )
+    loop = ControladorLoop(game)
+
+    for _ in range(15):
+        loop.atualizar()
+
+    assert game.fade == 0
 
 
 def test_eventos_de_boss_e_passagem_acionam_cutscenes_existentes(monkeypatch):
