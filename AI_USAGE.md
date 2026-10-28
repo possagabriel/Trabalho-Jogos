@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Saída da missão: Codex corrigiu clique e confirmação da pausa, restaurou o menu
+  e removeu o tremor residual; testes direcionados e Ruff validaram a correção.
 - Passagem de fase: Codex incorporou à branch visual a correção de renderização
   e fade da cutscene; 125 testes direcionados passaram com Ruff limpo.
 - Fundo do mundo aberto: Codex suavizou a troca de setores e portais; testes
