@@ -207,7 +207,7 @@ class OpenWorldModeStrategy:
         if self.world is None:
             return False
         if game.estado not in (EstadoJogo.JOGANDO, EstadoJogo.PAUSA,
-                               EstadoJogo.GAME_OVER):
+                               EstadoJogo.GAME_OVER, EstadoJogo.CUTSCENE):
             return False
         with usar_visual(
                 game.config, acabamento_gpu=game.shader_comic_ativo()):
@@ -215,6 +215,8 @@ class OpenWorldModeStrategy:
                 self.world.render_map(surface)
                 return True
             self.world.render(surface, game.jogador)
+            if game.estado is EstadoJogo.CUTSCENE:
+                return True
             game.hud.desenhar(surface, game, tempo=self.world.elapsed)
             with game._desenhar_na_interface():
                 game._desenhar_interface_jogo()

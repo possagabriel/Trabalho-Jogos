@@ -46,6 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - O README inclui capturas otimizadas do menu ORIGINAL em 1920×1080 e ultrawide.
 
 ### Fixed
+- A passagem de fase do mundo aberto volta a mostrar o fundo e o diálogo da
+  nova dimensão, com fade que deixa de cobrir a cutscene permanentemente.
 - Menu lê sua versão de `project.version` no `pyproject.toml`.
 - Menu ORIGINAL mantém títulos, botões e textos de rodapé dentro das margens,
   com contraste reforçado, rótulos ajustáveis e Continue desabilitado sem save.

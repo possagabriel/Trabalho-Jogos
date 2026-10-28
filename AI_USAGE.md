@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Passagem de fase: Codex incorporou à branch visual a correção de renderização
+  e fade da cutscene; 125 testes direcionados passaram com Ruff limpo.
 - Fundo do mundo aberto: Codex suavizou a troca de setores e portais; testes
   direcionados validam a mistura e a mudança de destino sem salto visual.
 - Mundo aberto: Codex implementou spawn seguro, seis fundos procedurais e
