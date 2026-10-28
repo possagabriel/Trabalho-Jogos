@@ -48,6 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - A passagem de fase do mundo aberto volta a mostrar o fundo e o diálogo da
   nova dimensão, com fade que deixa de cobrir a cutscene permanentemente.
+- Mundo aberto mostra o fundo da nova dimensão e o diálogo após derrotar o boss,
+  sem manter a tela preta durante a cutscene.
 - Menu lê sua versão de `project.version` no `pyproject.toml`.
 - Menu ORIGINAL mantém títulos, botões e textos de rodapé dentro das margens,
   com contraste reforçado, rótulos ajustáveis e Continue desabilitado sem save.
