@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Mundo aberto: Codex implementou spawn seguro, seis fundos procedurais e
+  anomalias gravitacionais/portais; testes direcionados cobrem teleporte e save.
 - Combate: Codex corrigiu o indicador do Mutante, refez a direção/colisão do íon e adicionou intangibilidade; validou com testes direcionados e Ruff.
 - Menu principal: Codex uniformizou as cinco opções e verificou geometria e interação em ORIGINAL, COMIC, 900x700 e 1920x1080.
 - Fase F: Codex reproduziu e corrigiu o crash da troca de dimensão com Configuracoes real; 29 testes direcionados e Ruff passaram.
