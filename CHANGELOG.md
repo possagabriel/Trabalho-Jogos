@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Fundos do mundo aberto fazem transição suave entre setores e portais, sem
+  salto visual quando a nave muda de destino durante a mistura.
 - O Mutante transformado exibe vida em vez de carga; o íon ganha feixe direcional e o seletor oferece intangibilidade temporária.
 - As cinco opções do menu principal agora usam o mesmo tamanho visual e de clique em ambos os estilos.
 - Corrige encerramento do jogo após derrotar o boss do mundo aberto ao carregar a próxima dimensão.

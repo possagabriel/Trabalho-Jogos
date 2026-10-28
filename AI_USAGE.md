@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Fundo do mundo aberto: Codex suavizou a troca de setores e portais; testes
+  direcionados validam a mistura e a mudança de destino sem salto visual.
 - Mundo aberto: Codex implementou spawn seguro, seis fundos procedurais e
   anomalias gravitacionais/portais; testes direcionados cobrem teleporte e save.
 - Combate: Codex corrigiu o indicador do Mutante, refez a direção/colisão do íon e adicionou intangibilidade; validou com testes direcionados e Ruff.

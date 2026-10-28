@@ -320,7 +320,7 @@ class OpenWorldRuntime:
         self.gravity_vx = self.gravity_vy = 0.0
         self.camera_x = self.x - LARGURA / 2
         self.camera_y = self.y - ALTURA / 2
-        self.background.snap_to(self.x, self.y)
+        self.background.transition_to(self.x, self.y)
         self.wormhole_cooldown = 1.5
         self.progress_dirty = True
 

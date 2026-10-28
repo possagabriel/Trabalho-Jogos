@@ -265,22 +265,53 @@ def test_fundo_muda_com_a_area_do_mapa():
     assert world.background.target_sector == 1
 
 
-def test_fundo_conclui_transicao_antes_de_trocar_o_setor_alvo():
+def test_fundo_redireciona_transicao_sem_salto_visual():
+    pygame.font.init()
     world = OpenWorldRuntime(position=OpenWorldRuntime.SECTORS[0][1])
     background = world.background
-    background.update(*world.SECTORS[1][1], 0.1)
-    background.update(*world.SECTORS[1][1], 0.2)
+    surface = pygame.Surface((LARGURA, ALTURA))
+    background.update(*world.SECTORS[1][1], 0.3)
     assert background.target_sector == 1
+    background.render(surface, comic=False)
+    previous = surface.get_at((10, 10))
 
-    background.update(*world.SECTORS[2][1], 0.1)
-    assert background.current_sector == 0
-    assert background.target_sector == 1
-    assert background.transition > 0.2
-
-    background.update(*world.SECTORS[2][1], 0.8)
     background.update(*world.SECTORS[2][1], 0.0)
-    assert background.current_sector == 1
+    background.render(surface, comic=False)
+    assert background.current_sector == 0
     assert background.target_sector == 2
+    assert all(abs(a - b) <= 2 for a, b in zip(previous[:3], surface.get_at((10, 10))[:3]))
+
+    background.update(*world.SECTORS[2][1], 1.2)
+    assert background.current_sector == 2
+    assert background.target_sector == 2
+
+
+def test_fundo_comeca_e_termina_a_troca_gradualmente(monkeypatch):
+    pygame.font.init()
+    world = OpenWorldRuntime(position=OpenWorldRuntime.SECTORS[0][1])
+    background = world.background
+    first = pygame.Surface((LARGURA, ALTURA))
+    second = pygame.Surface((LARGURA, ALTURA))
+    first.fill((220, 20, 20))
+    second.fill((20, 20, 220))
+    monkeypatch.setattr(background, "surface_for_sector",
+                        lambda sector, _comic: first if sector == 0 else second)
+    surface = pygame.Surface((LARGURA, ALTURA))
+
+    background.update(*world.SECTORS[1][1], 0.0)
+    background.update(*world.SECTORS[1][1], 0.2)
+    background.render(surface, comic=False)
+    early = surface.get_at((10, 10))
+    background.update(*world.SECTORS[1][1], 0.65)
+    background.render(surface, comic=False)
+    late = surface.get_at((10, 10))
+
+    assert early.r > 185
+    assert late.b > late.r
+    assert late.r > 20
+    assert late.b < 220
+    assert first.get_at((10, 10))[:3] == (220, 20, 20)
+    assert second.get_at((10, 10))[:3] == (20, 20, 220)
 
 
 def test_spawn_varia_e_fica_longe_de_boss_e_anomalias():
@@ -335,7 +366,8 @@ def test_buraco_de_minhoca_teleporta_sem_ricochete_e_salva_destino():
     world.update(1 / 60, Teclas(), {})
 
     assert math.dist((world.x, world.y), exit_portal.position) < 220
-    assert world.background.current_sector == world.background._nearest(world.x, world.y)
+    assert world.background.target_sector == world.background._nearest(world.x, world.y)
+    assert world.background.transition < 1.0
     assert all(math.dist((world.x, world.y), (rock.x, rock.y)) > rock.radius + 30
                for rock in world.asteroids.nearby(world.x, world.y, 120))
     destination = (world.x, world.y)

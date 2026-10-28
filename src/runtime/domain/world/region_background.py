@@ -114,6 +114,7 @@ def _galaxia(surface: pygame.Surface, center: tuple[int, int],
 class SectorBackground:
     """Cacheia seis composições e acompanha o setor próximo da nave."""
 
+    TRANSITION_SECONDS = 1.0
     motifs = (
         "sistema_rochoso", "constelacoes", "gigante_gasoso",
         "galaxia_espiral", "horizonte_negro", "exoplaneta_gelado",
@@ -128,6 +129,9 @@ class SectorBackground:
         self.current_sector = self._nearest(*position)
         self.target_sector = self.current_sector
         self.transition = 1.0
+        self._transitioning = False
+        self._interrupted = False
+        self._sources: dict[bool, pygame.Surface] = {}
         self._surfaces: dict[tuple[int, bool], pygame.Surface] = {}
         self._blend = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
 
@@ -137,22 +141,48 @@ class SectorBackground:
                               y - self.sectors[index][1][1]))
 
     def update(self, x: float, y: float, dt: float) -> None:
-        """Escolhe a área da nave e avança uma transição sem pop."""
-        if self.current_sector != self.target_sector:
-            self.transition = min(1.0, self.transition + max(0.0, dt) / 0.8)
-            if self.transition >= 1.0:
-                self.current_sector = self.target_sector
+        """Segue o setor próximo com transição contínua e ritmo suavizado."""
+        self.transition_to(x, y)
+        if not self._transitioning:
             return
-        nearest = self._nearest(x, y)
-        if nearest != self.current_sector:
-            self.target_sector = nearest
-            self.transition = 0.0
+        self.transition = min(1.0, self.transition + max(0.0, dt) / self.TRANSITION_SECONDS)
+        if self.transition >= 1.0:
+            self.current_sector = self.target_sector
+            self._transitioning = False
+            self._interrupted = False
 
-    def snap_to(self, x: float, y: float) -> None:
-        """Mostra imediatamente o setor de destino após teleporte."""
-        self.current_sector = self._nearest(x, y)
-        self.target_sector = self.current_sector
-        self.transition = 1.0
+    def transition_to(self, x: float, y: float) -> None:
+        """Aponta para o novo setor sem perder o quadro misturado atual."""
+        nearest = self._nearest(x, y)
+        if nearest == self.target_sector:
+            return
+        if self._transitioning:
+            self._capture_source()
+        else:
+            self._interrupted = False
+        self.target_sector = nearest
+        self.transition = 0.0
+        self._transitioning = True
+
+    @staticmethod
+    def _eased(progress: float) -> float:
+        progress = max(0.0, min(1.0, progress))
+        return progress * progress * (3.0 - 2.0 * progress)
+
+    def _capture_source(self) -> None:
+        """Congela a mistura atual apenas quando o alvo muda no meio da troca."""
+        amount = round(255 * self._eased(self.transition))
+        for comic in (False, True):
+            source = self._sources.get(comic)
+            if source is None:
+                source = pygame.Surface((LARGURA, ALTURA))
+                self._sources[comic] = source
+            if not self._interrupted:
+                source.blit(self.surface_for_sector(self.current_sector, comic), (0, 0))
+            self._blend.blit(self.surface_for_sector(self.target_sector, comic), (0, 0))
+            self._blend.set_alpha(amount)
+            source.blit(self._blend, (0, 0))
+        self._interrupted = True
 
     def surface_for_sector(self, sector: int, comic: bool) -> pygame.Surface:
         """Obtém a composição cacheada de um setor e estilo de apresentação."""
@@ -243,8 +273,10 @@ class SectorBackground:
 
     def render(self, surface: pygame.Surface, comic: bool) -> None:
         """Desenha o setor atual e mistura gradualmente o próximo."""
-        surface.blit(self.surface_for_sector(self.current_sector, comic), (0, 0))
-        if self.current_sector != self.target_sector:
+        source = (self._sources[comic] if self._interrupted else
+                  self.surface_for_sector(self.current_sector, comic))
+        surface.blit(source, (0, 0))
+        if self._transitioning:
             self._blend.blit(self.surface_for_sector(self.target_sector, comic), (0, 0))
-            self._blend.set_alpha(round(255 * self.transition))
+            self._blend.set_alpha(round(255 * self._eased(self.transition)))
             surface.blit(self._blend, (0, 0))
