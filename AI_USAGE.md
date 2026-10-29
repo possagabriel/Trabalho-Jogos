@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex implementou orientação por destino no mundo aberto, com testes escritos antes da lógica; 38 testes direcionados e Ruff passaram.
+
 - Codex ajustou meteoros, minimapa e mapa do mundo aberto, removeu planetas pequenos e validou 80 testes direcionados e Ruff.
 - Saída da missão: Codex corrigiu clique e confirmação da pausa, restaurou o menu
   e removeu o tremor residual; testes direcionados e Ruff validaram a correção.

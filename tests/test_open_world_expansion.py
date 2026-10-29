@@ -502,3 +502,97 @@ def test_mesmo_setor_muda_de_aparencia_em_cada_dimensao():
                    for world in worlds]
 
     assert len({pygame.image.tobytes(surface, "RGB") for surface in backgrounds}) == 6
+
+
+def test_destinos_incluem_setores_portais_e_apenas_encontros_pendentes():
+    world = OpenWorldRuntime()
+    destinos = world.destinos_navegacao()
+    assert len(destinos) == 2 + len(world.SECTORS) + len(world.anomalies.wormholes)
+    assert world.destino_atual()[0] == "boss"
+    world.alternar_destino(1)
+    assert world.destino_atual()[0] == "patrulha"
+    world.miniboss_defeated = True
+    assert "patrulha" not in {item[0] for item in world.destinos_navegacao()}
+    assert world.destino_atual()[0] == "boss"
+    world.boss_defeated = True
+    assert world.destino_atual()[0] == "setor_0"
+
+
+def test_selecao_circular_e_destino_reiniciam_na_proxima_dimensao():
+    world = OpenWorldRuntime()
+    world.alternar_destino(-1)
+    assert world.destino_atual() == world.destinos_navegacao()[-1]
+    world.alternar_destino(1)
+    assert world.destino_atual()[0] == "boss"
+    world.alternar_destino(3)
+    world.boss_defeated = True
+    world._pending_dimension = 2
+    assert world.advance_dimension()
+    assert world.destino_atual()[0] == "boss"
+    assert world.boss.nome in world.destino_atual()[1]
+
+
+def test_mapa_seleciona_destino_sem_mover_nave_ou_acionar_combate():
+    strategy = OpenWorldModeStrategy()
+    strategy.world = OpenWorldRuntime()
+    world = strategy.world
+    world.map_open = True
+    game = SimpleNamespace(estado=EstadoJogo.JOGANDO, menu_equipamento=False, controles={})
+    inicio = (world.x, world.y, world.elapsed)
+    for key in (pygame.K_RIGHT, pygame.K_RIGHT):
+        assert strategy.handle_event(game, pygame.event.Event(pygame.KEYDOWN, key=key))
+    assert world.destino_atual()[0] == "setor_0"
+    world.update(1 / 60, Teclas(pygame.K_RIGHT), {}, game)
+    assert (world.x, world.y, world.elapsed) == inicio
+    assert strategy.handle_event(game, pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
+    assert not world.map_open
+    assert world.destino_atual()[0] == "setor_0"
+
+
+def test_distancia_do_destino_acompanha_posicao_e_chegada():
+    world = OpenWorldRuntime()
+    world.alternar_destino(2)
+    world.x, world.y = world.SECTORS[0][1]
+    assert "NO DESTINO" in world.texto_navegacao()
+    world.x += 1000
+    assert "1000 u" in world.texto_navegacao()
+    assert "ESTRELA" in world.texto_navegacao()
+
+
+def test_seta_usa_destino_escolhido_mesmo_apos_derrota_do_boss(monkeypatch):
+    world = OpenWorldRuntime()
+    world.alternar_destino(2)
+    world.boss_defeated = True
+    alvos = []
+    monkeypatch.setattr(world, "_screen_position", lambda alvo: alvos.append(alvo) or (-10, -10))
+    world._draw_objective_marker(pygame.Surface((LARGURA, ALTURA)))
+    assert alvos == [world.SECTORS[0][1]]
+
+
+def test_painel_navegacao_cabe_nas_resolucoes_e_reutiliza_texto(monkeypatch):
+    world = OpenWorldRuntime()
+    paineis = []
+    textos = []
+    from src.runtime.domain.world import open_world
+
+    desenhar = open_world.texto_suave
+
+    def registrar_texto(*args, **kwargs):
+        texto = desenhar(*args, **kwargs)
+        textos.append(texto)
+        return texto
+
+    monkeypatch.setattr(open_world, "texto_suave", registrar_texto)
+    monkeypatch.setattr(open_world, "desenhar_painel",
+                        lambda _tela, _cor, rect, **_kwargs: paineis.append(rect))
+    for tamanho in ((900, 700), (1920, 1080)):
+        surface = pygame.Surface(tamanho)
+        for _ in range(len(world.destinos_navegacao())):
+            world._draw_navigation(surface)
+            world._draw_navigation(surface)
+            assert textos[-1] is textos[-2]
+            assert surface.get_rect().contains(paineis[-1])
+            assert paineis[-1].top >= 20 + world.MINIMAP_SIZE[1]
+            world.alternar_destino(1)
+    world.render_map(pygame.Surface((LARGURA, ALTURA)))
+    world._draw_minimap(pygame.Surface((LARGURA, ALTURA)))
