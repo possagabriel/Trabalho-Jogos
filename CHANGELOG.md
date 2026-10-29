@@ -47,6 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - O README inclui capturas otimizadas do menu ORIGINAL em 1920×1080 e ultrawide.
 
 ### Fixed
+- Sair da missão restaura o menu principal sem deslocamento e respeita a
+  opção clicada na pausa e na confirmação.
 - A passagem de fase do mundo aberto volta a mostrar o fundo e o diálogo da
   nova dimensão, com fade que deixa de cobrir a cutscene permanentemente.
 - Mundo aberto mostra o fundo da nova dimensão e o diálogo após derrotar o boss,

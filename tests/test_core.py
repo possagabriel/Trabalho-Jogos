@@ -211,6 +211,54 @@ def test_voltar_ao_menu_salva_checkpoint_da_fase_atual():
     salvar.assert_called_once()
 
 
+def test_clique_sair_da_missao_usa_opcao_clicada():
+    jogo = novo_jogo()
+    jogo.estado = EstadoJogo.PAUSA
+    jogo._pausa_selecao = 0
+    pos = (LARGURA // 2, ALTURA // 2 + 83)
+    assert jogo.pausa_controller.colidir_opcao(pos) == 2
+
+    jogo.pausa_controller.tratar_evento(
+        pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=pos))
+
+    assert jogo.estado is EstadoJogo.PAUSA
+    assert jogo._pausa_selecao == 2
+    assert jogo._pausa_dialogo is not None
+    assert jogo._pausa_dialogo.ativo
+
+
+def test_confirmar_saida_restaura_menu_e_remove_tremor():
+    jogo = novo_jogo()
+    jogo.estado = EstadoJogo.PAUSA
+    jogo.menu.subestado = "JOGAR"
+    jogo.trauma = 0.8
+
+    with mock.patch.object(jogo, "_salvar_tudo") as salvar:
+        jogo.pausa_controller.confirmar_saida()
+
+    assert jogo.estado is EstadoJogo.MENU
+    assert jogo.menu.subestado == "MENU"
+    assert jogo.trauma == 0.0
+    assert jogo.fade == 255
+    salvar.assert_called_once()
+
+
+def test_confirmar_saida_por_clique_usa_posicao_do_evento():
+    jogo = novo_jogo()
+    jogo.estado = EstadoJogo.PAUSA
+    jogo.pausa_controller.sair_para_menu()
+    jogo._pausa_mouse = (0, 0)
+    confirmar, _ = jogo._pausa_dialogo._retangulos()
+
+    with mock.patch.object(jogo, "_salvar_tudo") as salvar:
+        jogo.pausa_controller.tratar_evento(
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=confirmar.center))
+
+    assert jogo.estado is EstadoJogo.MENU
+    assert jogo._pausa_dialogo is None
+    salvar.assert_called_once()
+
+
 def test_verificar_desbloqueio_arma():
     jogo = novo_jogo()
     jogo.jogador.armas_desbloqueadas = [0]
