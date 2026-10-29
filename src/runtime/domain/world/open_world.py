@@ -753,8 +753,13 @@ class OpenWorldRuntime:
                     pygame.draw.circle(surface, color, (sx, sy), radius)
         self._draw_meteor_shower(surface)
         self._draw_sectors(surface)
+        try:
+            efeitos_reduzidos = self.visual_config["intensidade_flash"] != "NORMAL"
+        except (KeyError, TypeError):
+            efeitos_reduzidos = False
         self.anomalies.render(surface, self.camera_x, self.camera_y,
-                              opcoes_atuais().ativo)
+                              opcoes_atuais().ativo, tempo=self.elapsed,
+                              reduzido=efeitos_reduzidos)
         self._draw_asteroids(surface)
         self._draw_hostiles(surface)
         self._draw_void_border(surface)

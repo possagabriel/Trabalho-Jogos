@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Buracos negros ganham disco de acreção em camadas; portais recebem profundidade, fluxo suave e identificação dos pares, com animação estática ao reduzir efeitos e física preservada.
 - Mundo aberto e menu ganham chuvas curtas de meteoros; minimapa local e mapa completo melhoram, e planetas pequenos saem dos fundos.
 - Fundos do mundo aberto fazem transição suave entre setores e portais, sem
   salto visual quando a nave muda de destino durante a mistura.

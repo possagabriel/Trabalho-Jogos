@@ -7,14 +7,7 @@ from dataclasses import dataclass
 
 import pygame
 
-from src.core.constants import ALTURA, LARGURA
-
-COR_DISCO = (8, 11, 24)
-COR_ACRECAO = (239, 150, 91)
-COR_LENTE = (136, 190, 236)
-COR_PORTAL = (111, 211, 236)
-COR_PORTAL_INTERNO = (188, 139, 231)
-COR_COMIC = (226, 197, 151)
+from src.runtime.infrastructure.graphics.anomaly_visuals import desenhar_anomalia
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,32 +83,18 @@ class CosmicAnomalies:
         return None
 
     def render(
-        self, surface: pygame.Surface, camera_x: float, camera_y: float, comic: bool
+        self, surface: pygame.Surface, camera_x: float, camera_y: float, comic: bool,
+        *, tempo: float = 0.0, reduzido: bool = False,
     ) -> None:
-        """Desenha discos gravitacionais e portais visíveis na câmera."""
-        accretion = COR_COMIC if comic else COR_ACRECAO
-        lens = COR_COMIC if comic else COR_LENTE
-        portal_color = COR_COMIC if comic else COR_PORTAL
-        for hole in self.black_holes:
-            x, y = round(hole.x - camera_x), round(hole.y - camera_y)
-            if not (-150 <= x <= LARGURA + 150 and -150 <= y <= ALTURA + 150):
+        """Projeta anomalias visíveis; efeitos são independentes da física."""
+        largura, altura = surface.get_size()
+        pontos = [(hole.position, False, "BURACO NEGRO // ATRAÇÃO")
+                  for hole in self.black_holes]
+        pontos.extend((portal.position, True, f"PORTAL {indice + 1} > {portal.target + 1}")
+                      for indice, portal in enumerate(self.wormholes))
+        for posicao, portal, legenda in pontos:
+            x, y = round(posicao[0] - camera_x), round(posicao[1] - camera_y)
+            if not (-190 <= x <= largura + 190 and -180 <= y <= altura + 180):
                 continue
-            pygame.draw.circle(surface, lens, (x, y), hole.radius + 35, 1)
-            pygame.draw.ellipse(
-                surface, accretion, (x - hole.radius - 28, y - 42, (hole.radius + 28) * 2, 84), 5
-            )
-            pygame.draw.circle(surface, accretion, (x, y), hole.radius + 8, 4)
-            pygame.draw.circle(surface, COR_DISCO, (x, y), hole.radius)
-            pygame.draw.circle(surface, lens, (x, y), hole.radius - 8, 2)
-        for portal in self.wormholes:
-            x, y = round(portal.x - camera_x), round(portal.y - camera_y)
-            if not (-130 <= x <= LARGURA + 130 and -130 <= y <= ALTURA + 130):
-                continue
-            pygame.draw.ellipse(surface, portal_color, (x - 64, y - 103, 128, 206), 4)
-            pygame.draw.ellipse(
-                surface,
-                COR_PORTAL_INTERNO if not comic else COR_COMIC,
-                (x - 46, y - 82, 92, 164),
-                2,
-            )
-            pygame.draw.circle(surface, portal_color, (x, y), 10, 2)
+            desenhar_anomalia(surface, (x, y), portal=portal, comic=comic,
+                              reduzido=reduzido, tempo=tempo, legenda=legenda)

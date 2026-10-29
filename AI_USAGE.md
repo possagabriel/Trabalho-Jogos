@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex aprimorou o visual procedural das anomalias, isolou camadas cacheadas e validou acessibilidade, gravidade e teleporte com 38 testes direcionados e Ruff.
+
 - Codex ajustou meteoros, minimapa e mapa do mundo aberto, removeu planetas pequenos e validou 80 testes direcionados e Ruff.
 - Saída da missão: Codex corrigiu clique e confirmação da pausa, restaurou o menu
   e removeu o tremor residual; testes direcionados e Ruff validaram a correção.
