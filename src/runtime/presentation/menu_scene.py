@@ -27,6 +27,11 @@ from src.infrastructure.ui.layout import Layout
 from src.runtime.domain.entities.player import Jogador
 from src.runtime.domain.world.scenarios import Cenario
 from src.runtime.infrastructure.assets import carregar_imagem
+from src.runtime.infrastructure.graphics.meteor_shower import (
+    desenhar_meteoro,
+    gerar_chuva,
+    janela_chuva,
+)
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_cantos,
     desenhar_circulo,
@@ -81,11 +86,10 @@ class FundoCinematico:
             for _ in range(34)]
         self.planeta = self._criar_planeta(150, (26, 40, 86), (110, 190, 255),
                                            (150, 150, 210), True)
-        self.lua = self._criar_planeta(52, (70, 60, 90), (150, 140, 190),
-                                       (200, 190, 230), False)
         self.asteroides = self._criar_asteroides()
         self.particulas = []
-        self.meteoros = [self._novo_meteoro() for _ in range(3)]
+        self.meteoros = ()
+        self._ciclo_meteoros = -1
 
     # ----- construcao -----
 
@@ -197,12 +201,6 @@ class FundoCinematico:
                 "fase": random.uniform(0, math.tau)})
         return asteroides
 
-    def _novo_meteoro(self):
-        layout = self._layout
-        return {"x": random.uniform(0, layout.largura), "y": random.uniform(0, layout.px(130)),
-                "vx": random.uniform(-3.4, -1.5), "vy": random.uniform(2.2, 3.6),
-                "vida": random.uniform(50, 95), "t": 0}
-
     def _nova_particula(self):
         layout = self._layout
         return {"x": random.uniform(0, layout.largura), "y": layout.altura + layout.px(8),
@@ -230,13 +228,6 @@ class FundoCinematico:
                 ast["x"] = random.uniform(0, layout.largura)
             if ast["x"] < -layout.px(60):
                 ast["x"] = layout.largura + layout.px(60)
-        for m in self.meteoros[:]:
-            m["x"] += m["vx"]
-            m["y"] += m["vy"]
-            m["t"] += 1
-            if m["t"] >= m["vida"]:
-                self.meteoros.remove(m)
-                self.meteoros.append(self._novo_meteoro())
         if len(self.particulas) < 42 and random.random() < 0.4:
             self.particulas.append(self._nova_particula())
         for p in self.particulas[:]:
@@ -292,9 +283,6 @@ class FundoCinematico:
         px = layout.px(60) + int(math.sin(self.tempo * 0.15) * layout.px(6))
         py = layout.px(702) - int(math.sin(self.tempo * 0.22) * layout.px(5))
         tela.blit(self.planeta, self.planeta.get_rect(center=(px, py)))
-        lx = layout.px(900) + int(math.cos(self.tempo * 0.18) * layout.px(10))
-        ly = layout.px(60) + int(math.sin(self.tempo * 0.12) * layout.px(8))
-        tela.blit(self.lua, self.lua.get_rect(center=(lx, ly)))
 
     def _desenhar_heroicas(self, tela):
         for x, y, raio, fase in self.estrelas_heroicas:
@@ -310,12 +298,16 @@ class FundoCinematico:
                                max(1, int(p["r"])))
 
     def _desenhar_meteoros(self, tela):
-        for m in self.meteoros:
-            fade = 1 - m["t"] / m["vida"]
-            cor = tuple(int(230 * fade) for _ in range(3))
-            pygame.draw.line(tela, cor, (int(m["x"]), int(m["y"])),
-                             (int(m["x"] - m["vx"] * 7),
-                              int(m["y"] - m["vy"] * 7)), 2)
+        janela = janela_chuva(self.tempo)
+        if janela is None:
+            return
+        ciclo, fase = janela
+        if ciclo != self._ciclo_meteoros:
+            self.meteoros = gerar_chuva(
+                7601 + ciclo, self._layout.largura, self._layout.altura, 4)
+            self._ciclo_meteoros = ciclo
+        for meteoro in self.meteoros:
+            desenhar_meteoro(tela, meteoro, fase - meteoro.atraso)
 
 
 class FundoMenuParallax:

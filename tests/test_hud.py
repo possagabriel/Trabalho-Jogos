@@ -106,6 +106,21 @@ def test_desenha_hud_com_boss():
     assert tela.get_width() == LARGURA
 
 
+def test_mundo_aberto_reserva_topo_direito_para_o_minimapa(monkeypatch):
+    jogo = JogoFake()
+    hud = _hud()
+    chamadas = []
+    monkeypatch.setattr(hud, "_topo_direita", lambda *_args: chamadas.append(True))
+
+    jogo.modo_atual = "mundo_aberto"
+    hud.desenhar(_tela(), jogo)
+    assert not chamadas
+
+    jogo.modo_atual = "linear"
+    hud.desenhar(_tela(), jogo)
+    assert chamadas
+
+
 def test_monitor_de_desempenho_e_renderizado_quando_habilitado():
     jogo = JogoFake()
     jogo.config = {

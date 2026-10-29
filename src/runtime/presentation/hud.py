@@ -533,7 +533,9 @@ class HudJogo:
         d = self._dados(jogo)
         t = (pygame.time.get_ticks() * 0.001) if tempo is None else tempo
         self._topo_esquerda(tela, d, t)
-        self._topo_direita(tela, d, t)
+        # No mundo aberto, o minimapa ocupa sozinho este canto.
+        if getattr(jogo, "modo_atual", "linear") != "mundo_aberto":
+            self._topo_direita(tela, d, t)
         # O protocolo ocupa o cabeçalho durante o encontro; evita sobrepor
         # o nome e a barra do miniboss ao indicador de setor.
         if not getattr(jogo, "miniboss", None):
