@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex aprimorou orientação e contexto do mundo aberto, corrigiu propulsão parada e respeitou efeitos reduzidos com testes direcionados.
+
 - Codex corrigiu a disputa de foco entre mouse e teclado e refinou o contraste e os painéis do HUD.
 
 - Codex aprimorou o visual procedural das anomalias, isolou camadas cacheadas e validou acessibilidade, gravidade e teleporte com 38 testes direcionados e Ruff.

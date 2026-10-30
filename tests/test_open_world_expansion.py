@@ -566,6 +566,86 @@ def test_distancia_do_destino_acompanha_posicao_e_chegada():
     assert "ESTRELA" in world.texto_navegacao()
 
 
+def test_clique_no_mapa_seleciona_destino_proximo_sem_mover_nave():
+    world = OpenWorldRuntime()
+    posicao = (world.x, world.y)
+    ponto = world.ponto_mapa(world.SECTORS[0][1])
+    assert not world.selecionar_destino_mapa(ponto)
+    world.map_open = True
+    assert world.selecionar_destino_mapa(ponto)
+    assert world.destino_atual()[0] == "setor_0"
+    assert not world.selecionar_destino_mapa((0, 0))
+    assert world.destino_atual()[0] == "setor_0"
+    assert (world.x, world.y) == posicao
+
+
+def test_clique_do_mapa_converte_coordenadas_da_janela():
+    strategy = OpenWorldModeStrategy()
+    strategy.world = OpenWorldRuntime()
+    strategy.world.map_open = True
+    ponto = strategy.world.ponto_mapa(strategy.world.SECTORS[2][1])
+    game = SimpleNamespace(
+        estado=EstadoJogo.JOGANDO, menu_equipamento=False,
+        menu=SimpleNamespace(_pos_logica=lambda _pos: ponto))
+    event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(800, 500))
+    assert strategy.handle_event(game, event)
+    assert strategy.world.destino_atual()[0] == "setor_2"
+    assert strategy.world.map_open
+
+
+def test_contexto_informa_setor_e_encontros_ativos():
+    world = OpenWorldRuntime()
+    world.x, world.y = world.SECTORS[0][1]
+    assert "ESTRELA" in world.texto_contexto()
+    world.miniboss_active = True
+    assert "PATRULHA" in world.texto_contexto()
+    world.boss_active = True
+    assert world.boss.nome.upper() in world.texto_contexto()
+    world.boss_defeated = True
+    assert "PATRULHA" in world.texto_contexto()
+
+
+def test_propulsor_mundo_aberto_desliga_parado_e_aumenta_no_turbo():
+    from unittest.mock import Mock
+
+    world = OpenWorldRuntime()
+    player = Mock(tilt=0.0)
+    surface = pygame.Surface((LARGURA, ALTURA))
+    intensidades = []
+    for velocidade in (0, world.SPEED, world.SPEED * 2):
+        world.vx = velocidade
+        world._draw_ship(surface, player)
+        intensidades.append(player.desenhar.call_args.kwargs["intensidade_propulsor"])
+    assert intensidades[0] == 0
+    assert 0 < intensidades[1] < intensidades[2]
+
+
+@pytest.mark.parametrize("efeitos", ["REDUZIDO", "DESLIGADO"])
+def test_rastros_mundo_aberto_respeitam_efeitos_reduzidos(monkeypatch, efeitos):
+    world = OpenWorldRuntime(visual_config={"intensidade_flash": efeitos})
+    world.vx = world.SPEED
+    linhas = []
+    monkeypatch.setattr(pygame.draw, "line", lambda *args: linhas.append(args))
+    world._draw_speed_lines(pygame.Surface((LARGURA, ALTURA)))
+    assert linhas == []
+
+
+@pytest.mark.parametrize("estilo", ["COMIC", "ORIGINAL"])
+def test_rota_mapa_liga_nave_ao_destino_sem_mudar_fisica(monkeypatch, estilo):
+    from src.infrastructure.graphics.comic_theme import usar_visual
+    from src.runtime.domain.world import open_world
+
+    world = OpenWorldRuntime()
+    inicio = world.save_state()
+    linhas = []
+    monkeypatch.setattr(open_world, "linha_suave", lambda *args: linhas.append(args))
+    with usar_visual({"estilo_visual": estilo}):
+        world.render_map(pygame.Surface((LARGURA, ALTURA)))
+    assert linhas[0][2] == world.ponto_mapa((world.x, world.y))
+    assert all(world._area_mapa().collidepoint(linha[2]) for linha in linhas)
+    assert world.save_state() == inicio
+
+
 def test_seta_usa_destino_escolhido_mesmo_apos_derrota_do_boss(monkeypatch):
     world = OpenWorldRuntime()
     world.alternar_destino(2)
@@ -597,7 +677,8 @@ def test_painel_navegacao_cabe_nas_resolucoes_e_reutiliza_texto(monkeypatch):
         for _ in range(len(world.destinos_navegacao())):
             world._draw_navigation(surface)
             world._draw_navigation(surface)
-            assert textos[-1] is textos[-2]
+            assert textos[-4] is textos[-2]
+            assert textos[-3] is textos[-1]
             assert surface.get_rect().contains(paineis[-1])
             assert paineis[-1].top >= 20 + world.MINIMAP_SIZE[1]
             world.alternar_destino(1)

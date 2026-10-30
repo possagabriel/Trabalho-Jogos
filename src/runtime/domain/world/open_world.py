@@ -38,6 +38,7 @@ from src.runtime.infrastructure.graphics.meteor_shower import (
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_circulo,
     desenhar_painel,
+    linha_suave,
     texto_suave,
 )
 
@@ -166,7 +167,7 @@ class OpenWorldRuntime:
             f"MAPA // {self.REGION_NAME} // DIMENSÃO {self.dimension}",
             True, (225, 236, 250))
         self._map_hint = self._font_marker.render(
-            "ESQ / DIR: DESTINO    ENTER / M / ESC: VOLTAR", True, PAPEL)
+            "CLIQUE / ESQ / DIR: DESTINO    ENTER / M / ESC: VOLTAR", True, PAPEL)
         self._map_legend = tuple(
             self._font_marker.render(label, True, (225, 235, 246))
             for label in ("NAVE", "TOCA", "PATRULHA", "FENDA", "POÇO", "PORTAL")
@@ -201,6 +202,40 @@ class OpenWorldRuntime:
         indice = destinos.index(self.destino_atual())
         self._destino_id = destinos[(indice + passo) % len(destinos)][0]
 
+    @staticmethod
+    def _area_mapa() -> pygame.Rect:
+        layout = Layout(LARGURA, ALTURA)
+        return pygame.Rect(layout.x(42 / LARGURA), layout.y(68 / ALTURA),
+                           layout.x((LARGURA - 84) / LARGURA),
+                           layout.y((ALTURA - 120) / ALTURA))
+
+    def ponto_mapa(self, posicao: tuple[float, float]) -> tuple[int, int]:
+        """Projeta uma posição do mundo no mapa lógico usado pela interface."""
+        area = self._area_mapa()
+        return (area.left + round(posicao[0] / self.width * area.width),
+                area.top + round(posicao[1] / self.height * area.height))
+
+    def selecionar_destino_mapa(self, posicao: tuple[int, int]) -> bool:
+        """Seleciona o ponto mais próximo do clique, apenas com o mapa aberto."""
+        if not self.map_open or not self._area_mapa().collidepoint(posicao):
+            return False
+        destino = min(self.destinos_navegacao(),
+                      key=lambda item: math.dist(posicao, self.ponto_mapa(item[2])))
+        if math.dist(posicao, self.ponto_mapa(destino[2])) > 26:
+            return False
+        self._destino_id = destino[0]
+        return True
+
+    def texto_contexto(self) -> str:
+        """Informa o encontro ativo ou o setor mais próximo e controles úteis."""
+        if self.boss_active and not self.boss_defeated:
+            vida = max(0.0, min(1.0, self.boss.vida / max(1, self.boss.vida_max)))
+            return f"EM COMBATE // {self.boss.nome.upper()} // {vida:.0%}"
+        if self.miniboss_active and not self.miniboss_defeated:
+            return "EM COMBATE // PATRULHA CENSOR"
+        setor = min(self.SECTORS, key=lambda item: math.dist((self.x, self.y), item[1]))
+        return f"SETOR {setor[0]} // SHIFT: TURBO // M: MAPA"
+
     def texto_navegacao(self) -> str:
         """Informa destino e distância direta em unidades do mundo."""
         _ident, nome, posicao = self.destino_atual()
@@ -212,14 +247,16 @@ class OpenWorldRuntime:
         """Exibe orientação estática com fundo opaco e texto cacheado."""
         layout = Layout(*surface.get_size())
         texto = texto_suave(self._font_marker, self.texto_navegacao(), PAPEL)
+        contexto = texto_suave(self._font_marker, self.texto_contexto(), PAPEL)
         margem = layout.margem(8)
-        largura = texto.get_width() + margem * 2
+        largura = max(texto.get_width(), contexto.get_width()) + margem * 2
         x = layout.x(0.035) if mapa else layout.largura - largura - layout.margem()
         y = layout.y(0.07) if mapa else 20 + self.MINIMAP_SIZE[1] + margem
-        painel = pygame.Rect(x, y, largura, texto.get_height() + margem)
+        painel = pygame.Rect(x, y, largura, texto.get_height() + contexto.get_height() + margem)
         desenhar_painel(surface, PAPEL, painel, cor_fundo=TINTA,
                         alpha=255, glow_raio=0, raio_canto=0)
         surface.blit(texto, (x + margem, y + margem // 2))
+        surface.blit(contexto, (x + margem, y + margem // 2 + texto.get_height()))
 
     def _choose_spawn(self, position: tuple[float, float] | None = None
                       ) -> tuple[float, float]:
@@ -898,11 +935,24 @@ class OpenWorldRuntime:
                              (LARGURA, ALTURA - 15), 2)
         surface.blit(self._edge_label, (24, ALTURA - 48))
 
+    def _draw_map_route(self, surface: pygame.Surface, cor: tuple[int, int, int]) -> None:
+        """Traça uma orientação direta pontilhada, sem sugerir desvio de obstáculos."""
+        origem = self.ponto_mapa((self.x, self.y))
+        alvo = self.ponto_mapa(self.destino_atual()[2])
+        passos = max(1, math.ceil(math.dist(origem, alvo) / 16))
+        dx, dy = alvo[0] - origem[0], alvo[1] - origem[1]
+        for indice in range(passos):
+            inicio = indice / passos
+            fim = min(1.0, (indice + 0.5) / passos)
+            linha_suave(surface, cor,
+                        (round(origem[0] + dx * inicio), round(origem[1] + dy * inicio)),
+                        (round(origem[0] + dx * fim), round(origem[1] + dy * fim)), 1)
+
     def render_map(self, surface: pygame.Surface) -> None:
         """Mostra todo o mundo no canvas lógico, ocupando a tela inteira."""
         comic = opcoes_atuais().ativo
         surface.fill((36, 33, 33) if comic else (5, 12, 29))
-        area = pygame.Rect(42, 68, LARGURA - 84, ALTURA - 120)
+        area = self._area_mapa()
         fill = (55, 51, 48) if comic else (13, 27, 49)
         edge = LARANJA if comic else (105, 203, 234)
         pygame.draw.rect(surface, fill, area)
@@ -921,6 +971,8 @@ class OpenWorldRuntime:
         def point(world_x: float, world_y: float) -> tuple[int, int]:
             return (area.left + round(world_x / self.width * area.width),
                     area.top + round(world_y / self.height * area.height))
+
+        self._draw_map_route(surface, edge)
 
         for (_name, center, color), (_label_name, label) in zip(
                 self.SECTORS, self._sector_labels):
@@ -1041,11 +1093,16 @@ class OpenWorldRuntime:
             powerup.x, powerup.y = world_x, world_y
 
     def _draw_speed_lines(self, surface: pygame.Surface) -> None:
+        try:
+            if self.visual_config["intensidade_flash"] != "NORMAL":
+                return
+        except KeyError:
+            pass
         speed = math.hypot(self.vx, self.vy)
         if speed < 20:
             return
         direction = math.atan2(self.vy, self.vx)
-        count = 15 if self.turbo_ativo else 9
+        count = 8 if self.turbo_ativo else 4
         for index in range(count):
             t = self.elapsed * 0.9 + index / count
             x = int((index * 113 + t * 173) % LARGURA)
@@ -1188,7 +1245,7 @@ class OpenWorldRuntime:
             else:
                 player.angulo_mira = None
             player.desenhar(surface, intensidade_propulsor=min(
-                1.0, 0.35 + math.hypot(self.vx, self.vy) / self.SPEED * 0.65),
+                1.5, math.hypot(self.vx, self.vy) / self.SPEED),
                 piscar=False)
             return
         angle = math.atan2(self.vy, self.vx) if self.vx or self.vy else 0.0
