@@ -2,6 +2,10 @@
 
 - Codex aprimorou o visual procedural das anomalias, isolou camadas cacheadas e validou acessibilidade, gravidade e teleporte com 38 testes direcionados e Ruff.
 
+- Codex revisou o PR #64 e corrigiu a inicialização das fontes nos testes isolados do mundo aberto.
+
+- Codex implementou orientação por destino no mundo aberto, com testes escritos antes da lógica; 38 testes direcionados e Ruff passaram.
+
 - Codex ajustou meteoros, minimapa e mapa do mundo aberto, removeu planetas pequenos e validou 80 testes direcionados e Ruff.
 - Saída da missão: Codex corrigiu clique e confirmação da pausa, restaurou o menu
   e removeu o tremor residual; testes direcionados e Ruff validaram a correção.

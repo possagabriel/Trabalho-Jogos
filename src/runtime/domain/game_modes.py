@@ -187,8 +187,12 @@ class OpenWorldModeStrategy:
                 self.world.map_open = not self.world.map_open
                 return True
             if self.world.map_open:
-                if event.key == pygame.K_ESCAPE:
+                if event.key in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_KP_ENTER):
                     self.world.map_open = False
+                elif event.key == pygame.K_LEFT:
+                    self.world.alternar_destino(-1)
+                elif event.key == pygame.K_RIGHT:
+                    self.world.alternar_destino(1)
                 return True
         if (game.estado is EstadoJogo.JOGANDO and not game.menu_equipamento
                 and event.type == pygame.KEYDOWN and event.key == pygame.K_e
