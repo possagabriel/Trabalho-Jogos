@@ -3,6 +3,7 @@
 import math
 import random
 import sys
+from contextlib import contextmanager
 
 import pygame
 
@@ -32,7 +33,7 @@ from src.runtime.domain.entities.powerups import PowerUp, sortear_tipo
 from src.runtime.controllers.progression import ControladorProgressao
 from src.runtime.infrastructure.persistence.save_system import SistemaProgressao
 from src.runtime.domain.world.scenarios import CENARIOS, Cenario, cenario_do_nivel
-from src.core.settings import Configuracoes, TEMAS
+from src.core.settings import Configuracoes, OpcoesShaderComic, TEMAS
 from src.runtime.infrastructure.persistence.shop import LojaSkins
 from src.runtime.infrastructure.audio.sounds import Sons
 from src.runtime.infrastructure.graphics.smooth import (
@@ -202,14 +203,20 @@ class Jogo:
             return self._aplicar_modo_video()
 
     def _criar_layout_ui(self):
-        """Mantem toda a interface na superficie logica do jogo.
-
-        Desenhar menu, HUD e gameplay no mesmo canvas 16:9 de 1280x720 evita que
-        cada camada seja rasterizada novamente na resolucao do monitor. A
-        janela fisica recebe apenas o quadro final em ``_apresentar``.
-        """
+        """Cria canvases logicos separados para mundo e interface."""
         self.layout = Layout(LARGURA, ALTURA)
-        self.tela_ui = self.tela
+        self.tela_ui = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+        self._tela_composta = pygame.Surface((LARGURA, ALTURA), depth=self.tela)
+
+    @contextmanager
+    def _desenhar_na_interface(self):
+        """Redireciona temporariamente helpers legados para o canvas de UI."""
+        tela_mundo = self.tela
+        self.tela = self.tela_ui
+        try:
+            yield self.tela_ui
+        finally:
+            self.tela = tela_mundo
 
     def _liberar_apresentador_gpu(self):
         """Libera a textura antes de recriar o contexto de video."""
@@ -259,6 +266,7 @@ class Jogo:
                 janela = self._criar_modo_com_vsync(
                     tamanho, flags | pygame.OPENGL | pygame.DOUBLEBUF)
                 self._apresentador_gpu = ApresentadorGPU((LARGURA, ALTURA))
+                self._configurar_shader_gpu()
                 return janela
             except Exception:  # driver, contexto ou PyOpenGL indisponivel
                 self._apresentador_gpu = None
@@ -266,6 +274,35 @@ class Jogo:
         if flags & pygame.FULLSCREEN and janela.get_size() != tamanho:
             raise pygame.error("O driver nao aplicou a resolucao solicitada")
         return janela
+
+    def _configurar_shader_gpu(self) -> None:
+        """Sincroniza o filtro comic com as configuracoes persistidas."""
+        if self._apresentador_gpu is None:
+            return
+        self._apresentador_gpu.aplicar_opcoes_shader(
+            OpcoesShaderComic.de_config(self.config))
+
+    def shader_comic_ativo(self) -> bool:
+        """Indica se o acabamento GPU esta realmente disponivel neste frame."""
+        apresentador = self._apresentador_gpu
+        return bool(
+            self.config["estilo_visual"] == "COMIC"
+            and self.config["shader_comic"]
+            and apresentador is not None
+            and apresentador.shader_disponivel
+        )
+
+    def status_shader_comic(self) -> str:
+        """Retorna o estado efetivo do shader para o menu de configuracao."""
+        if not self.config["shader_comic"]:
+            return "DESLIGADO"
+        if self.config["estilo_visual"] != "COMIC":
+            return "INATIVO (ORIGINAL)"
+        if self._apresentador_gpu is None:
+            return "SEM GPU"
+        if not self._apresentador_gpu.shader_disponivel:
+            return "INCOMPATIVEL"
+        return "ATIVO"
 
     def _escala_janela(self):
         """Fator de escala e offsets para encaixar a tela 1280x720 na janela.
@@ -321,6 +358,17 @@ class Jogo:
             self.menu._recriar_fontes()
         return self.janela
 
+    def _quadro_composto(self) -> pygame.Surface:
+        """Combina mundo e UI no fallback CPU sem alterar os canvases fonte."""
+        if (not hasattr(self, "_tela_composta") or
+                self._tela_composta.get_size() != self.tela.get_size()):
+            self._tela_composta = pygame.Surface(
+                self.tela.get_size(), depth=self.tela)
+        self._tela_composta.blit(self.tela, (0, 0))
+        if hasattr(self, "tela_ui"):
+            self._tela_composta.blit(self.tela_ui, (0, 0))
+        return self._tela_composta
+
     def _escalar_quadro_cpu(self, tamanho: tuple[int, int]) -> pygame.Surface:
         """Redimensiona o quadro reutilizando o mesmo buffer de destino.
 
@@ -333,8 +381,16 @@ class Jogo:
             self._superficie_escalada = pygame.Surface(tamanho, depth=self.tela)
         escalar = (pygame.transform.scale if self._escala_rapida
                    else pygame.transform.smoothscale)
-        escalar(self.tela, tamanho, self._superficie_escalada)
+        escalar(self._quadro_composto(), tamanho, self._superficie_escalada)
         return self._superficie_escalada
+
+    def _apresentar_gpu(self, destino, tamanho_janela) -> None:
+        """Envia mundo e UI ao apresentador conforme a opção de preservação."""
+        preservar = self.config["preservar_interface"]
+        quadro = self.tela if preservar else self._quadro_composto()
+        interface = self.tela_ui if preservar else None
+        self._apresentador_gpu.apresentar(
+            quadro, destino, tamanho_janela, VOID_BLACK, interface=interface)
 
     def _apresentar(self):
         """Redimensiona a superficie interna (1280x720) para a janela.
@@ -343,8 +399,9 @@ class Jogo:
         no modo PREENCHE estica a cena. flip() e chamado por _desenhar().
         """
         w, h = self.janela.get_size()
+        self._configurar_shader_gpu()
         if (w, h) == (LARGURA, ALTURA) and self._apresentador_gpu is None:
-            self.janela.blit(self.tela, (0, 0))
+            self.janela.blit(self._quadro_composto(), (0, 0))
             return
         if self.config["aspecto"] == "PREENCHE":
             escala = max(0.5, self.config["ajuste_escala"])
@@ -352,8 +409,7 @@ class Jogo:
                         int(self.config["ajuste_off_y"]),
                         max(1, int(w * escala)), max(1, int(h * escala)))
             if self._apresentador_gpu is not None:
-                self._apresentador_gpu.apresentar(self.tela, destino, (w, h),
-                                                  VOID_BLACK)
+                self._apresentar_gpu(destino, (w, h))
                 return
             superficie = self._escalar_quadro_cpu(destino[2:])
             self.janela.fill(VOID_BLACK)
@@ -363,8 +419,7 @@ class Jogo:
         destino = (int(off_x), int(off_y), max(1, int(LARGURA * escala)),
                     max(1, int(ALTURA * escala)))
         if self._apresentador_gpu is not None:
-            self._apresentador_gpu.apresentar(self.tela, destino, (w, h),
-                                              VOID_BLACK)
+            self._apresentar_gpu(destino, (w, h))
             return
         superficie = self._escalar_quadro_cpu(destino[2:])
         self.janela.fill(VOID_BLACK)
@@ -777,24 +832,28 @@ class Jogo:
             self.miniboss.desenhar(self.tela)
         for proj in self.projeteis:
             proj.desenhar(self.tela)
-        avanco = self.avanco_controller.modelo
-        intensidade = (avanco.velocidade / avanco.velocidade_base
-                       if avanco.velocidade_base else 0.0)
+        intensidade = (max(1.0, self.jogador.velocidade / 5.0)
+                       if self.jogador.em_movimento else 0.0)
         self.jogador.desenhar(self.tela, self.particulas, intensidade)
         if (self.config["mostrar_hitbox"] or pygame.key.get_pressed()[pygame.K_LALT]
                 or pygame.key.get_pressed()[pygame.K_RALT]):
             retangulo_suave(self.tela, CIANO, self.jogador.rect, 4, 2)
             desenhar_circulo(self.tela, BRANCO, (self.jogador.x, self.jogador.y), 3)
-        for mensagem in self.mensagens:
-            mensagem.desenhar(self.tela)
-        for texto in self.textos_acao:
-            texto.desenhar(self.tela)
         self.particulas.desenhar(self.tela)
         desenhar_vignette(self.tela, intensidade=0.45, raio_interno=0.5)
+
+    def _desenhar_interface_jogo(self):
+        """Desenha textos e overlays depois do shader, mantendo-os nitidos."""
+        for mensagem in self.mensagens:
+            mensagem.desenhar(self.tela_ui)
+        for texto in self.textos_acao:
+            texto.desenhar(self.tela_ui)
         if self.boss_intro > 0:
-            self._desenhar_boss_intro()
+            with self._desenhar_na_interface():
+                self._desenhar_boss_intro()
         if self.menu_equipamento:
-            self._desenhar_menu_equipamento()
+            with self._desenhar_na_interface():
+                self._desenhar_menu_equipamento()
 
     def _desenhar_menu_equipamento(self):
         """Desenha o arsenal em formato de terminal tático aberto por TAB."""
@@ -1326,8 +1385,9 @@ class Jogo:
                        (LARGURA // 2, ALTURA - 50), VERDE, 22, "centro",
                        self.fontes)
 
-    def _desenhar_carregando(self):
-        self.cenario.desenhar(self.tela)
+    def _desenhar_carregando(self, incluir_cenario=True):
+        if incluir_cenario:
+            self.cenario.desenhar(self.tela)
         self._tela_sombra.fill((0, 0, 0, 175))
         self.tela.blit(self._tela_sombra, (0, 0))
         desenhar_vignette(self.tela, intensidade=0.7, raio_interno=0.45)

@@ -16,7 +16,7 @@ from src.runtime.domain.world.scroll import EstadoAvanco, deslocamento_camada, f
 
 QUALIDADE_CAMADAS = {"BAIXA": (3, 28), "MEDIA": (4, 52), "ALTA": (5, 84)}
 LIMITE_LINHAS_DIMENSAO = {1: 52, 2: 60, 3: 44, 4: 48, 5: 70, 6: 56}
-FATORES = (0.08, 0.18, 0.36, 0.68, 1.0)
+FATORES = (0.16, 0.3, 0.52, 0.85, 1.2)
 ESTILOS = {
     1: ("estrela", "nebulosa", "estrela", "detrito"),
     2: ("nebulosa", "brasa", "estrela", "detrito"),
@@ -136,16 +136,14 @@ class SpeedLines:
                 comprimento = (3 + classe * 3) * nivel
                 largura = max(5, math.ceil(abs(dx * comprimento)) + 5)
                 altura = max(5, math.ceil(abs(dy * comprimento)) + 5)
-                sprite = pygame.Surface((largura, altura))
-                sprite.fill((0, 0, 0))
-                sprite.set_colorkey((0, 0, 0))
-                brilho = 0.25 + nivel * 0.15 + classe * 0.08
-                tom = tuple(max(1, min(255, int(c * brilho))) for c in cor)
+                sprite = pygame.Surface((largura, altura), pygame.SRCALPHA)
+                tom = (*cor, 255)
                 inicio = (round(2 + max(0, dx * comprimento)),
                           round(2 + max(0, dy * comprimento)))
                 fim = (round(inicio[0] - dx * comprimento),
                        round(inicio[1] - dy * comprimento))
                 pygame.draw.line(sprite, tom, inicio, fim, 1 + classe // 2)
+                sprite.set_alpha(35 + nivel * 12)
                 self._sprites[classe, nivel] = sprite
 
     def atualizar(self, velocidade: float, velocidade_base: float, dt: float,
@@ -182,7 +180,7 @@ class ParallaxBackground:
         self.camadas_ativas = camadas_ativas
         numero, limite = QUALIDADE_CAMADAS[self.qualidade]
         self._numero = numero if camadas_ativas else 1
-        self._limite = min(limite, LIMITE_LINHAS_DIMENSAO[cenario.id])
+        self._limite = min(limite, LIMITE_LINHAS_DIMENSAO[cenario.id]) // 2
         self._bases: dict[tuple[object, ...], ScrollingLayer] = {}
         self._detalhes: list[ScrollingLayer] = []
         self._linhas: SpeedLines | None = None
@@ -211,7 +209,7 @@ class ParallaxBackground:
             tile = _preparar_detalhes(cenario.id, indice, estilo, cor,
                                      40 + indice * 22)
             self._detalhes.append(ScrollingLayer(tile, FATORES[indice + 1]))
-        self._linhas = SpeedLines(self._limite, cenario.cor_estrela,
+        self._linhas = SpeedLines(self._limite, cenario.cores_principais[0],
                                   self.direcao, 8_100 + cenario.id)
 
     def _base(self) -> ScrollingLayer:

@@ -392,6 +392,7 @@ class Jogador:
         self.melhorias: dict[str, int] = {}
         self.tiros_padrao = 0
         self.tilt = 0.0
+        self.em_movimento = False
         self.angulo_mira: float | None = None
         self.vivo = True
         self.skin = skin or Skin(SKINS[0])
@@ -416,6 +417,7 @@ class Jogador:
                   controles: Mapping[str, int] | None = None,
                   inverter_movimento: bool = False) -> None:
         controles = controles or {}
+        posicao_anterior = (self.x, self.y)
         dx = dy = 0
         esquerda = controles.get("esquerda")
         direita = controles.get("direita")
@@ -463,6 +465,7 @@ class Jogador:
             self.y += dy * self.velocidade
         self.x = max(20, min(LARGURA - 20, self.x))
         self.y = max(40, min(ALTURA - 30, self.y))
+        self.em_movimento = (self.x, self.y) != posicao_anterior
         self.tilt += (dx * 5 - self.tilt) * 0.15
         if self.cooldown_tiro > 0:
             self.cooldown_tiro -= 1

@@ -52,6 +52,10 @@ python main.py
 Sem aceleração OpenGL, instale apenas com `python -m pip install -e .`; o jogo
 usa automaticamente o renderizador de CPU e os perfis de desempenho.
 
+Em **Configurações**, o acabamento comic da GPU permite ajustar intensidade,
+contorno, quantidade de tons, hachuras, grão e saturação. A opção **Preservar
+interface** mantém HUD e textos fora do filtro e vem ligada por padrão.
+
 Sem áudio/vídeo (CI, servidores, debugging):
 
 ```bash
@@ -426,7 +430,8 @@ para catálogo, testes, integração, persistência e parâmetros de balanceamen
 
 ## HUD de combate
 
-O HUD fica em `game/hud.py` (`HudJogo`) e é desenhado pelo core em
+O HUD fica em `src/runtime/presentation/hud.py` (`HudJogo`), com fachada em
+`game/hud.py`, e é desenhado pelo core em
 `_desenhar_hud()`. É **responsivo** (usa `game/layout`, escala de
 1920x1080 até janelas menores) e mantém o **centro da tela sempre livre**
 para o gameplay. O **tom do HUD acompanha a fase**: cada dimensão tinge
@@ -436,13 +441,18 @@ sem elas usa a paleta padrão da marca ciano/magenta):
 
 | Módulo | Posição | Conteúdo |
 | --- | --- | --- |
-| Jogador | topo-esquerda | ícone da nave, `PLAYER 01`, vida segmentada + numérica, escudo (ciano), energia |
-| Score | topo-direita | `SCORE` grande, `HIGH SCORE`, abates, multiplicador combo |
-| Setor | topo-centro | `SECTOR xx`, nome da região e barra de progresso da fase (discreta) |
-| Boost | base-esquerda | medidor circular, velocidade e recarga da esquiva |
-| Arma | base-direita | ícone geométrico da arma, nome, `LVL`, carga/munição |
-| Especial | base-centro | barra de especial com `SPECIAL READY` pulsando quando cheia (tecla `E`) |
-| Boss | topo-centro | barra dourada segmentada com nome e fase comportamental |
+| Jogador | topo-esquerda | nome do piloto, casco segmentado + numérico, alerta de vida crítica, escudo e energia |
+| Pontuação | topo-direita | pontos, recorde, abates e combo com barra de tempo restante |
+| Setor | topo-centro | setor, onda, região e progresso da fase |
+| Impulso | base-esquerda | medidor circular, velocidade, recarga e atalho configurado da esquiva |
+| Arma | base-direita | ícone, nome, nível, carga e atalho de troca |
+| Especial | base-centro | carga, estado de prontidão e tecla `E` para a Bomba Vortex |
+| Boss | topo-centro | substitui o setor durante chefes e minibosses, com nome, fase e vida percentual |
+
+Painéis escuros e textos ajustados ao espaço preservam a leitura nos estilos
+ORIGINAL e COMIC. Rótulos e barras ocupam linhas separadas, inclusive com nomes
+longos e em janelas menores. `python preview_hud.py --save` gera uma prévia
+determinística em `images/preview_hud.png` sem abrir janela.
 
 Os medidores novos (`boost`, `especial`, `energia`) são mantidos pelo core:
 SHIFT/LCTRL turbina (drena boost e energia), abates carregam o especial.
@@ -502,6 +512,7 @@ funciona isolado. Cobertura por módulo:
 | `test_interacao.py` | core, menu | eventos reais (pygame.event): teclas de navegação, pausa/game over, remap de controles e cliques do mouse |
 | `test_core.py` | core | estados, níveis/boss a cada 5, desbloqueio de armas, combate e fim de jogo |
 | `test_hud.py` | hud | HUD: renderização de todos os módulos, segmentos, barra de boss, medidores e duck typing |
+| `test_hud_legibilidade.py` | hud | textos e barras sem sobreposição em quatro resoluções e dois estilos; centro livre, arco circular e atalhos |
 | `test_layout.py` | layout | layout responsivo nas resoluções-alvo |
 
 O `smoke_test.py` faz um smoke test geral: inicialização, loop de combate
@@ -512,6 +523,11 @@ avançando níveis, desenho dos 6 cenários e mapeamento nível→cenário.
 O estilo comic inclui contornos em cache, tons chapados, hachuras, papel,
 retícula, bursts e UI angular. Em **Configurações → Estilo visual**, alterne
 entre **COMIC** e **ORIGINAL**. **Detalhe comic** oferece BAIXA/MEDIA/ALTA,
-com toggles para texturas e tremida.
+com toggles para texturas e tremida. Quando a aceleração OpenGL está disponível,
+**Shader GPU** acrescenta posterização, contornos Sobel, hachuras e grão ao quadro
+final; **Intensidade shader** controla a força do efeito em tempo real. Se o driver
+não aceitar GLSL 1.20, a apresentação continua normalmente sem o filtro.
+O Lobby de fases também usa o fundo impresso, lettering com contorno, miniaturas
+posterizadas e painéis angulares do estilo comic.
 
 Veja [pipeline visual, screenshots, testes e custos medidos](docs/visual/README.md).

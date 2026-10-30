@@ -90,7 +90,9 @@ def test_fileira_centralizada():
 
 def test_menu_desenha_todas_as_telas():
     menu = novo_jogo().menu
-    for subestado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
+    for subestado in (
+        "MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG", "FASES",
+    ):
         menu.subestado = subestado
         menu.desenhar(menu.jogo.tela)
     menu.subestado = "CONFIG"
@@ -122,7 +124,9 @@ def test_menu_recomposto_em_resolucao_1280x720():
     menu = MenuPrincipal(jogo, layout=layout)
     tela = pygame.Surface((layout.largura, layout.altura))
 
-    for subestado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
+    for subestado in (
+        "MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG", "FASES",
+    ):
         menu.subestado = subestado
         menu.desenhar(tela)
 

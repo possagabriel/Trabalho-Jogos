@@ -21,6 +21,17 @@ existente; formato de progresso, controles, hitboxes e balanceamento permanecem 
 Também é possível definir `"estilo_visual": "ORIGINAL"` no `settings.json` do
 usuário. Não altere `data/save.json` para trocar o visual.
 
+**Shader GPU** liga o acabamento de pós-processamento sobre o quadro completo.
+Ele posteriza as cores, reforça bordas com Sobel, aplica hachuras nas sombras e
+adiciona um grão sutil. **Intensidade shader** varia de 0% a 100% sem recriar a
+janela. O estado exibido no menu distingue efeito ativo, desligado, estilo
+Original, GPU ausente e driver incompatível.
+
+O **Lobby** compartilha a mesma direção de arte: fundo impresso, cartões
+angulares, miniaturas posterizadas, lettering de tinta e carteira de moedas.
+A carteira consulta o mesmo saldo vivo usado pelo Hangar. Compras de blindagem
+e motor são sincronizadas com o save e aplicadas ao piloto da próxima partida.
+
 **Detalhe comic** controla apenas os novos efeitos:
 
 | Perfil | Contornos e tons chapados | Papel, retícula, hachuras | Tremida |
@@ -45,12 +56,15 @@ src/infrastructure/graphics/
   comic_render.py      # primitivas, fundo, papel, retícula, lettering e bursts
 src/runtime/
   controllers/render.py             # ativa a estratégia durante a composição
+  infrastructure/graphics/
+    gpu_renderer.py                  # recursos OpenGL, upload e composição
+    shader_sources.py                # fontes GLSL 3.30 e 1.20 isoladas
+    demais módulos                   # helpers existentes delegam para comic
   presentation/damage_feedback.py   # números de dano, somente apresentação
-  infrastructure/graphics/          # helpers existentes delegam para comic
   domain/entities/                  # integração somente em métodos de desenho
   domain/world/                     # fundo e partículas via helpers
   presentation/                     # HUD, menu e opções existentes
-src/core/settings.py                # valores padrão; mesma persistência
+src/core/settings.py                # persistência e OpcoesShaderComic validadas
 tools/preview_comic.py              # screenshot e benchmark reproduzível
 tests/test_comic_visual.py          # contratos e replay de gameplay
 ```
@@ -92,6 +106,15 @@ ela não muda desbloqueios, preços ou atributos.
 7. Caches LRU têm limites. Títulos e nave do menu incluem o estilo na chave para
    que voltar ao Original também restaure sua aparência. Opacidades usam o cache
    já existente, sem `set_alpha()` sobre superfícies compartilhadas.
+8. Com OpenGL e PyOpenGL disponíveis, mundo e interface são enviados em texturas
+   separadas. O shader GLSL 3.30 processa apenas o mundo e usa VBO/VAO; HUD,
+   menus e textos são compostos depois, nítidos. Drivers antigos usam o caminho
+   GLSL 1.20. Falhas de compilação ficam registradas e preservam a escala OpenGL;
+   ausência de OpenGL usa o caminho CPU.
+9. A posterização quantiza a luminância em 3, 4 ou 6 tons e preserva o matiz.
+   Sobel, hachuras e grão usam coordenadas lógicas estáveis, sem cintilação ao
+   mudar a resolução. Quando a GPU está ativa, papel/grão e hachuras equivalentes
+   deixam de ser repetidos no CPU.
 
 Polígonos e traços de velocidade são desenhados diretamente por helpers de
 infraestrutura; as entidades não implementam novos algoritmos de rasterização.
@@ -99,8 +122,11 @@ A UI mantém o sistema de layout e os retângulos de interação existentes.
 
 ## Fontes e assets
 
-Nenhuma dependência de runtime foi adicionada. O lettering procura uma fonte
-livre opcional em `data/fonts/Comic.ttf`. Sem esse arquivo, usa a fonte local
+O jogo base continua sem dependência gráfica extra. O shader usa o extra opcional
+`PyOpenGL`, instalado com `python -m pip install -e ".[gpu]"`; requer um driver
+com OpenGL 2.1/GLSL 1.20 ou superior; OpenGL 3.3 habilita o caminho moderno. O
+lettering procura uma fonte livre opcional
+em `data/fonts/Comic.ttf`. Sem esse arquivo, usa a fonte local
 DejaVu Sans/Liberation Sans/Arial em negrito e itálico, com fallback do pygame.
 Não redistribuímos fontes do sistema nem fontes proprietárias de jogos.
 A aparência exata da tipografia pode variar entre sistemas.
@@ -148,6 +174,20 @@ garantia universal de 60 FPS. Use **Monitor de FPS** para validar no equipamento
 final. O replay com atualização tem carga decrescente, pois os objetos avançam e
 expiram; a cena fixa mantém a carga descrita durante toda a amostragem.
 
+O pós-processamento GPU foi medido separadamente em 2026-09-25 numa GTX 1050,
+OpenGL 4.6, janela 1920×1080 e textura lógica 1280×720. Cada amostra inclui o
+upload do quadro, desenho e sincronização explícita da GPU:
+
+| Apresentação GPU | Mediana | p95 |
+| --- | ---: | ---: |
+| Shader desligado | 1,78 ms | 2,15 ms |
+| Shader MEDIA | 2,09 ms | 2,43 ms |
+| Shader ALTA | 2,06 ms | 2,52 ms |
+
+Nesse equipamento, o acréscimo mediano foi de aproximadamente **0,3 ms**. O
+resultado depende da GPU, do driver e da resolução física; BAIXA e o controle de
+intensidade permitem reduzir o efeito, e desligá-lo mantém a apresentação GPU.
+
 ## Testes e validação
 
 ```bash
@@ -155,7 +195,8 @@ python -m pytest tests/test_comic_visual.py -q
 python -m pytest tests/ -q
 ```
 
-Resultado da validação: **369 testes passando** (351 existentes + 18 novos).
+Resultado da validação atual: **452 testes passando**, mais **1 teste OpenGL
+real** passando (GLSL 3.30, upload, composição da UI e leitura do framebuffer).
 
 A suíte visual cobre:
 
@@ -168,6 +209,10 @@ A suíte visual cobre:
 - Replay dos dois estilos com posições, vida, tiros, pontuação e RNG iguais.
 - Dano efetivamente aplicado, cor crítica e ausência de dano fictício.
 - Fallback de sprite ausente, troca de estilo e restauração do cache do título.
+- Normalização de intensidade, contorno, tons, hachuras, grão, saturação e
+  preservação da interface; fallback quando contexto ou shader não existem.
+- Compilação e renderização GLSL 3.30 em Mesa no CI, além do teste local no
+  driver real. O teste opt-in usa `RUN_GPU_TESTS=1`.
 
 Também são executados os testes existentes de gameplay, persistência, layout,
 HUD, menus, entrada, entidades, cenários e partículas. O lint dos módulos novos

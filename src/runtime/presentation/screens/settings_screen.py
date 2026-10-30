@@ -182,7 +182,7 @@ class TelaConfiguracoesJogo:
             if abs(pos[1] - menu._y_linha_config(deslocamento)) >= 24:
                 continue
             menu.config_selecao = indice
-            if linhas[indice][1] == "slider":
+            if menu._eh_slider_config(linhas[indice][1]):
                 menu._aplicar_slider(indice, menu._slider_fracao(pos[0]))
             else:
                 self._abrir_selecao()
@@ -200,16 +200,18 @@ class TelaConfiguracoesJogo:
     ) -> None:
         """Desenha o controle correspondente a uma linha de configuracao."""
         menu, layout = self.menu, self.menu.layout
-        if tipo == "slider":
-            if indice == 4:
-                chave = "sensibilidade"
-                valor = menu.jogo.config[chave] - 0.5
+        if menu._eh_slider_config(tipo):
+            if menu._eh_slider_shader(tipo):
+                valor = menu._fracao_controle_shader(tipo)
+            elif indice == 4:
+                valor = menu.jogo.config["sensibilidade"] - 0.5
             else:
-                chave = "musica_volume" if indice == 0 else "efeitos_volume"
-                valor = menu.jogo.config[chave]
+                chave_volume = "musica_volume" if indice == 0 else "efeitos_volume"
+                valor = menu.jogo.config[chave_volume]
             fracao = max(0.0, min(1.0, valor))
             menu._desenhar_slider(tela, y, fracao)
-            base = 0.5 + fracao if indice == 4 else fracao
+            base = 0.5 + fracao if (indice == 4 or
+                                    tipo == "saturacao_shader") else fracao
             percentual = int(base * 100)
             texto = menu.fonte_media.render(
                 f"{percentual}%", True, (170, 175, 220))
@@ -235,14 +237,16 @@ class TelaConfiguracoesJogo:
                 "qualidade": menu.jogo.config["qualidade_grafica"],
                 "desempenho": ("LIGADO" if menu.jogo.config["mostrar_desempenho"]
                                 else "DESLIGADO"),
+                "shader_comic": menu.jogo.status_shader_comic(),
             }
             for chave in ("estilo_visual", "qualidade_comic",
                           "intensidade_flash", "intensidade_tremor"):
                 valores[chave] = menu.jogo.config[chave]
+            valores["tons_shader"] = f"{menu.jogo.config['tons_shader']} TONS"
             for chave in (
-                "comic_papel", "comic_halftone", "comic_hachuras",
-                "line_boil", "mostrar_hitbox", "mira_ativa",
-            ):
+                    "hachuras_shader", "preservar_interface", "comic_papel",
+                    "comic_halftone", "comic_hachuras", "line_boil",
+                    "mostrar_hitbox", "mira_ativa"):
                 valores[chave] = "LIGADO" if menu.jogo.config[chave] else "DESLIGADO"
             if menu.jogo.config["qualidade_comic"] == "BAIXA":
                 for chave in ("comic_papel", "comic_halftone", "comic_hachuras"):

@@ -42,6 +42,7 @@ class SistemaProgressao:
                 "minibosses_derrotados": 0,
                 "nivel_maximo": 1,
                 "cenarios_desbloqueados": [1],
+                "melhorias": {"blindagem": 0, "motor": 0},
                 "progresso_campanha": {
                     "fases_concluidas": [], "subbosses_derrotados": [],
                     "bosses_derrotados": [], "fragmentos": [],
