@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Anomalias: buraco negro com disco em camadas e portais com túnel/pares identificados; efeitos reduzidos estáticos, 38 testes direcionados passaram, falta playtest visual.
+
 - PR #64 revisado: corrigida a dependência de ordem nos testes; 38 testes direcionados e 33 isolados aprovados; playtest continua pendente.
 
 - Mundo aberto: destinos selecionáveis com Esquerda/Direita no mapa, seta, distância e indicação de chegada; 38 testes direcionados passaram, falta playtest.

@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Buracos negros ganham disco de acreção em camadas; portais recebem profundidade, fluxo suave e identificação dos pares, com animação estática ao reduzir efeitos e física preservada.
+
 - Testes de expansão do mundo aberto inicializam suas fontes sem depender de outro arquivo de teste.
 - Mundo aberto permite escolher setores, portais e encontros no mapa com Esquerda/Direita; seta, destaque e distância acompanham o destino até a chegada.
 - Mundo aberto e menu ganham chuvas curtas de meteoros; minimapa local e mapa completo melhoram, e planetas pequenos saem dos fundos.

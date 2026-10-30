@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex aprimorou o visual procedural das anomalias, isolou camadas cacheadas e validou acessibilidade, gravidade e teleporte com 38 testes direcionados e Ruff.
+
 - Codex revisou o PR #64 e corrigiu a inicialização das fontes nos testes isolados do mundo aberto.
 
 - Codex implementou orientação por destino no mundo aberto, com testes escritos antes da lógica; 38 testes direcionados e Ruff passaram.
