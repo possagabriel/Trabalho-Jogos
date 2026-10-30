@@ -1,4 +1,4 @@
-"""Gera um executável desktop do VOID//SHIFT no sistema atual."""
+"""Gera um executável desktop do INCARNATE no sistema atual."""
 
 from __future__ import annotations
 
@@ -26,11 +26,16 @@ def argumentos_distribuicao(
         formato,
         "--windowed",
         "--name",
-        "VOID-SHIFT",
+        "INCARNATE",
         "--add-data",
         f"{raiz / 'images'}{separador}images",
         "--add-data",
         f"{raiz / 'data' / 'fonts'}{separador}data/fonts",
+        "--add-data",
+        f"{raiz / 'pyproject.toml'}{separador}.",
+        "--add-data",
+        f"{raiz / 'src' / 'runtime' / 'story' / 'cenas_pt_BR.json'}"
+        f"{separador}src/runtime/story",
         "--collect-submodules",
         "src",
         "--collect-submodules",
@@ -45,7 +50,7 @@ def argumentos_distribuicao(
             "--icon",
             str(raiz / "assets" / "windows" / "void-shift.ico"),
         ])
-    argumentos.append(str(raiz / "main.py"))
+    argumentos.append(str(raiz / "incarnate.py"))
     return argumentos
 
 

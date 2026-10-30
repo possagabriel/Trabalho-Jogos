@@ -6,8 +6,12 @@ on:
   push:
     branches:
       - main
+      - "fix/**"
+      - "ci/fase-a-promocao-binarios"
     tags:
       - "v*"
+      # O 1.8.0 será publicado com os mesmos artefatos validados no push da branch.
+      - "!v1.8.0"
 
 jobs:
   empacotar-windows:
@@ -41,13 +45,17 @@ jobs:
             throw "Versão inválida para o instalador: $versao"
           }
           "valor=$versao" >> $env:GITHUB_OUTPUT
+          $versaoInfo = ($versao -replace '[-+].*$', '')
+          "info=$versaoInfo" >> $env:GITHUB_OUTPUT
           Write-Host "Versão do instalador: $versao"
       - name: Criar executável
         run: python tools/build_desktop.py
       - name: Validar inicialização do executável
         shell: pwsh
         run: |
-          & .\dist\VOID-SHIFT.exe --smoke-test
+          & .\dist\INCARNATE.exe --smoke-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & .\dist\INCARNATE.exe --smoke-test-legacy
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Assinar executável quando houver certificado
         shell: pwsh
@@ -59,16 +67,17 @@ jobs:
             Write-Host "Certificado não configurado; artefato será publicado sem assinatura."
             exit 0
           }
-          $certificate = Join-Path $env:RUNNER_TEMP "void-shift.pfx"
+          $certificate = Join-Path $env:RUNNER_TEMP "incarnate.pfx"
           [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64))
-          signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f $certificate /p $env:WINDOWS_CERTIFICATE_PASSWORD dist/VOID-SHIFT.exe
+          signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f $certificate /p $env:WINDOWS_CERTIFICATE_PASSWORD dist/INCARNATE.exe
       - name: Criar instalador Windows
         shell: pwsh
         env:
           APP_VERSION: ${{ steps.versao.outputs.valor }}
+          APP_VERSION_INFO: ${{ steps.versao.outputs.info }}
         run: |
           choco install innosetup --no-progress --yes
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$env:APP_VERSION" installer\void-shift.iss
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$env:APP_VERSION" "/DAppVersionInfo=$env:APP_VERSION_INFO" installer\incarnate.iss
       - name: Assinar instalador quando houver certificado
         shell: pwsh
         env:
@@ -79,16 +88,16 @@ jobs:
             Write-Host "Certificado não configurado; artefato será publicado sem assinatura."
             exit 0
           }
-          $certificate = Join-Path $env:RUNNER_TEMP "void-shift.pfx"
+          $certificate = Join-Path $env:RUNNER_TEMP "incarnate.pfx"
           [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64))
-          signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f $certificate /p $env:WINDOWS_CERTIFICATE_PASSWORD dist/VOID-SHIFT-Setup.exe
+          signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f $certificate /p $env:WINDOWS_CERTIFICATE_PASSWORD dist/INCARNATE-Setup.exe
       - name: Registrar commit do build
         shell: pwsh
         run: Set-Content -Encoding ascii dist/BUILD-COMMIT-Windows.txt "${{ github.sha }}"
       - name: Validar arquivos de distribuição
         shell: pwsh
         run: |
-          $arquivos = @("dist/VOID-SHIFT.exe", "dist/VOID-SHIFT-Setup.exe")
+          $arquivos = @("dist/INCARNATE.exe", "dist/INCARNATE-Setup.exe")
           foreach ($arquivo in $arquivos) {
             if (-not (Test-Path $arquivo -PathType Leaf)) {
               throw "Arquivo esperado não foi criado: $arquivo"
@@ -100,16 +109,16 @@ jobs:
       - name: Gerar somas SHA-256
         shell: pwsh
         run: |
-          Get-FileHash dist/VOID-SHIFT.exe, dist/VOID-SHIFT-Setup.exe -Algorithm SHA256 |
+          Get-FileHash dist/INCARNATE.exe, dist/INCARNATE-Setup.exe -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash) *$($_.Path | Split-Path -Leaf)" } |
             Set-Content -Encoding ascii dist/SHA256SUMS.txt
       - name: Publicar executável baixável
         uses: actions/upload-artifact@v7
         with:
-          name: VOID-SHIFT-Windows
+          name: INCARNATE-Windows
           path: |
-            dist/VOID-SHIFT.exe
-            dist/VOID-SHIFT-Setup.exe
+            dist/INCARNATE.exe
+            dist/INCARNATE-Setup.exe
             dist/BUILD-COMMIT-Windows.txt
             dist/SHA256SUMS.txt
           if-no-files-found: error
@@ -118,9 +127,11 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          make_latest: ${{ !contains(github.ref_name, '-') }}
           files: |
-            dist/VOID-SHIFT.exe
-            dist/VOID-SHIFT-Setup.exe
+            dist/INCARNATE.exe
+            dist/INCARNATE-Setup.exe
             dist/BUILD-COMMIT-Windows.txt
             dist/SHA256SUMS.txt
 
@@ -141,20 +152,27 @@ jobs:
         env:
           SDL_VIDEODRIVER: dummy
           SDL_AUDIODRIVER: dummy
-        run: ./dist/VOID-SHIFT/VOID-SHIFT --smoke-test
+        run: |
+          ./dist/INCARNATE/INCARNATE --smoke-test
+          ./dist/INCARNATE/INCARNATE --smoke-test-legacy
       - name: Empacotar e registrar commit do build
         run: |
-          chmod +x dist/VOID-SHIFT/VOID-SHIFT
+          chmod +x dist/INCARNATE/INCARNATE
+          mkdir -p dist/INCARNATE/licenses
+          cp data/fonts/OFL.txt dist/INCARNATE/licenses/OFL.txt
+          grep -q "Orbitron Project Authors" dist/INCARNATE/licenses/OFL.txt
+          grep -q "Indian Type Foundry" dist/INCARNATE/licenses/OFL.txt
+          grep -q "SIL OPEN FONT LICENSE Version 1.1" dist/INCARNATE/licenses/OFL.txt
           echo "${{ github.sha }}" > dist/BUILD-COMMIT-Linux.txt
-          tar -czf dist/VOID-SHIFT-Linux-x86_64.tar.gz -C dist VOID-SHIFT
+          tar -czf dist/INCARNATE-Linux-x86_64.tar.gz -C dist INCARNATE
           cd dist
-          sha256sum VOID-SHIFT-Linux-x86_64.tar.gz > SHA256SUMS-Linux.txt
+          sha256sum INCARNATE-Linux-x86_64.tar.gz > SHA256SUMS-Linux.txt
       - name: Publicar executável baixável
         uses: actions/upload-artifact@v6
         with:
-          name: VOID-SHIFT-Linux-x86_64
+          name: INCARNATE-Linux-x86_64
           path: |
-            dist/VOID-SHIFT-Linux-x86_64.tar.gz
+            dist/INCARNATE-Linux-x86_64.tar.gz
             dist/BUILD-COMMIT-Linux.txt
             dist/SHA256SUMS-Linux.txt
           if-no-files-found: error
@@ -162,7 +180,9 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v3
         with:
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          make_latest: ${{ !contains(github.ref_name, '-') }}
           files: |
-            dist/VOID-SHIFT-Linux-x86_64.tar.gz
+            dist/INCARNATE-Linux-x86_64.tar.gz
             dist/BUILD-COMMIT-Linux.txt
             dist/SHA256SUMS-Linux.txt

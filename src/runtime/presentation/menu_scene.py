@@ -20,19 +20,24 @@ import random
 
 import pygame
 
-from src.core.constants import NEGRO, NOME_JOGO
+from src.core.constants import ALTURA, LARGURA, NEGRO
 from src.infrastructure.graphics.comic_render import desenhar_fundo
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.infrastructure.ui.layout import Layout
 from src.runtime.domain.entities.player import Jogador
+from src.runtime.domain.world.scenarios import Cenario
 from src.runtime.infrastructure.assets import carregar_imagem
+from src.runtime.infrastructure.graphics.meteor_shower import (
+    desenhar_meteoro,
+    gerar_chuva,
+    janela_chuva,
+)
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_cantos,
     desenhar_circulo,
     desenhar_glow,
     gradiente_vertical,
     luz_radial,
-    retangulo_suave,
 )
 
 
@@ -81,11 +86,10 @@ class FundoCinematico:
             for _ in range(34)]
         self.planeta = self._criar_planeta(150, (26, 40, 86), (110, 190, 255),
                                            (150, 150, 210), True)
-        self.lua = self._criar_planeta(52, (70, 60, 90), (150, 140, 190),
-                                       (200, 190, 230), False)
         self.asteroides = self._criar_asteroides()
         self.particulas = []
-        self.meteoros = [self._novo_meteoro() for _ in range(3)]
+        self.meteoros = ()
+        self._ciclo_meteoros = -1
 
     # ----- construcao -----
 
@@ -113,13 +117,13 @@ class FundoCinematico:
         return img
 
     def _criar_nebulosa(self, intensidade, quantidade):
-        l = self._layout
-        surf = pygame.Surface((l.largura, l.altura), pygame.SRCALPHA)
+        layout = self._layout
+        surf = pygame.Surface((layout.largura, layout.altura), pygame.SRCALPHA)
         cores = [(70, 45, 140), (25, 85, 160), (130, 35, 120), (25, 120, 140)]
         for _ in range(quantidade):
-            x = random.randint(-l.px(100), l.largura)
-            y = random.randint(-l.px(100), l.altura)
-            raio = random.randint(l.px(90), l.px(240))
+            x = random.randint(-layout.px(100), layout.largura)
+            y = random.randint(-layout.px(100), layout.altura)
+            raio = random.randint(layout.px(90), layout.px(240))
             blob = luz_radial(random.choice(cores), raio, intensidade)
             surf.blit(blob, blob.get_rect(center=(x, y)))
         return surf
@@ -143,8 +147,8 @@ class FundoCinematico:
         return camadas
 
     def _criar_planeta(self, raio, cor_corpo, cor_borda, cor_anel, com_anel):
-        l = self._layout
-        raio = l.px(raio)
+        layout = self._layout
+        raio = layout.px(raio)
         lado = raio * 4
         surf = pygame.Surface((lado, lado), pygame.SRCALPHA)
         cx = cy = lado // 2
@@ -156,7 +160,7 @@ class FundoCinematico:
             cor = tuple(int(min(255, c * brilho)) for c in cor_corpo)
             pygame.draw.circle(surf, cor + (255,), (cx, cy), r)
         for i in range(7):
-            y = cy - l.px(12) + i * l.px(4)
+            y = cy - layout.px(12) + i * layout.px(4)
             cor = tuple(int(min(255, c * (0.85 + 0.12 * i))) for c in cor_borda)
             pygame.draw.line(surf, cor + (80,), (cx - raio, y), (cx + raio, y), 2)
         if com_anel:
@@ -169,10 +173,10 @@ class FundoCinematico:
         return surf
 
     def _criar_asteroides(self):
-        l = self._layout
+        layout = self._layout
         asteroides = []
         for _ in range(5):
-            raio = random.randint(l.px(9), l.px(20))
+            raio = random.randint(layout.px(9), layout.px(20))
             lados = random.randint(6, 9)
             pts = []
             for i in range(lados):
@@ -192,20 +196,14 @@ class FundoCinematico:
             pygame.draw.polygon(sup, (150, 160, 200, 170), pts2, 2)
             asteroides.append({
                 "surf": sup, "ox": int(min_x) - 4, "oy": int(min_y) - 4,
-                "x": random.uniform(0, l.largura), "y": random.uniform(0, l.altura),
+                "x": random.uniform(0, layout.largura), "y": random.uniform(0, layout.altura),
                 "vx": random.uniform(-0.35, 0.35), "vy": random.uniform(0.4, 1.1),
                 "fase": random.uniform(0, math.tau)})
         return asteroides
 
-    def _novo_meteoro(self):
-        l = self._layout
-        return {"x": random.uniform(0, l.largura), "y": random.uniform(0, l.px(130)),
-                "vx": random.uniform(-3.4, -1.5), "vy": random.uniform(2.2, 3.6),
-                "vida": random.uniform(50, 95), "t": 0}
-
     def _nova_particula(self):
-        l = self._layout
-        return {"x": random.uniform(0, l.largura), "y": l.altura + l.px(8),
+        layout = self._layout
+        return {"x": random.uniform(0, layout.largura), "y": layout.altura + layout.px(8),
                 "vx": random.uniform(-0.5, 0.5),
                 "vy": random.uniform(-0.7, -2.2),
                 "r": random.uniform(0.6, 1.9),
@@ -215,7 +213,7 @@ class FundoCinematico:
     # ----- atualizacao -----
 
     def atualizar(self):
-        l = self._layout
+        layout = self._layout
         self.tempo += 1 / 60.0
         for camada in self.camadas:
             camada["y"] += camada["vel"]
@@ -225,18 +223,11 @@ class FundoCinematico:
         for ast in self.asteroides:
             ast["x"] += ast["vx"]
             ast["y"] += ast["vy"]
-            if ast["y"] > l.altura + l.px(40):
-                ast["y"] = -l.px(40)
-                ast["x"] = random.uniform(0, l.largura)
-            if ast["x"] < -l.px(60):
-                ast["x"] = l.largura + l.px(60)
-        for m in self.meteoros[:]:
-            m["x"] += m["vx"]
-            m["y"] += m["vy"]
-            m["t"] += 1
-            if m["t"] >= m["vida"]:
-                self.meteoros.remove(m)
-                self.meteoros.append(self._novo_meteoro())
+            if ast["y"] > layout.altura + layout.px(40):
+                ast["y"] = -layout.px(40)
+                ast["x"] = random.uniform(0, layout.largura)
+            if ast["x"] < -layout.px(60):
+                ast["x"] = layout.largura + layout.px(60)
         if len(self.particulas) < 42 and random.random() < 0.4:
             self.particulas.append(self._nova_particula())
         for p in self.particulas[:]:
@@ -248,12 +239,21 @@ class FundoCinematico:
 
     # ----- desenho -----
 
-    def desenhar(self, tela):
+    def desenhar(
+        self,
+        tela: pygame.Surface,
+        cor_fundo_cutscene: tuple[int, int, int] | None = None,
+    ) -> None:
         if opcoes_atuais().ativo:
             desenhar_fundo(tela)
             return
         if self.fundo_imagem is not None:
-            tela.blit(self.fundo_imagem, (0, 0))
+            fundo = self.fundo_imagem
+            if cor_fundo_cutscene is not None:
+                from src.runtime.presentation.cutscene_raster import filtrar_fundo_cutscene
+
+                fundo = filtrar_fundo_cutscene(fundo, cor_fundo_cutscene)
+            tela.blit(fundo, (0, 0))
         else:
             tela.blit(self.gradiente, (0, 0))
         dx = int(math.sin(self.tempo * 0.12) * 18)
@@ -279,13 +279,10 @@ class FundoCinematico:
                 tela.blit(camada["surf"], (off_x - x, off_y - y))
 
     def _desenhar_planetas(self, tela):
-        l = self._layout
-        px = l.px(60) + int(math.sin(self.tempo * 0.15) * l.px(6))
-        py = l.px(702) - int(math.sin(self.tempo * 0.22) * l.px(5))
+        layout = self._layout
+        px = layout.px(60) + int(math.sin(self.tempo * 0.15) * layout.px(6))
+        py = layout.px(702) - int(math.sin(self.tempo * 0.22) * layout.px(5))
         tela.blit(self.planeta, self.planeta.get_rect(center=(px, py)))
-        lx = l.px(900) + int(math.cos(self.tempo * 0.18) * l.px(10))
-        ly = l.px(60) + int(math.sin(self.tempo * 0.12) * l.px(8))
-        tela.blit(self.lua, self.lua.get_rect(center=(lx, ly)))
 
     def _desenhar_heroicas(self, tela):
         for x, y, raio, fase in self.estrelas_heroicas:
@@ -301,12 +298,127 @@ class FundoCinematico:
                                max(1, int(p["r"])))
 
     def _desenhar_meteoros(self, tela):
-        for m in self.meteoros:
-            fade = 1 - m["t"] / m["vida"]
-            cor = tuple(int(230 * fade) for _ in range(3))
-            pygame.draw.line(tela, cor, (int(m["x"]), int(m["y"])),
-                             (int(m["x"] - m["vx"] * 7),
-                              int(m["y"] - m["vy"] * 7)), 2)
+        janela = janela_chuva(self.tempo)
+        if janela is None:
+            return
+        ciclo, fase = janela
+        if ciclo != self._ciclo_meteoros:
+            self.meteoros = gerar_chuva(
+                7601 + ciclo, self._layout.largura, self._layout.altura, 4)
+            self._ciclo_meteoros = ciclo
+        for meteoro in self.meteoros:
+            desenhar_meteoro(tela, meteoro, fase - meteoro.atraso)
+
+
+class FundoMenuParallax:
+    """Fundo do menu composto uma vez com ``ParallaxBackground`` em BAIXA.
+
+    O gameplay anima as camadas a cada quadro; o menu reutiliza a mesma
+    composição do cenário 1 como superfície estática em cache. A troca de
+    resolução apenas reescala o cache, e os filtros de cutscene são guardados
+    por cor para não repetir a posterização por quadro.
+    """
+
+    QUALIDADE = "BAIXA"
+    CENARIO_ID = 1
+
+    def __init__(self, layout=None):
+        self._layout = layout or Layout()
+        self._nativa: pygame.Surface | None = None
+        self._nativa_estilo: tuple | None = None
+        self._cache: pygame.Surface | None = None
+        self._cache_tamanho = (0, 0)
+        self._cache_estilo: tuple | None = None
+        self._tingidos: dict[tuple[int, int, int], pygame.Surface] = {}
+
+    def set_layout(self, layout: Layout) -> None:
+        """Atualiza o canvas lógico sem recompilar a composição nativa."""
+        if layout is self._layout and self._cache is not None:
+            return
+        self._layout = layout
+        self._descartar_cache()
+
+    def _descartar_cache(self) -> None:
+        self._cache = None
+        self._cache_tamanho = (0, 0)
+        self._cache_estilo = None
+        self._tingidos.clear()
+
+    @staticmethod
+    def _chave_estilo() -> tuple:
+        opcoes = opcoes_atuais()
+        return (opcoes.ativo, opcoes.qualidade, opcoes.papel,
+                opcoes.halftone, opcoes.hachuras, opcoes.line_boil)
+
+    def _compor_nativa(self, estilo: tuple) -> pygame.Surface:
+        if self._nativa is None or self._nativa_estilo != estilo:
+            cenario = Cenario(self.CENARIO_ID)
+            cenario.configurar_avanco(
+                self.QUALIDADE, (0.0, 1.0), False, True,
+                {"avanco_marcos": False, "avanco_ritmo_variavel": False})
+            nativa = pygame.Surface((LARGURA, ALTURA))
+            nativa.fill(NEGRO)
+            cenario.parallax.desenhar(nativa)
+            self._nativa = nativa
+            self._nativa_estilo = estilo
+        return self._nativa
+
+    def _recortar_cover(self, base: pygame.Surface) -> pygame.Surface:
+        largura, altura = self._layout.largura, self._layout.altura
+        if (largura, altura) == base.get_size():
+            return base
+        largura_base, altura_base = base.get_size()
+        escala = max(largura / largura_base, altura / altura_base)
+        redimensionada = pygame.transform.smoothscale(
+            base, (max(largura, int(largura_base * escala)),
+                   max(altura, int(altura_base * escala))))
+        x = (redimensionada.get_width() - largura) // 2
+        y = (redimensionada.get_height() - altura) // 2
+        return redimensionada.subsurface((x, y, largura, altura)).copy()
+
+    def _cache_estatico(self) -> pygame.Surface:
+        tamanho = (self._layout.largura, self._layout.altura)
+        estilo = self._chave_estilo()
+        if (self._cache is None or self._cache_tamanho != tamanho
+                or self._cache_estilo != estilo):
+            self._cache = self._recortar_cover(self._compor_nativa(estilo))
+            self._cache_tamanho = tamanho
+            self._cache_estilo = estilo
+            self._tingidos.clear()
+        return self._cache
+
+    @property
+    def cache_estatico(self) -> bool:
+        """Indica se a composição já foi preparada neste layout."""
+        return self._cache is not None
+
+    @property
+    def qualidade(self) -> str:
+        """Qualidade fixa usada na composição do fundo do menu."""
+        return self.QUALIDADE
+
+    def atualizar(self) -> None:
+        """O fundo do menu é estático; não há camadas para animar."""
+
+    def desenhar(
+        self,
+        tela: pygame.Surface,
+        cor_fundo_cutscene: tuple[int, int, int] | None = None,
+    ) -> None:
+        """Desenha a composição cacheada, tingindo por cutscene se pedido."""
+        fundo = self._cache_estatico()
+        if cor_fundo_cutscene is not None:
+            chave = tuple(cor_fundo_cutscene)
+            tingido = self._tingidos.get(chave)
+            if tingido is None:
+                from src.runtime.presentation.cutscene_raster import (
+                    filtrar_fundo_cutscene,
+                )
+
+                tingido = filtrar_fundo_cutscene(self._cache_estatico(), chave)
+                self._tingidos[chave] = tingido
+            fundo = tingido
+        tela.blit(fundo, (0, 0))
 
 
 # ---------------------------------------------------------------------------
@@ -314,7 +426,7 @@ class FundoCinematico:
 # ---------------------------------------------------------------------------
 
 class HudMenu:
-    """Elementos HUD de nave: molduras, radar, status e dados da missao."""
+    """Molduras neon do menu sem telemetria decorativa sem fonte de dados."""
 
     def __init__(self, layout=None):
         self._layout = layout or Layout()
@@ -334,21 +446,21 @@ class HudMenu:
         self._atualiza_contador = 0
 
     def _criar_radar(self):
-        l = self._layout
-        raio = l.px(26)
-        lado = raio * 2 + l.px(12)
+        layout = self._layout
+        raio = layout.px(26)
+        lado = raio * 2 + layout.px(12)
         surf = pygame.Surface((lado, lado), pygame.SRCALPHA)
         cx = cy = lado // 2
         pygame.draw.circle(surf, (90, 120, 170, 55), (cx, cy), raio, 1)
-        pygame.draw.circle(surf, (90, 120, 170, 40), (cx, cy), raio - l.px(9), 1)
-        pygame.draw.circle(surf, (70, 95, 140, 30), (cx, cy), raio - l.px(18), 1)
+        pygame.draw.circle(surf, (90, 120, 170, 40), (cx, cy), raio - layout.px(9), 1)
+        pygame.draw.circle(surf, (70, 95, 140, 30), (cx, cy), raio - layout.px(18), 1)
         pygame.draw.line(surf, (80, 110, 160, 45), (cx - raio, cy), (cx + raio, cy), 1)
         pygame.draw.line(surf, (80, 110, 160, 45), (cx, cy - raio), (cx, cy + raio), 1)
         for i in range(8):
             a = i * math.pi / 4
             pygame.draw.line(surf, (90, 130, 190, 35),
-                             (cx + math.cos(a) * (raio - l.px(5)),
-                              cy + math.sin(a) * (raio - l.px(5))),
+                             (cx + math.cos(a) * (raio - layout.px(5)),
+                              cy + math.sin(a) * (raio - layout.px(5))),
                              (cx + math.cos(a) * raio, cy + math.sin(a) * raio), 1)
         return surf
 
@@ -402,85 +514,20 @@ class HudMenu:
 
     # ----- desenho -----
 
-    def desenhar(self, tela, tema):
-        l = self._layout
+    def desenhar(self, tela, tema, estilo="COMIC"):
+        layout = self._layout
         primaria = tema["primaria"]
-        secundaria = tema["secundaria"]
         borda = tema["borda_forte"]
-        texto_cor = (205, 215, 240)
-        dim = (140, 152, 190)
 
         desenhar_cantos(tela, borda,
-                        pygame.Rect(l.px(12), l.px(12),
-                                    l.largura - l.px(24), l.altura - l.px(24)),
-                        tamanho=l.px(16), espessura=l.px(3))
+                        pygame.Rect(layout.px(12), layout.px(12),
+                                    layout.largura - layout.px(24), layout.altura - layout.px(24)),
+                        tamanho=layout.px(16), espessura=layout.px(3))
         desenhar_cantos(tela, primaria,
-                        pygame.Rect(l.px(20), l.px(20),
-                                    l.largura - l.px(40), l.altura - l.px(40)),
-                        tamanho=l.px(8), espessura=l.px(2))
+                        pygame.Rect(layout.px(20), layout.px(20),
+                                    layout.largura - layout.px(40), layout.altura - layout.px(40)),
+                        tamanho=layout.px(8), espessura=layout.px(2))
 
-        # canto superior esquerdo: logo + missao
-        self._desenhar_texto(tela, "logo", l.fonte_titulo(16), NOME_JOGO,
-                             (l.px(32), l.px(20)), primaria, 4)
-        self._desenhar_texto(tela, "sistema", l.fonte_texto(12),
-                             "// SISTEMA DIMENSIONAL", (l.px(34), l.px(42)),
-                             dim, 3)
-
-        # canto superior direito: status + coordenadas
-        pisca = 0.5 + 0.5 * math.sin(self.tempo * 3.2)
-        cor_sys = (0, 255, 150) if pisca > 0.1 else (80, 255, 170)
-        self._desenhar_texto(tela, "sys_rotulo", l.fonte_texto(12), "SYS",
-                             (l.largura - l.px(36), l.px(20)), dim, 2, "direita")
-        self._desenhar_texto(tela, "sys_valor", l.fonte_texto(12), "ATIVO",
-                             (l.largura - l.px(34), l.px(40)), cor_sys, 2,
-                             "direita")
-        coord_txt = "GRID %.0f.%.0f" % (self._coord % 1000,
-                                        self._coord * 3 % 1000)
-        self._desenhar_texto(tela, "coord", l.fonte_texto(11), coord_txt,
-                             (l.largura - l.px(34), l.px(58)), dim, 2,
-                             "direita")
-
-        # radar inferior esquerdo
-        cx, cy = l.px(74), l.px(588)
-        tela.blit(self.radar, self.radar.get_rect(center=(cx, cy)))
-        a = self.radar_angulo
-        r1 = l.px(26)
-        pygame.draw.aaline(tela, primaria + (200,), (cx, cy),
-                           (cx + math.cos(a) * r1, cy + math.sin(a) * r1), 2)
-        pygame.draw.aaline(tela, (200, 220, 255, 140), (cx, cy),
-                           (cx + math.cos(a + 2.2) * r1 * 0.7,
-                            cy + math.sin(a + 2.2) * r1 * 0.7), 1)
-        for fase, raio in self.blips:
-            bx = cx + math.cos(fase + self.tempo * 0.4) * r1 * 0.5
-            by = cy + math.sin(fase + self.tempo * 0.4) * r1 * 0.5
-            desenhar_circulo(tela, secundaria, (bx, by), l.px(2), brilho=1.2)
-
-
-
-        # missao
-        self._desenhar_texto(tela, "mis_rotulo", l.fonte_texto(12), "MISSAO",
-                             (l.px(40), l.altura - l.px(54)), dim, 3)
-        self._desenhar_texto(tela, "mis_valor", l.fonte_texto(15),
-                             "SALTO DIMENSIONAL", (l.px(40), l.altura - l.px(34)),
-                             texto_cor, 3)
-        self._desenhar_texto(tela, "mis_sub", l.fonte_texto(11),
-                             "ALVO // ENTRE NA FENDA", (l.px(44),
-                                                          l.altura - l.px(20)),
-                             primaria, 2)
-
-        # velocidade + coordenadas
-        self._desenhar_texto(tela, "vel_rotulo", l.fonte_texto(12),
-                             "VELOCIDADE", (l.largura - l.px(40),
-                                            l.altura - l.px(56)),
-                             dim, 3, "direita")
-        self._desenhar_texto(tela, "vel_valor", l.fonte_texto(15),
-                             "%.0f KC" % self._vel, (l.largura - l.px(40),
-                                                     l.altura - l.px(36)),
-                             (255, 200, 120), 3, "direita")
-        self._desenhar_texto(tela, "vel_sub", l.fonte_texto(11),
-                             "MODO NAVEGAÇÃO", (l.largura - l.px(44),
-                                          l.altura - l.px(22)),
-                             borda, 2, "direita")
 
 
 # ---------------------------------------------------------------------------
@@ -568,10 +615,10 @@ class DestaqueMenu:
         chave = tuple(sorted(tema.items()))
         if chave in self._formas:
             return self._formas[chave]
-        l = self._layout
+        layout = self._layout
         primaria = tema["primaria"]
         secundaria = tema["secundaria"]
-        largura, altura, inclinacao = l.px(360), l.px(50), l.px(16)
+        largura, altura, inclinacao = layout.px(360), layout.px(50), layout.px(16)
         surf = pygame.Surface((largura + inclinacao, altura), pygame.SRCALPHA)
         pts = [(0, inclinacao), (largura, 0), (largura + inclinacao, 0),
                (largura + inclinacao, altura), (inclinacao, altura), (0, 0)]
@@ -580,10 +627,10 @@ class DestaqueMenu:
         pygame.draw.line(surf, secundaria + (200,), (0, 0), (largura, 0), 3)
         # detalhe interno
         pygame.draw.polygon(surf, (255, 255, 255, 26),
-                            [(l.px(6), inclinacao - l.px(4)),
-                             (largura - l.px(4), l.px(3)),
-                             (largura - l.px(4), l.px(10)),
-                             (l.px(6), inclinacao + l.px(3))])
+                            [(layout.px(6), inclinacao - layout.px(4)),
+                             (largura - layout.px(4), layout.px(3)),
+                             (largura - layout.px(4), layout.px(10)),
+                             (layout.px(6), inclinacao + layout.px(3))])
         self._formas[chave] = surf
         return surf
 
@@ -644,7 +691,7 @@ class TransicaoMissao:
         return False
 
     def desenhar(self, tela, tema, intensidade_flash=1.0, intensidade_tremor=1.0):
-        l = self._layout
+        layout = self._layout
         p = self.progresso()
         if p <= 0:
             return
@@ -661,8 +708,8 @@ class TransicaoMissao:
         # riscas de velocidade
         vel = 8 + 40 * p
         for i in range(30):
-            y = (i * 97 + int(self.tempo * 30)) % l.altura
-            off = int((self.tempo * vel * (30 + i * 9))) % (l.largura + 500)
+            y = (i * 97 + int(self.tempo * 30)) % layout.altura
+            off = int((self.tempo * vel * (30 + i * 9))) % (layout.largura + 500)
             x = off - 200
             alfa = 60 + int(180 * (i / 30) * p)
             cor = (200, 225, 255)
@@ -672,7 +719,7 @@ class TransicaoMissao:
 
         # pulso radial central
         raio = int(30 + 300 * _ease_out(p))
-        desenhar_glow(tela, tema["primaria"], (l.x(0.5), l.y(0.5)),
+        desenhar_glow(tela, tema["primaria"], (layout.x(0.5), layout.y(0.5)),
                       max(8, raio // 6), 0.4 + 0.5 * p)
 
         # flash final

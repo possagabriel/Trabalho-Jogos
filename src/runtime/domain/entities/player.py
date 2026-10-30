@@ -33,12 +33,14 @@ from src.infrastructure.graphics.comic_pipeline import preparar_rotacoes
 from src.infrastructure.graphics.comic_theme import OpcoesVisuais, opcoes_atuais
 from src.runtime.domain.entities.weapons import ARMARIA, Projetil
 from src.runtime.domain.systems.aiming import (
-    angulo_para_alvo, direcao_para_alvo, dispersar_direcao, indice_sprite_direcional,
+    angulo_para_alvo,
+    direcao_para_alvo,
+    dispersar_direcao,
+    indice_sprite_direcional,
 )
 from src.runtime.infrastructure.assets import carregar_imagem_alpha
 from src.runtime.infrastructure.graphics.cel_shading import (
     circulo_com_contorno,
-    clarear_cor,
     contorno_poligono,
     desenhar_highlight,
     desenhar_sombra_chapada,
@@ -47,13 +49,13 @@ from src.runtime.infrastructure.graphics.cel_shading import (
     sprite_com_contorno,
 )
 from src.runtime.infrastructure.graphics.geometry import losango
+from src.runtime.infrastructure.graphics.ship_sprites import gerar_quadros_direcionais
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_circulo,
     desenhar_glow,
     desenhar_poligono,
     linha_suave,
 )
-from src.runtime.infrastructure.graphics.ship_sprites import gerar_quadros_direcionais
 
 if TYPE_CHECKING:
     from src.runtime.domain.world.particles import SistemaParticulas
@@ -361,6 +363,10 @@ class SistemaCombo:
 # ---------------------------------------------------------------------------
 
 class Jogador:
+    """Nave do piloto, armas, proteção e efeitos temporários."""
+
+    DURACAO_INTANGIBILIDADE = 180
+
     def __init__(self, nome: str = "Jogador", skin: Skin | None = None) -> None:
         self.nome = nome
         self.x = LARGURA // 2
@@ -379,6 +385,7 @@ class Jogador:
         self.burst_left = 0
         self.angulo_arma = 0.0
         self.invencivel = 0
+        self.tempo_intangivel = 0
         self.cooldown_esquiva = 0
         self.tempo_esquiva = 0
         self.esquiva_iniciada = False
@@ -471,6 +478,8 @@ class Jogador:
             self.cooldown_tiro -= 1
         if self.invencivel > 0:
             self.invencivel -= 1
+        if self.tempo_intangivel > 0:
+            self.tempo_intangivel -= 1
 
     def atirar(
         self, alvo: tuple[float, float] | None = None,
@@ -535,8 +544,12 @@ class Jogador:
                                       tipo=tipo))
             return mirar(projs)
         if tipo == "ion":
-            return mirar([Projetil(x, y, 0, 0, dano, arma["cor"],
-                                  arma["raio"], tipo=tipo)])
+            direcao = (direcao_para_alvo((self.x, self.y), alvo, 1)
+                       if alvo is not None else (0.0, -1.0))
+            emissor_x = self.x + direcao[0] * 20
+            emissor_y = self.y + direcao[1] * 20
+            return [Projetil(emissor_x, emissor_y, *direcao, dano,
+                             arma["cor"], arma["raio"], tipo=tipo)]
         if tipo == "gauss":
             return mirar([Projetil(x, y, 0, -arma["vel"], dano, arma["cor"],
                                   arma["raio"], tipo=tipo)])
@@ -552,7 +565,7 @@ class Jogador:
             self.arma_atual = indice
 
     def sofrer_dano(self) -> bool:
-        if self.invencivel > 0 or not self.vivo:
+        if self.invencivel > 0 or self.tempo_intangivel > 0 or not self.vivo:
             return False
         self.combo.zerar()
         if self.escudo:
@@ -566,11 +579,23 @@ class Jogador:
             self.vivo = False
         return True
 
+    def ativar_intangibilidade(self) -> bool:
+        """Ativa a passagem temporária por perigos sem ocultar a nave."""
+        if not self.vivo or self.tempo_intangivel > 0:
+            return False
+        self.tempo_intangivel = self.DURACAO_INTANGIBILIDADE
+        return True
+
     def desenhar(self, tela: pygame.Surface,
                  particulas: SistemaParticulas | None = None,
-                 intensidade_propulsor: float = 1.0) -> None:
-        if self.invencivel > 0 and (self.invencivel // 4) % 2 == 0:
+                 intensidade_propulsor: float = 1.0,
+                 piscar: bool = True) -> None:
+        if (piscar and self.tempo_intangivel <= 0 and self.invencivel > 0
+                and (self.invencivel // 4) % 2 == 0):
             return
+        if self.tempo_intangivel > 0:
+            desenhar_glow(tela, AZUL_CLARO, (self.x, self.y),
+                          self.raio + 16, 0.5)
         if self.tempo_esquiva > 0:
             desenhar_glow(tela, CIANO, (self.x, self.y), self.raio + 18, 0.8)
             dx, dy = self._direcao_esquiva
@@ -579,6 +604,9 @@ class Jogador:
                 self.raio + 8, 0.45,
             )
         self.skin.desenhar(tela, self, particulas, intensidade_propulsor)
+        if self.tempo_intangivel > 0:
+            desenhar_circulo(tela, AZUL_CLARO, (self.x, self.y),
+                             self.raio + 12, 2, brilho=1.1)
         if self.escudo:
             pulso = 1 + 0.15 * math.sin(pygame.time.get_ticks() * 0.008)
             desenhar_glow(tela, (50, 150, 255), (self.x, self.y),

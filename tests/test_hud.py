@@ -25,11 +25,21 @@ sys.path.insert(0, RAIZ)
 
 import pygame  # noqa: E402
 
+import src.runtime.presentation.hud as hud_runtime  # noqa: E402
 from game.config import ALTURA, LARGURA  # noqa: E402
 from game.hud import HudJogo  # noqa: E402
 from game.player import Jogador  # noqa: E402
 from game.weapons import ARMARIA  # noqa: E402
-
+from src.infrastructure.graphics.comic_theme import usar_visual  # noqa: E402
+from src.infrastructure.ui.layout import Layout  # noqa: E402
+from src.runtime.infrastructure.graphics.style_tokens import (  # noqa: E402
+    CONTRASTE_TEXTO_HUD_AJUSTE,
+    CONTRASTE_TEXTO_MINIMO,
+    FUNDO_TEXTO_HUD,
+    OPACIDADE_PAINEL_HUD,
+    TEXTO_ESSENCIAL_MIN_PX,
+    TEXTO_SECUNDARIO_MIN_PX,
+)
 
 # ---------------------------------------------------------------------------
 # Apoio: estado de jogo ficticio (duck typing)
@@ -96,6 +106,21 @@ def test_desenha_hud_com_boss():
     assert tela.get_width() == LARGURA
 
 
+def test_mundo_aberto_reserva_topo_direito_para_o_minimapa(monkeypatch):
+    jogo = JogoFake()
+    hud = _hud()
+    chamadas = []
+    monkeypatch.setattr(hud, "_topo_direita", lambda *_args: chamadas.append(True))
+
+    jogo.modo_atual = "mundo_aberto"
+    hud.desenhar(_tela(), jogo)
+    assert not chamadas
+
+    jogo.modo_atual = "linear"
+    hud.desenhar(_tela(), jogo)
+    assert chamadas
+
+
 def test_monitor_de_desempenho_e_renderizado_quando_habilitado():
     jogo = JogoFake()
     jogo.config = {
@@ -136,6 +161,84 @@ def test_dados_arma_por_tipo():
     for indice in range(len(ARMARIA)):
         _, _, dados = _desenha(JogoFake(arma=indice))
         assert dados["arma"]["nome"] == ARMARIA[indice]["nome"]
+
+
+def test_fontes_hud_respeitam_minimos_em_janela_pequena():
+    pygame.init()
+    hud = hud_runtime.HudJogo(Layout(900, 506))
+
+    for fonte in (hud._f_padrao_xxs, hud._f_padrao_xs, hud._f_titulo_xs):
+        assert fonte.render("Ag0", True, (255, 255, 255)).get_bounding_rect().height >= (
+            TEXTO_SECUNDARIO_MIN_PX)
+    for fonte in (hud._f_padrao_s, hud._f_padrao_m, hud._f_titulo_s,
+                  hud._f_titulo_m, hud._f_titulo_g, hud._f_numero):
+        assert fonte.render("Ag0", True, (255, 255, 255)).get_bounding_rect().height >= (
+            TEXTO_ESSENCIAL_MIN_PX)
+
+
+def test_medidor_separa_valor_e_rotulo(monkeypatch):
+    pygame.init()
+    registros = []
+
+    def capturar_blit(_tela, surf, pos, alfa=255):
+        registros.append(pygame.Rect(pos))
+
+    monkeypatch.setattr(hud_runtime, "_blit_alfa", capturar_blit)
+    for largura, altura, rotulo_abaixo in ((900, 506, True), (1280, 720, False)):
+        registros.clear()
+        layout = Layout(largura, altura)
+        tela = pygame.Surface((largura, altura), pygame.SRCALPHA)
+        centro = (layout.px(82), altura - layout.px(120))
+        hud_runtime._medidor_circular(
+            tela, layout, centro, layout.px(38), 0.8, (255, 112, 72),
+            rotulo="IMPULSO", valor="80%", rotulo_abaixo=rotulo_abaixo,
+        )
+
+        assert len(registros) == 2
+        rect_valor, rect_rotulo = registros
+        assert rect_rotulo.top >= rect_valor.bottom + layout.px(3)
+        if not rotulo_abaixo:
+            assert rect_rotulo.top >= centro[1]
+
+
+def test_lettering_comic_respeita_minimos_em_janela_pequena():
+    pygame.init()
+    pygame.display.set_mode((900, 506))
+    hud = hud_runtime.HudJogo(Layout(900, 506))
+    jogo = JogoFake()
+    jogo.config = {"estilo_visual": "COMIC", "qualidade_comic": "MEDIA"}
+
+    with usar_visual(jogo.config):
+        secundarios = (hud._f_padrao_xxs, hud._f_padrao_xs, hud._f_titulo_xs)
+        essenciais = (hud._f_padrao_s, hud._f_padrao_m, hud._f_titulo_s,
+                      hud._f_titulo_m, hud._f_titulo_g, hud._f_numero)
+        for fonte in secundarios:
+            altura = hud_runtime._render(fonte, "Ag0", (255, 255, 255))
+            assert altura.get_bounding_rect().height >= TEXTO_SECUNDARIO_MIN_PX
+        for fonte in essenciais:
+            altura = hud_runtime._render(fonte, "Ag0", (255, 255, 255))
+            assert altura.get_bounding_rect().height >= TEXTO_ESSENCIAL_MIN_PX
+
+
+def test_cores_de_texto_hud_alcancam_contraste_wcag_minimo():
+    amostras = (
+        (150, 158, 200), (120, 130, 170), (110, 118, 160),
+        (150, 132, 240), (200, 170, 90), (255, 214, 110),
+        (64, 226, 230), (255, 96, 140),
+    )
+    fundo_brilhante_com_painel = tuple(
+        round(c * OPACIDADE_PAINEL_HUD / 255 +
+              255 * (255 - OPACIDADE_PAINEL_HUD) / 255)
+        for c in FUNDO_TEXTO_HUD
+    )
+
+    for cor in amostras:
+        ajustada = hud_runtime.cor_com_contraste(
+            cor, FUNDO_TEXTO_HUD, CONTRASTE_TEXTO_HUD_AJUSTE)
+        assert hud_runtime.razao_contraste(ajustada, fundo_brilhante_com_painel) >= (
+            CONTRASTE_TEXTO_MINIMO)
+        assert hud_runtime.razao_contraste(ajustada, FUNDO_TEXTO_HUD) >= (
+            CONTRASTE_TEXTO_MINIMO)
 
 
 # ---------------------------------------------------------------------------

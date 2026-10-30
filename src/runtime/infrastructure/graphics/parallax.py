@@ -11,8 +11,17 @@ import pygame
 from src.core.constants import ALTURA, LARGURA
 from src.infrastructure.graphics.comic_render import fundo_comic
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
-from src.runtime.domain.world.scroll import EstadoAvanco, deslocamento_camada, faixas_repetidas
-
+from src.runtime.domain.world.landmarks import (
+    EstadoMundoVisual,
+    TransicaoDestino,
+    curva_evolucao,
+)
+from src.runtime.domain.world.scroll import (
+    EstadoAvanco,
+    deslocamento_camada,
+    faixas_repetidas,
+)
+from src.runtime.infrastructure.graphics.landmarks import CamadaMarcos
 
 QUALIDADE_CAMADAS = {"BAIXA": (3, 28), "MEDIA": (4, 52), "ALTA": (5, 84)}
 LIMITE_LINHAS_DIMENSAO = {1: 52, 2: 60, 3: 44, 4: 48, 5: 70, 6: 56}
@@ -25,6 +34,13 @@ ESTILOS = {
     5: ("estrela", "fenda", "estrela", "detrito"),
     6: ("nebulosa", "grade", "estrela", "cristal"),
 }
+
+
+def _ler(config: object, chave: str, padrao: object) -> object:
+    try:
+        return config[chave]  # type: ignore[index]
+    except (KeyError, TypeError):
+        return padrao
 
 
 def _espelhar(base: pygame.Surface) -> pygame.Surface:
@@ -121,38 +137,49 @@ class SpeedLines:
     """Pool fixo de rastros com sprites pequenos pré-renderizados."""
 
     def __init__(self, quantidade: int, cor: tuple[int, int, int],
-                 direcao: tuple[float, float], semente: int) -> None:
+                 direcao: tuple[float, float], semente: int,
+                 paletas: tuple[tuple[int, int, int], ...] | None = None) -> None:
         aleatorio = random.Random(semente)
         self.linhas = [_Linha(aleatorio.randrange(LARGURA),
                               aleatorio.randrange(ALTURA), i % 3)
                        for i in range(quantidade)]
         self.ativas = 0
         self._nivel = 0
+        self._paleta_nivel = 0
         modulo = math.hypot(*direcao) or 1.0
         dx, dy = direcao[0] / modulo, direcao[1] / modulo
-        self._sprites: dict[tuple[int, int], pygame.Surface] = {}
+        cores = paletas or (cor,) * 5
+        self._sprites: dict[tuple[int, int, int], pygame.Surface] = {}
         for classe in range(3):
             for nivel in range(1, 5):
                 comprimento = (3 + classe * 3) * nivel
                 largura = max(5, math.ceil(abs(dx * comprimento)) + 5)
                 altura = max(5, math.ceil(abs(dy * comprimento)) + 5)
-                sprite = pygame.Surface((largura, altura), pygame.SRCALPHA)
-                tom = (*cor, 255)
+                sprite = pygame.Surface((largura, altura))
+                sprite.fill((0, 0, 0))
+                sprite.set_colorkey((0, 0, 0))
+                brilho_linha = 0.25 + nivel * 0.15 + classe * 0.08
                 inicio = (round(2 + max(0, dx * comprimento)),
                           round(2 + max(0, dy * comprimento)))
                 fim = (round(inicio[0] - dx * comprimento),
                        round(inicio[1] - dy * comprimento))
-                pygame.draw.line(sprite, tom, inicio, fim, 1 + classe // 2)
-                sprite.set_alpha(35 + nivel * 12)
-                self._sprites[classe, nivel] = sprite
+                for indice_paleta, cor_paleta in enumerate(cores):
+                    variante = sprite.copy()
+                    tom = tuple(max(1, min(255, int(c * brilho_linha)))
+                                for c in cor_paleta)
+                    pygame.draw.line(variante, tom, inicio, fim, 1 + classe // 2)
+                    variante.set_alpha(35 + nivel * 12)
+                    self._sprites[classe, nivel, indice_paleta] = variante
 
     def atualizar(self, velocidade: float, velocidade_base: float, dt: float,
-                  direcao: tuple[float, float], intensidade: float) -> None:
+                  direcao: tuple[float, float], intensidade: float,
+                  evolucao: float = 0.0) -> None:
         """Move apenas as linhas ativas e reutiliza os objetos ao atravessar bordas."""
         razao = velocidade / velocidade_base if velocidade_base > 0 else 0.0
         fracao = max(0.0, min(1.0, razao * intensidade))
         self.ativas = min(len(self.linhas), int(len(self.linhas) * fracao))
         self._nivel = min(4, max(1, math.ceil(razao * 3))) if self.ativas else 0
+        self._paleta_nivel = min(4, max(0, round(evolucao * 4)))
         dx, dy = deslocamento_camada(direcao, velocidade, 1.0, dt)
         for indice in range(self.ativas):
             linha = self.linhas[indice]
@@ -163,7 +190,7 @@ class SpeedLines:
         """Compõe somente as linhas ativas sobre o fundo."""
         for indice in range(self.ativas):
             linha = self.linhas[indice]
-            sprite = self._sprites[linha.classe, self._nivel]
+            sprite = self._sprites[linha.classe, self._nivel, self._paleta_nivel]
             tela.blit(sprite, (round(linha.x), round(linha.y)))
 
 
@@ -185,6 +212,58 @@ class ParallaxBackground:
         self._detalhes: list[ScrollingLayer] = []
         self._linhas: SpeedLines | None = None
         self._pronto = False
+        self._config: object = {}
+        self._semente = 0
+        self._marcos: CamadaMarcos | None = None
+        self._destino: TransicaoDestino | None = None
+        self._progresso = 0.0
+
+    def configurar_percurso(self, config: object, semente: int) -> None:
+        """Prepara as regras do percurso com opções antigas ou atuais."""
+        self._config = config
+        self._semente = int(semente)
+        self._marcos = CamadaMarcos(self.cenario, self.qualidade, config, self._semente)
+
+    @property
+    def marco_atual(self) -> str:
+        """Identificadores dos marcos que atravessam a tela."""
+        return self._marcos.marco_atual if self._marcos else "--"
+
+    @property
+    def proximos_marcos(self) -> str:
+        """Próximos marcos sorteados e suas contagens regressivas."""
+        return self._marcos.proximos_marcos if self._marcos else "--"
+
+    @property
+    def fator_evolucao(self) -> float:
+        """Fator suavizado da curva de progresso do cenário."""
+        return self._marcos.fator_evolucao if self._marcos else 0.0
+
+    @property
+    def semente(self) -> int:
+        """Semente desta partida, usada no sorteio visual reproduzível."""
+        return self._semente
+
+    @property
+    def memoria_marcos(self) -> int:
+        """Memória dos sprites de marcos que já foram pré-renderizados."""
+        return self._marcos.memoria_cache if self._marcos else 0
+
+    def iniciar_saida_dimensao(self) -> None:
+        """Inicia o fade dos marcos antes de revelar a dimensão seguinte."""
+        if self._marcos:
+            self._marcos.iniciar_saida_dimensao()
+
+    def iniciar_entrada_dimensao(self) -> None:
+        """Inicia o fade dos marcos ao revelar esta dimensão."""
+        if self._marcos:
+            self._marcos.iniciar_entrada_dimensao()
+
+    def destino_boss_iniciado(self, destino: TransicaoDestino) -> None:
+        """Anexa o portal de chegada do boss ao cenário atual."""
+        self._destino = destino
+        if self._marcos:
+            self._marcos.iniciar_destino(destino)
 
     @property
     def numero_camadas(self) -> int:
@@ -209,18 +288,37 @@ class ParallaxBackground:
             tile = _preparar_detalhes(cenario.id, indice, estilo, cor,
                                      40 + indice * 22)
             self._detalhes.append(ScrollingLayer(tile, FATORES[indice + 1]))
-        self._linhas = SpeedLines(self._limite, cenario.cores_principais[0],
-                                  self.direcao, 8_100 + cenario.id)
+        brilho_inicio, brilho_fim = cenario.evolucao_brilho
+        paletas = tuple(
+            tuple(
+                round((base * (1 - progresso) + alvo * progresso)
+                      * (brilho_inicio + (brilho_fim - brilho_inicio) * progresso))
+                for base, alvo in zip(cenario.cor_estrela, cenario.cor_evolucao)
+            )
+            for progresso in (0.0, 0.25, 0.5, 0.75, 1.0)
+        )
+        if self.linhas_ativas:
+            self._linhas = SpeedLines(
+                self._limite, cenario.cor_estrela, self.direcao,
+                8_100 + cenario.id, paletas,
+            )
 
-    def _base(self) -> ScrollingLayer:
+    def _base(self, cor_fundo_cutscene: tuple[int, int, int] | None = None) -> ScrollingLayer:
         opcoes = opcoes_atuais()
-        chave = (opcoes.ativo, opcoes.qualidade, opcoes.papel, opcoes.halftone)
+        chave = (opcoes.ativo, opcoes.qualidade, opcoes.papel, opcoes.halftone,
+                 cor_fundo_cutscene)
         if chave not in self._bases:
             if opcoes.ativo:
                 fonte = fundo_comic((LARGURA, ALTURA), self.cenario.id,
                                     opcoes.qualidade, opcoes.papel, opcoes.halftone)
             else:
                 fonte = self.cenario.fundo_estatico
+                if cor_fundo_cutscene is not None:
+                    from src.runtime.presentation.cutscene_raster import (
+                        filtrar_fundo_cutscene,
+                    )
+
+                    fonte = filtrar_fundo_cutscene(fonte, cor_fundo_cutscene)
             camada = ScrollingLayer(_espelhar(fonte), FATORES[0])
             if self._bases:
                 anterior = next(iter(self._bases.values()))
@@ -232,28 +330,52 @@ class ParallaxBackground:
 
     def atualizar(self, velocidade: float, velocidade_base: float, dt: float,
                   estado: EstadoAvanco, desvio_parado: float,
-                  intensidade: float) -> None:
+                  intensidade: float, progresso: float = 0.0,
+                  estado_jogo: str = "JOGANDO") -> None:
         """Avança as camadas com velocidade residual apenas nas distantes."""
         self._preparar()
+        self._progresso = min(1.0, max(0.0, progresso))
+        if estado is None:
+            estado = EstadoAvanco.AVANCANDO
+        fase = EstadoMundoVisual(estado.value)
+        evolucao_ativa = bool(_ler(self._config, "avanco_evolucao_paleta", True))
+        ritmo_ativo = bool(_ler(self._config, "avanco_ritmo_variavel", True))
+        if self._marcos:
+            self._marcos.atualizar(
+                velocidade_base, dt, fase, self._progresso, estado_jogo,
+            )
+        factor = (self._marcos.ritmo_factor if self._marcos and ritmo_ativo else 1.0)
+        evolucao = curva_evolucao(self._progresso, self.cenario.curva_evolucao)
+        densidade = (self.cenario.evolucao_densidade[0]
+                     + (self.cenario.evolucao_densidade[1]
+                        - self.cenario.evolucao_densidade[0]) * evolucao
+                     if evolucao_ativa else 1.0)
+        passagem = self._marcos.em_passagem if self._marcos and ritmo_ativo else False
+        velocidade_visual = velocidade * factor
         residual = (velocidade_base * max(0.0, desvio_parado)
                     if estado is EstadoAvanco.PARADO else 0.0)
-        distante = max(velocidade, residual)
+        distante = max(velocidade_visual, residual)
         for base in self._bases.values():
             base.atualizar(distante, dt, self.direcao)
         for indice, camada in enumerate(self._detalhes):
-            vel = distante if indice == 0 else velocidade
+            vel = distante if indice == 0 else velocidade_visual
             camada.atualizar(vel, dt, self.direcao)
         if self._linhas is not None:
             self._linhas.atualizar(
-                velocidade if self.linhas_ativas else 0.0,
-                velocidade_base, dt, self.direcao, intensidade,
+                velocidade_visual if self.linhas_ativas else 0.0,
+                velocidade_base, dt, self.direcao,
+                intensidade * densidade * (1.22 if passagem else 1.0),
+                evolucao if evolucao_ativa else 0.0,
             )
 
-    def desenhar(self, tela: pygame.Surface) -> None:
+    def desenhar(self, tela: pygame.Surface,
+                 cor_fundo_cutscene: tuple[int, int, int] | None = None) -> None:
         """Desenha a arte, os planos distantes e os rastros em ordem."""
         self._preparar()
-        self._base().desenhar(tela)
+        self._base(cor_fundo_cutscene).desenhar(tela)
         for camada in self._detalhes:
             camada.desenhar(tela)
+        if self._marcos:
+            self._marcos.desenhar(tela)
         if self.linhas_ativas and self._linhas is not None:
             self._linhas.desenhar(tela)

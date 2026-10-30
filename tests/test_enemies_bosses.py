@@ -23,14 +23,20 @@ sys.path.insert(0, RAIZ)
 
 import math  # noqa: E402
 import random  # noqa: E402
+from unittest.mock import patch  # noqa: E402
 
 import pygame  # noqa: E402
 
 from game.bosses import BOSSES_POR_CENARIO, Boss  # noqa: E402
 from game.config import ALTURA, LARGURA  # noqa: E402
 from game.enemies import (  # noqa: E402
-    FORMAS, Inimigo, InimigoEspecial, TIPOS, composicao_onda,
-    sortear_inimigo_especial)
+    FORMAS,
+    TIPOS,
+    Inimigo,
+    InimigoEspecial,
+    composicao_onda,
+    sortear_inimigo_especial,
+)
 from game.player import Jogador  # noqa: E402
 from game.scenarios import Cenario  # noqa: E402
 
@@ -214,11 +220,26 @@ def test_especial_acoes_mutante():
     e.carga = e.carga_maxima
     e.carregado = True
     vida = e.vida
-    acoes = e.acoes_carregado()
+    e.acoes_carregado()
     assert e.mini_boss is True
     assert e.vida == vida + 60
     assert e.raio == 36
     assert e.ataque == "leque"
+
+
+def test_mutante_transformado_mostra_vida_em_vez_de_carga():
+    pygame.init()
+    tela = pygame.Surface((LARGURA, ALTURA))
+    e = InimigoEspecial("mutante", 3, cenario_id=1)
+    e.carga = e.carga_maxima
+    e.carregado = True
+    e.acoes_carregado()
+    e.vida -= 10
+
+    with patch("src.runtime.domain.entities.enemies.barra_vida_cartoon") as barra:
+        e.desenhar(tela)
+
+    assert barra.call_args.args[4:6] == (e.vida, e.vida_max)
 
 
 def test_especial_acoes_cristalino():

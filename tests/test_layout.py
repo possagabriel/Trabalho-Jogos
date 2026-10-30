@@ -30,9 +30,15 @@ import pygame  # noqa: E402
 
 from game.core import Jogo  # noqa: E402
 from game.layout import (  # noqa: E402
-    ANCRAS, ALTURA_BASE, BASE_CENTRO, BASE_DIREITA, BASE_ESQUERDA, CENTRO,
-    LARGURA_BASE, MEIO_DIREITA, MEIO_ESQUERDA, TOPO_CENTRO, TOPO_DIREITA,
-    TOPO_ESQUERDA, Layout)
+    ALTURA_BASE,
+    ANCRAS,
+    BASE_CENTRO,
+    BASE_ESQUERDA,
+    CENTRO,
+    LARGURA_BASE,
+    TOPO_DIREITA,
+    Layout,
+)
 from game.menu import MenuPrincipal  # noqa: E402
 
 RESOLUCOES_ALVO = [(900, 700), (1280, 720), (1366, 768), (1920, 1080),
@@ -139,10 +145,16 @@ def test_grade_de_configuracoes_fica_centralizada_no_painel():
     painel = menu._painel_config()
     rotulo_x, indicador_x, inicio_slider, fim_slider, percentual_x = menu._grade_config()
 
-    assert painel.left < indicador_x < rotulo_x < inicio_slider < fim_slider < percentual_x < painel.right
+    assert (
+        painel.left < indicador_x < rotulo_x < inicio_slider
+        < fim_slider < percentual_x < painel.right
+    )
     # A margem do indicador e a cauda reservada para a porcentagem se espelham.
     fim_conteudo = percentual_x + menu.layout.px(40)
-    assert abs((indicador_x - painel.centerx) + (fim_conteudo - painel.centerx)) <= menu.layout.px(10)
+    assert (
+        abs((indicador_x - painel.centerx) + (fim_conteudo - painel.centerx))
+        <= menu.layout.px(10)
+    )
 
 
 def test_layout_em_todas_as_resolucoes_alvo():

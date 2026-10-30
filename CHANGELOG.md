@@ -17,6 +17,149 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Arco do impulso desenha a circunferência completa, sem cruzar o medidor.
 - Rótulos de vida, energia, armas e chefes deixam de se sobrepor às barras;
   fontes acompanham mudanças de escala do HUD.
+- Buracos negros ganham disco de acreção em camadas; portais recebem profundidade, fluxo suave e identificação dos pares, com animação estática ao reduzir efeitos e física preservada.
+
+- Testes de expansão do mundo aberto inicializam suas fontes sem depender de outro arquivo de teste.
+- Mundo aberto permite escolher setores, portais e encontros no mapa com Esquerda/Direita; seta, destaque e distância acompanham o destino até a chegada.
+- Mundo aberto e menu ganham chuvas curtas de meteoros; minimapa local e mapa completo melhoram, e planetas pequenos saem dos fundos.
+- Fundos do mundo aberto fazem transição suave entre setores e portais, sem
+  salto visual quando a nave muda de destino durante a mistura.
+- O Mutante transformado exibe vida em vez de carga; o íon ganha feixe direcional e o seletor oferece intangibilidade temporária.
+- As cinco opções do menu principal agora usam o mesmo tamanho visual e de clique em ambos os estilos.
+- Corrige encerramento do jogo após derrotar o boss do mundo aberto ao carregar a próxima dimensão.
+- Mundo aberto amplia o mapa, varia o fundo por setor, distribui obstáculos com respawn e liga bosses, passagem de dimensão, mapa em M, turbo e correções da interface.
+- O build de teste da 1.8.0 registra o commit real do push da branch; a tag
+  final `v1.8.0` fica fora da recompilação automática para permitir publicar
+  exatamente os binários e hashes aprovados no teste manual.
+- Fase A: artefatos do build #40125004991 (`f020cb0`) tiveram SHA-256 e OFL
+  conferidos; aguardam teste manual Windows antes de RC2, tag ou release.
+- AGENTS.md consolida escopo de leitura, fluxo Git, validação, acessibilidade e regras de roteiro do INCARNATE.
+- Menu B2: cinco itens e hubs Jogar/Perfil mantêm os destinos antigos em até duas ações; a etapa 1 está integrada, e Continuar sem save fica desabilitado com aviso.
+- Nomes de perfil agora aceitam apóstrofo e outros caracteres imprimíveis na
+  criação e renomeação; espaços nas pontas e controles são rejeitados. Perfis
+  legados continuam legíveis e exportáveis.
+- O menu ganhou cartão de perfil alimentado pelo `ProfileService`, resumo real
+  do ponto inicial de Continuar e selos persistentes para Memórias e itens do
+  Hangar que ficaram compráveis. O schema de perfil migra automaticamente para v3.
+- ORIGINAL e COMIC usam a mesma hierarquia e uma composição própria para janelas
+  próximas de 4:3. Rótulos de telemetria sem dados reais saíram do HUD decorativo.
+- O saldo do rodapé agora vem do perfil ativo, igual ao cartão de perfil.
+- Menu ORIGINAL e COMIC compartilham cinco destinos: Jogar, Hangar, Perfil,
+  Configurações e Sair; os hubs de Jogar e Perfil preservam os callbacks atuais
+  e deixam cada tela anterior acessível em até duas ações.
+- O perfil versionado guarda os IDs de novidades reconhecidas no Arquivo e no
+  Hangar, com defaults para perfis antigos e transferência preservada.
+- Um perfil recém-criado sem partidas não é tratado como save continuável; o
+  resumo de Continuar mostra a partida iniciada na Dimensão 1 / Nível 1.
+- README documenta a navegação nova, os destinos de Lobby/Hangar e a ausência
+  de retomada por checkpoint.
+- A nave foi reposicionada para equilibrar o título e a coluna de ações. O marcador
+  de seleção e os painéis estáticos usam superfícies em cache.
+- O título recebe pulsos cromáticos breves em vez de glitch contínuo; a opção de
+  intensidade de flashes reduz ou desliga esses pulsos.
+- O README inclui capturas otimizadas do menu ORIGINAL em 1920×1080 e ultrawide.
+
+### Fixed
+- Sair da missão restaura o menu principal sem deslocamento e respeita a
+  opção clicada na pausa e na confirmação.
+- A passagem de fase do mundo aberto volta a mostrar o fundo e o diálogo da
+  nova dimensão, com fade que deixa de cobrir a cutscene permanentemente.
+- Mundo aberto mostra o fundo da nova dimensão e o diálogo após derrotar o boss,
+  sem manter a tela preta durante a cutscene.
+- Menu lê sua versão de `project.version` no `pyproject.toml`.
+- Menu ORIGINAL mantém títulos, botões e textos de rodapé dentro das margens,
+  com contraste reforçado, rótulos ajustáveis e Continue desabilitado sem save.
+- O rodapé trunca nomes longos sem alterar perfis existentes. A restrição antiga
+  de apóstrofo em novos nomes foi revista na seção Unreleased.
+
+### Added
+- Mundo aberto ganha spawn aleatório seguro, fundos procedurais distintos com
+  estrelas, planetas, luas, asteroides, meteoroides, cometas, nebulosas e
+  galáxias, além de buracos negros gravitacionais e portais de teleporte.
+- Documento de design do mundo aberto com mapa em dados, bosses 2–4 em ordem livre, títulos sem número nesse modo, modo extra e viagem rápida após o protótipo; implementação ainda pendente.
+- Licença MIT do projeto e avisos OFL 1.1 de Orbitron e Rajdhani nos pacotes.
+- README resume o aviso SmartScreen/antivírus e a verificação SHA-256.
+
+### Fixed
+- Fallback de OpenGL reinicializa o subsistema de vídeo antes de criar a janela
+  CPU quando a criação do apresentador GPU falha.
+
+## [1.8.0] - 2026-10-18
+
+### Changed
+- Produto, pacote Python, comando principal, ponto de entrada, executável,
+  artefatos e instalador agora usam o nome INCARNATE. `void-shift`, `main.py` e
+  os diretórios de dados anteriores continuam compatíveis.
+- O AppId do Inno Setup foi mantido para atualizar instalações existentes; a
+  candidata usa metadados de pré-lançamento sem marcar a release como latest.
+- Contornos de sprites escalam com o tamanho, respeitando limites comuns para
+  nave, inimigos, bosses e skins.
+- Densidade de hachura cresce com o tamanho do sprite e é omitida nas formas pequenas,
+  mantendo detalhes visuais legíveis sem alterar hitboxes.
+- Screenshot do README registra as dez skins COMIC em quatro direções.
+- Versão do projeto elevada de 1.7.0 para 1.8.0.
+- README reorganizado em guia para jogadores e documentação técnica, com descrição
+  correta dos assets, resolução interna, controles, fases e cobertura de testes.
+- Ruff centralizado em `pyproject.toml`; scripts de dados usam o caminho canônico
+  `INCARNATE_DATA_DIR` e preservam `SPACEFURY_DATA_DIR` como fallback legado.
+- Preview do HUD movido para `tools/`; CI de qualidade dispara em qualquer push e PR.
+- Guia de migração atualizado com os módulos pendentes e critérios para remover `game/`.
+
+## [1.7.0] - 2026-10-18
+
+### Changed
+- Fundos COMIC agora usam composição distinta para cada dimensão: rotas orbitais,
+  cristas vulcânicas, ondas e recifes, cristais, fendas e raios divinos.
+- Detalhes de fundo têm menos densidade, contraste e saturação para preservar a leitura
+  de inimigos, projéteis e marcos.
+- Projéteis inimigos usam contorno escuro e claro com contraste mínimo de 3:1; hitboxes
+  e lógica de combate não mudam.
+- Screenshot do README documenta as seis composições de cenário.
+- Versão do projeto elevada de 1.6.0 para 1.7.0.
+
+## [1.6.0] - 2026-10-18
+
+### Added
+- Marcos procedurais de percurso por dimensão, com sorteio reproduzível, pool
+  limitado por qualidade, evolução visual e destino de chegada para bosses.
+- Progresso de nível suavizado, monotônico e visível no F3, junto da semente e
+  da agenda de marcos.
+- Opções globais para marcos, evolução visual e ritmo variável, compatíveis com
+  `settings.json` antigos.
+
+### Changed
+- `PREENCHE` preserva a área jogável em 16:9 e estende somente o fundo decorativo.
+- Configurações e README explicam que as bordas adicionais não ampliam o campo de jogo.
+- Flash e fade de transição também cobrem as faixas decorativas; a apresentação reutiliza
+  buffers de escala e de fundo, e as bordas ficam fora do shake da câmera.
+- HUD renderizado na resolução física da área jogável, com tipografia mínima efetiva,
+  contraste automatizado e cores/medidas centralizadas em tokens.
+- Medidor circular do HUD desenhado sem superfície temporária por quadro; brilho removido
+  de elementos não focados.
+- Fundos rasterizados de cutscene recebem acabamento cartoon pré-processado e cacheado,
+  com posterização, tinta de dimensão, contorno e retícula.
+- Caixa de diálogo, retratos, títulos e controles de cutscene usam contorno cartoon sem
+  glow decorativo; magenta fica restrito aos glitches e alertas.
+- A troca de dimensão faz fade dos marcos antigos e novos sem alterar a
+  transição de combate existente.
+- Versão do projeto elevada de 1.5.0 para 1.6.0.
+
+## [1.5.0] - 2026-10-18
+
+### Added
+- Perfis locais com UUID, seleção inicial, criação, renomeação e exclusão confirmada.
+- Progresso, recordes, preferências de mira e controles separados por perfil.
+- Repositório JSON versionado com backups, recuperação de índice e aviso para perfis danificados.
+- Migração idempotente do save único, preservando `save.json` e `records.json` originais.
+- Indicadores do perfil, última gravação e alterações pendentes no overlay F3.
+- Importação e exportação portáteis pela CLI sem novas gravações nos arquivos legados.
+
+### Changed
+- Melhorias de partida são contadas por perfil como estatísticas; seus efeitos continuam
+  restritos à partida atual.
+- `settings.json` mantém somente opções globais; controles, sensibilidade e mira ficam
+  no perfil selecionado.
+- Versão do projeto elevada de 1.4.0 para 1.5.0.
 
 ## [1.4.0] - 2026-10-17
 

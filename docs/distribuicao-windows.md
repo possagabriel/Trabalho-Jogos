@@ -1,7 +1,7 @@
 # Executável Windows
 
-O workflow **Executáveis Desktop** gera o arquivo portátil `VOID-SHIFT.exe` e o
-instalador `VOID-SHIFT-Setup.exe` em uma máquina Windows, publicando ambos como
+O workflow **Executáveis Desktop** gera o arquivo portátil `INCARNATE.exe` e o
+instalador `INCARNATE-Setup.exe` em uma máquina Windows, publicando ambos como
 artefato baixável da execução no GitHub Actions. Ele também publica
 `SHA256SUMS.txt`, com as somas de verificação dos dois arquivos.
 
@@ -18,13 +18,13 @@ ela vem do campo `project.version` do `pyproject.toml`.
 
 ## Download público por Release
 
-Para uma compilação de teste, baixe o artefato `VOID-SHIFT-Windows` ao final
-da execução e execute `VOID-SHIFT-Setup.exe`. Para jogadores, publique uma tag
+Para uma compilação de teste, baixe o artefato `INCARNATE-Windows` ao final
+da execução e execute `INCARNATE-Setup.exe`. Para jogadores, publique uma tag
 de versão, por exemplo `v1.0.0`:
-o workflow cria uma GitHub Release e anexa `VOID-SHIFT.exe` diretamente nela.
+o workflow cria uma GitHub Release e anexa `INCARNATE.exe` diretamente nela.
 O link de distribuição passa a ficar em **Releases** → versão mais recente →
-`VOID-SHIFT-Setup.exe` (instalação com atalho e desinstalação) e
-`VOID-SHIFT.exe` (versão portátil).
+`INCARNATE-Setup.exe` (instalação com atalho e desinstalação) e
+`INCARNATE.exe` (versão portátil).
 
 ## Gerar localmente no Windows
 
@@ -35,8 +35,8 @@ Em um PowerShell, com Python 3.11 ou superior e o
 py -m pip install -e ".[desktop]"
 py tools/build_desktop.py
 $AppVersion = py -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])"
-& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$AppVersion" installer\void-shift.iss
-Get-FileHash dist/VOID-SHIFT.exe, dist/VOID-SHIFT-Setup.exe -Algorithm SHA256
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$AppVersion" "/DAppVersionInfo=$AppVersion" installer\incarnate.iss
+Get-FileHash dist/INCARNATE.exe, dist/INCARNATE-Setup.exe -Algorithm SHA256
 ```
 
 O executável é assinado antes de o instalador ser criado; assim, quando houver
@@ -44,11 +44,35 @@ certificado configurado no GitHub, a cópia instalada também carrega a
 assinatura. Compare o hash exibido com `SHA256SUMS.txt` antes de distribuir um
 build manual.
 
+Para verificar um download no PowerShell, execute:
+
+```powershell
+Get-FileHash .\INCARNATE-Setup.exe -Algorithm SHA256
+```
+
+Compare o valor `Hash` com a linha `INCARNATE-Setup.exe` de `SHA256SUMS.txt`.
+O arquivo `licenses\OFL.txt` instalado junto ao jogo contém a licença e os
+avisos de copyright das fontes.
+
+## Testar binários da branch de preparação 1.8.0
+
+Enquanto `v1.8.0` não for publicada, use os artefatos da execução **push** de
+`ci/fase-a-promocao-binarios` em **Actions → Executáveis Desktop**. O evento
+`pull_request` compila um merge temporário e não serve como origem dos bytes
+a promover. Baixe `INCARNATE-Windows`, compare `BUILD-COMMIT-Windows.txt` com o
+SHA do push e valide os hashes em `SHA256SUMS.txt`. Os passos completos de
+teste e promoção estão no [plano da Fase A](release-v1.8.0-promocao.md).
+
 ## Assinatura e aviso do SmartScreen
 
 O aviso de arquivo potencialmente perigoso não pode ser removido por código.
 Ele é decidido pelo Microsoft SmartScreen a partir da assinatura digital e da
 reputação do arquivo.
+
+Um build sem certificado confiável pode gerar um alerta do SmartScreen ou do
+antivírus. Confirme que o download veio da Release oficial e valide seu SHA-256
+com as instruções acima antes de executá-lo. A verificação do hash confirma a
+integridade em relação ao valor publicado, não substitui a origem confiável.
 
 Para assinar os builds, configure estes segredos no repositório:
 

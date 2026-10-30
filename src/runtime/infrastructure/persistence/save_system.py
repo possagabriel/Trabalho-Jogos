@@ -1,10 +1,16 @@
 """Sistema de progressao e salvamento em JSON."""
 
+from __future__ import annotations
+
 import json
 import os
+from typing import TYPE_CHECKING
 
 from src.shared.persistence import carregar_json_resiliente, salvar_json_atomico
 from src.shared.user_data import diretorio_dados
+
+if TYPE_CHECKING:
+    from src.domain.systems.profile_service import ProfileService
 
 PASTA_DADOS = diretorio_dados()
 ARQUIVO_SAVE = os.path.join(PASTA_DADOS, "save.json")
@@ -247,3 +253,124 @@ class SistemaProgressao:
     def melhor_pontuacao():
         lista = SistemaProgressao.carregar_recordes()
         return lista[0]["pontos"] if lista else 0
+
+
+class ProgressoPerfil(SistemaProgressao):
+    """Adapta o contrato de progresso existente ao perfil ativo."""
+
+    def __init__(self, service: ProfileService) -> None:
+        self.service = service
+        self.dados = self._novo_dados()
+        self.carregar_ativo()
+
+    def carregar_ativo(self) -> None:
+        """Troca o estado em memória pelo do perfil selecionado."""
+        profile = self.service.active
+        if profile is None:
+            self.dados = self._novo_dados()
+            return
+        saved = profile.progress.get("legacy", {})
+        self.dados = self._mesclar_padrao(self._novo_dados(), saved)
+        jog = self.jogador
+        progress = profile.progress
+        jog["nome"] = profile.name
+        for old, new in (("moedas", "moedas"), ("skins_desbloqueadas", "skins_desbloqueadas"),
+                         ("skin_atual", "skin_atual"), ("nivel_maximo", "nivel_maximo"),
+                         ("total_pontos", "total_pontos")):
+            jog[old] = progress[new]
+        self.campanha["cenas_vistas"] = list(progress["cenas_vistas"])
+
+    def resetar_progresso(self) -> None:
+        """Reinicia somente o progresso do perfil selecionado."""
+        from src.domain.profiles import initial_progress
+
+        if self.service.active:
+            self.service.active.progress = initial_progress()
+        self.dados = self._novo_dados()
+
+    def salvar_arquivo(self) -> bool:
+        """Persiste progresso no perfil; não grava save.json legado."""
+        if self.service.active is None:
+            return False
+        from src.domain.profiles import MAX_MONEY
+
+        jog = self.jogador
+        money = jog.get("moedas")
+        if type(money) is not int or not 0 <= money <= MAX_MONEY:
+            self.service.dirty = True
+            self.service.save_error = True
+            return False
+        progress = self.service.active.progress
+        progress.update({
+            "moedas": jog["moedas"],
+            "skins_desbloqueadas": list(jog["skins_desbloqueadas"]),
+            "skin_atual": jog["skin_atual"],
+            "nivel_maximo": jog["nivel_maximo"],
+            "total_pontos": jog["total_pontos"],
+            "dimensao_maxima": max(jog.get("cenarios_desbloqueados", [1]) or [1]),
+            "cenas_vistas": list(self.cenas_vistas),
+            "memorias_desbloqueadas": list(self.cenas_vistas),
+            "tempo_total": self.dados["estatisticas"].get("tempo_total", 0),
+            "inimigos_derrotados": self.dados["estatisticas"].get("inimigos_derrotados", 0),
+            "legacy": self.dados,
+        })
+        modes = progress.setdefault("modos", {})
+        if not isinstance(modes, dict):
+            modes = {}
+            progress["modos"] = modes
+        linear = modes.setdefault("linear", {})
+        if not isinstance(linear, dict):
+            linear = {}
+            modes["linear"] = linear
+        bosses = progress.get("bosses_por_tipo", {})
+        campaign = self.campanha
+        linear.update({
+            "nivel": jog["nivel_maximo"],
+            "dimensao": max(jog.get("cenarios_desbloqueados", [1]) or [1]),
+            "bosses": sum(value for value in bosses.values()
+                          if type(value) is int and value > 0)
+            if isinstance(bosses, dict) else 0,
+            "moedas": jog["moedas"],
+            "tempo": self.dados["estatisticas"].get("tempo_total", 0),
+            "fase_atual": campaign.get("fase_atual", "lealdade"),
+            "nivel_atual": campaign.get("nivel_atual", 1),
+        })
+        return self.service._save()
+
+    def existe_save(self) -> bool:
+        """Informa se o perfil tem progresso de partida que pode continuar."""
+        profile = self.service.active
+        if profile is None:
+            return False
+        progress = profile.progress
+        if progress.get("modo_ultimo") == "mundo_aberto":
+            modes = progress.get("modos", {})
+            world = modes.get("mundo_aberto", {}) if isinstance(modes, dict) else {}
+            return bool(isinstance(world, dict) and world.get("partidas_jogadas", 0))
+        partidas = progress.get("partidas_jogadas", 0)
+        return bool((type(partidas) is int and partidas > 0)
+                    or progress.get("legacy"))
+
+    def registrar_recorde(self, nome: str, pontos: int, nivel: int,
+                         skin: str) -> list[dict]:
+        """Mantém recordes exclusivamente no perfil ativo."""
+        progress = self.service.active.progress if self.service.active else self.dados.setdefault(
+            "_recordes_em_memoria", {"recordes": [], "recorde_pontos": 0})
+        records = progress["recordes"]
+        records.append({"nome": nome, "pontos": pontos, "nivel": nivel, "skin": skin})
+        records.sort(key=lambda row: row.get("pontos", 0), reverse=True)
+        del records[10:]
+        progress["recorde_pontos"] = max(progress["recorde_pontos"], pontos)
+        if self.service.active:
+            self.service._save()
+        return records
+
+    def carregar_recordes_perfil(self) -> list[dict]:
+        """Devolve recordes somente do perfil ativo."""
+        return (self.service.active.progress["recordes"] if self.service.active else
+                self.dados.get("_recordes_em_memoria", {}).get("recordes", []))
+
+    def melhor_pontuacao_perfil(self) -> int:
+        """Devolve recorde pessoal."""
+        return (self.service.active.progress["recorde_pontos"] if self.service.active else
+                self.dados.get("_recordes_em_memoria", {}).get("recorde_pontos", 0))

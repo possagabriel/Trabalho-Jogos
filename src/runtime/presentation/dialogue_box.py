@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.core.constants import ALTURA, LARGURA, NOME_JOGO, VOID_BLACK
-from src.infrastructure.graphics.comic_theme import opcoes_atuais
+from src.infrastructure.graphics.comic_theme import CIANO, LARANJA, TINTA, opcoes_atuais
 from src.runtime.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
 from src.runtime.infrastructure.graphics.smooth import desenhar_painel, desenhar_painel_cartoon
 
@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 def _painel(tela, cor, rect, **opcoes):
     """Usa o acabamento correspondente ao estilo visual selecionado."""
     desenhar = desenhar_painel_cartoon if opcoes_atuais().ativo else desenhar_painel
+    if not opcoes_atuais().ativo:
+        opcoes.pop("espessura_borda", None)
     desenhar(tela, cor, rect, **opcoes)
 
 
@@ -40,7 +42,12 @@ class DialogueBox:
         self._retratos = {
             icone: self._criar_retrato(icone) for icone in set(self._icones.values())
         }
-        self._titulos: dict[tuple[str, tuple[int, int, int]], pygame.Surface] = {}
+        self._titulos: dict[
+            tuple[str, tuple[int, int, int], bool], pygame.Surface
+        ] = {}
+        self._texto_contornado: dict[
+            tuple[int, str, tuple[int, int, int], int], pygame.Surface
+        ] = {}
         self._glitches: dict[str, tuple[str, ...]] = {}
         self._estaticas = [self._criar_estatica(i) for i in range(4)]
         self._sombra = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
@@ -49,13 +56,14 @@ class DialogueBox:
 
     def _criar_retrato(self, icone: str) -> pygame.Surface:
         superficie = pygame.Surface((132, 132), pygame.SRCALPHA)
-        superficie.fill((20, 24, 42, 245))
-        cor = (25, 217, 255) if icone == "nave" else (255, 200, 87)
-        pygame.draw.rect(superficie, cor, (4, 4, 124, 124), 5, border_radius=13)
+        superficie.fill((32, 37, 47, 255))
+        cor = CIANO if icone == "nave" else LARANJA
+        pygame.draw.rect(superficie, TINTA, (3, 3, 126, 126), 5, border_radius=13)
+        pygame.draw.rect(superficie, cor, (7, 7, 118, 118), 3, border_radius=10)
         if icone == "nave":
             pontos = [(66, 21), (100, 105), (66, 84), (32, 105)]
             pygame.draw.polygon(superficie, cor, pontos)
-            pygame.draw.polygon(superficie, VOID_BLACK, pontos, 5)
+            pygame.draw.polygon(superficie, TINTA, pontos, 5)
         elif icone == "hexagono":
             pontos = [(66 + 43 * math.cos(i * math.tau / 6),
                        66 + 43 * math.sin(i * math.tau / 6)) for i in range(6)]
@@ -99,8 +107,37 @@ class DialogueBox:
     def _glifo(self, letra: str, cor: tuple[int, int, int]) -> pygame.Surface:
         chave = letra, cor
         if chave not in self._glifos:
-            self._glifos[chave] = self._fonte.render(letra, True, cor)
+            self._glifos[chave] = self._texto_outline(self._fonte, letra, cor, 3)
         return self._glifos[chave]
+
+    def _texto_outline(self, fonte: pygame.font.Font, texto: str,
+                       cor: tuple[int, int, int], espessura: int) -> pygame.Surface:
+        chave = id(fonte), texto, cor, espessura
+        if chave not in self._texto_contornado:
+            base = fonte.render(texto, True, cor)
+            contorno = fonte.render(texto, True, TINTA)
+            resultado = pygame.Surface(
+                (base.get_width() + espessura * 2, base.get_height() + espessura * 2),
+                pygame.SRCALPHA,
+            )
+            for dx, dy in ((0, 0), (espessura * 2, 0), (0, espessura * 2),
+                           (espessura * 2, espessura * 2), (espessura, 0),
+                           (0, espessura), (espessura * 2, espessura),
+                           (espessura, espessura * 2)):
+                resultado.blit(contorno, (dx, dy))
+            resultado.blit(base, (espessura, espessura))
+            if len(self._texto_contornado) >= 512:
+                self._texto_contornado.pop(next(iter(self._texto_contornado)))
+            self._texto_contornado[chave] = resultado
+        return self._texto_contornado[chave]
+
+    @staticmethod
+    def _cor_acento(cor: tuple[int, int, int]) -> tuple[int, int, int]:
+        """Reserva o magenta para os quadros de glitch e alerta."""
+        vermelho, verde, azul = cor
+        if vermelho > verde * 1.45 and azul > verde * 1.45:
+            return LARANJA if vermelho >= azul else CIANO
+        return cor
 
     def _texto(self, tela: pygame.Surface, texto: str, x: int, y: int,
                largura: int, cor: tuple[int, int, int]) -> None:
@@ -110,13 +147,14 @@ class DialogueBox:
                 x, y = inicio, y + 34
                 continue
             glifo = self._glifo(letra, cor)
-            if x + glifo.get_width() > inicio + largura and letra == " ":
+            largura_glifo = max(1, glifo.get_width() - 6)
+            if x + largura_glifo > inicio + largura and letra == " ":
                 x, y = inicio, y + 34
                 continue
-            if x + glifo.get_width() > inicio + largura:
+            if x + largura_glifo > inicio + largura:
                 x, y = inicio, y + 34
             tela.blit(glifo, (x, y))
-            x += glifo.get_width()
+            x += largura_glifo
 
     def desenhar(self, tela: pygame.Surface, controle: ControladorCutscene,
                 cor_dimensao: tuple[int, int, int]) -> None:
@@ -134,17 +172,21 @@ class DialogueBox:
             tela.blit(self._estaticas[indice], (0, 0))
             texto = passo.get("texto", "")
             if texto:
-                self._titulo(tela, self._texto_corrompido(texto, indice), cor_dimensao)
+                self._titulo(tela, self._texto_corrompido(texto, indice),
+                             cor_dimensao, glitch=True)
         elif tipo == "titulo":
             self._titulo(tela, passo["texto"].replace("{titulo_jogo}", NOME_JOGO),
                          cor_dimensao)
         elif tipo == "fala":
             painel = pygame.Rect(110, 500, 1060, 184)
-            _painel(tela, cor_dimensao, painel)
+            cor_acento = self._cor_acento(cor_dimensao)
+            _painel(tela, cor_acento, painel,
+                                    espessura_borda=4, glow_raio=0)
             personagem = controle.catalogo.personagens[passo["personagem"]]
             icone = controle.retrato_atual or self._icones[passo["personagem"]]
             tela.blit(self.obter_retrato(icone), (132, 525))
-            nome = self._fonte_nome.render(personagem["nome"], True, cor_dimensao)
+            nome = self._texto_outline(self._fonte_nome, personagem["nome"],
+                                       cor_acento, 3)
             tela.blit(nome, (288, 519))
             self._texto(tela, controle.sequenciador.texto_visivel,
                         288, 566, 850, (244, 244, 247))
@@ -155,28 +197,36 @@ class DialogueBox:
             self._fade.fill(VOID_BLACK)
             self._fade.set_alpha(alfa)
             tela.blit(self._fade, (0, 0))
-        _painel(tela, cor_dimensao, self.BOTAO_PULAR,
-                                cor_fundo=(18, 18, 35), glow_raio=4)
-        rotulo = self._fonte_auxiliar.render("PULAR CENA", True, (244, 244, 247))
+        cor_acento = self._cor_acento(cor_dimensao)
+        _painel(tela, cor_acento, self.BOTAO_PULAR,
+                                cor_fundo=(32, 37, 47), espessura_borda=4,
+                                glow_raio=0)
+        rotulo = self._texto_outline(self._fonte_auxiliar, "PULAR CENA",
+                                     (244, 244, 247), 2)
         tela.blit(rotulo, rotulo.get_rect(center=self.BOTAO_PULAR.center))
         if controle.pausado:
             self._titulo(tela, "CENA PAUSADA", cor_dimensao)
         if controle.confirmacao_pulo:
             caixa = pygame.Rect(330, 255, 620, 180)
-            _painel(tela, cor_dimensao, caixa)
+            _painel(tela, cor_acento, caixa,
+                                    espessura_borda=4, glow_raio=0)
             texto = self._fonte_nome.render("Pular esta cena?", True, (244, 244, 247))
             tela.blit(texto, texto.get_rect(center=(640, 312)))
             for rect, rotulo in ((self.BOTAO_CONFIRMAR, "PULAR"),
                                  (self.BOTAO_CANCELAR, "CANCELAR")):
-                _painel(tela, cor_dimensao, rect, glow_raio=2)
+                _painel(tela, cor_acento, rect,
+                                        espessura_borda=4, glow_raio=0)
                 texto_botao = self._fonte_auxiliar.render(rotulo, True, (244, 244, 247))
                 tela.blit(texto_botao, texto_botao.get_rect(center=rect.center))
 
     def _titulo(self, tela: pygame.Surface, texto: str,
-                cor: tuple[int, int, int]) -> None:
-        chave = texto, cor
+                cor: tuple[int, int, int], glitch: bool = False) -> None:
+        chave = texto, cor, glitch
         if chave not in self._titulos:
-            self._titulos[chave] = self._fonte_titulo.render(texto, True, cor)
+            cor_titulo = (255, 76, 174) if glitch else self._cor_acento(cor)
+            self._titulos[chave] = self._texto_outline(
+                self._fonte_titulo, texto, cor_titulo, 4,
+            )
         superficie = self._titulos[chave]
         tela.blit(superficie, superficie.get_rect(center=(LARGURA // 2, ALTURA // 2)))
 

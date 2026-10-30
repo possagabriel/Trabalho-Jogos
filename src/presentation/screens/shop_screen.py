@@ -9,7 +9,7 @@ from typing import Any
 
 import pygame
 
-from src.core.constants import BRANCO, CIANO, DOURADO, LARGURA, ALTURA, VERDE
+from src.core.constants import ALTURA, BRANCO, CIANO, DOURADO, LARGURA, VERDE
 from src.presentation.screens.menu_screen import SistemaNotificacao, formatar_pontos
 
 
@@ -143,7 +143,6 @@ class ShopScreen:
 
     def _rects_botoes(self) -> dict[str, pygame.Rect]:
         nomes = ["comprar", "equipar", "preview", "voltar"]
-        labels = ["COMPRAR", "EQUIPAR", "PREVIEW", "VOLTAR"]
         largura, espaco = 140, 18
         total = largura * 4 + espaco * 3
         x = (LARGURA - total) // 2

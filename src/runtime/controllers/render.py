@@ -43,8 +43,8 @@ class ControladorRenderizacao:
                     preparar_rotacoes(sprite, hachuras, variacao)
 
     def desenhar_hud(self) -> None:
-        """Desenha o HUD na superficie logica de jogo."""
-        self.jogo.hud.desenhar(self.jogo.tela_ui, self.jogo)
+        """Desenha o HUD em resolução efetiva, mantendo o mundo lógico."""
+        self.jogo._desenhar_hud()
 
     def _desenhar_campo(self) -> None:
         """Mostra o combate ou a animação dimensional, com HUD quando aplicável."""
@@ -78,9 +78,16 @@ class ControladorRenderizacao:
 
     def _compor(self) -> None:
         jogo = self.jogo
-        self.sincronizar_cursor()
         jogo.tela_ui.fill((0, 0, 0, 0))
-        if jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
+        strategy = jogo.estrategia_modo
+        mode_rendered = bool(
+            strategy and strategy.handles_gameplay
+            and strategy.render(jogo, jogo.tela))
+        jogo._hud_nativo_pronto = False
+        self.sincronizar_cursor()
+        if mode_rendered:
+            self._desenhar_sobre_modo()
+        elif jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
             jogo.tela.fill(VOID_BLACK)
             with usar_visual(jogo.config):
                 jogo.menu.desenhar(jogo.tela_ui)
@@ -92,9 +99,12 @@ class ControladorRenderizacao:
                 jogo._desenhar_carregando(incluir_cenario=False)
         elif jogo.estado is EstadoJogo.CUTSCENE:
             if jogo.cutscene_controller.estado_anterior is EstadoJogo.MENU:
-                jogo.menu.desenhar(jogo.tela)
+                jogo.menu.desenhar(
+                    jogo.tela,
+                    cor_fundo_cutscene=jogo.cenario.cor_transicao,
+                )
             else:
-                jogo._desenhar_jogo()
+                jogo._desenhar_jogo(acabamento_cutscene=True)
             jogo.cutscene_controller.caixa.desenhar(
                 jogo.tela, jogo.cutscene_controller, jogo.cenario.cor_transicao)
         elif jogo.estado is EstadoJogo.JOGANDO:
@@ -116,6 +126,19 @@ class ControladorRenderizacao:
         self._desenhar_mira_e_debug()
         jogo._apresentar()
         pygame.display.flip()
+
+    def _desenhar_sobre_modo(self) -> None:
+        """Compoe as telas que ficam sobre o cenário do modo ativo."""
+        jogo = self.jogo
+        if jogo.estado is EstadoJogo.CUTSCENE:
+            jogo.cutscene_controller.caixa.desenhar(
+                jogo.tela, jogo.cutscene_controller, jogo.cenario.cor_transicao)
+        elif jogo.estado is EstadoJogo.PAUSA:
+            with usar_visual(jogo.config), jogo._desenhar_na_interface():
+                jogo._desenhar_pausa()
+        elif jogo.estado is EstadoJogo.GAME_OVER:
+            with usar_visual(jogo.config), jogo._desenhar_na_interface():
+                jogo._desenhar_game_over()
 
     def _desenhar_mira_e_debug(self) -> None:
         """Mantém mira e depuração sobre a interface, sem tremor de câmera."""

@@ -12,16 +12,16 @@ from src.infrastructure.graphics.comic_render import trilha_tinta
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.runtime.infrastructure.graphics.cel_shading import (
     circulo_com_contorno,
-    contorno_circulo,
-    contorno_retangulo,
-    escurecer_cor,
 )
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_circulo,
     desenhar_glow,
     desenhar_poligono,
     linha_suave,
-    retangulo_suave,
+)
+from src.runtime.infrastructure.graphics.style_tokens import (
+    CONTORNO_PROJETIL_CLARO,
+    CONTORNO_PROJETIL_ESCURO,
 )
 
 CORES_ARCO_IRIS = [(255, 60, 60), (255, 220, 60), (90, 255, 90),
@@ -51,7 +51,7 @@ ARMARIA = [
      "papel": "três trajetórias curvas"},
     {"nome": "Canhao de Ions", "nivel": 20, "cor": AZUL_CLARO, "raio": 6,
      "vel": 0, "dano": 5, "cooldown": 48, "tipo": "ion",
-     "papel": "coluna de dano total"},
+     "papel": "feixe direcional penetrante"},
     {"nome": "Rifle Gauss", "nivel": 22, "cor": (180, 220, 255), "raio": 3,
      "vel": 14, "dano": 3, "cooldown": 16, "tipo": "gauss",
      "papel": "projétil perfurante"},
@@ -62,6 +62,9 @@ ARMARIA = [
 
 class Projetil:
     """Projetil disparado pelo jogador ou por inimigos."""
+
+    CRESCIMENTO_ION = 6
+    ALCANCE_ION = 2 * max(LARGURA, ALTURA)
 
     def __init__(self, x: float, y: float, vel_x: float, vel_y: float,
                  dano: int, cor: Cor, raio: float,
@@ -84,9 +87,29 @@ class Projetil:
     @property
     def rect(self) -> pygame.Rect:
         if self.tipo == "ion":
-            return pygame.Rect(int(self.x - 7), 0, 14, ALTURA)
+            ponta_x, ponta_y = self.ponta_ion()
+            left = math.floor(min(self.x, ponta_x) - 7)
+            top = math.floor(min(self.y, ponta_y) - 7)
+            right = math.ceil(max(self.x, ponta_x) + 7)
+            bottom = math.ceil(max(self.y, ponta_y) + 7)
+            return pygame.Rect(left, top, right - left, bottom - top)
         return pygame.Rect(int(self.x - self.raio), int(self.y - self.raio),
                            self.raio * 2, self.raio * 2)
+
+    def ponta_ion(self) -> tuple[float, float]:
+        """Devolve a ponta do feixe que cresce da nave rumo à mira."""
+        dx, dy = self._direcao_visual()
+        length = self.ALCANCE_ION * min(1.0, self.tempo / self.CRESCIMENTO_ION)
+        return self.x + dx * length, self.y + dy * length
+
+    def atinge_rect(self, alvo: pygame.Rect) -> bool:
+        """Testa a largura real do feixe, inclusive na diagonal."""
+        if self.tipo != "ion":
+            return self.rect.colliderect(alvo)
+        ponta = self.ponta_ion()
+        area = alvo.inflate(14, 14)
+        return bool(area.clipline((round(self.x), round(self.y)),
+                                  (round(ponta[0]), round(ponta[1]))))
 
     def atualizar(self) -> None:
         if self.tipo == "ion":
@@ -123,8 +146,41 @@ class Projetil:
             return CORES_ARCO_IRIS[(self.tempo // 6) % len(CORES_ARCO_IRIS)]
         return self.cor
 
+    def _direcao_visual(self) -> tuple[float, float]:
+        """Orienta o desenho pela velocidade atual, inclusive após reflexão."""
+        velocidade = math.hypot(self.vel_x, self.vel_y)
+        if velocidade < 0.1:
+            return 0.0, -1.0
+        return self.vel_x / velocidade, self.vel_y / velocidade
+
+    def _desenhar_gauss(self, tela: pygame.Surface, x: int, y: int, cor: Cor) -> None:
+        """Desenha os trilhos do Gauss alinhados à direção atual."""
+        dx, dy = self._direcao_visual()
+        ponta = (x + dx * 9, y + dy * 9)
+        cauda = (x - dx * 26, y - dy * 26)
+        desenhar_glow(tela, cor, (x, y), 16, 0.5)
+        for lado in (-1, 1):
+            desvio = (dy * lado * 3, -dx * lado * 3)
+            linha_suave(tela, cor,
+                         (cauda[0] + desvio[0], cauda[1] + desvio[1]),
+                         (ponta[0] + desvio[0], ponta[1] + desvio[1]), 2)
+        linha_suave(tela, BRANCO, (x - dx * 13, y - dy * 13), ponta, 2)
+        desenhar_circulo(tela, BRANCO, ponta, 2, brilho=1.8)
+
+    def _desenhar_ion(self, tela: pygame.Surface, x: int, y: int, cor: Cor) -> None:
+        """Anima o feixe a partir do emissor, alinhado à mira."""
+        ponta = self.ponta_ion()
+        desenhar_glow(tela, cor, (x, y), 18, 0.45)
+        desenhar_circulo(tela, BRANCO, (x, y), 5, brilho=1.3)
+        if self.tempo > 0:
+            brilho = 0.5 + 0.2 * min(1.0, self.tempo / self.CRESCIMENTO_ION)
+            linha_suave(tela, AZUL_CLARO, (x, y), ponta, 18)
+            linha_suave(tela, cor, (x, y), ponta, 8)
+            linha_suave(tela, BRANCO, (x, y), ponta, 2)
+            desenhar_glow(tela, cor, ponta, 12, brilho)
+
     def desenhar(self, tela: pygame.Surface) -> None:
-        if opcoes_atuais().ativo:
+        if opcoes_atuais().ativo and self.tipo != "ion":
             trilha_tinta(tela, (self.x, self.y), (self.vel_x, self.vel_y), self.cor)
         x, y = int(self.x), int(self.y)
         cor = self._cor_atual()
@@ -137,32 +193,22 @@ class Projetil:
                                 espessura_contorno=2)
             desenhar_circulo(tela, BRANCO, (x, y), max(2, r // 2), brilho=1.5)
         elif self.tipo == "laser":
-            desenhar_glow(tela, (0, 120, 50), (x, y), 12, 0.4)
-            rect_laser = pygame.Rect(x - 2, y - 12, 4, 24)
-            contorno_retangulo(tela, rect_laser, 2)
-            retangulo_suave(tela, cor, rect_laser, 2)
-            linha_suave(tela, BRANCO, (x, y - 12), (x, y + 12), 2)
-            desenhar_circulo(tela, BRANCO, (x, y - 12), 2, brilho=1.8)
+            dx, dy = self._direcao_visual()
+            cauda = (x - dx * 31, y - dy * 31)
+            ponta = (x + dx * 7, y + dy * 7)
+            desenhar_glow(tela, cor, (x, y), 15, 0.55)
+            linha_suave(tela, cor, cauda, (x - dx * 8, y - dy * 8), 2)
+            linha_suave(tela, cor, (x - dx * 13, y - dy * 13), ponta, 7)
+            linha_suave(tela, BRANCO, (x - dx * 9, y - dy * 9), ponta, 2)
+            desenhar_circulo(tela, BRANCO, ponta, 2, brilho=1.7)
         elif self.tipo == "ion":
-            desenhar_glow(tela, (80, 110, 180), (x, ALTURA // 2),
-                          max(ALTURA, LARGURA) // 2, 0.5)
-            rect_ion = pygame.Rect(x - 9, 0, 18, ALTURA)
-            contorno_retangulo(tela, rect_ion, 2)
-            retangulo_suave(tela, (80, 110, 180), rect_ion, 6)
-            retangulo_suave(tela, cor, pygame.Rect(x - 3, 0, 6, ALTURA), 3,
-                            glow_cor=cor, glow_raio=20)
-            linha_suave(tela, BRANCO, (x - 1, 0), (x - 1, ALTURA), 2)
+            self._desenhar_ion(tela, x, y, cor)
         elif self.tipo == "feixe":
             desenhar_glow(tela, cor, (x, y + 30), 20, 0.6)
             linha_suave(tela, cor, (x, y), (x, y + 60), 3)
             linha_suave(tela, BRANCO, (x, y), (x, y + 60), 1)
         elif self.tipo == "gauss":
-            desenhar_glow(tela, (90, 130, 200), (x, y), 14, 0.4)
-            rect_gauss = pygame.Rect(x - 2, y - 14, 4, 28)
-            contorno_retangulo(tela, rect_gauss, 2)
-            retangulo_suave(tela, cor, rect_gauss, 2)
-            linha_suave(tela, BRANCO, (x, y - 14), (x, y + 14), 2)
-            desenhar_circulo(tela, BRANCO, (x, y - 14), 2, brilho=1.8)
+            self._desenhar_gauss(tela, x, y, cor)
         elif self.tipo == "nova":
             pulso = 1 + 0.25 * math.sin(self.tempo * 0.5)
             desenhar_glow(tela, LARANJA, (x, y), (self.raio + 10) * pulso,
@@ -202,18 +248,31 @@ class Projetil:
             desenhar_glow(tela, (255, 240, 120), (x, y - self.raio * 1.3),
                           6, 0.9)
         else:
-            comp = max(self.raio * 2 + 4, self.speed + 4)
-            ang = math.atan2(self.vel_y, self.vel_x)
-            dx = math.cos(ang) * comp
-            dy = math.sin(ang) * comp
-            larg = max(3, self.raio * 2)
-            desenhar_glow(tela, cor, (x, y), max(10, self.raio * 3), 0.45)
-            linha_suave(tela, cor, (x - dx, y - dy), (x + dx, y + dy), larg)
+            dx, dy = self._direcao_visual()
+            comprimento = max(18, min(32, self.speed * 2.3))
+            cauda = (x - dx * comprimento, y - dy * comprimento)
+            larg = max(3, int(self.raio * 1.5))
+            desenhar_glow(tela, cor, (x, y), max(10, self.raio * 3), 0.5)
+            linha_suave(tela, cor, cauda,
+                         (x - dx * comprimento * 0.35,
+                          y - dy * comprimento * 0.35), 2)
+            linha_suave(tela, cor,
+                         (x - dx * comprimento * 0.55,
+                          y - dy * comprimento * 0.55), (x, y), larg)
+            if self.tipo == "espiral":
+                onda = math.sin(self.tempo * 0.6) * 5
+                linha_suave(tela, cor,
+                             (cauda[0] + dy * onda, cauda[1] - dx * onda),
+                             (x - dx * 4, y - dy * 4), 2)
             linha_suave(tela, BRANCO,
-                         (x - dx * 0.5, y - dy * 0.5),
-                         (x + dx * 0.85, y + dy * 0.85),
-                         max(1, larg // 2 - 1))
-            desenhar_circulo(tela, BRANCO, (x, y), max(1, larg // 2 - 1),
-                             brilho=1.6)
+                         (x - dx * comprimento * 0.45, y - dy * comprimento * 0.45),
+                         (x, y), max(1, larg // 3))
+            desenhar_circulo(tela, cor, (x, y), max(2, self.raio), brilho=1.3)
+            desenhar_circulo(tela, BRANCO, (x + dx * 2, y + dy * 2),
+                             max(1, int(self.raio * 0.5)), brilho=1.6)
         if self.origem == "inimigo":
             desenhar_circulo(tela, LARANJA, (x, y), max(7, int(self.raio) + 4), 2)
+            pygame.draw.circle(tela, CONTORNO_PROJETIL_ESCURO,
+                               (x, y), max(10, int(self.raio) + 7), 3)
+            pygame.draw.circle(tela, CONTORNO_PROJETIL_CLARO,
+                               (x, y), max(9, int(self.raio) + 5), 1)

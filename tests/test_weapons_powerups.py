@@ -29,7 +29,6 @@ from game.config import ALTURA, LARGURA  # noqa: E402
 from game.powerups import PowerUp, sortear_tipo  # noqa: E402
 from game.weapons import ARMARIA, CORES_ARCO_IRIS, Projetil  # noqa: E402
 
-
 # ---------------------------------------------------------------------------
 # ARMARIA
 # ---------------------------------------------------------------------------
@@ -68,10 +67,32 @@ def test_projetil_ion_nao_movimenta():
     proj.atualizar()
     assert proj.x == 100 and proj.y == 100
     assert proj.tempo == 1
-    # rect do ion cobre a tela inteira em altura
+    # O feixe nasce no emissor e cresce apenas na direção do disparo.
     rect = proj.rect
-    assert rect.top == 0 and rect.bottom == ALTURA
+    assert rect.top < 100 and rect.bottom <= 107
     assert rect.w == 14
+
+
+def test_ion_horizontal_cresce_da_origem_e_nao_acerta_atras():
+    proj = Projetil(100, 200, 1, 0, 5, (200, 220, 255), 6, tipo="ion")
+    proj.atualizar()
+
+    assert proj.atinge_rect(pygame.Rect(180, 190, 20, 20))
+    assert not proj.atinge_rect(pygame.Rect(40, 190, 20, 20))
+    assert not proj.atinge_rect(pygame.Rect(180, 300, 20, 20))
+    assert proj.rect.left >= 93
+
+
+def test_ion_horizontal_desenha_feixe_a_frente_do_emissor():
+    pygame.init()
+    tela = pygame.Surface((LARGURA, ALTURA))
+    proj = Projetil(100, 200, 1, 0, 5, (200, 220, 255), 6, tipo="ion")
+    proj.atualizar()
+
+    proj.desenhar(tela)
+
+    assert tela.get_at((250, 200))[:3] != (0, 0, 0)
+    assert tela.get_at((40, 200))[:3] == (0, 0, 0)
 
 
 def test_projetil_rect():

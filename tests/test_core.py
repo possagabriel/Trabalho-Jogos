@@ -16,30 +16,31 @@ import tempfile
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
-os.environ["SPACEFURY_DATA_DIR"] = tempfile.mkdtemp(prefix="spacefury_test_")
+os.environ["INCARNATE_DATA_DIR"] = tempfile.mkdtemp(prefix="incarnate_test_")
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
 
-import random  # noqa: E402
 from unittest import mock  # noqa: E402
 
 import pygame  # noqa: E402
 
-from game.config import ALTURA, EstadoJogo, LARGURA  # noqa: E402
 from game.combat_session import SessaoCombate  # noqa: E402
+from game.config import ALTURA, LARGURA, EstadoJogo  # noqa: E402
 from game.core import Jogo  # noqa: E402
+from game.enemies import Inimigo, InimigoEspecial  # noqa: E402
 from game.game_over_controller import ControladorGameOver  # noqa: E402
 from game.loop_controller import ControladorLoop  # noqa: E402
 from game.pause_controller import ControladorPausa  # noqa: E402
+from game.powerups import PowerUp  # noqa: E402
 from game.render_controller import ControladorRenderizacao  # noqa: E402
 from game.theme import tema_atual  # noqa: E402
-from game.enemies import Inimigo, InimigoEspecial  # noqa: E402
-from game.powerups import PowerUp  # noqa: E402
 from game.weapons import ARMARIA, Projetil  # noqa: E402
-from src.core.settings import Configuracoes  # noqa: E402
+from src.core.settings import (  # noqa: E402
+    Configuracoes,  # noqa: E402
+    OpcoesShaderComic,  # noqa: E402
+)
 from src.runtime.domain.entities.player import Jogador  # noqa: E402
-from src.core.settings import OpcoesShaderComic  # noqa: E402
 
 
 def _patch_recordes():
@@ -207,6 +208,54 @@ def test_voltar_ao_menu_salva_checkpoint_da_fase_atual():
     assert jogo.estado is EstadoJogo.MENU
     assert campanha["fase_atual"] == "identidade"
     assert campanha["nivel_atual"] == 13
+    salvar.assert_called_once()
+
+
+def test_clique_sair_da_missao_usa_opcao_clicada():
+    jogo = novo_jogo()
+    jogo.estado = EstadoJogo.PAUSA
+    jogo._pausa_selecao = 0
+    pos = (LARGURA // 2, ALTURA // 2 + 83)
+    assert jogo.pausa_controller.colidir_opcao(pos) == 2
+
+    jogo.pausa_controller.tratar_evento(
+        pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=pos))
+
+    assert jogo.estado is EstadoJogo.PAUSA
+    assert jogo._pausa_selecao == 2
+    assert jogo._pausa_dialogo is not None
+    assert jogo._pausa_dialogo.ativo
+
+
+def test_confirmar_saida_restaura_menu_e_remove_tremor():
+    jogo = novo_jogo()
+    jogo.estado = EstadoJogo.PAUSA
+    jogo.menu.subestado = "JOGAR"
+    jogo.trauma = 0.8
+
+    with mock.patch.object(jogo, "_salvar_tudo") as salvar:
+        jogo.pausa_controller.confirmar_saida()
+
+    assert jogo.estado is EstadoJogo.MENU
+    assert jogo.menu.subestado == "MENU"
+    assert jogo.trauma == 0.0
+    assert jogo.fade == 255
+    salvar.assert_called_once()
+
+
+def test_confirmar_saida_por_clique_usa_posicao_do_evento():
+    jogo = novo_jogo()
+    jogo.estado = EstadoJogo.PAUSA
+    jogo.pausa_controller.sair_para_menu()
+    jogo._pausa_mouse = (0, 0)
+    confirmar, _ = jogo._pausa_dialogo._retangulos()
+
+    with mock.patch.object(jogo, "_salvar_tudo") as salvar:
+        jogo.pausa_controller.tratar_evento(
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=confirmar.center))
+
+    assert jogo.estado is EstadoJogo.MENU
+    assert jogo._pausa_dialogo is None
     salvar.assert_called_once()
 
 
@@ -398,6 +447,36 @@ def test_ion_atinge_cada_alvo_uma_vez_por_projetil():
         jogo._atualizar_projeteis()
     assert inimigo.vida == vida_antes - 1
     assert jogo.jogador.combo.combo_atual == 1
+
+
+def test_ion_horizontal_atinge_apenas_alvos_a_frente_do_feixe():
+    jogo = novo_jogo()
+    _limpar_campo(jogo)
+    alvo = Inimigo("scout", 1, x=600, y=300)
+    atras = Inimigo("scout", 1, x=300, y=300)
+    fora = Inimigo("scout", 1, x=600, y=400)
+    jogo.inimigos = [alvo, atras, fora]
+    jogo.projeteis = [Projetil(450, 300, 1, 0, 5,
+                              (200, 220, 255), 6, tipo="ion")]
+
+    jogo._atualizar_projeteis()
+
+    assert alvo.vida <= 0
+    assert atras.vida == atras.vida_max
+    assert fora.vida == fora.vida_max
+
+
+def test_especial_intangivel_consume_carga_e_nao_cria_bomba():
+    jogo = novo_jogo()
+    _limpar_campo(jogo)
+    assert "intangivel" in jogo.especiais_desbloqueados
+    jogo.especial_atual = "intangivel"
+    jogo.especial = 1.0
+
+    assert jogo._ativar_especial()
+    assert jogo.especial == 0.0
+    assert jogo.jogador.tempo_intangivel > 0
+    assert not jogo.projeteis
 
 
 def test_gauss_atravessa_mas_danifica():
@@ -620,7 +699,7 @@ def test_fim_de_jogo_nao_e_recorde():
         jog = jogo.jogador
         jog.pontuacao = 100
         jogo._fim_de_jogo()
-    assert jogo.novo_recorde is False
+    assert jogo.novo_recorde is True  # recordes legados globais não afetam o perfil
 
 
 # ---------------------------------------------------------------------------
@@ -649,7 +728,7 @@ def test_adicionar_trauma_limita_a_1():
 # Desenho e apresentacao
 # ---------------------------------------------------------------------------
 
-def test_interface_usa_o_canvas_logico_em_vez_da_resolucao_da_janela():
+def test_interface_generica_permanece_no_canvas_logico():
     jogo = Jogo()
     assert jogo.tela_ui is not jogo.tela
     assert jogo.tela_ui.get_flags() & pygame.SRCALPHA
@@ -661,11 +740,11 @@ def test_hud_e_composto_no_canvas_logico_antes_da_apresentacao():
     jogo = novo_jogo()
     jogo._desenhar_jogo = mock.Mock()
     jogo._apresentar = mock.Mock()
-    jogo.hud.desenhar = mock.Mock()
+    jogo._desenhar_hud = mock.Mock()
 
     jogo.render_controller.desenhar()
 
-    jogo.hud.desenhar.assert_called_once_with(jogo.tela_ui, jogo)
+    jogo._desenhar_hud.assert_called_once()
     jogo._apresentar.assert_called_once()
 
 
@@ -680,7 +759,7 @@ def test_apresentador_gpu_recebe_mundo_interface_e_destino_fisico():
         OpcoesShaderComic.de_config(jogo.config))
     jogo._apresentador_gpu.apresentar.assert_called_once_with(
         jogo.tela, (0, 0, 1920, 1080), (1920, 1080), (8, 8, 13),
-        interface=jogo.tela_ui)
+        interface=jogo.tela_ui, fundo=None, efeito_borda=None, hud=None)
 
 
 def test_fallback_cpu_compoe_interface_sobre_o_mundo():
@@ -708,6 +787,55 @@ def test_gpu_processa_interface_junto_quando_preservacao_esta_desligada():
     assert argumentos.kwargs["interface"] is None
 
 
+def test_hud_nativo_usa_area_16_por_9_e_reutiliza_canvas():
+    jogo = Jogo()
+    jogo.janela = pygame.Surface((900, 700))
+    jogo.config["aspecto"] = "PREENCHE"
+
+    jogo._desenhar_hud()
+    primeira = jogo._hud_superficie_nativa
+    jogo._desenhar_hud()
+
+    assert primeira.get_size() == (900, 506)
+    assert jogo._hud_superficie_nativa is primeira
+
+
+def test_hud_nativo_recria_canvas_apenas_quando_muda_a_area():
+    jogo = Jogo()
+    jogo.janela = pygame.Surface((1920, 1080))
+    jogo._desenhar_hud()
+    anterior = jogo._hud_superficie_nativa
+
+    jogo.janela = pygame.Surface((900, 700))
+    jogo._desenhar_hud()
+
+    assert jogo._hud_superficie_nativa.get_size() == (900, 506)
+    assert jogo._hud_superficie_nativa is not anterior
+
+
+def test_apresentador_cpu_compoe_hud_nativo_no_viewport():
+    jogo = Jogo()
+    jogo.janela = pygame.Surface((1280, 720))
+    jogo.fade = 0
+    jogo.flash = 0
+    jogo._hud_superficie_nativa = pygame.Surface((1280, 720), pygame.SRCALPHA)
+    jogo._hud_superficie_nativa.fill((0, 0, 0, 0))
+    jogo._hud_superficie_nativa.set_at((40, 40), (240, 30, 50, 255))
+    jogo._hud_nativo_pronto = True
+
+    jogo._apresentar()
+
+    assert jogo.janela.get_at((40, 40))[:3] == (240, 30, 50)
+
+
+def test_hud_nativo_fica_abaixo_dos_fades_de_tela():
+    jogo = Jogo()
+    jogo.fade = 18
+    jogo._hud_nativo_pronto = True
+
+    assert not jogo._hud_nativo_visivel()
+
+
 def test_status_do_shader_distingue_configuracao_e_fallback():
     jogo = Jogo()
     jogo._apresentador_gpu = None
@@ -731,6 +859,129 @@ def test_canvas_logico_16_por_9_preenche_full_hd_sem_barras():
     assert escala == 1.5
     assert off_x == 0
     assert off_y == 0
+
+
+def test_mira_alinha_com_mouse_nos_dois_modos_e_resolucoes_alvo():
+    jogo = Jogo()
+    jogo.estado = EstadoJogo.JOGANDO
+    jogo.config["mira_ativa"] = True
+    ponto_logico = (640, 360)
+
+    for tamanho in ((900, 700), (1280, 720), (1920, 1080), (2560, 1080)):
+        jogo.janela = pygame.Surface(tamanho)
+        for modo in ("AJUSTAR", "PREENCHE"):
+            jogo.config["aspecto"] = modo
+            escala, off_x, off_y = jogo._transformacao_janela()
+            ponto_janela = (round(ponto_logico[0] * escala + off_x),
+                            round(ponto_logico[1] * escala + off_y))
+            with mock.patch("pygame.mouse.get_pos", return_value=ponto_janela):
+                assert jogo.posicao_mira() == ponto_logico
+
+
+def test_flash_e_fade_da_troca_de_dimensao_alcancam_bordas_preenche():
+    from src.runtime.presentation.dimension_transition import (
+        INICIO_FLASH,
+        TransicaoDimensional,
+    )
+
+    jogo = Jogo()
+    jogo.janela = pygame.Surface((2560, 1080))
+    jogo.config["aspecto"] = "PREENCHE"
+    jogo.fade = 0
+    jogo.tela.fill((20, 40, 60))
+    jogo.tela_ui.fill((0, 0, 0, 0))
+    fundo = pygame.Surface((2560, 1080))
+    fundo.fill((10, 20, 30))
+    jogo._obter_fundo_preenche = mock.Mock(return_value=fundo)
+    jogo.cenario.desenhar = mock.Mock(
+        side_effect=lambda tela: tela.fill((10, 20, 30)))
+    jogo.particulas.desenhar = mock.Mock()
+    transicao = TransicaoDimensional(jogo.cenario, (255, 255, 255))
+    transicao.quadro = INICIO_FLASH + 4
+    jogo.progressao_controller.transicao = transicao
+    jogo.progressao_controller.frame_transicao()
+    jogo._apresentar()
+    pixel_borda = jogo.janela.get_at((20, 540))[:3]
+    assert pixel_borda[0] > 10
+    assert pixel_borda[1] > 20
+    assert pixel_borda[2] > 30
+    pixel_central = jogo.janela.get_at((1280, 540))[:3]
+    assert all(valor > 10 for valor in pixel_central)
+
+    jogo.progressao_controller.transicao = None
+    jogo.fade = 255
+    jogo.render_controller._desenhar_overlays_logicos()
+    jogo._apresentar()
+    assert jogo.janela.get_at((20, 540))[:3] == (0, 0, 0)
+    assert max(jogo.janela.get_at((1280, 540))[:3]) <= 16
+
+
+def test_shake_nao_desloca_a_borda_decorativa():
+    jogo = Jogo()
+    jogo.janela = pygame.Surface((2560, 1080))
+    jogo.config["aspecto"] = "PREENCHE"
+    jogo.fade = 0
+    jogo.tela.fill((220, 30, 40))
+    fundo = pygame.Surface((2560, 1080))
+    fundo.fill((20, 170, 60))
+    jogo._obter_fundo_preenche = mock.Mock(return_value=fundo)
+
+    jogo._apresentar()
+    antes = jogo.janela.get_at((20, 540))[:3]
+    jogo.trauma = 1.0
+    with mock.patch("src.runtime.controllers.render.random.uniform", return_value=20):
+        jogo.render_controller.aplicar_shake()
+    jogo._apresentar()
+
+    assert jogo.janela.get_at((20, 540))[:3] == antes == (20, 170, 60)
+
+
+def test_cache_das_bordas_reusa_superficies_e_libera_tamanhos_anteriores():
+    import gc
+    import weakref
+
+    jogo = Jogo()
+    jogo.config["aspecto"] = "PREENCHE"
+    jogo.fade = 0
+    jogo.janela = pygame.Surface((2560, 1080))
+    jogo._apresentar()
+    fundo = jogo._fundo_preenche
+    superficie_escalada = jogo._superficie_escalada
+    for _ in range(4):
+        jogo._apresentar()
+    assert jogo._fundo_preenche is fundo
+    assert jogo._superficie_escalada is superficie_escalada
+    jogo.config["estilo_visual"] = "COMIC"
+    assert jogo._obter_fundo_preenche((2560, 1080)) is fundo
+
+    referencia_antiga = weakref.ref(fundo)
+    jogo.janela = pygame.Surface((1920, 1080))
+    jogo._apresentar()
+    assert jogo._fundo_preenche is not fundo
+    del fundo
+    gc.collect()
+    assert referencia_antiga() is None
+
+
+def test_redimensionar_e_alternar_tela_cheia_recria_cache_uma_vez():
+    jogo = Jogo()
+    jogo.config["aspecto"] = "PREENCHE"
+    jogo.fade = 0
+    jogo.config["resolucao"] = "1920x1080"
+    jogo._liberar_apresentador_gpu = mock.Mock()
+    jogo._criar_janela_video = mock.Mock(
+        side_effect=lambda tamanho, flags: pygame.Surface(tamanho))
+
+    for tela_cheia in (False, True, False, True):
+        jogo.config["tela_cheia"] = tela_cheia
+        jogo._aplicar_modo_video()
+        janela = jogo.janela
+        jogo._apresentar()
+        fundo = jogo._fundo_preenche
+        for _ in range(3):
+            jogo._apresentar()
+        assert jogo._fundo_preenche is fundo
+        assert jogo.janela is janela
 
 
 def test_modo_desempenho_troca_escala_somente_apos_atraso_sustentado():

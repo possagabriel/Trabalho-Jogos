@@ -1,0 +1,404 @@
+"""Contratos puros para perfis, recuperação e migração legada."""
+
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from src.domain.systems.profile_service import ProfileService
+from src.infrastructure.persistence.profile_repository import JsonProfileRepository
+
+
+@pytest.fixture
+def service(tmp_path):
+    return ProfileService(JsonProfileRepository(tmp_path), max_profiles=5, max_name_length=16)
+
+
+@pytest.mark.parametrize("name", [
+    "", "   ", " Ana", "Ana ", "A\nB", "A\tB", "A\0B", "A\u200bB", "A😀B", "A★B", "A_B", "X" * 17,
+])
+def test_invalid_names(service, name):
+    with pytest.raises(ValueError):
+        service.create(name)
+
+
+def test_names_unicode_duplicates_and_limit(service):
+    first = service.create("José da Silva")
+    assert first.name == "José da Silva"
+    with pytest.raises(ValueError):
+        service.create("josé DA SILVA")
+    assert service.create("Á" * 16).name == "Á" * 16
+    with pytest.raises(ValueError):
+        service.rename(first.id, "á" * 16)
+    assert service.rename(first.id, "JOÃO").name == "JOÃO"
+
+
+@pytest.mark.parametrize("name", [
+    "O'Brien", "Ana-Maria", "José da Silva", "Ana  Maria", "Ana 42",
+])
+def test_create_accepts_letters_numbers_spaces_apostrophe_and_hyphen(service, name):
+    profile = service.create(name)
+    assert service.repository.load(profile.id).name == name
+
+
+def test_rename_accepts_apostrophe_and_preserves_name_on_invalid_attempt(service):
+    profile = service.create("Ana")
+    assert service.rename(profile.id, "D'Ávila-Sul").name == "D'Ávila-Sul"
+    assert service.repository.read_index()["profiles"][0]["name"] == "D'Ávila-Sul"
+    with pytest.raises(ValueError):
+        service.rename(profile.id, " D'Ávila-Sul")
+    with pytest.raises(ValueError):
+        service.rename(profile.id, "Ana★")
+    assert service.repository.load(profile.id).name == "D'Ávila-Sul"
+
+
+def test_name_normalizes_accents_without_trimming(service):
+    assert service.create("Jose\u0301").name == "José"
+
+
+def test_legacy_apostrophe_name_survives_index_rebuild_and_export(tmp_path):
+    repository = JsonProfileRepository(tmp_path)
+    service = ProfileService(repository)
+    profile = service.create("Ana")
+    raw = profile.to_dict()
+    raw["name"] = "D'Ávila"
+    repository.write_raw(profile.id, raw)
+    repository.index_path.unlink()
+
+    reopened = ProfileService(JsonProfileRepository(tmp_path))
+    assert reopened.list_profiles()[0].name == "D'Ávila"
+    assert reopened.select(profile.id).name == "D'Ávila"
+    exported = tmp_path / "legado-exportado.json"
+    assert reopened.export_active(exported)
+    assert json.loads(exported.read_text(encoding="utf-8"))["name"] == "D'Ávila"
+    assert reopened.repository.load(profile.id).name == "D'Ávila"
+
+
+def test_crud_limit_and_active_delete(service):
+    profiles = [service.create(f"P{i}") for i in range(5)]
+    with pytest.raises(ValueError):
+        service.create("P5")
+    service.select(profiles[0].id)
+    with pytest.raises(ValueError):
+        service.delete(profiles[0].id, profiles[0].name, in_game=True)
+    with pytest.raises(ValueError):
+        service.delete(profiles[0].id, "errado")
+    service.delete(profiles[0].id, profiles[0].name)
+    assert profiles[0].id not in [p.id for p in service.list_profiles()]
+    with pytest.raises(KeyError):
+        service.credit(1)
+
+
+def test_money_unlocks_and_catalog_validation(service, caplog):
+    profile = service.create("Jogadora")
+    service.select(profile.id)
+    service.credit(10)
+    with pytest.raises(ValueError):
+        service.spend(11)
+    with pytest.raises(ValueError):
+        service.credit(2**63)
+    assert service.spend(4) == 6
+    assert service.unlock_skin("padrao") is False
+    assert service.unlock_skin("skin-invalida") is False
+    raw = service.active.to_dict()
+    raw["progress"]["skins_desbloqueadas"] += ["skin-invalida"]
+    raw["progress"]["armas_desbloqueadas"] += [999]
+    raw["progress"]["melhorias_escolhidas"] = {"inexistente": 3}
+    raw["progress"]["cenas_vistas"] = ["inexistente", "introducao"]
+    raw["progress"]["bosses_por_tipo"] = {"inexistente": 2}
+    raw["progress"]["skin_atual"] = "skin-invalida"
+    service.repository.write_raw(profile.id, raw)
+    reloaded = ProfileService(service.repository)
+    reloaded.select(profile.id)
+    assert "skin-invalida" not in reloaded.active.progress["skins_desbloqueadas"]
+    assert 999 not in reloaded.active.progress["armas_desbloqueadas"]
+    assert reloaded.active.progress["skin_atual"] == "padrao"
+    assert reloaded.active.progress["melhorias_escolhidas"] == {}
+    assert reloaded.active.progress["cenas_vistas"] == ["introducao"]
+    assert reloaded.active.progress["bosses_por_tipo"] == {}
+    assert "descartado" in caplog.text
+
+
+def test_novelty_memories_are_acknowledged_without_marking_story_seen(service):
+    profile = service.create("Memórias")
+    service.select(profile.id)
+    service.update_progress(memorias_desbloqueadas=["introducao"], cenas_vistas=[])
+
+    assert service.novelty_ids("memorias") == ["introducao"]
+    assert service.acknowledge_novelties("memorias") == ["introducao"]
+    assert service.novelty_ids("memorias") == []
+    assert service.active.progress["cenas_vistas"] == []
+
+
+def test_hangar_novelty_is_one_time_after_presentation_despite_balance_changes(
+        service):
+    profile = service.create("Hangar")
+    service.select(profile.id)
+    service.credit(500)
+
+    assert service.refresh_hangar_novelties() == ["fenix"]
+    service.spend(500)
+    assert service.novelty_ids("hangar") == ["fenix"]
+    assert service.acknowledge_novelties("hangar") == ["fenix"]
+    service.credit(500)
+    assert service.novelty_ids("hangar") == []
+    assert service.active.progress["novidades_pendentes"]["hangar"] == []
+
+
+def test_schema_v1_gets_novelty_defaults_and_transfer_preserves_state(
+        service, tmp_path):
+    from src.domain.profiles import Profile
+
+    old = Profile.from_dict({
+        "schema_version": 1, "id": "old", "name": "Antigo",
+        "progress": {"moedas": 12},
+    })
+    assert old.progress["novidades_vistas"] == {"memorias": [], "hangar": []}
+    assert old.progress["novidades_pendentes"] == {"hangar": []}
+    version_two = Profile.from_dict({
+        "schema_version": 2, "id": "old-v2", "name": "Antigo V2",
+        "progress": {"novidades_vistas": {"memorias": [], "hangar": ["fenix"]}},
+    })
+    assert version_two.progress["novidades_pendentes"] == {"hangar": []}
+
+    profile = service.create("Transferência")
+    service.select(profile.id)
+    service.active.progress["novidades_vistas"] = {
+        "memorias": ["introducao"], "hangar": ["fenix"],
+    }
+    service.active.progress["novidades_pendentes"] = {"hangar": ["cristal"]}
+    service.flush()
+    exported = tmp_path / "transfer.json"
+    assert service.export_active(exported)
+
+    imported = ProfileService(JsonProfileRepository(tmp_path / "importado"))
+    result = imported.import_file(exported)
+    assert result.progress["novidades_vistas"] == {
+        "memorias": ["introducao"], "hangar": ["fenix"],
+    }
+    assert result.progress["novidades_pendentes"] == {"hangar": ["cristal"]}
+
+
+def test_menu_summaries_use_profile_service_and_continue_start_point(service):
+    assert service.menu_profile_summary() is None
+    assert service.continue_summary() is None
+    profile = service.create("Resumo")
+    service.select(profile.id)
+    service.update_progress(
+        dimensao_maxima=5, nivel_maximo=18, bosses_por_tipo={"HEXAGONO": 2},
+        moedas=420, tempo_total=7325,
+    )
+    assert service.menu_profile_summary() == {
+        "name": "Resumo", "skin_id": "padrao", "dimension": 5,
+        "bosses_defeated": 2, "coins": 420, "play_time": 7325,
+    }
+    assert service.continue_summary() == {
+        "mode": "linear", "dimension": 1, "level": 1,
+        "total_play_time": 7325,
+    }
+
+
+def test_schema_v3_adiciona_resumos_dos_modos_sem_perder_save_linear():
+    from src.domain.profiles import Profile
+
+    old = Profile.from_dict({
+        "schema_version": 3, "id": "linear-v3", "name": "Linear",
+        "progress": {
+            "moedas": 42, "nivel_maximo": 13, "dimensao_maxima": 3,
+            "tempo_total": 900, "legacy": {
+                "jogador": {"progresso_campanha": {
+                    "fase_atual": "identidade", "nivel_atual": 13,
+                }},
+            },
+        },
+    })
+
+    assert old.to_dict()["schema_version"] == 4
+    assert old.progress["modo_ultimo"] == "linear"
+    assert old.progress["modos"]["linear"]["nivel"] == 13
+    assert old.progress["modos"]["linear"]["moedas"] == 42
+    assert old.progress["modos"]["linear"]["fase_atual"] == "identidade"
+    assert old.progress["modos"]["mundo_aberto"]["regioes_libertas"] == 0
+
+
+def test_continue_summary_reflete_fase_e_nivel_realmente_salvos(service):
+    profile = service.create("Ponto salvo")
+    service.select(profile.id)
+    service.update_progress(
+        partidas_jogadas=1,
+        legacy={"jogador": {"progresso_campanha": {
+            "fase_atual": "identidade", "nivel_atual": 13,
+        }}},
+    )
+
+    assert service.continue_summary() == {
+        "mode": "linear", "dimension": 3, "level": 13,
+        "total_play_time": 0,
+    }
+
+
+def test_fresh_profile_is_not_mistaken_for_a_continuable_save(service):
+    profile = service.create("Novo")
+    service.select(profile.id)
+    from src.runtime.infrastructure.persistence.save_system import ProgressoPerfil
+
+    progress = ProgressoPerfil(service)
+    assert progress.existe_save() is False
+    service.update_progress(partidas_jogadas=1)
+    assert progress.existe_save() is True
+
+
+def test_rebuild_index_and_corrupt_profile(tmp_path):
+    repo = JsonProfileRepository(tmp_path)
+    service = ProfileService(repo)
+    good = service.create("Bom")
+    bad = service.create("Ruim")
+    repo.profile_path(bad.id).write_text("{", encoding="utf-8")
+    repo.backup_path(bad.id).write_text("{", encoding="utf-8")
+    repo.index_path.write_text("{", encoding="utf-8")
+    recovered = ProfileService(JsonProfileRepository(tmp_path))
+    entries = {item.id: item for item in recovered.list_profiles()}
+    assert entries[good.id].damaged is False
+    assert entries[bad.id].damaged is True
+    with pytest.raises(ValueError):
+        recovered.select(bad.id)
+
+
+def test_corrupt_primary_uses_backup(tmp_path):
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    profile = service.create("Ana")
+    service.select(profile.id)
+    service.credit(3)
+    service.repository.profile_path(profile.id).write_text("{", encoding="utf-8")
+    recovered = ProfileService(JsonProfileRepository(tmp_path))
+    recovered.select(profile.id)
+    assert recovered.active.progress["moedas"] == 0
+    assert json.loads(recovered.repository.backup_path(profile.id).read_text(
+        encoding="utf-8"))["progress"]["moedas"] == 0
+
+
+def test_damaged_last_used_is_not_selected(tmp_path):
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    profile = service.create("Ana")
+    service.select(profile.id)
+    service.repository.profile_path(profile.id).write_text("{", encoding="utf-8")
+    service.repository.backup_path(profile.id).write_text("{", encoding="utf-8")
+    recovered = ProfileService(JsonProfileRepository(tmp_path))
+    assert recovered.select_last() is None
+    assert recovered.active is None
+
+
+@pytest.mark.parametrize("legacy", [
+    {"jogador": {"moedas": 12, "skins_desbloqueadas": ["padrao"],
+                 "progresso_campanha": {"cenas_vistas": ["introducao"]}}},
+    {"jogador": {"moedas": 7}},
+])
+def test_legacy_migration_idempotent(tmp_path, legacy):
+    (tmp_path / "save.json").write_text(json.dumps(legacy), encoding="utf-8")
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    service.migrate_legacy()
+    assert len(service.list_profiles()) == 1
+    profile = service.list_profiles()[0]
+    service.delete(profile.id, profile.name)
+    ProfileService(JsonProfileRepository(tmp_path)).migrate_legacy()
+    assert not ProfileService(JsonProfileRepository(tmp_path)).list_profiles()
+    assert (tmp_path / "save.json").read_text(encoding="utf-8") == json.dumps(legacy)
+
+
+def test_migration_from_backup_and_both_corrupt(tmp_path):
+    (tmp_path / "save.json").write_text("{", encoding="utf-8")
+    (tmp_path / "save.json.bak").write_text('{"jogador":{"moedas":9}}', encoding="utf-8")
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    service.migrate_legacy()
+    assert service.list_profiles()[0].progress["moedas"] == 9
+    other = tmp_path / "other"
+    other.mkdir()
+    (other / "save.json").write_text("{", encoding="utf-8")
+    (other / "save.json.bak").write_text("{", encoding="utf-8")
+    failed = ProfileService(JsonProfileRepository(other))
+    failed.migrate_legacy()
+    assert failed.migration_error
+    assert not failed.list_profiles()
+
+
+def test_interrupted_migration_recovers_without_duplicate(tmp_path):
+    (tmp_path / "save.json").write_text('{"jogador":{"moedas":4}}', encoding="utf-8")
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    service.migrate_legacy(interrupt_after_profile=True)
+    assert len(service.list_profiles()) == 1
+    resumed = ProfileService(JsonProfileRepository(tmp_path))
+    resumed.migrate_legacy()
+    assert len(resumed.list_profiles()) == 1
+    assert resumed.repository.read_index()["migration_complete"] is True
+
+
+def test_old_schema_and_deleted_last_profile_do_not_reimport(tmp_path):
+    legacy = '{"jogador":{"moedas":4}}'
+    (tmp_path / "save.json").write_text(legacy, encoding="utf-8")
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    service.migrate_legacy()
+    profile = service.list_profiles()[0]
+    raw = profile.to_dict()
+    raw["schema_version"] = 0
+    raw["progress"].pop("mortes")
+    service.repository.write_raw(profile.id, raw)
+    loaded = ProfileService(JsonProfileRepository(tmp_path))
+    assert loaded.list_profiles()[0].progress["mortes"] == 0
+    loaded.delete(profile.id, profile.name)
+    loaded.repository.index_path.unlink()
+    again = ProfileService(JsonProfileRepository(tmp_path))
+    again.migrate_legacy()
+    assert again.list_profiles() == []
+
+
+def test_orphan_is_cleaned_on_startup(tmp_path):
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    profile = service.create("Ana")
+    orphan = service.repository.folder / "00000000-0000-0000-0000-000000000001.json"
+    orphan.write_text(json.dumps(profile.to_dict()), encoding="utf-8")
+    ProfileService(JsonProfileRepository(tmp_path))
+    assert not orphan.exists()
+
+
+def test_missing_index_recovers_backup_only_profile(tmp_path):
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    profile = service.create("Ana")
+    service.select(profile.id)
+    service.repository.profile_path(profile.id).unlink()
+    service.repository.index_path.unlink()
+    recovered = ProfileService(JsonProfileRepository(tmp_path))
+    assert [item.id for item in recovered.list_profiles()] == [profile.id]
+
+
+def test_delete_damaged_profile_by_displayed_name(tmp_path):
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    profile = service.create("Ana")
+    service.repository.profile_path(profile.id).write_text("{", encoding="utf-8")
+    damaged = service.list_profiles()[0]
+    assert damaged.damaged
+    service.delete(damaged.id, damaged.name)
+    assert service.list_profiles() == []
+
+
+def test_cli_transfer_uses_profiles_without_legacy_writes(tmp_path, monkeypatch):
+    from main import cli
+
+    monkeypatch.setenv("INCARNATE_DATA_DIR", str(tmp_path))
+    service = ProfileService(JsonProfileRepository(tmp_path))
+    service.migrate_legacy()
+    profile = service.create("Ana")
+    service.select(profile.id)
+    service.credit(8)
+    exported = tmp_path / "portable.json"
+    assert cli(["--export-save", str(exported)]) == 0
+    assert cli(["--import-save", str(exported)]) == 0
+    recovered = ProfileService(JsonProfileRepository(tmp_path))
+    assert [p.progress["moedas"] for p in recovered.list_profiles()] == [8, 8]
+    assert not (tmp_path / "save.json").exists()
+    assert not (tmp_path / "records.json").exists()
+    old_file = tmp_path / "old-save.json"
+    old_file.write_text('{"jogador":{"moedas":13}}', encoding="utf-8")
+    assert cli(["--import-save", str(old_file)]) == 0
+    assert old_file.read_text(encoding="utf-8") == '{"jogador":{"moedas":13}}'
+    assert not (tmp_path / "save.json").exists()

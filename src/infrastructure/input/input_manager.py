@@ -8,7 +8,7 @@ Migrated from game/core.py (``_tratar_eventos``, ``_atualizar_jogando``) and
 game/settings.py (control bindings).
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 
 import pygame
 
@@ -25,7 +25,6 @@ from src.infrastructure.input.commands import (
     NavigateLeft,
     NavigateRight,
     NavigateUp,
-    NullCommand,
     Pause,
     SelectWeapon,
     Shoot,

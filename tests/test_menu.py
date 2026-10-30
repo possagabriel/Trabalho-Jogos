@@ -25,30 +25,45 @@ import pygame  # noqa: E402
 import pytest  # noqa: E402
 
 from game import phase_select  # noqa: E402
-from game.config import ALTURA, LARGURA  # noqa: E402
+from game.config import ALTURA, LARGURA, EstadoJogo  # noqa: E402
 from game.core import Jogo  # noqa: E402
 from game.layout import Layout  # noqa: E402
 from game.menu import MenuPrincipal  # noqa: E402
 from game.phase_select import PhaseStatus  # noqa: E402
 from game.theme import tema_atual  # noqa: E402
 from src.infrastructure.graphics.comic_theme import usar_visual  # noqa: E402
+from src.infrastructure.graphics.theme import (  # noqa: E402
+    MENU_ALPHA_PAINEL_RODAPE,
+    MENU_COR_PAINEL_RODAPE,
+    MENU_COR_TEXTO,
+    MENU_COR_TEXTO_SECUNDARIO,
+    MENU_MARGEM_SEGURANCA,
+)
 
 ROTULOS_ESPERADOS = [
-    "01 // CONTINUAR",
-    "02 // LOBBY",
-    "03 // HANGAR",
-    "04 // RECORDES",
-    "05 // CONFIGURAÇÕES",
-    "06 // ARQUIVO DE MEMÓRIAS",
-    "07 // SAIR",
+    "01 // JOGAR",
+    "02 // HANGAR",
+    "03 // PERFIL",
+    "04 // CONFIGURAÇÕES",
+    "05 // SAIR",
 ]
 
 
 def novo_menu():
     jogo = Jogo()
+    perfis = jogo.profile_service.list_profiles()
+    perfil = perfis[0] if perfis else jogo.profile_service.create("Jogador")
+    jogo.ativar_perfil(perfil.id)
     menu = jogo.menu
     menu.alpha_entrada = 255
     return jogo, menu
+
+
+def configurar_menu_original(jogo, menu):
+    """Ativa o layout ORIGINAL sem afetar os testes de compatibilidade COMIC."""
+    jogo.config["estilo_visual"] = "ORIGINAL"
+    menu._estilo_layout_opcoes = None
+    menu._aplicar_layout_opcoes()
 
 
 # ---------------------------------------------------------------------------
@@ -58,24 +73,27 @@ def novo_menu():
 def test_construcao_subestado_e_opcoes():
     _, menu = novo_menu()
     assert menu.subestado == "MENU"
-    assert len(menu.opcoes) == 7
+    assert len(menu.opcoes) == 5
     assert [o.texto for o in menu.opcoes] == ROTULOS_ESPERADOS
     assert menu.x_opcoes <= menu.layout.largura
 
 
-def test_opcoes_principais_tem_tamanho_uniforme_e_nao_usam_indicador_antigo():
-    """Todos os painéis compartilham a área; seleção não cria bloco extra."""
-    _, menu = novo_menu()
+def test_menu_principal_tem_cinco_acoes_do_mesmo_tamanho():
+    """Os cinco destinos mantêm painéis uniformes sem mudar a ordem."""
+    jogo, menu = novo_menu()
+    configurar_menu_original(jogo, menu)
     rects = [opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
              for opcao in menu.opcoes]
-    assert {rect.size for rect in rects} == {rects[0].size}
+    assert len({rect.size for rect in rects}) == 1
     assert all(b.top - a.bottom > 0 for a, b in zip(rects, rects[1:]))
-    assert menu.destaque.y == menu.opcoes[0].y  # estado mantido para compatibilidade
+    assert menu.destaque.y == menu.opcoes[0].y
+    assert [option.texto for option in menu.opcoes] == ROTULOS_ESPERADOS
 
 
-def test_opcao_selecionada_no_estilo_original_tem_fundo_visivel():
-    """O fundo de selecao ocupa a area clicavel e nao aparece nas demais opcoes."""
+def test_opcoes_originais_têm_painel_e_selecao_destacada_na_area_clicavel():
+    """O painel desenhado coincide com a mesma área usada para clique."""
     jogo, menu = novo_menu()
+    configurar_menu_original(jogo, menu)
     opcao = menu.opcoes[0]
     rect = opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
     amostra = (rect.x + menu.layout.px(12), rect.centery)
@@ -88,8 +106,199 @@ def test_opcao_selecionada_no_estilo_original_tem_fundo_visivel():
             opcao.desenhar(tela, menu.fonte_opcao, menu.fonte_opcao_sel, tema,
                            menu.x_opcoes, selecionado, 0, 255, menu.layout)
 
-    assert sem_selecao.get_at(amostra).a == 0
-    assert com_selecao.get_at(amostra).a > 0
+    assert sem_selecao.get_at(amostra).a > 0
+    assert com_selecao.get_at(amostra).a > sem_selecao.get_at(amostra).a
+    assert opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout) == rect
+
+
+@pytest.mark.parametrize("resolucao", [(900, 700), (1280, 720),
+                                        (1920, 1080), (2560, 1080)])
+@pytest.mark.parametrize("aspecto", ["AJUSTAR", "PREENCHE"])
+def test_retangulo_clicavel_coincide_com_botao_em_todas_as_apresentacoes(
+        resolucao, aspecto):
+    jogo, menu = novo_menu()
+    configurar_menu_original(jogo, menu)
+    largura, altura = resolucao
+    jogo.config["aspecto"] = aspecto
+    jogo.config["resolucao"] = f"{largura}x{altura}"
+    jogo.janela = pygame.display.set_mode(resolucao)
+    escala_janela = jogo._transformacao_janela()[0]
+    assert menu.fonte_secundaria.get_height() * escala_janela >= 14
+    opcao = menu.opcoes[3]
+    esperado = opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
+    tela = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
+
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        tema = tema_atual(jogo.config["tema"])
+        opcao.desenhar(tela, menu.fonte_opcao, menu.fonte_opcao_sel, tema,
+                       menu.x_opcoes, True, 0, 255, menu.layout)
+
+    assert opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout) == esperado
+    escala, offset_x, offset_y = jogo._transformacao_janela()
+    ponto_janela = (round((esperado.centerx * escala) + offset_x),
+                    round((esperado.centery * escala) + offset_y))
+    pos_logica = menu._pos_logica(ponto_janela)
+    assert abs(pos_logica[0] - esperado.centerx) <= 1
+    assert abs(pos_logica[1] - esperado.centery) <= 1
+    assert esperado.collidepoint(pos_logica)
+
+
+def test_clique_fora_do_botao_nao_dispara_callback():
+    _, menu = novo_menu()
+    opcao = menu.opcoes[3]
+    callback = mock.Mock()
+    opcao.funcao = callback
+    rect = opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
+    menu.tela_principal.tratar_clique((rect.right + 1, rect.centery))
+    callback.assert_not_called()
+    menu.tela_principal.tratar_clique(rect.center)
+    callback.assert_called_once_with()
+
+
+def test_rotulos_cabem_no_botao_e_nome_longo_do_perfil_usa_reticencias():
+    _, menu = novo_menu()
+    for opcao in menu.opcoes:
+        fonte_ajustada, rotulo = opcao._ajustar_rotulo(
+            menu.fonte_opcao, opcao.texto,
+            menu.layout.px(opcao.largura_painel - 52), menu.layout)
+        assert fonte_ajustada.size(rotulo)[0] <= menu.layout.px(
+            opcao.largura_painel - 52)
+
+    fonte = menu.fonte_pequena
+    linha = menu._linha_perfil_rodape(fonte, "PILOTO-" + "X" * 80, "123", 300)
+    assert linha.endswith("   |   MOEDAS: 123")
+    assert "…" in linha
+    assert menu._medir_espacado(fonte, linha, 1) <= 300
+    linha_especial = menu._linha_perfil_rodape(
+        fonte, "ÁUREA_Ω-EXPEDIÇÃO" * 4, "123", 300)
+    assert linha_especial.startswith("PILOTO: ÁURE")
+    assert "…" in linha_especial
+    assert menu._medir_espacado(fonte, linha_especial, 1) <= 300
+
+
+def test_selecao_inicial_respeita_existencia_de_save():
+    jogo, menu = novo_menu()
+    with mock.patch.object(jogo.progresso, "existe_save", return_value=True):
+        menu._construir_opcoes_menu()
+        assert menu.opcao_selecionada == 0
+        assert menu.opcoes[0].desabilitado is False
+    with mock.patch.object(jogo.progresso, "existe_save", return_value=False):
+        menu._construir_opcoes_menu()
+        menu.jogar_hub.abrir()
+        assert menu.opcao_selecionada == 0
+        assert menu.opcoes[0].desabilitado is False
+        assert menu.jogar_hub.selection == 1
+
+
+def test_ativar_perfil_seleciona_lobby_sem_save_e_continuar_com_save():
+    jogo, menu = novo_menu()
+    perfil_id = jogo.profile_service.active.id
+    with mock.patch.object(jogo.progresso, "existe_save", return_value=False):
+        jogo.ativar_perfil(perfil_id)
+    assert menu.subestado == "MENU"
+    assert menu.opcao_selecionada == 0
+    assert menu.opcoes[0].desabilitado is False
+    with mock.patch.object(jogo.progresso, "existe_save", return_value=True):
+        jogo.ativar_perfil(perfil_id)
+    assert menu.opcao_selecionada == 0
+    assert menu.opcoes[0].desabilitado is False
+
+
+def test_foco_de_teclado_percorre_grupos_sem_interrupcao_e_clique_coincide():
+    jogo, menu = novo_menu()
+    configurar_menu_original(jogo, menu)
+    menu.opcao_selecionada = 2
+    evento = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN, unicode="")
+    menu.tela_principal.tratar_tecla(evento)
+    assert menu.opcao_selecionada == 3
+    evento = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_UP, unicode="")
+    menu.tela_principal.tratar_tecla(evento)
+    assert menu.opcao_selecionada == 2
+    for indice, opcao in enumerate(menu.opcoes):
+        callback = mock.Mock()
+        opcao.funcao = callback
+        rect = opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
+        menu.tela_principal.tratar_clique(rect.center)
+        assert menu.opcao_selecionada == indice
+        callback.assert_called_once_with()
+
+
+def test_glitch_desligado_na_reducao_de_efeitos_e_titulo_em_cache():
+    jogo, menu = novo_menu()
+    configurar_menu_original(jogo, menu)
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        tema = tema_atual(jogo.config["tema"])
+        superficies = menu._titulo_surfaces(tema)
+    tela = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
+    jogo.config["intensidade_flash"] = "DESLIGADO"
+    with mock.patch("pygame.time.get_ticks", return_value=0):
+        menu._desenhar_glitch_titulo(tela, superficies, 0)
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        superficies_segunda_leitura = menu._titulo_surfaces(tema)
+    assert tela.get_bounding_rect() == pygame.Rect(0, 0, 0, 0)
+    assert superficies_segunda_leitura is superficies
+
+
+def test_glitch_tem_pulsos_curto_com_frequencia_inferior_a_tres_por_segundo():
+    jogo, menu = novo_menu()
+    superf = {"incarnate_eco": pygame.Surface((4, 4), pygame.SRCALPHA),
+              "incarnate_glitch_ciano": pygame.Surface((4, 4), pygame.SRCALPHA)}
+    tela = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
+    with mock.patch.object(menu, "_blit_alfa") as desenhar:
+        for instante, chamadas in ((0, 2), (41, 2), (42, 0), (649, 0),
+                                   (650, 2)):
+            desenhar.reset_mock()
+            with mock.patch("pygame.time.get_ticks", return_value=instante):
+                menu._desenhar_glitch_titulo(tela, superf, 0)
+            assert desenhar.call_count == chamadas
+
+
+def test_continuar_sem_save_fica_visualmente_desabilitado_no_menu_original():
+    jogo, menu = novo_menu()
+    configurar_menu_original(jogo, menu)
+    superficie = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
+    with mock.patch.object(menu, "_tem_save", return_value=False):
+        menu._abrir_jogar()
+        menu.jogar_hub.desenhar(superficie)
+    assert menu.jogar_hub.selection == 1
+    assert menu.opcoes[0].desabilitado is False
+
+
+def test_contraste_do_rodape_sobre_fundo_real_inclui_planeta():
+    jogo, menu = novo_menu()
+    fundo = pygame.Surface(jogo.tela.get_size())
+    margem = menu.layout.margem(MENU_MARGEM_SEGURANCA)
+    topo = menu.layout.altura - menu.layout.px(98)
+    amostras = []
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        menu.fundo.desenhar(fundo)
+        menu.hud.desenhar(fundo, tema_atual(jogo.config["tema"]))
+    for x in range(margem, menu.layout.largura - margem, 17):
+        for y in range(topo, menu.layout.altura - margem // 2, 11):
+            amostras.append(fundo.get_at((x, y))[:3])
+
+    def luminancia(cor):
+        canais = []
+        for canal in cor:
+            valor = canal / 255
+            canais.append(valor / 12.92 if valor <= 0.04045
+                          else ((valor + 0.055) / 1.055) ** 2.4)
+        return sum(peso * valor for peso, valor in zip((0.2126, 0.7152, 0.0722), canais))
+
+    def contraste(foreground, background):
+        clara, escura = sorted((luminancia(foreground), luminancia(background)),
+                               reverse=True)
+        return (clara + 0.05) / (escura + 0.05)
+
+    ratios = []
+    for pixel in amostras:
+        alpha = MENU_ALPHA_PAINEL_RODAPE / 255
+        composto = tuple(round(MENU_COR_PAINEL_RODAPE[i] * alpha
+                               + pixel[i] * (1 - alpha)) for i in range(3))
+        ratios.extend((contraste(MENU_COR_TEXTO, composto),
+                       contraste(MENU_COR_TEXTO_SECUNDARIO, composto)))
+    assert len(amostras) > 100
+    assert min(ratios) >= 4.5
 
 
 def test_menu_widescreen_separa_titulo_da_coluna_de_opcoes():
@@ -133,8 +342,11 @@ def test_paineis_amplos_dos_submenus_compartilham_alinhamento():
 
 
 def test_construcao_carregou_fundo_do_menu():
+    from game.menu_scene import FundoMenuParallax
+
     _, menu = novo_menu()
-    assert menu.fundo.fundo_imagem is not None or menu.fundo.gradiente
+    assert isinstance(menu.fundo, FundoMenuParallax)
+    assert menu.fundo.qualidade == "BAIXA"
 
 
 def test_escolher_resolucao_preserva_tela_cheia_ativa():
@@ -235,6 +447,17 @@ def test_teste_de_resolucao_nao_emite_som():
     menu._som.assert_not_called()
 
 
+def test_navegacao_no_seletor_de_resolucao_emite_som():
+    _, menu = novo_menu()
+    menu._som = mock.Mock()
+    menu.config_submodo = "resolucao"
+
+    menu._tecla_config(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_DOWN}))
+    menu._tecla_config(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_ESCAPE}))
+
+    assert menu._som.call_args_list == [mock.call("navegar"), mock.call("navegar")]
+
+
 def test_qualidade_visual_e_monitor_de_fps_sao_configuraveis():
     jogo, menu = novo_menu()
     jogo._aplicar_qualidade_grafica = mock.Mock()
@@ -317,6 +540,330 @@ def test_voltar_menu():
     assert menu.subestado == "MENU"
     assert menu.config_submodo is None
     assert menu.remapando is None
+
+
+def test_nova_estrutura_tem_cinco_itens_nos_dois_estilos():
+    jogo, menu = novo_menu()
+    assert [item.texto for item in menu.opcoes] == ROTULOS_ESPERADOS
+    for estilo in ("ORIGINAL", "COMIC"):
+        jogo.config["estilo_visual"] = estilo
+        menu._estilo_layout_opcoes = None
+        menu._aplicar_layout_opcoes()
+        assert [item.texto for item in menu.opcoes] == ROTULOS_ESPERADOS
+
+
+def test_hubs_preservam_destinos_antigos_em_no_maximo_duas_acoes():
+    jogo, menu = novo_menu()
+    with mock.patch.object(menu, "_tem_save", return_value=True):
+        menu._abrir_jogar()
+        assert menu.jogar_hub.entries == (
+            ("CONTINUAR", "continuar"), ("LINEAR", "linear"),
+            ("MUNDO ABERTO", "mundo_aberto"))
+    menu.jogar_hub.ativar(1)
+    assert menu.subestado == "FASES"
+    assert jogo.modo_atual == "linear"
+
+    menu._voltar_menu()
+    menu._abrir_perfil_hub()
+    assert menu.perfil_hub.entries == (
+        ("PILOTOS", "pilotos"), ("RECORDES", "recordes"),
+        ("MEMÓRIAS", "memorias"))
+    for index, destino in enumerate(("PERFIS", "RECORDES", "ARQUIVO")):
+        menu._abrir_perfil_hub()
+        menu.perfil_hub.ativar(index)
+        assert menu.subestado == destino
+
+
+def test_hub_jogar_sem_save_foca_lobby_e_avisa_ao_ativar_continuar():
+    _, menu = novo_menu()
+    with mock.patch.object(menu, "_tem_save", return_value=False):
+        menu._abrir_jogar()
+        assert menu.jogar_hub.selection == 1
+        menu.jogar_hub.selection = 0
+        menu.jogar_hub.tratar_tecla(pygame.event.Event(
+            pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+    assert menu.subestado == "JOGAR"
+    assert menu.jogar_hub.selection == 0
+    assert any(item["tipo"] == "erro"
+               for item in menu.notificacoes.notificacoes)
+
+
+def test_hub_jogar_mostra_progresso_e_inicia_modo_aberto():
+    jogo, menu = novo_menu()
+    jogo.profile_service.update_progress(
+        partidas_jogadas=2, dimensao_maxima=3, nivel_maximo=13,
+        bosses_por_tipo={"HEXAGONO": 2}, moedas=170, tempo_total=3661,
+    )
+    assert jogo.profile_service.mode_progress_summary("linear") == {
+        "started": True, "dimension": 3, "level": 13,
+        "bosses": 2, "coins": 170, "play_time": 3661,
+    }
+    assert jogo.profile_service.mode_progress_summary("mundo_aberto") == {
+        "started": False, "regions": 0, "echoes": 0, "bosses": 0,
+        "coins": 0, "play_time": 0,
+    }
+
+    menu._abrir_jogar()
+    menu.jogar_hub.ativar(2)
+
+    assert menu.subestado == "JOGAR"
+    assert jogo.modo_atual == "mundo_aberto"
+    assert jogo.estado == EstadoJogo.JOGANDO
+
+
+def test_mundo_aberto_salva_e_continua_do_ponto_do_perfil():
+    jogo, menu = novo_menu()
+    strategy = menu.mode_strategies["mundo_aberto"]
+
+    assert strategy.start_new(jogo) is True
+    strategy.world.x = 1240
+    strategy.world.y = 710
+    strategy.world.elapsed = 95
+    strategy.save(jogo)
+    jogo.estado = EstadoJogo.MENU
+    menu.subestado = "MENU"
+    menu._abrir_jogar()
+    assert menu._tem_save() is True
+
+    menu.jogar_hub.ativar(0)
+
+    assert jogo.modo_atual == "mundo_aberto"
+    assert jogo.estado == EstadoJogo.JOGANDO
+    assert (strategy.world.x, strategy.world.y, strategy.world.elapsed) == (
+        1240, 710, 95,
+    )
+    assert jogo.profile_service.continue_summary() == {
+        "mode": "mundo_aberto", "dimension": "espaco_profundo",
+        "level": "inicio", "total_play_time": 95,
+    }
+
+
+@pytest.mark.parametrize("entrada", ["teclado", "mouse"])
+def test_continuar_sem_save_desabilitado_em_ambas_as_entradas(entrada):
+    _, menu = novo_menu()
+    with mock.patch.object(menu, "_tem_save", return_value=False):
+        menu._abrir_jogar()
+        hub = menu.jogar_hub
+        if entrada == "teclado":
+            hub.selection = 0
+            hub.tratar_tecla(pygame.event.Event(
+                pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+        else:
+            hub.tratar_clique(hub._rects()[0].center)
+    assert menu.subestado == "JOGAR"
+    assert any(item["tipo"] == "erro"
+               for item in menu.notificacoes.notificacoes)
+
+
+@pytest.mark.parametrize("resolucao", ["900x700", "1280x720"])
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_alvos_do_hub_nao_se_sobrepoem(resolucao, estilo):
+    jogo, menu = novo_menu()
+    jogo.config["resolucao"] = resolucao
+    jogo.config["estilo_visual"] = estilo
+    for hub in (menu.jogar_hub, menu.perfil_hub):
+        retangulos = [*hub._rects(), hub._back_rect()]
+        for indice, primeiro in enumerate(retangulos):
+            assert all(not primeiro.colliderect(outro)
+                       for outro in retangulos[indice + 1:])
+
+
+def test_hubs_mantem_a_mesma_estrutura_nos_dois_estilos():
+    jogo, menu = novo_menu()
+    estruturas = []
+    for estilo in ("ORIGINAL", "COMIC"):
+        jogo.config["estilo_visual"] = estilo
+        estruturas.append((
+            tuple(item.texto for item in menu.opcoes),
+            menu.jogar_hub.entries, menu.perfil_hub.entries,
+            tuple(rect.size for rect in menu.jogar_hub._rects()),
+            tuple(rect.size for rect in menu.perfil_hub._rects()),
+        ))
+    assert estruturas[0] == estruturas[1]
+
+
+@pytest.mark.parametrize("entrada", ["teclado", "mouse"])
+def test_grafo_de_destinos_antigos_em_ate_duas_acoes(entrada):
+    rotas = (
+        ("CONTINUAR", 0, 0, "CONTINUAR"),
+        ("LOBBY", 0, 1, "FASES"),
+        ("HANGAR", 1, None, "LOJA"),
+        ("PILOTOS", 2, 0, "PERFIS"),
+        ("RECORDES", 2, 1, "RECORDES"),
+        ("MEMÓRIAS", 2, 2, "ARQUIVO"),
+        ("CONFIGURAÇÕES", 3, None, "CONFIG"),
+        ("SAIR", 4, None, "MENU"),
+    )
+    for _, indice_raiz, indice_hub, destino in rotas:
+        jogo, menu = novo_menu()
+        jogo.profile_service.active.progress["modo_ultimo"] = "linear"
+        with (mock.patch.object(menu, "_tem_save", return_value=True),
+              mock.patch.object(jogo.progresso, "existe_save", return_value=True)):
+            if entrada == "teclado":
+                for _ in range(indice_raiz):
+                    menu.tela_principal.tratar_tecla(pygame.event.Event(
+                        pygame.KEYDOWN, {"key": pygame.K_DOWN, "unicode": ""}))
+                menu.tela_principal.tratar_tecla(pygame.event.Event(
+                    pygame.KEYDOWN, {"key": pygame.K_RETURN, "unicode": ""}))
+            else:
+                rect = menu.opcoes[indice_raiz].get_rect(
+                    menu.x_opcoes, menu.fonte_opcao, menu.layout)
+                menu.tela_principal.tratar_clique(rect.center)
+            if indice_hub is not None:
+                hub = menu.jogar_hub if indice_raiz == 0 else menu.perfil_hub
+                if entrada == "teclado":
+                    for _ in range(indice_hub):
+                        hub.tratar_tecla(pygame.event.Event(
+                            pygame.KEYDOWN, {"key": pygame.K_DOWN}))
+                    hub.tratar_tecla(pygame.event.Event(
+                        pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+                else:
+                    hub.tratar_clique(hub._rects()[indice_hub].center)
+            if destino == "CONTINUAR":
+                assert menu.transicao_missao.em_andamento() is True
+            elif destino == "MENU":
+                assert menu.dialogo is not None and menu.dialogo.ativo
+            else:
+                assert menu.subestado == destino
+
+
+def test_escape_dos_hubs_e_destinos_restaura_foco_de_origem():
+    _, menu = novo_menu()
+    menu.opcao_selecionada = 2
+    menu._abrir_perfil_hub()
+    menu.perfil_hub.tratar_tecla(pygame.event.Event(
+        pygame.KEYDOWN, {"key": pygame.K_ESCAPE}))
+    assert menu.subestado == "MENU"
+    assert menu.opcao_selecionada == 2
+
+    menu.opcao_selecionada = 0
+    menu._abrir_jogar()
+    menu.jogar_hub.tratar_tecla(pygame.event.Event(
+        pygame.KEYDOWN, {"key": pygame.K_ESCAPE}))
+    assert menu.subestado == "MENU"
+    assert menu.opcao_selecionada == 0
+
+    menu.opcao_selecionada = 2
+    menu._abrir_perfil_hub()
+    menu.perfil_hub.ativar(1)
+    menu.telas["RECORDES"].tratar_tecla(pygame.event.Event(
+        pygame.KEYDOWN, {"key": pygame.K_ESCAPE}))
+    assert menu.subestado == "MENU"
+    assert menu.opcao_selecionada == 2
+
+
+def test_clique_do_hub_usa_o_mesmo_retangulo_desenhado():
+    _, menu = novo_menu()
+    menu._abrir_jogar()
+    rect = menu.jogar_hub._rects()[1]
+    menu.jogar_hub.tratar_clique(rect.center)
+    assert menu.subestado == "FASES"
+
+
+def test_botao_voltar_do_hub_funciona_com_mouse():
+    _, menu = novo_menu()
+    menu._abrir_jogar()
+    menu.jogar_hub.tratar_clique(menu.jogar_hub._back_rect().center)
+    assert menu.subestado == "MENU"
+    assert menu.opcao_selecionada == 0
+
+
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+@pytest.mark.parametrize("resolucao", ["900x700", "1920x1080"])
+def test_menu_principal_compartilha_opcoes_uniformes_e_cartao(
+        estilo, resolucao):
+    jogo, menu = novo_menu()
+    jogo.config["estilo_visual"] = estilo
+    jogo.config["resolucao"] = resolucao
+    menu._estilo_layout_opcoes = None
+    menu._aplicar_layout_opcoes()
+    jogo.profile_service.rename(jogo.profile_service.active.id, "Árvore Estelar 9")
+    jogo.profile_service.update_progress(
+        dimensao_maxima=4, nivel_maximo=8, moedas=1200, tempo_total=5400,
+        bosses_por_tipo={"HEXAGONO": 2}, partidas_jogadas=1,
+    )
+    surface = pygame.Surface(jogo.tela_ui.get_size(), pygame.SRCALPHA)
+    with usar_visual({"estilo_visual": estilo}):
+        menu.tela_principal.desenhar_fundo_cartao(
+            surface, jogo.profile_service.menu_profile_summary())
+        menu.tela_principal.desenhar(surface)
+    rects = [item.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
+             for item in menu.opcoes]
+    assert [item.texto for item in menu.opcoes] == ROTULOS_ESPERADOS
+    assert all(item.principal for item in menu.opcoes)
+    assert len({rect.size for rect in rects}) == 1
+    assert all(rect.bottom <= seguinte.top
+               for rect, seguinte in zip(rects, rects[1:]))
+    assert all(0 <= rect.left < rect.right <= menu.layout.largura
+               and 0 <= rect.top < rect.bottom <= menu.layout.altura
+               for rect in rects)
+    assert rects[0].width < menu.layout.largura
+    font = menu.layout.fonte_titulo(20)
+    name = menu.tela_principal._truncar_nome(font, "Árvore Estelar 9",
+                                             menu.layout.px(120))
+    assert name.endswith("…")
+    assert font.size(name)[0] <= menu.layout.px(120)
+
+
+def test_cartao_de_perfil_tem_estado_vazio_sem_perfil_ativo():
+    jogo, menu = novo_menu()
+    jogo.profile_service.active = None
+    surface = pygame.Surface(jogo.tela_ui.get_size(), pygame.SRCALPHA)
+    menu._estilo_layout_opcoes = None
+    menu._aplicar_layout_opcoes()
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        menu.tela_principal.desenhar_fundo_cartao(surface, None)
+        menu.tela_principal.desenhar(surface)
+    rect = pygame.Rect(*menu.tela_principal.cartao_rect())
+    assert surface.get_at(rect.center).a > 0
+
+
+def test_selos_do_menu_respeitam_servico_e_hangar_nao_reaparece():
+    jogo, menu = novo_menu()
+    service = jogo.profile_service
+    service.update_progress(
+        memorias_desbloqueadas=["introducao"], moedas=500,
+        novidades_vistas={"memorias": [], "hangar": []},
+        novidades_pendentes={"hangar": []}, skins_desbloqueadas=["padrao"],
+    )
+    surface = pygame.Surface(jogo.tela_ui.get_size(), pygame.SRCALPHA)
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        menu.tela_principal.desenhar(surface)
+    assert menu.opcoes[1].novo is True
+    assert menu.opcoes[2].novo is True
+
+    menu._abrir_perfil_hub()
+    assert service.novelty_ids("memorias") == ["introducao"]
+    menu._abrir_arquivo()
+    assert service.novelty_ids("memorias") == []
+    service.spend(500)
+    assert "fenix" in service.novelty_ids("hangar")
+    menu._abrir_loja()
+    service.credit(500)
+    assert service.novelty_ids("hangar") == []
+
+
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_layout_4_3_e_hub_continuar_mostram_resumo_real(estilo):
+    jogo, menu = novo_menu()
+    jogo.config["estilo_visual"] = estilo
+    jogo.config["resolucao"] = "900x700"
+    menu._estilo_layout_opcoes = None
+    menu._aplicar_layout_opcoes()
+    jogo.profile_service.update_progress(
+        partidas_jogadas=1, dimensao_maxima=6, nivel_maximo=22, tempo_total=3661,
+    )
+    assert menu._layout_4_3() is True
+    menu.jogar_hub.abrir()
+    menu.jogar_hub.selection = 0
+    surface = pygame.Surface(jogo.tela_ui.get_size(), pygame.SRCALPHA)
+    with usar_visual({"estilo_visual": estilo}):
+        menu.jogar_hub.desenhar(surface)
+    assert jogo.profile_service.continue_summary() == {
+        "mode": "linear", "dimension": 1, "level": 1,
+        "total_play_time": 3661,
+    }
+    assert menu.jogar_hub._panel().width == jogo.layout.px(620)
 
 
 # ---------------------------------------------------------------------------
@@ -538,6 +1085,123 @@ def test_pos_mouse_usa_a_mesma_transformacao_do_gameplay():
     assert abs(pos_logica[0] - rect.centerx) <= 1
     assert abs(pos_logica[1] - rect.centery) <= 1
     assert rect.collidepoint(pos_logica)
+
+
+@pytest.mark.parametrize("modo", ["AJUSTAR", "PREENCHE"])
+@pytest.mark.parametrize("tamanho", [
+    (900, 700), (1280, 720), (1920, 1080), (2560, 1080),
+])
+def test_mouse_mira_e_transformacao_preservam_16_por_9(modo, tamanho):
+    """A conversão de mouse é a inversa da mesma escala uniforme da cena."""
+    jogo, menu = novo_menu()
+    jogo.janela = pygame.Surface(tamanho)
+    jogo.config["aspecto"] = modo
+    escala, off_x, off_y = jogo._transformacao_janela()
+
+    assert escala == pytest.approx(min(tamanho[0] / LARGURA,
+                                       tamanho[1] / ALTURA))
+    largura_destino = LARGURA * escala
+    altura_destino = ALTURA * escala
+    assert largura_destino / altura_destino == pytest.approx(16 / 9)
+
+    ponto_logico = (LARGURA * 0.73, ALTURA * 0.61)
+    ponto_janela = (ponto_logico[0] * escala + off_x,
+                    ponto_logico[1] * escala + off_y)
+    ponto_revertido = menu._pos_logica(ponto_janela)
+    assert ponto_revertido == pytest.approx(ponto_logico, abs=1)
+
+
+@pytest.mark.parametrize("tamanho", [
+    (900, 700), (1280, 720), (1920, 1080), (2560, 1080),
+])
+def test_preenche_estende_fundo_sem_ampliar_cena_jogavel(tamanho):
+    jogo = Jogo()
+    jogo.janela = pygame.Surface(tamanho)
+    jogo.config["aspecto"] = "PREENCHE"
+    jogo.fade = 0
+    jogo.tela.fill((220, 30, 40))
+    jogo.tela_ui.fill((0, 0, 0, 0))
+    jogo._obter_fundo_preenche = mock.Mock(
+        return_value=pygame.Surface(tamanho))
+    jogo._obter_fundo_preenche.return_value.fill((20, 170, 60))
+
+    jogo._apresentar()
+
+    escala, off_x, off_y = jogo._transformacao_janela()
+    caixa = pygame.Rect(round(off_x), round(off_y),
+                        round(LARGURA * escala), round(ALTURA * escala))
+    centro = jogo.janela.get_at(caixa.center)[:3]
+    assert all(abs(valor - esperado) <= 4
+               for valor, esperado in zip(centro, (220, 30, 40)))
+    borda = (0, tamanho[1] // 2)
+    if not caixa.collidepoint(borda):
+        assert jogo.janela.get_at(borda)[:3] == (20, 170, 60)
+
+
+def test_clique_na_borda_decorativa_nao_aciona_opcao_do_menu():
+    jogo, menu = novo_menu()
+    jogo.janela = pygame.Surface((2560, 1080))
+    jogo.config["aspecto"] = "PREENCHE"
+    menu.subestado = "MENU"
+    menu.opcao_selecionada = 0
+    estado_anterior = menu.subestado
+
+    menu.tratar_eventos(pygame.event.Event(
+        pygame.MOUSEBUTTONDOWN, {"button": 1, "pos": (80, 540)}))
+
+    assert menu.subestado == estado_anterior
+    assert menu.opcao_selecionada == 0
+
+
+def test_ajuste_de_tela_aplica_zoom_e_offset_no_modo_preenche():
+    jogo, menu = novo_menu()
+    jogo.janela = pygame.Surface((2560, 1080))
+    jogo.config["aspecto"] = "PREENCHE"
+    jogo.config["ajuste_escala"] = 1.0
+    jogo.config["ajuste_off_x"] = 0
+    jogo.config["ajuste_off_y"] = 0
+
+    menu._tecla_ajuste(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_w}))
+    menu._tecla_ajuste(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RIGHT}))
+
+    escala, off_x, off_y = jogo._transformacao_janela()
+    assert escala == pytest.approx(1.5 * 1.01)
+    assert off_x == pytest.approx(324)
+    assert off_y == 0
+    ponto = (640, 360)
+    janela = (ponto[0] * escala + off_x, ponto[1] * escala + off_y)
+    assert menu._pos_logica(janela) == pytest.approx(ponto, abs=1)
+
+
+def test_preenche_900x700_usa_bordas_verticais_e_mira_fora_delimitada():
+    jogo, menu = novo_menu()
+    jogo.janela = pygame.Surface((900, 700))
+    jogo.config["aspecto"] = "PREENCHE"
+    jogo.config["mira_ativa"] = True
+    jogo.estado = EstadoJogo.JOGANDO
+    jogo.fade = 0
+    jogo.tela.fill((220, 30, 40))
+    jogo.tela_ui.fill((0, 0, 0, 0))
+    fundo = pygame.Surface((900, 700))
+    fundo.fill((20, 170, 60))
+    jogo._obter_fundo_preenche = mock.Mock(return_value=fundo)
+
+    jogo._apresentar()
+    escala, off_x, off_y = jogo._transformacao_janela()
+    destino = pygame.Rect(round(off_x), round(off_y),
+                          round(LARGURA * escala), round(ALTURA * escala))
+    assert destino.width / destino.height == pytest.approx(16 / 9, abs=0.002)
+    assert destino.left == 0 and destino.right == 900
+    assert destino.top > 0 and destino.bottom < 700
+    assert jogo.janela.get_at((450, 20))[:3] == (20, 170, 60)
+    assert all(abs(valor - esperado) <= 4 for valor, esperado in zip(
+        jogo.janela.get_at(destino.center)[:3], (220, 30, 40)))
+
+    with mock.patch("pygame.mouse.get_pos", return_value=(450, 20)):
+        assert jogo.posicao_mira() is None
+    with mock.patch("pygame.mouse.get_pos", return_value=destino.center):
+        assert jogo.posicao_mira() == (640, 360)
+    assert menu._pos_logica(destino.center) == pytest.approx((640, 360), abs=1)
 
 
 def test_selecao_fases_responsiva_e_cacheada():

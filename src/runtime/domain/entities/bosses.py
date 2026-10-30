@@ -9,31 +9,37 @@ from typing import TYPE_CHECKING, Any, Mapping
 import pygame
 
 from src.core.constants import (
-    ALTURA, AZUL, BRANCO, CIANO, DOURADO, LARGURA, ROSA, ROXO, VERMELHO,
+    ALTURA,
+    AZUL,
+    BRANCO,
+    CIANO,
+    DOURADO,
+    LARGURA,
+    ROSA,
+    ROXO,
+    VERMELHO,
 )
+from src.runtime.domain.entities.weapons import Projetil
 from src.runtime.infrastructure.graphics.cel_shading import (
     circulo_com_contorno,
     contorno_circulo,
-    contorno_poligono,
-    desenhar_brilho_contorno,
     desenhar_highlight,
     desenhar_sombra_chapada,
-    escurecer_cor,
     estrela_com_contorno,
     poligono_com_contorno,
 )
 from src.runtime.infrastructure.graphics.geometry import (
     estrela,
     losango,
-    pentagono as pent_pontos,
     poligono,
 )
+from src.runtime.infrastructure.graphics.geometry import (
+    pentagono as pent_pontos,
+)
 from src.runtime.infrastructure.graphics.smooth import (
-    desenhar_circulo,
     desenhar_glow,
     desenhar_poligono,
 )
-from src.runtime.domain.entities.weapons import Projetil
 
 if TYPE_CHECKING:
     from src.runtime.domain.entities.player import Jogador

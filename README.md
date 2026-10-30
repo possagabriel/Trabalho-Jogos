@@ -1,52 +1,74 @@
-# INCARNATE 
+# INCARNATE
 
-Shoot 'em up vertical em **Pygame** com progressão, personalização de nave,
-6 dimensões, inimigos especiais e entidades RIFT (bosses). O código é 100%
-procedural (visual, sons e música são gerados em runtime, sem assets
-externos).
+Shoot 'em up vertical 2D em **Pygame**: enfrente seis dimensões, desbloqueie
+armas e skins, atravesse cenários em movimento e derrote entidades RIFT. A
+identidade visual combina arte incluída em `images/` e `data/fonts/` com
+cenários, efeitos, interface, sons e música gerados pelo jogo.
 
-## Windows e Linux
+## Parte A — Para jogadores
 
-Baixe a versão para Windows em [Releases](../../releases). Em cada versão,
-`VOID-SHIFT-Setup.exe` instala o jogo com atalho e desinstalador; `VOID-SHIFT.exe`
-é a opção portátil. Não é necessário abrir o GitHub Actions. Builds de teste
-continuam disponíveis como artefatos do workflow **Executáveis Desktop**. Veja
-as instruções de [distribuição para Windows](docs/distribuicao-windows.md).
+### Imagens do jogo
 
-No Linux, a mesma Release inclui `VOID-SHIFT-Linux-x86_64.tar.gz`. Extraia o
-arquivo e abra `VOID-SHIFT/VOID-SHIFT`. O formato de pasta autocontida reduz o
-tempo de abertura e evita depender da extração em diretórios temporários. Builds
-de teste e instruções locais estão em
-[distribuição para Linux](docs/distribuicao-linux.md).
+![Menu ORIGINAL com cartão de perfil em 1920×1080](docs/screenshots/menu-perfil-1920.jpg)
+![Menu COMIC com a mesma navegação e cartão de perfil](docs/screenshots/menu-comic-perfil-1920.jpg)
+![Menu ORIGINAL adaptado à janela 900×700](docs/screenshots/menu-perfil-900x700.jpg)
+![Menu ORIGINAL em PREENCHE ultrawide 2560×1080](docs/screenshots/menu-original-ultrawide.jpg)
+![Percurso 2D e HUD em PREENCHE](docs/screenshots/preenche-ultrawide.jpg)
+![Seis dimensões com composições próprias](docs/screenshots/dimensoes-composicao.jpg)
 
-Os dois pacotes são gerados no mesmo workflow e no mesmo commit. Os arquivos
-`BUILD-COMMIT-Windows.txt` e `BUILD-COMMIT-Linux.txt` permitem confirmar que
-as distribuições contêm exatamente a mesma versão do jogo.
+<!-- Espaço reservado para um GIF curto de gameplay. -->
 
-> Este README é orientado a **desenvolvedores e IAs**: explica a arquitetura,
-> o fluxo de dados e as convenções para que qualquer pessoa (ou modelo) possa
-> navegar, modificar e estender o código com segurança.
+### Baixar e iniciar
 
----
+Baixe uma versão publicada em [Releases](../../releases). O instalador Windows
+cria atalhos; o pacote Linux é uma pasta autocontida. Os artefatos novos usam
+o nome INCARNATE; instalações antigas são atualizadas pelo mesmo AppId do
+Inno Setup. Consulte os guias
+de [Windows](docs/distribuicao-windows.md) e [Linux](docs/distribuicao-linux.md).
+O código está na versão 1.8.0. A candidata `v1.8.0-rc1` está disponível em
+[Releases](../../releases/tag/v1.8.0-rc1), mas antecede os avisos completos das
+fontes nos pacotes. Para testar os binários atualizados, use os artefatos da
+[execução de build #40125004991](https://github.com/possagabriel/Trabalho-Jogos/actions/runs/40125004991),
+gerados do commit `f020cb0`. RC2 e release final aguardam o teste manual no
+Windows. O [plano de promoção 1.8.0](docs/release-v1.8.0-promocao.md) tem os
+hashes e o checklist.
 
-## Sumário
+No Windows, o SmartScreen ou o antivírus pode mostrar um aviso de reputação
+para um build sem assinatura reconhecida. Para conferir o download, baixe
+`SHA256SUMS.txt`, rode `Get-FileHash .\INCARNATE-Setup.exe -Algorithm SHA256`
+no PowerShell e compare o valor com a linha de `INCARNATE-Setup.exe` no arquivo.
+O [guia de distribuição Windows](docs/distribuicao-windows.md) explica os
+avisos e a verificação.
 
-1. [Como executar](#como-executar)
-2. [Arquitetura](#arquitetura)
-3. [Fluxo do jogo](#fluxo-do-jogo)
-4. [Modelo de dados](#modelo-de-dados)
-5. [Convenções do código](#convenções-do-código)
-6. [Performance](#performance)
-7. [Como estender](#como-estender)
-8. [Testes](#testes)
+Para jogar a partir do código-fonte, instale Python 3.10 ou superior e Pygame:
 
----
+```bash
+python -m pip install -e .
+python incarnate.py
+```
 
-## Como executar
+### Controles padrão
+
+| Ação | Controle |
+| --- | --- |
+| Mover | Setas ou WASD |
+| Mirar | Mouse |
+| Atirar | Segurar botão esquerdo, Espaço ou Z |
+| Esquivar | X |
+| Acelerar | Segurar Shift ou Ctrl |
+| Habilidade especial | E |
+| Pausar | P ou Esc |
+
+Atirar e esquivar podem ser remapeados em Configurações. O jogo também oferece
+ajustes de mira, sensibilidade, áudio, resolução e qualidade visual.
+
+## Parte B — Para desenvolvedores
+
+### Executar localmente
 
 ```bash
 python -m pip install -e ".[gpu]"           # Linux ou Windows
-python main.py
+python incarnate.py
 ```
 
 Sem aceleração OpenGL, instale apenas com `python -m pip install -e .`; o jogo
@@ -89,8 +111,72 @@ individuais se afastam do ponto central. **Limitação conhecida:** o **Íon**
 continua sendo uma coluna vertical fixa na posição da nave; apontar a mira
 não altera sua trajetória. Ajuste `dispersao_duplo_graus` (padrão `4.5`) e
 `dispersao_espiral_graus` (padrão `15.0`) no `settings.json` do diretório de
-dados do usuário para balancear o leque. `mira_ativa` é salva no mesmo JSON;
-configurações antigas recebem `true` como padrão.
+dados do usuário para balancear o leque. `mira_ativa` fica no perfil selecionado;
+configurações antigas são copiadas na migração e novos perfis recebem `true`.
+
+### Perfis de jogador (1.5.0)
+
+Ao abrir o jogo, selecione um perfil antes do menu principal. **N** cria um
+perfil; as setas escolhem outro, Enter seleciona, **R** renomeia e Delete pede
+confirmação digitando exatamente o nome exibido. O mouse também seleciona os
+cartões e botões. No menu principal, **Perfis** permite trocar de jogador fora
+de uma partida. O perfil em uso não pode ser excluído durante o combate. Se
+todos forem removidos, a tela oferece criar outro. A lista mostra moedas,
+armas, skins, dimensão, bosses e último acesso; um perfil ilegível aparece
+como **DANIFICADO**, sem impedir o acesso aos demais.
+
+Cada perfil tem UUID e um arquivo `profiles/<uuid>.json` com cópia `.bak` no
+diretório de dados do jogo. `profiles/index.json` guarda a lista, o último
+perfil usado e o marcador de migração; se sumir ou estiver corrompido, o jogo
+o reconstrói pelos arquivos de perfil. No primeiro uso, o `save.json` e o
+`records.json` antigos são importados para **JOGADOR** e preservados sem novas
+gravações. O nome pode ser editado depois. A seleção usa controles padrão
+antes de carregar um perfil. Uma gravação que falhe deixa a alteração pendente
+em memória; o jogo avisa na tela e o F3 mostra perfil, ID curto, última
+gravação e pendência.
+Nomes novos e renomeações aceitam apóstrofo, hífen, acentos e espaços internos.
+Espaços nas pontas e caracteres de controle são rejeitados. Um perfil antigo
+continua legível; seu nome não é alterado automaticamente.
+
+Para verificar na prática, defina `INCARNATE_DATA_DIR` para uma pasta de teste
+e execute `python incarnate.py`. Crie dois perfis, ganhe ou gaste moedas no primeiro,
+troque pelo menu e confirme que o segundo começa sem esse progresso. Renomeie
+e exclua um perfil pela tela de seleção. Para testar migração, copie um
+`save.json` antigo para essa pasta antes de iniciar; para recuperação, altere
+o conteúdo de `profiles/<uuid>.json` para `{` e mantenha o `.bak` válido.
+Corrompa também o `.bak` para ver o aviso de perfil danificado. Faça esses
+testes em cópias dos arquivos, preservando os dados pessoais.
+
+`limite_perfis` (padrão 5, intervalo 1–20) e `limite_nome_perfil` (padrão 16,
+intervalo 1–32) são ajustáveis em `settings.json`. Controles remapeados,
+sensibilidade e `mira_ativa` ficam em cada perfil; volume, vídeo, qualidade
+visual e velocidade do diálogo permanecem globais. Melhorias escolhidas são
+contadas por perfil, mas seus efeitos terminam ao fim da partida.
+
+### Menu principal e navegação
+
+O menu principal tem cinco itens numerados: **01 Jogar**, **02 Hangar**,
+**03 Perfil**, **04 Configurações** e **05 Sair** (ação secundária). Jogar abre
+**Continuar** e **Lobby**; Hangar abre compra e equipamento de skins; Perfil
+reúne **Pilotos**, **Recordes** e **Memórias**; **Configurações** e **Sair**
+completam a navegação.
+Setas ou W/S movem o foco, Enter ativa e Esc volta ao menu mantendo o foco de
+origem. No menu principal, Esc abre a confirmação de saída. Cada destino das
+telas antigas fica a até dois passos do menu. Sem save, Continuar aparece
+desabilitado e avisa quando ativado; Lobby recebe o foco inicial dentro de Jogar.
+
+O Lobby conserva a campanha e abre a seleção de fases. O Hangar é uma loja
+separada para comprar e equipar skins. Continuar carrega o progresso persistido
+para iniciar uma missão no início da campanha (Dimensão 1, Nível 1); o Lobby
+retoma o checkpoint salvo. O resumo de Continuar mostra o início efetivo da
+missão e o tempo total acumulado pelo perfil.
+
+O menu também mostra um cartão do perfil ativo com skin equipada, dimensão
+máxima, bosses derrotados, moedas e tempo total. O selo de Perfil acompanha
+Memórias novas e só é dispensado ao abrir essa aba; o selo do Hangar registra
+uma única vez os itens que se tornaram compráveis. A composição se ajusta para
+janelas próximas de 4:3 sem ampliar a área jogável. Os cantos e linhas do HUD
+continuam decorativos, mas rótulos de telemetria sem dados reais foram removidos.
 
 ### História e cutscenes (1.4.0)
 
@@ -117,6 +203,14 @@ abra **Arquivo de Memórias** no menu principal para revê-la.
 No `settings.json`, `velocidade_dialogo` define os caracteres por segundo:
 padrão `42`, aceitando valores de `10` a `120`. Saves antigos recebem
 `cenas_vistas: []` em `progresso_campanha` sem perder outros dados.
+
+Os fundos rasterizados das cutscenes recebem posterização, tinta leve da
+dimensão, contorno e retícula preparados uma vez e mantidos em cache. Retratos,
+caixa e títulos usam contorno escuro de 3–5 px; o magenta fica reservado aos
+quadros de glitch e alerta. As camadas do mundo, inimigos e projéteis continuam
+desenhados por cima do fundo filtrado.
+
+![Cutscene com fundo tratado e caixa de diálogo cartoon](docs/screenshots/cutscene-dialogue.jpg)
 
 ### Avanço da nave e parallax (1.3.0)
 
@@ -146,6 +240,32 @@ usuário. Configurações antigas recebem os padrões automaticamente:
 | `avanco_desvio_parado` | `0.04` | Fração lenta aplicada às camadas distantes no boss. |
 | `avanco_miniboss_percentual` | `0.5` | Velocidade no miniboss: de `0` a `1`. |
 | `avanco_miniboss_tipos` | `{}` | Exceções por chave, por exemplo `{"eco": 0.25}`. |
+| `avanco_marcos` | `true` | Ativa marcos procedurais de cenário e o destino visual de boss. |
+| `avanco_evolucao_paleta` | `true` | Varia cor, brilho e densidade durante o nível. |
+| `avanco_ritmo_variavel` | `true` | Liga pequenas variações e passagens visuais. |
+| `avanco_marco_tamanho_max` | `420` | Maior lado de um marco em pixels; a qualidade também impõe um teto. |
+| `avanco_semente` | `null` | Sorteio por partida; use um inteiro para reproduzir testes. |
+| `avanco_ritmo_intervalo` | `8.0` | Intervalo das variações de velocidade, em segundos. |
+| `avanco_ritmo_variacao` | `0.08` | Limite da variação de velocidade: `0.08` representa 8%. |
+| `avanco_ritmo_passagem` | `2.5` | Duração máxima de uma passagem acelerada, em segundos. |
+| `avanco_destino_entrada_s`, `avanco_destino_saida_s` | `1.5`, `1.0` | Duração da aproximação e saída do destino de boss. |
+| `avanco_progresso_suavizacao` | `3.0` | Velocidade de interpolação do indicador, limitada de `0.1` a `8`. |
+
+Os catálogos de cada dimensão definem tipos, cores, profundidade, intervalos,
+curva, extremos de brilho e densidade. A qualidade limita os marcos simultâneos
+a 1, 2 ou 3 em `BAIXA`, `MEDIA` e `ALTA`, com tamanhos máximos de 240, 360 e
+480 pixels antes do limite global configurável. Os sprites cartoon usam
+contorno grosso, cores menos saturadas e opacidade reduzida; são desenhados
+antes das entidades, projéteis, nave e mira.
+
+No visual COMIC, cada dimensão também tem uma composição própria: rotas orbitais,
+cristas vulcânicas, ondas e recifes, cristais laterais, fendas e anéis com raios.
+Os planos usam baixa saturação e contraste para deixar a ação em primeiro plano.
+Projéteis inimigos recebem contornos escuro e claro, com contraste mínimo de
+3:1 definido em `src/runtime/infrastructure/graphics/style_tokens.py`; o desenho
+não altera suas hitboxes.
+
+![Composições de fundo das seis dimensões](docs/screenshots/dimensoes-composicao.jpg)
 
 Para observar a parada sem avançar cinco níveis, inicie uma partida de teste
 diretamente no boss do nível 5:
@@ -157,44 +277,63 @@ python -c 'from src.runtime.application.core import Jogo; jogo = Jogo(); jogo._n
 Pressione **F3** para conferir `FREANDO` → `PARADO`. Ao derrotá-lo, o estado
 passa por `ACELERANDO` e retorna a `AVANCANDO`. A medição reproduzível do mundo
 visual com 60 inimigos está em `python -m tools.benchmark_scroll --quadros 120`.
+O F3 também mostra progresso monotônico do nível, fator de evolução, marco
+atual, próximos sorteios e semente da partida. O benchmark informa média, p95 e
+memória de cache dos marcos nas três qualidades.
+
+Na medição anterior a esta alteração, o parallax com 60 inimigos marcou média
+de 4,819 ms e p95 de 6,372 ms. Após a alteração, com o mesmo Linux x86_64,
+Python 3.14.8, pygame-ce 2.5.8, SDL dummy, 1280×720, COMIC/MEDIA, 120 quadros e
+3 repetições, marcou média de 5,421 ms e p95 de 8,850 ms. O cache procedural
+mediu 435.000 bytes em `BAIXA`, 610.092 em `MEDIA` e 753.200 em `ALTA` para a
+dimensão 1. As superfícies são pré-renderizadas durante a preparação do fundo.
 
 ### Backup e transferência de progresso
 
 Cada gravação substitui o arquivo de forma atômica e mantém uma cópia `.bak`.
 Se o arquivo principal estiver corrompido, o jogo tenta recuperar essa cópia.
-Para levar o progresso entre Linux e Windows, use o mesmo executável/Python:
+Para levar um perfil entre Linux e Windows, selecione-o no jogo e use:
 
 ```bash
-python main.py --export-save progresso.json
-python main.py --import-save progresso.json
+python incarnate.py --export-save progresso.json
+python incarnate.py --import-save progresso.json
 ```
 
-Os comandos equivalentes também funcionam com `VOID-SHIFT.exe` no Windows e
-`VOID-SHIFT/VOID-SHIFT` no Linux.
+A exportação usa o último perfil selecionado. A importação cria outro perfil
+com UUID novo, chamado **IMPORTADO** (ou um nome numerado), sem modificar os
+arquivos legados. O comando de importação também aceita um `save.json` antigo.
+
+Os comandos equivalentes também funcionam com `INCARNATE.exe` no Windows e
+`INCARNATE/INCARNATE` no Linux. `python main.py` e o comando instalado
+`void-shift` continuam como aliases de compatibilidade.
 
 ### Resolução e responsividade
 
 O jogo renderiza numa superfície interna **16:9 de 1280×720** e a ajusta à
 janela preservando a proporção (scale-to-fit). Em Full HD, a cena ocupa toda a
 tela sem ser esticada; o custo continua bem menor que uma renderização nativa
-em 1920×1080. O posicionamento de **toda** a UI passa
-pelo módulo `game/layout.py` — um sistema responsivo com **ancoras** (grade
-3x3), **containers** ancorados, **proporções** da superfície, **escala** de uma
-base de design (900×700) e **safe areas** (margem interna). Nenhum elemento usa
-coordenada rígida em pixels: se a superfície lógica mudar de tamanho, o menu se
-recompõe automaticamente.
+em 1920×1080. O layout responsivo canônico fica em
+`src/infrastructure/ui/layout.py` e usa âncoras, containers, proporções, escala
+da base de design 900×700 e safe areas. Algumas telas ainda têm medidas locais
+em pixels; a migração para o sistema de layout segue em andamento.
 
 - **Inicialização padrão:** abre em **janela Full HD** (`1920x1080`).
 - **Resoluções suportadas:** `900x700`, `1024x768`, `1280x720`, `1280x800`,
   `1366x768`, `1440x900`, `1600x900`, `1680x1050`, `1920x1080`, `2560x1080`,
-  `2560x1440`, `3440x1440`, `3840x2160` (a lista vive em `settings.RESOLUCOES`;
+  `2560x1440`, `3440x1440`, `3840x2160` (a lista vive em `src/core/settings.py`;
   no menu **Config → Resolução** há um seletor com rolagem para escolher).
 - **Modo de aspecto** (configuração `aspecto`, disponível em Settings):
   - `AJUSTAR` (padrão): *scale-to-fit* com **safe areas** (letterbox) em
     `VOID_BLACK`, mantendo proporções iguais em qualquer formato de tela.
-  - `PREENCHE`: estica a cena para preencher a janela inteira.
-- **Tela cheia:** usa exatamente a resolução escolhida no menu (sem `SCALED`,
-  sem esticar). Alterar a resolução mantém a tela cheia ligada; se o monitor
+  - `PREENCHE`: mantém a área jogável em 16:9, com nave, HUD, mira e textos
+    na proporção correta; somente o fundo decorativo se estende pelas bordas.
+    Em telas ultrawide, as laterais extras não ampliam o campo de jogo.
+
+Prévia do modo `PREENCHE` em ultrawide:
+
+![Modo PREENCHE mantém a cena jogável em 16:9 e estende o fundo](docs/screenshots/preenche-ultrawide.jpg)
+- **Tela cheia:** usa exatamente a resolução escolhida no menu (sem `SCALED`;
+  a área jogável continua sem distorção). Alterar a resolução mantém a tela cheia ligada; se o monitor
   não suportar o modo selecionado, o jogo restaura a configuração anterior.
 - **Qualidade visual:** em **Config → Qualidade Visual**, escolha `ALTA`,
   `EQUILIBRADA` ou `DESEMPENHO`. `ALTA` preserva o redimensionamento suave em
@@ -213,10 +352,10 @@ recompõe automaticamente.
   (ou `Esc` cancela). Persistido em `ajuste_escala`, `ajuste_off_x` e
   `ajuste_off_y`; vale tanto no modo `AJUSTAR` quanto no `PREENCHE`.
 - **Conversão do mouse:** `MenuPrincipal._pos_logica` converte coordenadas da
-  janela para a superfície interna aplicando a transformação vigente (escala +
-  offsets do letterbox e os ajustes manuais de Ajustar Tela; proporção direta
-  com escala no modo `PREENCHE`).
-- **Layout responsivo:** `game/layout.py` define `Layout`, com `x()/y()`
+  janela para a superfície interna usando a mesma escala uniforme e os mesmos
+  offsets da cena e de Ajustar Tela. A mira permanece alinhada nos dois modos;
+  as faixas externas decorativas não fazem parte da área jogável.
+- **Layout responsivo:** `src/infrastructure/ui/layout.py` define `Layout`, com `x()/y()`
   (frações da superfície), `px()` (escala da base de design), `rect(ancora, …)`
   (containers), `ponto(ancora, …)` e `fonte(...)` (fontes escaladas). Todas as
   telas do menu (`menu.py`) e os elementos visuais (`menu_scene.py`) derivam
@@ -224,16 +363,19 @@ recompõe automaticamente.
 
 ---
 
-## Arquitetura
+### Arquitetura
 
-O projeto segue o padrão **Game Loop** clássico: um estado global
-(`Jogo.estado`) decide o que é atualizado e desenhado a cada frame. O runtime
-executável fica em `src/runtime/`; `game/` existe apenas como fachada de
-compatibilidade para imports antigos.
+O projeto segue o padrão **Game Loop** clássico: `Jogo.estado` orienta a
+atualização e o desenho. O runtime executável fica em `src/runtime/`. Imports
+novos devem apontar para os módulos canônicos `src/runtime`, `src/core` e
+`src/infrastructure`; `game/` é reservado a fachadas de compatibilidade. A
+migração ainda tem exceções, detalhadas em
+[docs/architecture-migration.md](docs/architecture-migration.md).
 
 ```
 Trabalho-Jogos/
-├── main.py                       # chama src.core.application.main
+├── incarnate.py                  # entrada e comandos portáteis do produto
+├── main.py                       # alias de compatibilidade
 ├── src/
 │   ├── core/                     # entry point, estados, constantes e configurações
 │   ├── runtime/                  # implementação executável, por responsabilidade
@@ -245,24 +387,22 @@ Trabalho-Jogos/
 │   ├── domain/                   # abstrações reutilizáveis em evolução
 │   ├── infrastructure/           # adaptadores reutilizáveis em evolução
 │   └── presentation/             # componentes e telas reutilizáveis em evolução
-├── game/                          # fachadas de compatibilidade sem lógica
+├── game/                          # fachadas antigas; ver exceções na migração
 ├── tests/                         # testes unitários, integração e arquitetura
 ├── docs/architecture-migration.md # regras e mapa da migração
 └── data/fonts/                    # fontes incluídas na distribuição
 ```
 
-### Ativos visuais
+#### Ativos visuais
 
-A pasta `images/` concentra as artes: fundos por cenário, o menu e a folha de
-sprites de naves (`naves.png`). A nave padrão do jogador é um recorte da folha
-(`nave-padrao.png`, extraído com fundo transparente) e é carregada por
-`src/runtime/domain/entities/player.py` com fallback para a nave procedural
-caso o arquivo falte.
+A pasta `images/` contém fundos, arte do menu, ícone e sprites de naves
+(`naves.png` e `nave-padrao.png`). `data/fonts/` contém Orbitron e Rajdhani.
+Há também efeitos, fundos e áudio gerados proceduralmente em runtime.
 No estilo **ORIGINAL**, as seis dimensões combinam as imagens existentes com
 formas próprias pré-renderizadas; o Oceano Cósmico também recebe uma tonalidade
 azul própria. O estilo **COMIC** continua usando seu fundo separado.
 
-### Responsabilidades por camada
+#### Responsabilidades por camada
 
 | Camada | Módulos | Responsabilidade |
 |--------|---------|------------------|
@@ -274,15 +414,15 @@ azul própria. O estilo **COMIC** continua usando seu fundo separado.
 
 ---
 
-## Fluxo do jogo
+### Fluxo do jogo
 
-### Estados (`Jogo.estado`)
+#### Estados (`Jogo.estado`)
 
 `MENU`, `CONTINUAR`, `LOJA`, `RECORDES`, `CONFIG` → renderizados pelo
 `MenuPrincipal`. Durante o gameplay: `PREPARANDO` (tela de carregamento
 falsa) → `JOGANDO` → `PAUSA` / `GAME_OVER`.
 
-### Loop principal (`core.Jogo.executar`)
+#### Loop principal (`core.Jogo.executar`)
 
 A cada quadro renderizado, na ordem:
 
@@ -292,7 +432,7 @@ A cada quadro renderizado, na ordem:
 4. `_atualizar()` avança o mundo de zero a cinco vezes, sem espiral de atraso.
 5. `_desenhar()` apresenta uma vez o cenário, HUD e overlays.
 
-### Combate (`_atualizar_jogando`)
+#### Combate (`_atualizar_jogando`)
 
 1. Lê o teclado e move/atira (`Jogador.atualizar` / `atirar`).
 2. Faz **spawn** de inimigos da `fila_onda` (1 a cada ~35 frames).
@@ -301,7 +441,7 @@ A cada quadro renderizado, na ordem:
 5. `_atualizar_powerups()` — coleta e aplica efeitos.
 6. Se não há onda/inimigos/boss → `_iniciar_nivel(nivel + 1)`.
 
-### Níveis e dimensões
+#### Níveis e dimensões
 
 - `cenario_do_nivel(nivel)` → `min((nivel-1)//5 + 1, 6)`.
 - A cada `5` níveis nasce uma **entidade RIFT** (boss) da dimensão atual.
@@ -309,7 +449,7 @@ A cada quadro renderizado, na ordem:
   espiral → flash branco → troca da `Dimensao` → revelação. O estado da animação
   fica em `src/runtime/presentation/dimension_transition.py` e avança pelo loop.
 
-### Fim de jogo (`_fim_de_jogo`)
+#### Fim de jogo (`_fim_de_jogo`)
 
 Salva recorde, calcula moedas ganhas (bonus por dimensão + entidades RIFT **da
 partida atual**), atualiza estatísticas, sincroniza a loja e vai para
@@ -317,41 +457,44 @@ partida atual**), atualiza estatísticas, sincroniza a loja e vai para
 
 ---
 
-## Modelo de dados
+### Modelo de dados
 
 Tudo é persistido como JSON. **Não há banco de dados.** No Windows, os
 arquivos ficam em `%LOCALAPPDATA%\VoidShift`; no Linux, em
 `$XDG_DATA_HOME/void-shift` ou `~/.local/share/void-shift`. As variáveis
-`INCARNATE_DATA_DIR` e `SPACEFURY_DATA_DIR` permitem substituir esse local.
+`INCARNATE_DATA_DIR` substitui esse local; `SPACEFURY_DATA_DIR` continua aceito
+como fallback legado para instalações e scripts antigos.
 
 | Arquivo | Conteúdo |
 |---------|----------|
-| `save.json` | Progresso: nome, moedas, skins desbloqueadas/atual, total de pontos, bosses, nível máximo, cenários desbloqueados, estatísticas |
-| `records.json` | Top 10 recordes (`{nome, pontos, nivel, skin}`) |
-| `settings.json` | Configurações: volumes, resolução, tela cheia, sensibilidade, controles, tema, aspecto |
-| `skins.json` | Catálogo de skins (criado na primeira execução, espelha `player.SKINS`) |
+| `profiles/<uuid>.json` | Progresso, recordes, preferências e estatísticas do perfil |
+| `profiles/index.json` | Índice derivado, último perfil e marcador da migração |
+| `save.json` e `records.json` | Arquivos legados preservados após importação |
+| `settings.json` | Configurações globais: volumes, resolução, tela cheia, tema, aspecto e limites de perfis |
+| `skins.json` | Catálogo de skins (criado na primeira execução; espelha `SKINS` em `src/runtime/domain/entities/player.py`) |
 
-**Fluxo de gravação:** `MenuPrincipal`/`Jogo` alteram os objetos em memória
-(loja, config, progresso) e chamam `_salvar_tudo()` /
-`config.salvar()` que serializam em disco por substituição atômica. A versão
-anterior é mantida como `.bak` para recuperação. `SistemaProgressao.sincronizar_loja`
-garante que moedas/skins da `LojaSkins` sejam espelhadas no save.
+**Fluxo de gravação:** eventos de progresso sincronizam loja e perfil por
+`ProfileService`; a saída tenta uma gravação final. O repositório troca JSON
+atomicamente e mantém a versão anterior em `.bak` para recuperação.
 
 ---
 
-## Convenções do código
+### Convenções do código
 
 - **Idioma:** Português (nomes, docstrings e comentários). Mantenha assim.
-- **Imports:** sempre relativos dentro do pacote `game` (`from .x import y`).
+- **Imports:** use caminhos absolutos para os módulos canônicos (`src.runtime`,
+  `src.core`, `src.domain`, `src.infrastructure`, `src.presentation` e
+  `src.shared`). Não crie implementação nova em `game/`; ali ficam apenas
+  fachadas de compatibilidade até a migração terminar.
 - **Estrutura de entidades:** cada entidade (inimigo, boss, projétil, power-up)
   implementa `atualizar(...)` e `desenhar(tela, ...)`; retorna projéteis novos
   a partir de `atualizar()` para o `core` adicionar às listas.
 - **Rect de colisão:** exposto via `@property rect` (retângulo centrado no
   raio), usado com `colliderect`.
-- **Configuração:** constantes globais em `config.py`; configurações do
+- **Configuração:** constantes em `src/core/constants.py`; configurações do
   jogador via `Configuracoes` (acessadas por `jogo.config["chave"]`).
-- **Cores:** cores base em `config.py`; cores de destaque por tema via
-  `theme.tema_atual()`. Não use cores RGB soltas espalhadas pelo código.
+- **Cores:** cores base em `src/core/constants.py`; cores de destaque por tema
+  via `src/infrastructure/graphics/theme.py`. Não espalhe cores RGB pelo código.
 - **Fontes:** sempre via `fonte_texto(tamanho)` / `fonte_titulo(tamanho)`
   (cacheadas). Nunca `pygame.font.Font(None, n)` no meio do jogo.
 - **Desenho:** use os helpers de `smooth.py` (`desenhar_glow`,
@@ -362,7 +505,7 @@ garante que moedas/skins da `LojaSkins` sejam espelhadas no save.
 
 ---
 
-## Performance
+### Performance
 
 O jogo roda a 60 FPS; as regras abaixo mantêm isso:
 
@@ -387,72 +530,73 @@ regressões severas na busca de colisões.
 
 ---
 
-## Como estender
+### Como estender
 
-### Minibosses aleatórios
+#### Minibosses aleatórios
 
 Sete protocolos corporativos podem aparecer a cada três ondas comuns, com
 sorteio ponderado, filtro por dimensão e sem repetição consecutiva. O sistema
 também aceita intervalo por segundos e seed. Veja [minibosses](docs/minibosses.md)
 para catálogo, testes, integração, persistência e parâmetros de balanceamento.
 
-### Nova arma
-1. Adicione um dict em `ARMARIA` (`game/weapons.py`) com `nivel`, `cor`,
+#### Nova arma
+1. Adicione um dict em `ARMARIA` (`src/runtime/domain/entities/weapons.py`) com `nivel`, `cor`,
    `raio`, `vel`, `dano`, `cooldown`, `tipo`.
 2. Implemente o disparo em `Jogador.atirar` (novo branch de `tipo`).
 3. Se o projétil tiver comportamento visual novo, adicione um `tipo` em
    `Projetil.desenhar`.
 
-### Novo inimigo
-1. Adicione o tipo em `TIPOS` e a forma em `FORMAS` (`game/enemies.py`).
+#### Novo inimigo
+1. Adicione o tipo em `TIPOS` e a forma em `FORMAS` (`src/runtime/domain/entities/enemies.py`).
 2. Implemente o movimento em `Inimigo.atualizar` e o ataque em `_atacar`.
 3. Inclua o tipo na lista `inimigos` de um cenário em `scenarios.py`.
 
-### Novo inimigo especial
+#### Novo inimigo especial
 1. Adicione entradas em `CARGA_POR_TIRO`, `CORES` e no dict de `base`/
    `mov` em `InimigoEspecial`.
 2. Implemente a ação ao carregar em `acoes_carregado` e o desenho em
    `desenhar`.
 
-### Novo cenário
-1. Adicione um dict em `CENARIOS` (`scenarios.py`) — cores, camadas de
+#### Novo cenário
+1. Adicione um dict em `CENARIOS` (`src/runtime/domain/world/scenarios.py`) — cores, camadas de
    estrelas, efeito, inimigos, especiais.
 2. Se o efeito for novo, implemente em `Cenario._atualizar_efeito` /
    `_desenhar_efeito`.
-3. Adicione o boss correspondente em `BOSSES_POR_CENARIO` (`bosses.py`).
+3. Adicione o boss correspondente em `BOSSES_POR_CENARIO` (`src/runtime/domain/entities/bosses.py`).
 
-### Nova skin
-1. Adicione um dict em `SKINS` (`player.py`) com `id`, `preco`, `cor`,
+#### Nova skin
+1. Adicione um dict em `SKINS` (`src/runtime/domain/entities/player.py`) com `id`, `preco`, `cor`,
    `efeito`, `descricao`.
 2. Implemente o efeito visual em `Skin.desenhar`/`_desenhar_*`.
 
 ---
 
-## HUD de combate
+### HUD de combate
 
-O HUD fica em `src/runtime/presentation/hud.py` (`HudJogo`), com fachada em
-`game/hud.py`, e é desenhado pelo core em
-`_desenhar_hud()`. É **responsivo** (usa `game/layout`, escala de
-1920x1080 até janelas menores) e mantém o **centro da tela sempre livre**
-para o gameplay. O **tom do HUD acompanha a fase**: cada dimensão tinge
-os painéis, o badge do jogador, boost, energia e a barra de especial com
-as cores principais do cenário (`cores_principais` em `scenarios.py`;
-sem elas usa a paleta padrão da marca ciano/magenta):
+O HUD fica em `src/runtime/presentation/hud.py` (`HudJogo`) e é desenhado pelo core
+em `_desenhar_hud()`. O mundo continua na resolução lógica; o HUD é renderizado
+em pixels da área de jogo apresentada para manter o texto nítido em cada janela.
+Em uma janela 900×700, por exemplo, o HUD acompanha a área 16:9 de 900×506 e
+permanece centralizado nela. Textos essenciais têm altura efetiva mínima de 18 px,
+textos secundários de 14 px, e o contraste é ajustado para no mínimo 4,5:1 sobre
+os painéis escuros. As cores, limites e espaçamentos estão centralizados em
+`src/runtime/infrastructure/graphics/style_tokens.py`. Brilho fica reservado
+para boss e especial pronto; os acentos acompanham a dimensão sem usar magenta
+fora de alertas e efeitos de glitch:
 
 | Módulo | Posição | Conteúdo |
 | --- | --- | --- |
-| Jogador | topo-esquerda | nome do piloto, casco segmentado + numérico, alerta de vida crítica, escudo e energia |
-| Pontuação | topo-direita | pontos, recorde, abates e combo com barra de tempo restante |
-| Setor | topo-centro | setor, onda, região e progresso da fase |
-| Impulso | base-esquerda | medidor circular, velocidade, recarga e atalho configurado da esquiva |
-| Arma | base-direita | ícone, nome, nível, carga e atalho de troca |
-| Especial | base-centro | carga, estado de prontidão e tecla `E` para a Bomba Vortex |
-| Boss | topo-centro | substitui o setor durante chefes e minibosses, com nome, fase e vida percentual |
+| Jogador | topo-esquerda | ícone da nave, `PILOTO 01`, vida segmentada + numérica, escudo, energia |
+| Pontos | topo-direita | pontuação, recorde, abates, multiplicador combo |
+| Setor | topo-centro | `SETOR xx`, nome da região e barra de progresso da fase |
+| Boost | base-esquerda | medidor circular, velocidade e recarga da esquiva |
+| Arma | base-direita | ícone geométrico da arma, nome, `LVL`, carga/munição |
+| Especial | base-centro | barra de especial com `SPECIAL READY` pulsando quando cheia (tecla `E`) |
+| Boss | topo-centro | barra dourada segmentada com nome e fase comportamental |
 
-Painéis escuros e textos ajustados ao espaço preservam a leitura nos estilos
-ORIGINAL e COMIC. Rótulos e barras ocupam linhas separadas, inclusive com nomes
-longos e em janelas menores. `python preview_hud.py --save` gera uma prévia
-determinística em `images/preview_hud.png` sem abrir janela.
+Exemplo em 900×700 (modo `PREENCHE`):
+
+![HUD em 900×700 com texto renderizado na resolução efetiva da área de jogo](docs/screenshots/hud-900x700.jpg)
 
 Os medidores novos (`boost`, `especial`, `energia`) são mantidos pelo core:
 SHIFT/LCTRL turbina (drena boost e energia), abates carregam o especial.
@@ -481,23 +625,23 @@ janela e renderização continuam responsivos durante a animação.
 Para ver todos os componentes sobre um fundo neutro em 1920x1080:
 
 ```bash
-python preview_hud.py            # janela animada
-python preview_hud.py --save     # salva images/preview_hud.png
+python -m tools.preview_hud            # janela animada
+python -m tools.preview_hud --save     # salva images/preview_hud.png
 ```
 
 ---
 
-## Testes
+### Testes
 
 ```bash
-pytest tests/                  # suite completa (recomendado)
-python tests/run_all.py        # alternativa standalone, sem pytest
+python -m pytest tests/         # suíte completa, headless
+python -m ruff check src/ tools/ tests/  # varredura completa; há achados antigos
+python tests/run_all.py          # smoke tests standalone
 ```
 
-Os testes rodam **headless** (drivers dummy do SDL). O `tests/conftest.py`
-define o ambiente antes de qualquer importação do jogo e cria um
-`SPACEFURY_DATA_DIR` temporário para a sessão do pytest; cada arquivo também
-funciona isolado. Cobertura por módulo:
+O workflow `quality.yml` verifica com Ruff todos os arquivos Python alterados
+no push ou pull request. A varredura completa acima ainda encontra apontamentos
+antigos em módulos legados; a limpeza está planejada em branch separada.
 
 | Arquivo | Módulos | O que cobre |
 | --- | --- | --- |
@@ -514,11 +658,29 @@ funciona isolado. Cobertura por módulo:
 | `test_hud.py` | hud | HUD: renderização de todos os módulos, segmentos, barra de boss, medidores e duck typing |
 | `test_hud_legibilidade.py` | hud | textos e barras sem sobreposição em quatro resoluções e dois estilos; centro livre, arco circular e atalhos |
 | `test_layout.py` | layout | layout responsivo nas resoluções-alvo |
+O `tests/conftest.py` configura SDL dummy e `INCARNATE_DATA_DIR` temporário
+antes de importar o jogo. `SPACEFURY_DATA_DIR` continua testado como fallback
+para scripts antigos. Nesta branch, a suíte contém **640 casos: 639 passam e 1
+teste OpenGL real é ignorado** quando não há display/driver configurado.
 
-O `smoke_test.py` faz um smoke test geral: inicialização, loop de combate
-avançando níveis, desenho dos 6 cenários e mapeamento nível→cenário.
+| Arquivo(s) | Cobertura |
+| --- | --- |
+| `smoke_test.py`, `test_application_entrypoint.py` | Inicialização, CLI e smoke de gameplay sem janela. |
+| `test_core.py`, `test_gameplay_integration.py`, `test_state_machine.py` | Loop, estados, combate, níveis, recordes e game over. |
+| `test_cross_platform.py`, `test_runtime_assets.py`, `test_public_api_types.py` | Diretórios de dados, builds, assets e contratos públicos. |
+| `test_cutscene_integration.py`, `test_story_engine.py` | Motor de cenas, roteiro, pausa, pulo e arquivo de memórias. |
+| `test_mira.py`, `test_scroll.py`, `test_scroll_integration.py` | Mira, progresso visual, avanço, frenagem e retomada do cenário. |
+| `test_profiles.py`, `test_profiles_integration.py` | CRUD, migração, backups, seleção e isolamento de perfis. |
+| `test_enemies_bosses.py`, `test_minibosses.py`, `test_miniboss_integration.py` | Inimigos, bosses, protocolos especiais e integrações. |
+| `test_player.py`, `test_weapons_powerups.py`, `test_settings_save_shop.py` | Nave, armas, power-ups, configurações, persistência e loja. |
+| `test_scenarios_particles.py`, `test_spatial_index.py`, `test_timing_metrics.py` | Cenários, partículas, colisões e métricas de desempenho. |
+| `test_menu.py`, `test_menu_scene.py`, `test_interacao.py`, `test_hud.py`, `test_layout.py` | Menus, eventos reais, HUD e layout responsivo. |
+| `test_comic_visual.py`, `test_gpu_renderer.py`, `test_gpu_shader_integration.py`, `test_theme_geometry_smooth.py` | Tema, renderização comic, fallback CPU e integração OpenGL. |
+| `test_src_migration.py`, `test_runtime_module_layout.py` | Fachadas compatíveis e organização de módulos canônicos. |
 
-## Visual comic (1.1.0)
+O teste OpenGL é executado em ambiente com Xvfb/Mesa pelo workflow de qualidade.
+
+### Visual comic (1.1.0)
 
 O estilo comic inclui contornos em cache, tons chapados, hachuras, papel,
 retícula, bursts e UI angular. Em **Configurações → Estilo visual**, alterne
@@ -530,4 +692,18 @@ não aceitar GLSL 1.20, a apresentação continua normalmente sem o filtro.
 O Lobby de fases também usa o fundo impresso, lettering com contorno, miniaturas
 posterizadas e painéis angulares do estilo comic.
 
+Os contornos dos sprites aumentam com o tamanho até um limite comum. Hachuras
+ficam mais densas em sprites grandes e são omitidas nos pequenos para preservar
+seus detalhes. A prévia mostra as dez skins em quatro direções.
+
+![Naves e skins COMIC com contorno e hachura proporcionais](docs/screenshots/sprites-comic.jpg)
+
 Veja [pipeline visual, screenshots, testes e custos medidos](docs/visual/README.md).
+
+## Licenças
+
+O código do INCARNATE é distribuído sob a licença MIT, no arquivo
+[`LICENSE`](LICENSE). As fontes Orbitron e Rajdhani permanecem sob a SIL Open
+Font License 1.1; seus avisos de copyright e o texto integral da licença estão
+em [`data/fonts/OFL.txt`](data/fonts/OFL.txt) e são incluídos nos pacotes
+Windows e Linux.

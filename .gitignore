@@ -26,11 +26,14 @@ MANIFEST
 *.swo
 *~
 
-data/save.json
-data/records.json
-data/skins.json
-data/settings.json
-data/achievements.json
+# Dados locais e saves. `data/fonts/` contém assets versionados.
+/data/*
+!/data/fonts/
+!/data/fonts/**
+/profiles/
+/saves/
+
+builds/
 
 *.log
 .pytest_cache/

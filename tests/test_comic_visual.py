@@ -45,7 +45,7 @@ def test_contorno_usa_mascara_uma_vez_sem_mutar_sprite():
         b = contornar(origem, 3)
         assert a is b
         assert mascara.call_count == 1
-    assert a.get_size() == (15, 15)
+    assert a.get_size() == (11, 11)
     assert a.get_at((4, 6)).a > 0
     assert pygame.image.tobytes(origem, "RGBA") == antes
 
@@ -67,11 +67,68 @@ def test_texturas_nao_consumem_random_do_gameplay():
     assert random.getstate() == estado
 
 
+def test_cada_dimensao_tem_composicao_comic_propria():
+    from src.infrastructure.graphics.comic_render import fundo_comic
+    from src.infrastructure.graphics.comic_theme import COMPOSICOES_FUNDO
+
+    fundos = [fundo_comic((320, 180), setor, "BAIXA") for setor in range(1, 7)]
+    imagens = [pygame.image.tobytes(fundo, "RGB") for fundo in fundos]
+    assert len(set(imagens)) == 6
+    assert len(set(COMPOSICOES_FUNDO)) == 6
+
+
+def test_projeteis_inimigos_mantem_contorno_de_alto_contraste():
+    from src.infrastructure.graphics.comic_render import fundo_comic
+    from src.runtime.domain.entities.weapons import Projetil
+    from src.runtime.infrastructure.graphics.style_tokens import (
+        CONTORNO_PROJETIL_CLARO,
+        CONTORNO_PROJETIL_ESCURO,
+        CONTRASTE_PROJETIL_MINIMO,
+    )
+    from src.runtime.presentation.hud import razao_contraste
+
+    pygame.init()
+    for setor in range(1, 7):
+        tela = fundo_comic((320, 180), setor, "BAIXA").copy()
+        projetil = Projetil(160, 90, 0, 4, 1, (255, 80, 90), 4,
+                            origem="inimigo")
+        hitbox = projetil.rect.copy()
+        projetil.desenhar(tela)
+        cores = {tuple(tela.get_at((x, y))[:3])
+                 for y in range(180) for x in range(320)}
+        assert CONTORNO_PROJETIL_ESCURO in cores
+        assert CONTORNO_PROJETIL_CLARO in cores
+        assert projetil.rect == hitbox
+        for y in range(0, 180, 12):
+            for x in range(0, 320, 12):
+                cor_fundo = tuple(fundo_comic((320, 180), setor, "BAIXA")
+                                  .get_at((x, y))[:3])
+                contraste_borda = max(
+                    razao_contraste(cor_fundo, CONTORNO_PROJETIL_ESCURO),
+                    razao_contraste(cor_fundo, CONTORNO_PROJETIL_CLARO),
+                )
+                assert contraste_borda >= CONTRASTE_PROJETIL_MINIMO
+
+
 def test_paleta_tem_tres_faixas_ordenadas():
     from src.infrastructure.graphics.comic_pipeline import gerar_paleta
 
     sombra, base, luz = gerar_paleta((80, 160, 240))
     assert all(s < b < claro for s, b, claro in zip(sombra, base, luz))
+
+
+def test_contorno_e_hachura_escalam_com_o_tamanho_do_sprite():
+    from src.infrastructure.graphics.comic_theme import (
+        espessura_contorno_sprite,
+        passo_hachura_sprite,
+    )
+
+    espessuras = [espessura_contorno_sprite(tamanho) for tamanho in (12, 24, 48, 96)]
+    passos = [passo_hachura_sprite(tamanho) for tamanho in (12, 24, 48, 96)]
+    assert espessuras == sorted(espessuras)
+    assert passos[0] == 0
+    assert passos[1] > passos[2] > passos[3] > 0
+    assert espessura_contorno_sprite(96, solicitada=4) <= 4
 
 
 @pytest.mark.parametrize("chave", ["comic_papel", "comic_halftone", "comic_hachuras"])

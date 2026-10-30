@@ -7,15 +7,21 @@ import math
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pygame
 
 from src.shared.persistence import carregar_json_resiliente, salvar_json_atomico
 from src.shared.user_data import diretorio_dados
 
+if TYPE_CHECKING:
+    from src.domain.systems.profile_service import ProfileService
+
 from .constants import (
-    ALTURA, DISPERSAO_DUPLO_GRAUS, DISPERSAO_ESPIRAL_GRAUS, LARGURA,
+    ALTURA,
+    DISPERSAO_DUPLO_GRAUS,
+    DISPERSAO_ESPIRAL_GRAUS,
+    LARGURA,
 )
 
 PASTA_DADOS = diretorio_dados()
@@ -64,11 +70,25 @@ _DEFAULT: dict[str, Any] = {
     "avanco_miniboss_percentual": 0.5,
     "avanco_miniboss_tipos": {},
     "avanco_velocidades": VELOCIDADES_AVANCO_PADRAO,
+    "avanco_marcos": True,
+    "avanco_evolucao_paleta": True,
+    "avanco_ritmo_variavel": True,
+    "avanco_semente": None,
+    "avanco_marco_tamanho_max": 420,
+    "avanco_destino_entrada_s": 1.5,
+    "avanco_destino_saida_s": 1.0,
+    "avanco_ritmo_intervalo": 8.0,
+    "avanco_ritmo_variacao": 0.08,
+    "avanco_ritmo_passagem": 2.5,
+    "avanco_progresso_suavizacao": 3.0,
+    "limite_perfis": 5,
+    "limite_nome_perfil": 16,
     "shader_comic": True, "intensidade_shader": 0.7,
     "contorno_shader": 0.75, "tons_shader": 3,
     "hachuras_shader": True, "grao_shader": 0.35,
     "saturacao_shader": 1.1, "preservar_interface": True,
 }
+PREFERENCIAS_PERFIL = ("controles", "sensibilidade", "mira_ativa")
 
 
 def escala_visual(intensidade: str) -> float:
@@ -123,6 +143,24 @@ def _normalizar_avanco(valores: dict[str, Any]) -> None:
         {str(chave): _limitar_numero(valor, 0.5, 0, 1)
          for chave, valor in tipos.items()} if isinstance(tipos, dict) else {}
     )
+    for chave in ("avanco_marcos", "avanco_evolucao_paleta", "avanco_ritmo_variavel"):
+        valores[chave] = valores.get(chave) is True
+    semente = valores.get("avanco_semente")
+    valores["avanco_semente"] = semente if type(semente) is int else None
+    valores["avanco_marco_tamanho_max"] = int(_limitar_numero(
+        valores.get("avanco_marco_tamanho_max"), 420, 128, 1024))
+    valores["avanco_destino_entrada_s"] = _limitar_numero(
+        valores.get("avanco_destino_entrada_s"), 1.5, 0.1, 5.0)
+    valores["avanco_destino_saida_s"] = _limitar_numero(
+        valores.get("avanco_destino_saida_s"), 1.0, 0.1, 5.0)
+    valores["avanco_ritmo_intervalo"] = _limitar_numero(
+        valores.get("avanco_ritmo_intervalo"), 8.0, 2.0, 30.0)
+    valores["avanco_ritmo_variacao"] = _limitar_numero(
+        valores.get("avanco_ritmo_variacao"), 0.08, 0.0, 0.2)
+    valores["avanco_ritmo_passagem"] = _limitar_numero(
+        valores.get("avanco_ritmo_passagem"), 2.5, 0.0, 6.0)
+    valores["avanco_progresso_suavizacao"] = _limitar_numero(
+        valores.get("avanco_progresso_suavizacao"), 3.0, 0.1, 8.0)
 
 
 
@@ -205,6 +243,7 @@ class Configuracoes:
     """Configuracoes do jogador com carregamento e persistencia em JSON."""
 
     def __init__(self) -> None:
+        self.profile_service = None
         self._dados = self._carregar()
 
     def _carregar(self) -> dict[str, Any]:
@@ -218,6 +257,10 @@ class Configuracoes:
             _normalizar_avanco(valores)
             valores["velocidade_dialogo"] = _limitar_numero(
                 valores.get("velocidade_dialogo"), 42, 10, 120)
+            valores["limite_perfis"] = int(_limitar_numero(
+                valores.get("limite_perfis"), 5, 1, 20))
+            valores["limite_nome_perfil"] = int(_limitar_numero(
+                valores.get("limite_nome_perfil"), 16, 1, 32))
             valores["shader_comic"] = bool(valores.get("shader_comic", True))
             shader = OpcoesShaderComic.de_config(valores)
             valores.update({
@@ -236,11 +279,31 @@ class Configuracoes:
             _normalizar_avanco(valores)
             valores["velocidade_dialogo"] = _limitar_numero(
                 valores.get("velocidade_dialogo"), 42, 10, 120)
+            valores["limite_perfis"] = 5
+            valores["limite_nome_perfil"] = 16
             return valores
 
     def salvar(self) -> bool:
         """Persiste as configuracoes e informa se a gravacao foi concluida."""
-        return salvar_json_atomico(ARQUIVO_CONFIG, self._dados)
+        if self.profile_service is not None and self.profile_service.active is not None:
+            self.profile_service.active.preferences = {
+                key: self._dados[key] for key in PREFERENCIAS_PERFIL
+            }
+            self.profile_service._save()
+        globais = {key: value for key, value in self._dados.items()
+                   if key not in PREFERENCIAS_PERFIL}
+        return salvar_json_atomico(ARQUIVO_CONFIG, globais)
+
+    def aplicar_perfil(self, profile_service: ProfileService) -> None:
+        """Aplica comandos e preferências do perfil selecionado."""
+        self.profile_service = profile_service
+        profile = profile_service.active
+        preferences = profile.preferences if profile else {}
+        controls = dict(DEFAULT_CONTROLES)
+        controls.update(preferences.get("controles", {}))
+        self._dados["controles"] = controls
+        self._dados["sensibilidade"] = preferences.get("sensibilidade", 1.0)
+        self._dados["mira_ativa"] = preferences.get("mira_ativa", True)
 
     def __getitem__(self, chave: str) -> Any:
         return self._dados[chave]

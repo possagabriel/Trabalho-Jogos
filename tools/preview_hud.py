@@ -6,8 +6,8 @@ os componentes visiveis e animados (vida, escudo, energia, boost, especial,
 combo, abates, arma e barra de boss). Salva ``images/preview_hud.png``.
 
 Uso:
-    python3 preview_hud.py            # abre uma janela interativa
-    python3 preview_hud.py --save     # salva o frame demonstrativo em PNG
+    python -m tools.preview_hud            # abre uma janela interativa
+    python -m tools.preview_hud --save     # salva o frame demonstrativo em PNG
 """
 
 import os
@@ -23,13 +23,11 @@ from types import SimpleNamespace
 
 import pygame
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from game.assets import PASTA_IMAGENS
-from game.hud import HudJogo
-from game.layout import Layout
-from game.player import Jogador
-from game.weapons import ARMARIA
+from src.infrastructure.ui.layout import Layout  # noqa: E402
+from src.runtime.domain.entities.player import Jogador  # noqa: E402
+from src.runtime.domain.entities.weapons import ARMARIA  # noqa: E402
+from src.runtime.infrastructure.assets import PASTA_IMAGENS  # noqa: E402
+from src.runtime.presentation.hud import HudJogo  # noqa: E402
 
 TAMANHO = (1920, 1080)
 
@@ -110,7 +108,7 @@ def _rodar(salvar=False):
         tela.blit(fundo, (0, 0))
         hud.desenhar(tela, demo, tempo=t)
         if salvar:
-            pygame.image.save(tela, os.path.join(PASTA_IMAGENS, "preview_hud.png"))
+            pygame.image.save(tela, os.fspath(PASTA_IMAGENS / "preview_hud.png"))
             rodando = False
         elif not salvar:
             pygame.display.flip()

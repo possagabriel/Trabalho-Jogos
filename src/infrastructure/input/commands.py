@@ -13,10 +13,8 @@ from __future__ import annotations
 import abc
 from typing import TYPE_CHECKING
 
-import pygame
-
 if TYPE_CHECKING:
-    from src.infrastructure.input.controls import ControleConfiguracao
+    pass
 
 
 class Command(abc.ABC):

@@ -74,7 +74,7 @@ class EscudoNuclear(Estrategia):
         """Aplica dano apenas ao núcleo atingido pelo projétil."""
         acertou = False
         for i, vida in enumerate(self.vidas):
-            if vida > 0 and self._rect(boss, i).colliderect(proj.rect):
+            if vida > 0 and proj.atinge_rect(self._rect(boss, i)):
                 if not boss.entrando:
                     self.vidas[i] = max(0, vida - proj.dano)
                 acertou = True

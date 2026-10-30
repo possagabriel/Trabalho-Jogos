@@ -56,10 +56,16 @@ class ControladorCombate:
         ]
 
     def ativar_especial(self) -> bool:
-        """Lanca a Bomba Vortex se a carga especial estiver completa."""
+        """Ativa o especial equipado quando a carga estiver completa."""
         sessao = self.sessao
         if sessao.especial < 1.0 or sessao.estado is not EstadoJogo.JOGANDO:
             return False
+        if sessao.especial_atual == "intangivel":
+            if not sessao.jogador.ativar_intangibilidade():
+                return False
+            sessao.especial = 0.0
+            sessao.sons.tocar("especial")
+            return True
         sessao.especial = 0.0
         x, y = sessao.jogador.x, sessao.jogador.y - 24
         sessao.projeteis.append(Projetil(x, y, 0, -3.5, 25, LARANJA, 20,
@@ -217,9 +223,14 @@ class ControladorCombate:
         sessao.boss = None
         total = int(boss.pontos * sessao.jogador.combo.get_bonus())
         sessao.jogador.pontuacao += total
-        sessao.progresso.registrar_boss()
-        sessao.progresso.registrar_fase_concluida(boss.nivel)
-        sessao.progresso.salvar_arquivo()
+        if getattr(sessao, "modo_atual", "linear") != "mundo_aberto":
+            sessao.progresso.registrar_boss()
+            sessao.progresso.registrar_fase_concluida(boss.nivel)
+            sessao.progresso.salvar_arquivo()
+        if sessao.profile_service.active:
+            counts = dict(sessao.profile_service.active.progress["bosses_por_tipo"])
+            counts[boss.nome] = counts.get(boss.nome, 0) + 1
+            sessao.profile_service.update_progress(bosses_por_tipo=counts)
         sessao.bosses_abates += 1
         sessao.mensagens.append(MensagemFlutuante(
             f"CHEFE DERROTADO! +{total}", boss.x, boss.y, boss.cor, 110))
@@ -242,7 +253,8 @@ class ControladorCombate:
             sessao.powerups.append(
                 PowerUp(sortear_tipo(), boss.x, boss.y + random.randint(-20, 20)))
         publicar_evento(GameEventType.BOSS_DEFEATED, sessao=sessao,
-                        boss=boss, nivel=boss.nivel, cenario_id=boss.cenario_id)
+                        boss=boss, nivel=boss.nivel, cenario_id=boss.cenario_id,
+                        modo=getattr(sessao, "modo_atual", "linear"))
 
     def atualizar_projeteis(self) -> None:
         """Atualiza movimento, colisao e remocao de todos os projeteis."""
@@ -281,6 +293,8 @@ class ControladorCombate:
 
     def _aplicar_atracao_gravitacional(self, proj: Projetil) -> None:
         """Curva tiros proximos de inimigos com campo gravitacional."""
+        if proj.tipo == "ion":
+            return
         for inimigo in self.sessao.inimigos:
             atrai = inimigo.tipo == "distorcao" or (
                 isinstance(inimigo, InimigoEspecial) and inimigo.tipo_especial == "condutor")
@@ -310,7 +324,7 @@ class ControladorCombate:
         if acertou and not penetrante:
             return True
         for inimigo in self._candidatos(proj.rect):
-            if not proj.rect.colliderect(inimigo.rect):
+            if not proj.atinge_rect(inimigo.rect):
                 continue
             if penetrante and id(inimigo) in proj.alvos_atingidos:
                 continue
@@ -347,7 +361,7 @@ class ControladorCombate:
             acertou = True
             if not penetrante:
                 return True
-        if (sessao.boss and proj.rect.colliderect(sessao.boss.rect)
+        if (sessao.boss and proj.atinge_rect(sessao.boss.rect)
                 and (not penetrante or id(sessao.boss) not in proj.alvos_atingidos)):
             alvo, vida_antes = sessao.boss, sessao.boss.vida
             morreu = sessao.boss.sofrer_dano(proj.dano)
@@ -387,6 +401,7 @@ class ControladorCombate:
     def atualizar_powerups(self) -> None:
         """Atualiza quedas e aplica as coletas do jogador."""
         sessao = self.sessao
+        moedas_antes = sessao.jogador.moedas_jogo
         restantes = []
         for powerup in sessao.powerups:
             powerup.atualizar()
@@ -400,3 +415,5 @@ class ControladorCombate:
                 continue
             restantes.append(powerup)
         sessao.powerups[:] = restantes
+        if sessao.jogador.moedas_jogo > moedas_antes:
+            sessao.progressao_controller.creditar_moedas_partida()

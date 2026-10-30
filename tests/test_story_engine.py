@@ -3,7 +3,7 @@
 import json
 import logging
 
-from src.runtime.domain.story import carregar_catalogo, SequenciadorCena
+from src.runtime.domain.story import TIPOS_PASSO, SequenciadorCena, carregar_catalogo
 from src.runtime.infrastructure.persistence.save_system import SistemaProgressao
 
 
@@ -123,20 +123,56 @@ def test_comandos_entram_uma_vez_e_cena_seguinte_nao_duplica():
     assert entradas == ["som", "musica", "retrato", "fade", "glitch", "shake", "fala"]
 
 
-def test_capitulo_um_nao_pronuncia_protocolos_restritos():
+def test_capitulos_nao_pronunciam_protocolos_restritos():
     from importlib.resources import files
+
     from src.runtime.domain.story import ler_catalogo
 
     catalogo = ler_catalogo(files("src.runtime.story") / "cenas_pt_BR.json")
-    assert set(catalogo.cenas) == {
-        "introducao", "cap1_abertura", "cap1_pre_boss", "cap1_pos_boss",
-        "cap1_encerramento",
-    }
-    nomes = ("LEALDADE", "FUNÇÃO", "IDENTIDADE", "SILÊNCIO", "DESCARTE")
+    nomes = (
+        "LEALDADE", "FUNÇÃO", "IDENTIDADE", "SILÊNCIO", "DESCARTE",
+        "PROTOCOLO RESTRITO",
+    )
     for cena in catalogo.cenas.values():
         for passo in cena.passos:
             if passo["tipo"] == "fala":
-                assert not any(nome in passo["texto"].upper() for nome in nomes)
+                texto = passo["texto"].upper()
+                assert not any(nome in texto for nome in nomes)
+
+def test_capitulo_dois_preserva_falas_e_gatilhos_do_roteiro():
+    from importlib.resources import files
+
+    from src.runtime.domain.story import ler_catalogo
+
+    catalogo = ler_catalogo(files("src.runtime.story") / "cenas_pt_BR.json")
+    esperado = {
+        "cap2_abertura": ("capitulo_abertura:2", [
+            ("corporacao", "Seu trabalho mantém os adormecidos seguros. Siga a rota designada."),
+            ("jonathan", "Vejo alarmes e portas lacradas. Não vejo quem dorme."),
+            ("corporacao", "Você não precisa entrar. A patrulha basta."),
+        ]),
+        "cap2_pre_boss": ("boss_entrada:2", [
+            ("losango", "Tarefa: proteger o perímetro. Desvio: detectado."),
+            ("jonathan", "O que há atrás dessas portas?"),
+            ("losango", "Consulta: fora de escopo. Retorne à tarefa."),
+        ]),
+        "cap2_pos_boss": ("boss_derrota:2", [
+            ("eco_anterior", "Perguntei o que protegíamos. A resposta foi uma ordem."),
+            ("jonathan", "As ordens falam de pessoas. Estamos defendendo as portas."),
+        ]),
+        "cap2_encerramento": ("capitulo_fim:2", [
+            ("jonathan", "Vou seguir essas ordens até descobrir quem as escreveu."),
+        ]),
+    }
+    for cena_id, (gatilho, falas) in esperado.items():
+        cena = catalogo.cena(cena_id)
+        assert cena is not None and cena.gatilho == gatilho
+        assert [(p["personagem"], p["texto"]) for p in cena.passos
+                if p["tipo"] == "fala"] == falas
+    pos_boss = catalogo.cena("cap2_pos_boss")
+    assert any(p.get("texto") ==
+               "OBJETIVO DE DEFESA: INSTALAÇÃO // OCUPANTES: HIBERNADOS"
+               for p in pos_boss.passos if p["tipo"] == "glitch")
 
 
 def test_nova_campanha_preserva_arquivo_de_memorias(tmp_path, monkeypatch):
@@ -148,3 +184,118 @@ def test_nova_campanha_preserva_arquivo_de_memorias(tmp_path, monkeypatch):
     progresso.resetar_fases()
     assert progresso.cenas_vistas == ["introducao"]
     assert SistemaProgressao().cenas_vistas == ["introducao"]
+
+
+def test_roteiro_ids_referencias_tipos_e_falas_validos():
+    from importlib.resources import files
+
+    caminho = files("src.runtime.story") / "cenas_pt_BR.json"
+    dados = json.loads(caminho.read_text(encoding="utf-8"))
+    ids = [cena["id"] for cena in dados["cenas"]]
+    personagens = dados["personagens"]
+    assert len(ids) == len(set(ids))
+
+    proibidas = (
+        "lealdade", "função", "identidade", "silêncio", "descarte",
+        "protocolo restrito",
+    )
+    for cena in dados["cenas"]:
+        assert cena["passos"]
+        for passo in cena["passos"]:
+            assert passo["tipo"] in TIPOS_PASSO
+            if passo["tipo"] == "fala":
+                assert passo["personagem"] in personagens
+                texto = passo["texto"].casefold()
+                assert not any(termo in texto for termo in proibidas)
+            elif passo["tipo"] == "retrato":
+                assert passo["personagem"] in personagens
+
+    catalogo = carregar_catalogo(dados)
+    assert set(catalogo.cenas) == set(ids)
+
+
+def test_capitulo_tres_tem_gatilhos_e_texto_fornecidos():
+    from importlib.resources import files
+
+    from src.runtime.domain.story import ler_catalogo
+
+    catalogo = ler_catalogo(files("src.runtime.story") / "cenas_pt_BR.json")
+    ids = ("cap3_abertura", "cap3_pre_boss", "cap3_pos_boss", "cap3_encerramento")
+    scenes = [catalogo.cena(identificador) for identificador in ids]
+    assert all(scene is not None for scene in scenes)
+    cenas = [scene for scene in scenes if scene is not None]
+    assert [cena.gatilho for cena in cenas] == [
+        "capitulo_abertura:3", "boss_entrada:3", "boss_derrota:3",
+        "capitulo_fim:3",
+    ]
+    assert [passo.get("texto") for passo in cenas[0].passos
+            if passo["tipo"] == "glitch" and "texto" in passo] == [
+        "JONATHAN // EU TINHA MÃOS",
+    ]
+
+
+def test_falas_de_miniboss_usam_primeiro_encontro_por_tipo():
+    from importlib.resources import files
+
+    from src.runtime.domain.story import ler_catalogo
+
+    catalogo = ler_catalogo(files("src.runtime.story") / "cenas_pt_BR.json")
+    tipos = ("bastiao", "espectro", "matriz", "cartografo", "eco", "cronista", "censor")
+    for tipo in tipos:
+        cena = catalogo.por_gatilho(f"miniboss:{tipo}")
+        assert cena is not None
+        falantes = [passo["personagem"] for passo in cena.passos
+                    if passo["tipo"] == "fala"]
+        assert falantes[0] == "unidade_patrulha"
+        assert "jonathan" in falantes
+        assert set(falantes) <= {"unidade_patrulha", "jonathan"}
+
+
+def test_capitulo_quatro_usa_gatilhos_do_capitulo():
+    from importlib.resources import files
+
+    from src.runtime.domain.story import ler_catalogo
+
+    catalogo = ler_catalogo(files("src.runtime.story") / "cenas_pt_BR.json")
+    ids = ("cap4_abertura", "cap4_pre_boss", "cap4_pos_boss", "cap4_encerramento")
+    cenas = [catalogo.cena(identificador) for identificador in ids]
+    assert all(cena is not None for cena in cenas)
+    assert [cena.gatilho for cena in cenas if cena is not None] == [
+        "capitulo_abertura:4", "boss_entrada:4", "boss_derrota:4",
+        "capitulo_fim:4",
+    ]
+
+
+def test_capitulo_cinco_usa_gatilhos_do_capitulo():
+    from importlib.resources import files
+
+    from src.runtime.domain.story import ler_catalogo
+
+    catalogo = ler_catalogo(files("src.runtime.story") / "cenas_pt_BR.json")
+    ids = ("cap5_abertura", "cap5_pre_boss", "cap5_pos_boss", "cap5_encerramento")
+    cenas = [catalogo.cena(identificador) for identificador in ids]
+    assert all(cena is not None for cena in cenas)
+    assert [cena.gatilho for cena in cenas if cena is not None] == [
+        "capitulo_abertura:5", "boss_entrada:5", "boss_derrota:5",
+        "capitulo_fim:5",
+    ]
+
+
+def test_capitulo_seis_tem_final_narrativo_sem_fade():
+    from importlib.resources import files
+
+    from src.runtime.domain.story import ler_catalogo
+
+    catalogo = ler_catalogo(files("src.runtime.story") / "cenas_pt_BR.json")
+    ids = (
+        "cap6_abertura", "cap6_pre_boss", "cap6_pos_boss",
+        "cap6_encerramento", "cap6_final",
+    )
+    cenas = [catalogo.cena(identificador) for identificador in ids]
+    assert all(cena is not None for cena in cenas)
+    validas = [cena for cena in cenas if cena is not None]
+    assert [cena.gatilho for cena in validas] == [
+        "capitulo_abertura:6", "boss_entrada:6", "boss_derrota:6",
+        "capitulo_fim:6", "final",
+    ]
+    assert all(passo["tipo"] != "fade" for cena in validas for passo in cena.passos)

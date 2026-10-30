@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pygame
 
 import main
@@ -40,18 +42,47 @@ def test_diretorio_configurado_tem_prioridade(monkeypatch, tmp_path) -> None:
     assert user_data.diretorio_dados() == str(tmp_path)
 
 
+def test_diretorio_dados_aceita_variavel_legada(monkeypatch, tmp_path) -> None:
+    monkeypatch.delenv("INCARNATE_DATA_DIR", raising=False)
+    monkeypatch.setenv("SPACEFURY_DATA_DIR", str(tmp_path))
+
+    assert user_data.diretorio_dados() == str(tmp_path)
+
+
 def test_build_desktop_usa_separador_correto_por_sistema(tmp_path) -> None:
     windows = argumentos_distribuicao("win32", tmp_path)
     linux = argumentos_distribuicao("linux", tmp_path)
 
     assert f"{tmp_path / 'images'};images" in windows
     assert f"{tmp_path / 'images'}:images" in linux
+    assert f"{tmp_path / 'pyproject.toml'};." in windows
+    assert f"{tmp_path / 'pyproject.toml'}:." in linux
+    catalogo = tmp_path / "src" / "runtime" / "story" / "cenas_pt_BR.json"
+    assert f"{catalogo};src/runtime/story" in windows
+    assert f"{catalogo}:src/runtime/story" in linux
+    for argumentos, separador in ((windows, ";"), (linux, ":")):
+        destinos = {
+            argumentos[indice + 1].rsplit(separador, 1)[1]
+            for indice, valor in enumerate(argumentos) if valor == "--add-data"
+        }
+        assert destinos == {"images", "data/fonts", ".", "src/runtime/story"}
     assert "--icon" in windows
     assert "--icon" not in linux
     assert "--onefile" in windows
     assert "--onedir" in linux
-    assert windows[-1] == str(tmp_path / "main.py")
-    assert linux[-1] == str(tmp_path / "main.py")
+    assert windows[windows.index("--name") + 1] == "INCARNATE"
+    assert linux[linux.index("--name") + 1] == "INCARNATE"
+    assert windows[-1] == str(tmp_path / "incarnate.py")
+    assert linux[-1] == str(tmp_path / "incarnate.py")
+
+
+def test_installer_preserva_identidade_de_upgrade_e_usa_marca_nova() -> None:
+    instalador = (Path(__file__).resolve().parents[1] /
+                  "installer" / "incarnate.iss").read_text(encoding="utf-8")
+
+    assert "AppId={{B74AE7B0-9A9F-4C93-9A30-0D51F7C91000}" in instalador
+    assert "AppName=INCARNATE" in instalador
+    assert "UsePreviousAppDir=yes" in instalador
 
 
 def test_renderer_reutiliza_buffer_de_escala() -> None:

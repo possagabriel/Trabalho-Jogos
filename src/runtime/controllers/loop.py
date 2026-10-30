@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.core.constants import EstadoJogo, FPS, INCREMENTO_CARREGAMENTO
+from src.core.constants import FPS, INCREMENTO_CARREGAMENTO, EstadoJogo
 from src.core.event_bus import GameEventType, publicar_evento
 from src.runtime.application.timing import PASSO_FIXO, RelogioSimulacao
 
@@ -24,14 +24,32 @@ class ControladorLoop:
     def atualizar(self) -> None:
         """Atualiza o estado ativo e os efeitos que independem da tela."""
         jogo = self.jogo
+        strategy = jogo.estrategia_modo
+        if strategy is not None:
+            strategy.update(jogo, PASSO_FIXO)
+        world_managed = bool(strategy and strategy.handles_gameplay)
+        if jogo.profile_service.save_error and not getattr(jogo, "_aviso_save_exibido", False):
+            jogo.menu.notificacoes.adicionar("Falha ao salvar perfil", "erro")
+            jogo._aviso_save_exibido = True
+        elif not jogo.profile_service.save_error:
+            jogo._aviso_save_exibido = False
         if jogo.estado is EstadoJogo.JOGANDO:
-            if jogo.progressao_controller.transicao is not None:
+            if world_managed:
+                pass
+            elif jogo.progressao_controller.transicao is not None:
                 jogo.progressao_controller.atualizar_transicao()
             else:
                 jogo.tempo_partida += PASSO_FIXO
                 jogo._atualizar_jogando()
+                jogo.progressao_controller.atualizar_progresso_visual(
+                    PASSO_FIXO, concluido=jogo.estado is EstadoJogo.MELHORIA)
+        elif jogo.estado is EstadoJogo.MELHORIA:
+            jogo.progressao_controller.atualizar_progresso_visual(
+                PASSO_FIXO, concluido=True)
         elif jogo.estado is EstadoJogo.CUTSCENE:
             jogo.cutscene_controller.atualizar(PASSO_FIXO)
+            if world_managed and jogo.fade > 0:
+                jogo.fade = max(0, jogo.fade - 18)
             return
         elif jogo.estado is EstadoJogo.PREPARANDO:
             jogo.carregamento += INCREMENTO_CARREGAMENTO
@@ -43,7 +61,7 @@ class ControladorLoop:
             jogo.menu.atualizar()
         # O fundo de combate e suas partículas não são visíveis no menu.
         # Evitar esse trabalho fora da partida reduz uso de CPU em idle.
-        mundo_visivel = jogo.estado in (
+        mundo_visivel = not world_managed and jogo.estado in (
             EstadoJogo.JOGANDO, EstadoJogo.MELHORIA,
             EstadoJogo.PAUSA, EstadoJogo.GAME_OVER)
         if (mundo_visivel and not jogo.menu_equipamento
@@ -88,9 +106,16 @@ class ControladorLoop:
             if evento.type == pygame.QUIT:
                 jogo.menu.cancelar_confirmacao_resolucao()
                 jogo._salvar_tudo()
+                jogo.profile_service.flush()
                 return False
             if jogo.estado is EstadoJogo.CUTSCENE:
                 jogo.cutscene_controller.tratar_evento(evento)
+                continue
+            strategy = jogo.estrategia_modo
+            if (jogo.estado in (EstadoJogo.JOGANDO, EstadoJogo.MELHORIA,
+                                EstadoJogo.PAUSA, EstadoJogo.GAME_OVER)
+                    and strategy is not None
+                    and strategy.handle_event(jogo, evento)):
                 continue
             if jogo.estado in ("MENU", "CONTINUAR", "LOJA", "RECORDES", "CONFIG"):
                 if not jogo.menu.tratar_eventos(evento):
@@ -118,6 +143,9 @@ class ControladorLoop:
                     jogo._ativar_especial()
                 elif pygame.K_1 <= evento.key <= pygame.K_9:
                     jogo.jogador.selecionar_arma(evento.key - pygame.K_1)
+                    if jogo.profile_service.active:
+                        jogo.profile_service.update_progress(
+                            arma_equipada=jogo.jogador.arma_atual)
             elif jogo.estado is EstadoJogo.MELHORIA:
                 if evento.key in (pygame.K_LEFT, pygame.K_a):
                     jogo.melhoria_selecionada = (jogo.melhoria_selecionada - 1) % 3

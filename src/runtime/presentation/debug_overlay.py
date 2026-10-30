@@ -19,7 +19,7 @@ class OverlayDebug:
     def __init__(self) -> None:
         self._fonte = fonte_texto(18)
         self._glifos: dict[str, pygame.Surface] = {}
-        self._fundo = pygame.Surface((440, 244), pygame.SRCALPHA)
+        self._fundo = pygame.Surface((760, 408), pygame.SRCALPHA)
         self._fundo.fill((*VOID_BLACK, 215))
 
     def desenhar(self, tela: pygame.Surface, jogo: Jogo, mira: tuple[int, int] | None) -> None:
@@ -27,6 +27,7 @@ class OverlayDebug:
         tela.blit(self._fundo, (12, 12))
         avanco = jogo.avanco_controller.modelo
         fundo = getattr(jogo.cenario, "parallax", None)
+        progresso_nivel = jogo.progressao_controller.progresso_visual.valor
         particulas = len(jogo.particulas.particulas)
         if fundo is not None:
             particulas += fundo.particulas_ativas
@@ -34,12 +35,21 @@ class OverlayDebug:
         cena_id = narrativa.cena.id if narrativa.cena else "--"
         vistas = jogo.progresso.cenas_vistas
         flags = ", ".join(vistas[-2:]) or "--"
+        profile = jogo.profile_service.active
         linhas = (
+            f"PERFIL: {profile.name} [{profile.id[:8]}]" if profile else "PERFIL: --",
+            f"SALVO: {jogo.profile_service.last_save or '--'} | "
+            f"PENDENTE: {'SIM' if jogo.profile_service.dirty else 'NÃO'}",
             f"FPS: {jogo.fps_atual:.0f}",
             f"AVANÇO: {avanco.estado.value}",
             f"VELOCIDADE: {avanco.velocidade:.1f} px/s",
             f"CAMADAS: {fundo.numero_camadas if fundo else 0}",
             f"PARTÍCULAS: {particulas}",
+            f"PERCURSO: {progresso_nivel * 100:.0f}% | EVOLUÇÃO: "
+            f"{fundo.fator_evolucao:.2f}" if fundo else "PERCURSO: --",
+            f"MARCO ATUAL: {fundo.marco_atual}" if fundo else "MARCO ATUAL: --",
+            f"PRÓXIMOS: {fundo.proximos_marcos}" if fundo else "PRÓXIMOS: --",
+            f"SEMENTE: {jogo.avanco_semente if hasattr(jogo, 'avanco_semente') else '--'}",
             f"MIRA: {mira[0]}, {mira[1]}" if mira else "MIRA: --",
             f"ENTIDADES: {len(jogo.inimigos) + int(bool(jogo.boss)) + int(bool(jogo.miniboss))}",
             f"CENA: {cena_id} / PASSO: {narrativa.indice if narrativa.ativo else '--'}",

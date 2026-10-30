@@ -20,7 +20,6 @@ from src.core.constants import (
 )
 from src.infrastructure.graphics.comic_render import burst, texto_tinta
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
-from src.runtime.infrastructure.graphics.cel_shading import escurecer_cor
 from src.runtime.infrastructure.graphics.fonts import fonte_padrao
 from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, luz_radial
 

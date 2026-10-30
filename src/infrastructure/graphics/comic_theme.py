@@ -15,10 +15,15 @@ FERRUGEM = (144, 76, 48)
 LARANJA = (255, 151, 42)
 CIANO = (64, 226, 230)
 CONTORNO = 3
+CONTORNO_MAX_SPRITE = 4
+FATOR_ESPESSURA_CONTORNO_SPRITE = 0.075
 FATOR_SOMBRA = 0.48
 FATOR_LUZ = 0.32
 NIVEIS = (0, 85, 170, 255)
 PASSO_HACHURA = 7
+TAMANHO_MIN_HACHURA_SPRITE = 18
+PASSO_HACHURA_SPRITE_BASE = 16
+FATOR_DENSIDADE_HACHURA_SPRITE = 0.125
 PASSO_HALFTONE = 12
 FONTE_COMIC = "Comic.ttf"  # Opcional: arquivo livre fornecido pelo usuário.
 FONTE_SISTEMA = "dejavusans,liberationsans,arial"
@@ -39,6 +44,34 @@ PALETA_UI = {
 }
 FUNDOS = ((65, 66, 65), (66, 68, 75), (75, 61, 52),
           (62, 72, 65), (73, 58, 69), (81, 61, 50))
+
+# Composições cromáticas de baixa saturação, próprias de cada dimensão.
+COMPOSICOES_FUNDO = (
+    "orbital", "vulcanica", "oceanica", "cristalina", "fenda", "divina",
+)
+CORES_COMPOSICAO = (
+    ((103, 98, 86), (121, 111, 91)), ((107, 77, 66), (133, 87, 65)),
+    ((63, 91, 99), (73, 111, 119)), ((74, 99, 79), (91, 117, 91)),
+    ((91, 72, 97), (111, 78, 110)), ((111, 99, 73), (133, 116, 80)),
+)
+
+
+def espessura_contorno_sprite(tamanho: int, solicitada: int = CONTORNO) -> int:
+    """Escala a tinta pela dimensão do sprite, respeitando o teto solicitado."""
+    limite = max(1, min(CONTORNO_MAX_SPRITE, int(solicitada)))
+    proporcional = round(max(1, int(tamanho)) * FATOR_ESPESSURA_CONTORNO_SPRITE)
+    return max(1, min(limite, proporcional))
+
+
+def passo_hachura_sprite(tamanho: int) -> int:
+    """Retorna espaçamento inverso ao tamanho; formas pequenas não recebem hachura."""
+    extensao = max(0, int(tamanho))
+    if extensao < TAMANHO_MIN_HACHURA_SPRITE:
+        return 0
+    return max(
+        4,
+        round(PASSO_HACHURA_SPRITE_BASE - extensao * FATOR_DENSIDADE_HACHURA_SPRITE),
+    )
 
 
 @dataclass(frozen=True)

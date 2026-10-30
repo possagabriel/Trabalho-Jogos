@@ -8,19 +8,48 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.runtime.infrastructure.graphics.cel_shading import (barra_vida_cartoon, circulo_com_contorno,
-                          contorno_circulo, contorno_poligono,
-                          desenhar_brilho_contorno, desenhar_highlight,
-                          desenhar_sombra_chapada, escurecer_cor,
-                          estrela_com_contorno, poligono_com_contorno)
-from src.core.constants import AMARELO, AZUL, BRANCO, CIANO, \
-    COOLDOWN_ATAQUE_INIMIGO_MAXIMO, COOLDOWN_ATAQUE_INIMIGO_MINIMO, \
-    DOURADO, INVISIBILIDADE_QUADROS, LARGURA, LARANJA, \
-    PISCAR_INVISIBILIDADE_QUADROS, ROXO, VERDE, VERMELHO
-from src.runtime.infrastructure.graphics.geometry import estrela, losango, pentagono, poligono, quadrado, triangulo
-from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, desenhar_glow, desenhar_poligono, \
-    linha_suave
+from src.core.constants import (
+    AMARELO,
+    AZUL,
+    BRANCO,
+    CIANO,
+    COOLDOWN_ATAQUE_INIMIGO_MAXIMO,
+    COOLDOWN_ATAQUE_INIMIGO_MINIMO,
+    DOURADO,
+    INVISIBILIDADE_QUADROS,
+    LARANJA,
+    LARGURA,
+    PISCAR_INVISIBILIDADE_QUADROS,
+    ROXO,
+    VERDE,
+    VERMELHO,
+)
 from src.runtime.domain.entities.weapons import Projetil
+from src.runtime.infrastructure.graphics.cel_shading import (
+    barra_vida_cartoon,
+    circulo_com_contorno,
+    contorno_circulo,
+    contorno_poligono,
+    desenhar_highlight,
+    desenhar_sombra_chapada,
+    escurecer_cor,
+    estrela_com_contorno,
+    poligono_com_contorno,
+)
+from src.runtime.infrastructure.graphics.geometry import (
+    estrela,
+    losango,
+    pentagono,
+    poligono,
+    quadrado,
+    triangulo,
+)
+from src.runtime.infrastructure.graphics.smooth import (
+    desenhar_circulo,
+    desenhar_glow,
+    desenhar_poligono,
+    linha_suave,
+)
 
 if TYPE_CHECKING:
     from src.runtime.domain.entities.player import Jogador
@@ -487,6 +516,14 @@ class InimigoEspecial(Inimigo):
             brilho.set_alpha(pulso)
             tela.blit(brilho, (x, y))
 
+    def desenhar_barra_vida(self, tela: pygame.Surface) -> None:
+        """Mostra a vida real do mutante depois da transformação."""
+        largura = int(self.raio * 2)
+        x = int(self.x) - largura // 2
+        y = int(self.y) - self.raio - 15
+        barra_vida_cartoon(tela, x, y, largura,
+                          max(0, self.vida), self.vida_max, altura=5)
+
     def desenhar(self, tela: pygame.Surface) -> None:
         if self.invisivel > 0:
             if (self.invisivel // PISCAR_INVISIBILIDADE_QUADROS) % 2 == 0:
@@ -506,7 +543,7 @@ class InimigoEspecial(Inimigo):
             circulo_com_contorno(tela, (255, 0, 255), centro, 8,
                                 espessura_contorno=2)
             desenhar_highlight(tela, centro, 8, intensidade=0.7)
-            self.desenhar_barra_carga(tela)
+            self.desenhar_barra_vida(tela)
             return
 
         if self.tipo_especial == "acumulador":
