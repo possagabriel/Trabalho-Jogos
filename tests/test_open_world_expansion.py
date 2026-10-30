@@ -7,6 +7,7 @@ import random
 from types import SimpleNamespace
 
 import pygame
+import pytest
 
 from src.core.constants import ALTURA, LARGURA, EstadoJogo
 from src.core.event_bus import GameEventType
@@ -18,6 +19,12 @@ from src.runtime.domain.entities.weapons import Projetil
 from src.runtime.domain.game_modes import OpenWorldModeStrategy
 from src.runtime.domain.world.asteroid_field import AsteroidField
 from src.runtime.domain.world.open_world import OpenWorldRuntime
+
+
+@pytest.fixture(autouse=True)
+def inicializar_fontes() -> None:
+    """Garante que estes testes funcionem sem depender da ordem de coleta."""
+    pygame.font.init()
 
 
 class Teclas:
