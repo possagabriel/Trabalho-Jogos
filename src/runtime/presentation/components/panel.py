@@ -7,10 +7,9 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.infrastructure.graphics.comic_render import painel_tinta
-from src.infrastructure.graphics.comic_theme import opcoes_atuais, usar_visual
+from src.runtime.infrastructure.graphics.menu_panels import painel_original
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_cantos,
-    desenhar_painel,
 )
 from src.runtime.presentation.components.primitives import (
     desenhar_caixa,
@@ -123,27 +122,9 @@ class Painel:
         if tk.estilo == ESTILO_COMIC:
             tela.blit(painel_tinta(rect.size, tuple(borda[:3])), (rect.x - 12, rect.y - 12))
         else:
-            if opcoes_atuais().estilo == ESTILO_ORIGINAL:
-                desenhar_painel(
-                    tela,
-                    borda,
-                    rect,
-                    cor_fundo=fundo,
-                    raio_canto=raio,
-                    alpha=self.alpha or tk.superficie.alpha,
-                    glow_raio=layout.px(self.glow or tk.superficie.glow),
-                )
-            else:
-                with usar_visual({"estilo_visual": ESTILO_ORIGINAL}):
-                    desenhar_painel(
-                        tela,
-                        borda,
-                        rect,
-                        cor_fundo=fundo,
-                        raio_canto=raio,
-                        alpha=self.alpha or tk.superficie.alpha,
-                        glow_raio=layout.px(self.glow or tk.superficie.glow),
-                    )
+            tela.blit(painel_original(
+                rect.size, tuple(fundo[:3]), tuple(borda[:3]), raio=raio,
+                alpha=self.alpha or tk.superficie.alpha), rect)
             if self.mostrar_cantos:
                 desenhar_cantos(
                     tela,

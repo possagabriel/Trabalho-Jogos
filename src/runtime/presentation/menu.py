@@ -43,7 +43,6 @@ from src.infrastructure.graphics.theme import (
     MENU_COR_TEXTO,
     MENU_COR_TEXTO_DESABILITADO,
     MENU_COR_TEXTO_SECUNDARIO,
-    MENU_ESPESSURA_BOTAO,
     MENU_FONTE_MINIMA_ROTULO,
     MENU_FONTE_PRINCIPAL,
     MENU_FONTE_PRINCIPAL_SELECIONADA,
@@ -84,6 +83,7 @@ from src.runtime.domain.game_modes import (
     ModeStrategy,
     OpenWorldModeStrategy,
 )
+from src.runtime.infrastructure.graphics.menu_panels import painel_original
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_botao_cartoon,
     desenhar_cantos,
@@ -201,26 +201,13 @@ class OpcaoMenu:
                  self.desabilitado)
         painel = self._SUPERFICIES_BOTAO.get(chave)
         if painel is None:
-            painel = pygame.Surface(rect.size, pygame.SRCALPHA)
-            fundo = (5, 10, 28, MENU_ALPHA_BOTAO_SELECIONADO if selecionado
-                     else MENU_ALPHA_BOTAO_NORMAL)
-            cor_borda = secundaria if selecionado else tema["borda_fraco"]
-            if self.desabilitado:
-                fundo = (8, 10, 20, MENU_ALPHA_BOTAO_NORMAL)
-                cor_borda = MENU_COR_TEXTO_DESABILITADO
-            pygame.draw.rect(painel, fundo, painel.get_rect(), border_radius=8)
-            pygame.draw.rect(
-                painel, cor_borda + (235 if selecionado else 150,),
-                painel.get_rect(), MENU_ESPESSURA_BOTAO, border_radius=8,
-            )
-            if selecionado:
-                pygame.draw.rect(painel, primaria + (230,),
-                                 (0, layout.px(8), max(1, layout.px(4)),
-                                  max(1, rect.height - layout.px(16))))
-                pygame.draw.line(painel, primaria + (230,),
-                                 (layout.px(14), layout.px(7)),
-                                 (rect.width - layout.px(14), layout.px(7)),
-                                 max(1, layout.px(2)))
+            cor_borda = (MENU_COR_TEXTO_DESABILITADO if self.desabilitado else
+                         primaria if selecionado else tema["borda_fraco"])
+            painel = painel_original(
+                rect.size, tuple(tema["fundo_painel"][:3]), tuple(cor_borda[:3]),
+                selecionado=selecionado and not self.desabilitado,
+                raio=layout.px(10),
+                alpha=MENU_ALPHA_BOTAO_SELECIONADO if selecionado else MENU_ALPHA_BOTAO_NORMAL)
             self._SUPERFICIES_BOTAO[chave] = painel
         self._blit(tela, painel, rect.centerx, rect.centery, alfa, centrado=True)
 
@@ -2247,9 +2234,13 @@ class MenuPrincipal:
         p = self._frac_sub(0.04, 0.45)
         if p <= 0:
             return
-        surf = painel_glass(tema["primaria"], rect,
-                            cor_fundo=tema["fundo_painel"], raio_canto=raio,
-                            glow_raio=layout.px(22))
+        if self.jogo.config["estilo_visual"] == "ORIGINAL":
+            surf = painel_original(rect.size, tuple(tema["fundo_painel"][:3]),
+                                    tuple(tema["primaria"][:3]), raio=layout.px(raio))
+        else:
+            surf = painel_glass(tema["primaria"], rect,
+                                cor_fundo=tema["fundo_painel"], raio_canto=raio,
+                                glow_raio=layout.px(22))
         escala = 0.9 + 0.1 * ease_out_back(p)
         if abs(escala - 1.0) > 0.01:
             surf = pygame.transform.smoothscale(

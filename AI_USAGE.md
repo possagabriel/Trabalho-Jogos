@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex unificou os painéis do menu ORIGINAL e corrigiu o espaço dos resumos nos hubs, com regressões de cache, geometria e navegação.
+
 - Codex refez o sombreamento procedural das anomalias e adicionou regressões de sombra, volume, assimetria, cache e efeitos reduzidos.
 
 - Codex refinou arte procedural cacheada de rochas/meteoros e mecânicas anunciadas dos bosses móveis do mundo aberto, com testes de padrões, avisos, cache e regressões.

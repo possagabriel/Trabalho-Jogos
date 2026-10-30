@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Menus ORIGINAL: painéis cacheados com profundidade, foco consistente e resumos contidos nos cartões; conferir aparência jogando.
+
 - Anomalias: acreção e lente preenchidas, horizonte negro e túneis profundos com fluxo cacheado; revisão visual jogando pendente.
 
 - Mundo aberto: rochas e meteoros refinados; bosses móveis sem perseguição, aviso de mira e padrões por dimensão/fase; playtest de dificuldade e visual pendente.

@@ -19,6 +19,7 @@ from src.infrastructure.graphics.theme import (
     tema_atual,
 )
 from src.runtime.domain.entities.player import SKINS
+from src.runtime.infrastructure.graphics.menu_panels import painel_original
 from src.runtime.infrastructure.graphics.smooth import ease_out
 
 if TYPE_CHECKING:
@@ -72,6 +73,12 @@ class TelaPrincipalJogo:
         rect = pygame.Rect(*self.cartao_rect())
         tema = tema_atual(self.menu.jogo.config["tema"])
         border = tema["secundaria"] if resumo else tema["borda_fraco"]
+        if self.menu.jogo.config["estilo_visual"] == "ORIGINAL":
+            panel = painel_original(rect.size, MENU_CARTAO_PERFIL_COR,
+                                     tuple(border[:3]), alpha=MENU_CARTAO_PERFIL_ALPHA,
+                                     raio=self.menu.layout.px(12))
+            tela.blit(panel, rect)
+            return
         key = (rect.size, tuple(border), tuple(tema["primaria"]))
         panel = self._card_cache.get(key)
         if panel is None:
