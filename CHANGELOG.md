@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Mundo aberto: asteroides com facetas/crateras e meteoros cacheados por estilo; bosses patrulham arenas amplas e anunciam seis padrões de disparo, com mira travada e mudança por fase.
 - Mundo aberto ganha seleção de destino por clique, rota pontilhada, setor e encontro ativo no painel; propulsor desliga parado e rastros respeitam efeitos reduzidos.
 - Menu mantém o foco do teclado; HUD ganha acentos nos painéis e texto com contraste reforçado.
 - HUD de combate reorganizado com painéis de maior contraste, nome do piloto,

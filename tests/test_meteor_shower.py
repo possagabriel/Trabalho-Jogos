@@ -34,3 +34,30 @@ def test_meteoro_desenha_cabeca_e_cauda_sem_alocar_outro_canvas() -> None:
 
     assert tela.get_bounding_rect().width >= 20
     assert tela.get_bounding_rect().height >= 20
+
+
+def test_arte_meteoro_tem_estilos_e_efeitos_distintos_e_cache_preservado() -> None:
+    from src.runtime.infrastructure.graphics.meteor_shower import _quadros_meteoro
+
+    original = _quadros_meteoro(48, 40, False, False)
+    comic = _quadros_meteoro(48, 40, True, False)
+    reduzido = _quadros_meteoro(48, 40, False, True)
+    antes = pygame.image.tobytes(original[8], "RGBA")
+    assert original is _quadros_meteoro(48, 40, False, False)
+    assert antes != pygame.image.tobytes(comic[8], "RGBA")
+    assert antes != pygame.image.tobytes(reduzido[8], "RGBA")
+    tela = pygame.Surface((320, 240), pygame.SRCALPHA)
+    desenhar_meteoro(tela, MeteoroVisual(220, 25, -300, 250, 0, 48), 0.5)
+    assert pygame.image.tobytes(original[8], "RGBA") == antes
+
+
+def test_rochas_cacheadas_preservam_forma_e_diferenciam_estilos() -> None:
+    from src.runtime.infrastructure.graphics.world_objects import arte_asteroide
+
+    forma = ((-18, -10), (3, -20), (21, -3), (16, 17), (-9, 19), (-22, 2))
+    original = arte_asteroide(forma, 24, False)
+    assert original is arte_asteroide(forma, 24, False)
+    comic = arte_asteroide(forma, 24, True)
+    assert original.get_bounding_rect().width > 30
+    assert pygame.image.tobytes(original, "RGBA") != pygame.image.tobytes(comic, "RGBA")
+    assert forma[0] == (-18, -10)

@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Mundo aberto: rochas e meteoros refinados; bosses móveis sem perseguição, aviso de mira e padrões por dimensão/fase; playtest de dificuldade e visual pendente.
+
 - Mundo aberto: mapa clicável com rota direta, contexto de combate/setor e propulsor por movimento; falta playtest visual.
 
 - Menu: foco do teclado preservado com mouse parado; HUD com contraste e acentos revisados.

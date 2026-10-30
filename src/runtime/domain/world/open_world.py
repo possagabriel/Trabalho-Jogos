@@ -26,6 +26,11 @@ from src.runtime.domain.entities.powerups import PowerUp
 from src.runtime.domain.entities.weapons import Projetil
 from src.runtime.domain.world.anomalies import CosmicAnomalies
 from src.runtime.domain.world.asteroid_field import AsteroidField
+from src.runtime.domain.world.boss_patterns import (
+    angulos_ataque,
+    descricao_padrao,
+    posicao_patrulha,
+)
 from src.runtime.domain.world.region_background import SectorBackground
 from src.runtime.domain.world.scenarios import CENARIOS, Cenario
 from src.runtime.domain.world.scroll import EstadoAvanco
@@ -41,6 +46,7 @@ from src.runtime.infrastructure.graphics.smooth import (
     linha_suave,
     texto_suave,
 )
+from src.runtime.infrastructure.graphics.world_objects import arte_asteroide
 
 
 class OpenWorldRuntime:
@@ -132,6 +138,7 @@ class OpenWorldRuntime:
         self._destino_id = "boss"
         self._boss_orbit = 0.0
         self._boss_attack_timer = 1.6
+        self._boss_attack_angle: float | None = None
         self.miniboss_active = False
         self.miniboss_defeated = False
         self.boss_active = False
@@ -529,7 +536,7 @@ class OpenWorldRuntime:
             )
 
     def _update_world_boss(self, dt: float) -> list[Projetil]:
-        """Orbita a toca em duas dimensões e mira a nave em salvas móveis."""
+        """Patrulha livremente e trava a mira durante um aviso antes de cada salva."""
         boss = self.boss
         boss.t += 1
         boss.flash = max(0, boss.flash - 1)
@@ -538,43 +545,40 @@ class OpenWorldRuntime:
         if phase != boss.fase_anterior:
             boss.fase_anterior = phase
             boss.pulso_fase = 75
+            self._boss_attack_angle = None
+            self._boss_attack_timer = max(0.75, self._boss_attack_timer)
         boss.enraivecido = phase == 3
-        direction = -1 if self.dimension % 2 else 1
-        self._boss_orbit += dt * direction * (0.72 + phase * 0.16)
-        radius = 125 + 24 * phase + 9 * self.dimension
-        target_x = self.BOSS_LAIR[0] + math.cos(self._boss_orbit) * radius
-        target_y = self.BOSS_LAIR[1] + math.sin(self._boss_orbit * 1.3) * radius
-        follow = min(1.0, dt * (2.6 + phase * 0.6))
-        self._boss_world = (
-            self._boss_world[0] + (target_x - self._boss_world[0]) * follow,
-            self._boss_world[1] + (target_y - self._boss_world[1]) * follow,
-        )
+        if self._boss_attack_angle is None:
+            self._boss_orbit += dt
+            target_x, target_y = posicao_patrulha(
+                self.BOSS_LAIR, self._boss_orbit, self.dimension, phase)
+            follow = min(1.0, dt * (2.6 + phase * 0.6))
+            self._boss_world = (
+                self._boss_world[0] + (target_x - self._boss_world[0]) * follow,
+                self._boss_world[1] + (target_y - self._boss_world[1]) * follow,
+            )
         boss.x, boss.y = self._screen_position(self._boss_world)
         boss.angulo += dt * (0.9 + phase * 0.35)
         self._boss_attack_timer -= dt
+        if self._boss_attack_timer <= 0.65 and self._boss_attack_angle is None:
+            self._boss_attack_angle = math.atan2(ALTURA / 2 - boss.y, LARGURA / 2 - boss.x)
+            if self.dimension == 5:
+                self._boss_attack_angle += self._boss_orbit
+            # Mesmo após um quadro longo, o aviso permanece visível antes do tiro.
+            self._boss_attack_timer = 0.65
         if self._boss_attack_timer > 0:
             return []
-        self._boss_attack_timer = max(0.52, 1.8 - phase * 0.28
+        self._boss_attack_timer = 0.65 + max(0.52, 1.8 - phase * 0.28
                                       - self.dimension * 0.06)
-        player_x, player_y = LARGURA / 2, ALTURA / 2
-        direction = math.atan2(player_y - boss.y, player_x - boss.x)
-        count = 1 + phase * 2
+        direction = self._boss_attack_angle or 0.0
+        self._boss_attack_angle = None
         speed = 3.2 + phase * 0.55
-        shots = [
+        return [
             Projetil(boss.x, boss.y,
-                     math.cos(direction + (index - count // 2) * 0.18) * speed,
-                     math.sin(direction + (index - count // 2) * 0.18) * speed,
+                     math.cos(angle) * speed, math.sin(angle) * speed,
                      1, boss.cor, 5, origem="inimigo")
-            for index in range(count)
+            for angle in angulos_ataque(self.dimension, phase, direction)
         ]
-        if phase == 3 or self.dimension in (2, 4, 6):
-            shots.extend(
-                Projetil(boss.x, boss.y, math.cos(angle) * 2.8,
-                         math.sin(angle) * 2.8, 1, boss.cor, 4,
-                         origem="inimigo")
-                for angle in (index * math.tau / 8 for index in range(8))
-            )
-        return shots
 
     def _sync_encounter_targets(self, dt: float, game) -> None:
         """Projeta alvos e atualiza a IA dos encontros lineares."""
@@ -788,6 +792,7 @@ class OpenWorldRuntime:
         self._destino_id = "boss"
         self._boss_orbit = 0.0
         self._boss_attack_timer = 1.6
+        self._boss_attack_angle = None
         self.projectiles.clear()
         self.powerups.clear()
         self._region_label = self._font_region.render(
@@ -856,6 +861,7 @@ class OpenWorldRuntime:
         self._draw_void_border(surface)
         self._draw_speed_lines(surface)
         self._draw_boss_lair(surface)
+        self._draw_boss_warning(surface)
         self._draw_objective_marker(surface)
         self._draw_powerups(surface)
         self._draw_projectiles(surface)
@@ -867,8 +873,6 @@ class OpenWorldRuntime:
     def _draw_asteroids(self, surface: pygame.Surface) -> None:
         """Desenha apenas rochas dos chunks que tocam a câmera."""
         comic = opcoes_atuais().ativo
-        fill = (71, 59, 53) if comic else (58, 72, 91)
-        edge = PAPEL if comic else (153, 191, 213)
         for rock in self.asteroids.visible(self.camera_x, self.camera_y,
                                            LARGURA, ALTURA):
             if not rock.active():
@@ -876,11 +880,8 @@ class OpenWorldRuntime:
             sx, sy = self._screen_position((rock.x, rock.y))
             if not (-45 <= sx <= LARGURA + 45 and -45 <= sy <= ALTURA + 45):
                 continue
-            points = tuple((sx + dx, sy + dy) for dx, dy in rock.shape)
-            pygame.draw.polygon(surface, fill, points)
-            pygame.draw.polygon(surface, edge, points, 2)
-            pygame.draw.circle(surface, edge, (sx - rock.radius // 4, sy),
-                               max(2, rock.radius // 5), 1)
+            arte = arte_asteroide(rock.shape, rock.radius, comic)
+            surface.blit(arte, arte.get_rect(center=(sx, sy)))
 
     def _draw_meteor_shower(self, surface: pygame.Surface) -> None:
         """Desenha grupos curtos no plano de fundo, sem colisão ou flashes."""
@@ -1182,6 +1183,27 @@ class OpenWorldRuntime:
         if game.miniboss is not None:
             game.miniboss.x, game.miniboss.y = self._screen_position(
                 self._miniboss_world)
+
+    def _draw_boss_warning(self, surface: pygame.Surface) -> None:
+        """Mostra as linhas reais de disparo; a mira fica fixa até terminar o aviso."""
+        if not self.boss_active or self.boss_defeated or self._boss_attack_angle is None:
+            return
+        origem = self._screen_position(self._boss_world)
+        for angulo in angulos_ataque(
+                self.dimension, self.boss.fase_atual, self._boss_attack_angle):
+            destino = (round(origem[0] + math.cos(angulo) * 600),
+                       round(origem[1] + math.sin(angulo) * 600))
+            linha_suave(surface, TINTA, origem, destino, 4)
+            linha_suave(surface, PAPEL, origem, destino, 1)
+        raio = 45 + round(max(0.0, self._boss_attack_timer) / 0.65 * 35)
+        desenhar_circulo(surface, PAPEL, origem, raio, espessura=2)
+        rotulo = f"FASE {self.boss.fase_atual} // {descricao_padrao(self.dimension)}"
+        texto = texto_suave(self._font_marker, rotulo, PAPEL)
+        pos = texto.get_rect(midbottom=(origem[0], origem[1] - raio - 8))
+        pos.clamp_ip(surface.get_rect().inflate(-16, -16))
+        desenhar_painel(surface, PAPEL, pos.inflate(12, 8), cor_fundo=TINTA,
+                        glow_raio=0, alpha=255)
+        surface.blit(texto, pos)
 
     def _draw_boss_lair(self, surface: pygame.Surface) -> None:
         x, y = self._screen_position(self.BOSS_LAIR)

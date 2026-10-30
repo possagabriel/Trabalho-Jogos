@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex refinou arte procedural cacheada de rochas/meteoros e mecânicas anunciadas dos bosses móveis do mundo aberto, com testes de padrões, avisos, cache e regressões.
+
 - Codex aprimorou orientação e contexto do mundo aberto, corrigiu propulsão parada e respeitou efeitos reduzidos com testes direcionados.
 
 - Codex corrigiu a disputa de foco entre mouse e teclado e refinou o contraste e os painéis do HUD.
