@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex refez o sombreamento procedural das anomalias e adicionou regressões de sombra, volume, assimetria, cache e efeitos reduzidos.
+
 - Codex refinou arte procedural cacheada de rochas/meteoros e mecânicas anunciadas dos bosses móveis do mundo aberto, com testes de padrões, avisos, cache e regressões.
 
 - Codex aprimorou orientação e contexto do mundo aberto, corrigiu propulsão parada e respeitou efeitos reduzidos com testes direcionados.
