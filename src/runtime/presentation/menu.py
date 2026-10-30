@@ -214,6 +214,9 @@ class OpcaoMenu:
                 painel.get_rect(), MENU_ESPESSURA_BOTAO, border_radius=8,
             )
             if selecionado:
+                pygame.draw.rect(painel, primaria + (230,),
+                                 (0, layout.px(8), max(1, layout.px(4)),
+                                  max(1, rect.height - layout.px(16))))
                 pygame.draw.line(painel, primaria + (230,),
                                  (layout.px(14), layout.px(7)),
                                  (rect.width - layout.px(14), layout.px(7)),
@@ -2721,9 +2724,6 @@ class MenuPrincipal:
             for opcao in self.opcoes:
                 opcao.atualizar(self.mouse, self.x_opcoes, self.fonte_opcao,
                                 self.layout)
-            for i, opcao in enumerate(self.opcoes):
-                if opcao.hover:
-                    self._selecionar(i)
 
     # -------------------------------------------------------------- eventos
 
@@ -2743,6 +2743,12 @@ class MenuPrincipal:
             return self._tratar_remap(evento)
         if evento.type == pygame.MOUSEMOTION:
             self.mouse = self._pos_logica(evento.pos)
+            if self.subestado == "MENU":
+                for indice, opcao in enumerate(self.opcoes):
+                    if opcao.get_rect(self.x_opcoes, self.fonte_opcao,
+                                      self.layout).collidepoint(self.mouse):
+                        self._selecionar(indice)
+                        break
             if self.subestado == "FASES":
                 self.phase_screen.handle_event(pygame.event.Event(
                     pygame.MOUSEMOTION, {"pos": self.mouse}))

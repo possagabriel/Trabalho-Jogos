@@ -241,6 +241,12 @@ def _blit_alfa(tela, surf, pos, alfa=255):
         tela.blit(_com_alpha(surf, alfa), pos)
 
 
+@lru_cache(maxsize=256)
+def _cor_texto_hud(cor):
+    """Mantém contraste legível sem recalcular a cor a cada quadro."""
+    return cor_com_contraste(cor, FUNDO_TEXTO_HUD, CONTRASTE_TEXTO_HUD_AJUSTE)
+
+
 def _painel(tela, layout, rect, cor_borda, alpha=235, raio=8, glow=3, fundo=AZUL_PROFUNDO):
     """Painel holografico translucido com borda neon e cantos em L."""
     desenhar_painel(
@@ -253,6 +259,9 @@ def _painel(tela, layout, rect, cor_borda, alpha=235, raio=8, glow=3, fundo=AZUL
         tamanho=layout.px(HUD_TAMANHO_CANTO),
         espessura=HUD_ESPESSURA_CONTORNO,
     )
+    margem = layout.px(16)
+    linha_suave(tela, cor_borda, (rect.left + margem, rect.top + layout.px(2)),
+                (rect.right - margem, rect.top + layout.px(2)), max(1, layout.px(1)))
 
 
 def _barra_segmentada(tela, layout, rect, fracao, cor, segmentos=12, raio_canto=3):
@@ -704,6 +713,7 @@ class HudJogo:
 
     def _texto(self, tela, texto, rect, fonte, cor=BRANCO_HUD, alinhar="esquerda"):
         """Mantém cada rótulo dentro de sua célula, inclusive no estilo comic."""
+        cor = _cor_texto_hud(tuple(cor[:3]))
         surf = _texto_limitado(
             fonte, str(texto), tuple(cor[:3]), opcoes_atuais().ativo, max(1, rect.w), max(1, rect.h)
         )

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Menu mantém o foco do teclado; HUD ganha acentos nos painéis e texto com contraste reforçado.
 - HUD de combate reorganizado com painéis de maior contraste, nome do piloto,
   alerta de casco crítico, atalhos visíveis e textos ajustados ao espaço.
 - Chefes e minibosses substituem o setor no cabeçalho; combo mostra seu tempo

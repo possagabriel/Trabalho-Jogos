@@ -78,6 +78,19 @@ def test_construcao_subestado_e_opcoes():
     assert menu.x_opcoes <= menu.layout.largura
 
 
+def test_teclado_mantem_foco_ate_mouse_voltar_a_mover():
+    """O cursor parado não deve desfazer a seleção feita pelo teclado."""
+    _, menu = novo_menu()
+    pos = menu.opcoes[0].get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout).center
+    with mock.patch.object(menu, "_pos_logica", side_effect=lambda p: p):
+        menu.tratar_eventos(pygame.event.Event(pygame.MOUSEMOTION, {"pos": pos}))
+        menu.tratar_eventos(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_DOWN}))
+        menu.atualizar()
+        assert menu.opcao_selecionada == 1
+        menu.tratar_eventos(pygame.event.Event(pygame.MOUSEMOTION, {"pos": pos}))
+        assert menu.opcao_selecionada == 0
+
+
 def test_menu_principal_tem_cinco_acoes_do_mesmo_tamanho():
     """Os cinco destinos mantêm painéis uniformes sem mudar a ordem."""
     jogo, menu = novo_menu()
