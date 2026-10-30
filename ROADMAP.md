@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Fundo aberto: nebulosas procedurais por setor, planetas sombreados e centro livre para combate; testes de identidade/cache/contraste aprovados, playtest visual pendente.
+
 - Pausa/confirmar saída: estilo ORIGINAL alinhado aos menus e navegação de ações por setas/Tab; validação visual pendente.
 
 - Menus ORIGINAL: painéis cacheados com profundidade, foco consistente e resumos contidos nos cartões; conferir aparência jogando.

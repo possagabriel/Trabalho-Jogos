@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex refez o fundo aberto com gás, poeira e planetas sombreados, validando composição por semente, cache, contraste e transições entre setores.
+
 - Codex refinou pausa e confirmações, compartilhou a geometria com os controles e adicionou regressões de navegação e renderização.
 
 - Codex unificou os painéis do menu ORIGINAL e corrigiu o espaço dos resumos nos hubs, com regressões de cache, geometria e navegação.
