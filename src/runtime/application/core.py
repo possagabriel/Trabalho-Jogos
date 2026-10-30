@@ -1111,9 +1111,8 @@ class Jogo:
             self.miniboss.desenhar(self.tela)
         for proj in self.projeteis:
             proj.desenhar(self.tela)
-        avanco = self.avanco_controller.modelo
-        intensidade = (avanco.velocidade / avanco.velocidade_base
-                       if avanco.velocidade_base else 0.0)
+        intensidade = (max(1.0, self.jogador.velocidade / 5.0)
+                       if self.jogador.em_movimento else 0.0)
         self.jogador.desenhar(self.tela, self.particulas, intensidade)
         if (self.config["mostrar_hitbox"] or pygame.key.get_pressed()[pygame.K_LALT]
                 or pygame.key.get_pressed()[pygame.K_RALT]):

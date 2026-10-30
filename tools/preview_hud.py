@@ -63,10 +63,11 @@ class Demonstracao:
 
     def _atualizar(self, t):
         jog = self.jogador
-        jog.vida = max(1, min(8, 5 + 3 * math.sin(t * 0.55)))
+        jog.vida = round(max(1, min(8, 5 + 3 * math.sin(t * 0.55))))
         jog.escudo = math.sin(t * 1.15) > -0.4
         jog.pontuacao = int(48_000 + t * 320 + 900 * math.sin(t * 0.3))
         jog.combo.combo_atual = int(1 + 8 * max(0.0, math.sin(t * 0.45)))
+        jog.combo.quadros_restantes = round(jog.combo.janela_acertos * 0.7)
         jog.arma_atual = int(t / 1.6) % len(ARMARIA)
         self.boost = max(0.06, min(1.0, 0.5 + 0.5 * math.sin(t * 0.9)))
         self.especial = min(1.0, (t % 7) / 6.0)
@@ -86,7 +87,7 @@ class Demonstracao:
 
 def _rodar(salvar=False):
     pygame.init()
-    tela = pygame.display.set_mode(TAMANHO, pygame.SCALED)
+    tela = pygame.display.set_mode(TAMANHO, 0 if salvar else pygame.SCALED)
     pygame.display.set_caption("INCARNATE - HUD")
     fundo = _fundo_neutro()
     layout = Layout(TAMANHO[0], TAMANHO[1])
@@ -95,19 +96,18 @@ def _rodar(salvar=False):
     relogio = pygame.time.Clock()
     t0 = time.time()
     rodando = True
-    alvo = 6.4 if salvar else 0.0
     while rodando:
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 rodando = False
             elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
                 rodando = False
-        t = (time.time() - t0) % 12
+        t = 6.4 if salvar else (time.time() - t0) % 12
         demo._atualizar(t)
         demo.boss = demo.boss if demo.boss_mostrado else None
         tela.blit(fundo, (0, 0))
         hud.desenhar(tela, demo, tempo=t)
-        if salvar and t >= alvo:
+        if salvar:
             pygame.image.save(tela, os.fspath(PASTA_IMAGENS / "preview_hud.png"))
             rodando = False
         elif not salvar:

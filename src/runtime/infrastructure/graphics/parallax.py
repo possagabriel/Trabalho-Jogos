@@ -25,7 +25,7 @@ from src.runtime.infrastructure.graphics.landmarks import CamadaMarcos
 
 QUALIDADE_CAMADAS = {"BAIXA": (3, 28), "MEDIA": (4, 52), "ALTA": (5, 84)}
 LIMITE_LINHAS_DIMENSAO = {1: 52, 2: 60, 3: 44, 4: 48, 5: 70, 6: 56}
-FATORES = (0.08, 0.18, 0.36, 0.68, 1.0)
+FATORES = (0.16, 0.3, 0.52, 0.85, 1.2)
 ESTILOS = {
     1: ("estrela", "nebulosa", "estrela", "detrito"),
     2: ("nebulosa", "brasa", "estrela", "detrito"),
@@ -168,6 +168,7 @@ class SpeedLines:
                     tom = tuple(max(1, min(255, int(c * brilho_linha)))
                                 for c in cor_paleta)
                     pygame.draw.line(variante, tom, inicio, fim, 1 + classe // 2)
+                    variante.set_alpha(35 + nivel * 12)
                     self._sprites[classe, nivel, indice_paleta] = variante
 
     def atualizar(self, velocidade: float, velocidade_base: float, dt: float,
@@ -206,7 +207,7 @@ class ParallaxBackground:
         self.camadas_ativas = camadas_ativas
         numero, limite = QUALIDADE_CAMADAS[self.qualidade]
         self._numero = numero if camadas_ativas else 1
-        self._limite = min(limite, LIMITE_LINHAS_DIMENSAO[cenario.id])
+        self._limite = min(limite, LIMITE_LINHAS_DIMENSAO[cenario.id]) // 2
         self._bases: dict[tuple[object, ...], ScrollingLayer] = {}
         self._detalhes: list[ScrollingLayer] = []
         self._linhas: SpeedLines | None = None

@@ -74,6 +74,16 @@ python incarnate.py
 Sem aceleração OpenGL, instale apenas com `python -m pip install -e .`; o jogo
 usa automaticamente o renderizador de CPU e os perfis de desempenho.
 
+Em **Configurações**, o acabamento comic da GPU permite ajustar intensidade,
+contorno, quantidade de tons, hachuras, grão e saturação. A opção **Preservar
+interface** mantém HUD e textos fora do filtro e vem ligada por padrão.
+
+Sem áudio/vídeo (CI, servidores, debugging):
+
+```bash
+SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python main.py
+```
+
 ### Mira e disparos (1.2.0)
 
 Durante a partida, o cursor do sistema dá lugar à mira da dimensão atual.
@@ -633,6 +643,21 @@ O workflow `quality.yml` verifica com Ruff todos os arquivos Python alterados
 no push ou pull request. A varredura completa acima ainda encontra apontamentos
 antigos em módulos legados; a limpeza está planejada em branch separada.
 
+| Arquivo | Módulos | O que cobre |
+| --- | --- | --- |
+| `test_theme_geometry_smooth.py` | theme, geometry, smooth | cores (mix, ciclo, esmaecer), easing, caches e desenho suave (glow, gradientes, painéis, textos) |
+| `test_settings_save_shop.py` | settings, save_system, shop | configurações, persistência de progresso/save e loja de skins |
+| `test_weapons_powerups.py` | weapons, powerups | todos os tipos de projétil (laser, ion, gauss, espiral...) e power-ups (vida, escudo, arma, skin...) |
+| `test_player.py` | player | jogador: movimento, controles, cooldowns, rajadas, combo, dano, skins (inclui sprite da nave padrão e fallback) |
+| `test_enemies_bosses.py` | enemies, bosses | inimigos, especiais (acumulador, cristalino...), ondas, sorteios e todos os bosses |
+| `test_scenarios_particles.py` | scenarios, particles | 6 cenários, estrelas, cover, partículas e mensagens flutuantes |
+| `test_menu_scene.py` | menu_scene | fundo com `fundo-menuprincipal.png` (e fallback), HUD, nave, destaque, transições |
+| `test_menu.py` | menu | menu principal: construção, navegação entre telas, save, loja, diálogo de saída, `_pos_logica` |
+| `test_interacao.py` | core, menu | eventos reais (pygame.event): teclas de navegação, pausa/game over, remap de controles e cliques do mouse |
+| `test_core.py` | core | estados, níveis/boss a cada 5, desbloqueio de armas, combate e fim de jogo |
+| `test_hud.py` | hud | HUD: renderização de todos os módulos, segmentos, barra de boss, medidores e duck typing |
+| `test_hud_legibilidade.py` | hud | textos e barras sem sobreposição em quatro resoluções e dois estilos; centro livre, arco circular e atalhos |
+| `test_layout.py` | layout | layout responsivo nas resoluções-alvo |
 O `tests/conftest.py` configura SDL dummy e `INCARNATE_DATA_DIR` temporário
 antes de importar o jogo. `SPACEFURY_DATA_DIR` continua testado como fallback
 para scripts antigos. Nesta branch, a suíte contém **640 casos: 639 passam e 1

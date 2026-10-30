@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- HUD de combate reorganizado com painéis de maior contraste, nome do piloto,
+  alerta de casco crítico, atalhos visíveis e textos ajustados ao espaço.
+- Chefes e minibosses substituem o setor no cabeçalho; combo mostra seu tempo
+  restante e o especial informa a prontidão da Bomba Vortex.
+
+### Fixed
+- Arco do impulso desenha a circunferência completa, sem cruzar o medidor.
+- Rótulos de vida, energia, armas e chefes deixam de se sobrepor às barras;
+  fontes acompanham mudanças de escala do HUD.
 - Buracos negros ganham disco de acreção em camadas; portais recebem profundidade, fluxo suave e identificação dos pares, com animação estática ao reduzir efeitos e física preservada.
 
 - Testes de expansão do mundo aberto inicializam suas fontes sem depender de outro arquivo de teste.

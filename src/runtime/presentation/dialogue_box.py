@@ -9,12 +9,20 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.core.constants import ALTURA, LARGURA, NOME_JOGO, VOID_BLACK
-from src.infrastructure.graphics.comic_theme import CIANO, LARANJA, TINTA
+from src.infrastructure.graphics.comic_theme import CIANO, LARANJA, TINTA, opcoes_atuais
 from src.runtime.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
-from src.runtime.infrastructure.graphics.smooth import desenhar_painel_cartoon
+from src.runtime.infrastructure.graphics.smooth import desenhar_painel, desenhar_painel_cartoon
 
 if TYPE_CHECKING:
     from src.runtime.controllers.cutscene import ControladorCutscene
+
+
+def _painel(tela, cor, rect, **opcoes):
+    """Usa o acabamento correspondente ao estilo visual selecionado."""
+    desenhar = desenhar_painel_cartoon if opcoes_atuais().ativo else desenhar_painel
+    if not opcoes_atuais().ativo:
+        opcoes.pop("espessura_borda", None)
+    desenhar(tela, cor, rect, **opcoes)
 
 
 class DialogueBox:
@@ -172,7 +180,7 @@ class DialogueBox:
         elif tipo == "fala":
             painel = pygame.Rect(110, 500, 1060, 184)
             cor_acento = self._cor_acento(cor_dimensao)
-            desenhar_painel_cartoon(tela, cor_acento, painel,
+            _painel(tela, cor_acento, painel,
                                     espessura_borda=4, glow_raio=0)
             personagem = controle.catalogo.personagens[passo["personagem"]]
             icone = controle.retrato_atual or self._icones[passo["personagem"]]
@@ -190,7 +198,7 @@ class DialogueBox:
             self._fade.set_alpha(alfa)
             tela.blit(self._fade, (0, 0))
         cor_acento = self._cor_acento(cor_dimensao)
-        desenhar_painel_cartoon(tela, cor_acento, self.BOTAO_PULAR,
+        _painel(tela, cor_acento, self.BOTAO_PULAR,
                                 cor_fundo=(32, 37, 47), espessura_borda=4,
                                 glow_raio=0)
         rotulo = self._texto_outline(self._fonte_auxiliar, "PULAR CENA",
@@ -200,13 +208,13 @@ class DialogueBox:
             self._titulo(tela, "CENA PAUSADA", cor_dimensao)
         if controle.confirmacao_pulo:
             caixa = pygame.Rect(330, 255, 620, 180)
-            desenhar_painel_cartoon(tela, cor_acento, caixa,
+            _painel(tela, cor_acento, caixa,
                                     espessura_borda=4, glow_raio=0)
             texto = self._fonte_nome.render("Pular esta cena?", True, (244, 244, 247))
             tela.blit(texto, texto.get_rect(center=(640, 312)))
             for rect, rotulo in ((self.BOTAO_CONFIRMAR, "PULAR"),
                                  (self.BOTAO_CANCELAR, "CANCELAR")):
-                desenhar_painel_cartoon(tela, cor_acento, rect,
+                _painel(tela, cor_acento, rect,
                                         espessura_borda=4, glow_raio=0)
                 texto_botao = self._fonte_auxiliar.render(rotulo, True, (244, 244, 247))
                 tela.blit(texto_botao, texto_botao.get_rect(center=rect.center))
@@ -227,7 +235,7 @@ class DialogueBox:
         """Mostra IDs de cena para o atalho de depuração F8."""
         tela.blit(self._sombra, (0, 0))
         painel = pygame.Rect(230, 110, 820, 500)
-        desenhar_painel_cartoon(tela, cor, painel)
+        _painel(tela, cor, painel)
         titulo = self._fonte_nome.render("CENAS // DEBUG", True, cor)
         tela.blit(titulo, (265, 135))
         ids = list(controle.catalogo.cenas)
