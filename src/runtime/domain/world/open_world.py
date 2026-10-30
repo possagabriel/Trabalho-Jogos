@@ -15,8 +15,10 @@ from src.infrastructure.graphics.comic_theme import (
     CIANO,
     LARANJA,
     PAPEL,
+    TINTA,
     opcoes_atuais,
 )
+from src.infrastructure.ui.layout import Layout
 from src.runtime.domain.entities.bosses import Boss
 from src.runtime.domain.entities.enemies import Inimigo
 from src.runtime.domain.entities.minibosses.registry import criar_miniboss
@@ -32,6 +34,11 @@ from src.runtime.infrastructure.graphics.meteor_shower import (
     desenhar_meteoro,
     gerar_chuva,
     janela_chuva,
+)
+from src.runtime.infrastructure.graphics.smooth import (
+    desenhar_circulo,
+    desenhar_painel,
+    texto_suave,
 )
 
 
@@ -121,6 +128,7 @@ class OpenWorldRuntime:
         self.boss.entrando = False
         self.boss.angulo = 0.0
         self._boss_world = self.BOSS_LAIR
+        self._destino_id = "boss"
         self._boss_orbit = 0.0
         self._boss_attack_timer = 1.6
         self.miniboss_active = False
@@ -158,7 +166,7 @@ class OpenWorldRuntime:
             f"MAPA // {self.REGION_NAME} // DIMENSÃO {self.dimension}",
             True, (225, 236, 250))
         self._map_hint = self._font_marker.render(
-            "M / ESC: VOLTAR", True, (210, 224, 240))
+            "ESQ / DIR: DESTINO    ENTER / M / ESC: VOLTAR", True, PAPEL)
         self._map_legend = tuple(
             self._font_marker.render(label, True, (225, 235, 246))
             for label in ("NAVE", "TOCA", "PATRULHA", "FENDA", "POÇO", "PORTAL")
@@ -167,6 +175,51 @@ class OpenWorldRuntime:
             (name, self._font_marker.render(name, True, color))
             for name, _center, color in self.SECTORS
         )
+
+    def destinos_navegacao(self) -> tuple[tuple[str, str, tuple[float, float]], ...]:
+        """Lista pontos existentes; encontros concluídos deixam de ser destinos."""
+        destinos = []
+        if not self.boss_defeated:
+            destinos.append(("boss", f"TOCA // {self.boss.nome}", self.BOSS_LAIR))
+        if not self.miniboss_defeated:
+            destinos.append(("patrulha", "PATRULHA // CENSOR", self._miniboss_world))
+        destinos.extend((f"setor_{i}", f"SETOR // {nome}", centro)
+                        for i, (nome, centro, _cor) in enumerate(self.SECTORS))
+        destinos.extend((f"portal_{i}", f"PORTAL {i + 1} > {portal.target + 1}",
+                         portal.position)
+                        for i, portal in enumerate(self.anomalies.wormholes))
+        return tuple(destinos)
+
+    def destino_atual(self) -> tuple[str, str, tuple[float, float]]:
+        """Resolve o destino por identidade, mesmo após a conclusão de encontros."""
+        destinos = self.destinos_navegacao()
+        return next((item for item in destinos if item[0] == self._destino_id), destinos[0])
+
+    def alternar_destino(self, passo: int) -> None:
+        """Seleciona circularmente um ponto do mapa, sem mover a nave."""
+        destinos = self.destinos_navegacao()
+        indice = destinos.index(self.destino_atual())
+        self._destino_id = destinos[(indice + passo) % len(destinos)][0]
+
+    def texto_navegacao(self) -> str:
+        """Informa destino e distância direta em unidades do mundo."""
+        _ident, nome, posicao = self.destino_atual()
+        distancia = math.dist((self.x, self.y), posicao)
+        estado = "NO DESTINO" if distancia <= 120 else f"{round(distancia / 10) * 10} u"
+        return f"{nome} | {estado}"
+
+    def _draw_navigation(self, surface: pygame.Surface, mapa: bool = False) -> None:
+        """Exibe orientação estática com fundo opaco e texto cacheado."""
+        layout = Layout(*surface.get_size())
+        texto = texto_suave(self._font_marker, self.texto_navegacao(), PAPEL)
+        margem = layout.margem(8)
+        largura = texto.get_width() + margem * 2
+        x = layout.x(0.035) if mapa else layout.largura - largura - layout.margem()
+        y = layout.y(0.07) if mapa else 20 + self.MINIMAP_SIZE[1] + margem
+        painel = pygame.Rect(x, y, largura, texto.get_height() + margem)
+        desenhar_painel(surface, PAPEL, painel, cor_fundo=TINTA,
+                        alpha=255, glow_raio=0, raio_canto=0)
+        surface.blit(texto, (x + margem, y + margem // 2))
 
     def _choose_spawn(self, position: tuple[float, float] | None = None
                       ) -> tuple[float, float]:
@@ -695,6 +748,7 @@ class OpenWorldRuntime:
         self.boss.entrando = False
         self.boss_active = self.boss_defeated = False
         self._boss_world = self.BOSS_LAIR
+        self._destino_id = "boss"
         self._boss_orbit = 0.0
         self._boss_attack_timer = 1.6
         self.projectiles.clear()
@@ -766,6 +820,7 @@ class OpenWorldRuntime:
         self._draw_ship(surface, player)
         self._draw_region_label(surface)
         self._draw_minimap(surface)
+        self._draw_navigation(surface)
 
     def _draw_asteroids(self, surface: pygame.Surface) -> None:
         """Desenha apenas rochas dos chunks que tocam a câmera."""
@@ -911,6 +966,10 @@ class OpenWorldRuntime:
                                              (px - 8, py + 8),
                                              (px + 8, py + 8)), 2)
         self._draw_map_legend(surface, area, comic)
+        destino = point(*self.destino_atual()[2])
+        desenhar_circulo(surface, TINTA, destino, 22, espessura=5)
+        desenhar_circulo(surface, PAPEL, destino, 22, espessura=2)
+        self._draw_navigation(surface, mapa=True)
 
     def _draw_map_legend(self, surface: pygame.Surface, area: pygame.Rect,
                          comic: bool) -> None:
@@ -1089,10 +1148,8 @@ class OpenWorldRuntime:
         surface.blit(label, (x - label.get_width() // 2, y + radius + 22))
 
     def _draw_objective_marker(self, surface: pygame.Surface) -> None:
-        """Aponta para a toca do boss quando ela está fora da câmera."""
-        if self.boss_defeated:
-            return
-        target_x, target_y = self._screen_position(self.BOSS_LAIR)
+        """Aponta para o destino escolhido quando ele está fora da câmera."""
+        target_x, target_y = self._screen_position(self.destino_atual()[2])
         if 48 <= target_x <= LARGURA - 48 and 48 <= target_y <= ALTURA - 48:
             return
         center_x, center_y = LARGURA // 2, ALTURA // 2
@@ -1188,6 +1245,9 @@ class OpenWorldRuntime:
             )
             pygame.draw.rect(self._minimap, frame, view.clip(area), 1)
         self._draw_minimap_contacts(point, comic)
+        destino = point(self.destino_atual()[2])
+        if destino is not None:
+            desenhar_circulo(self._minimap, PAPEL, destino, 8, espessura=2)
         px, py = area.center
         pygame.draw.polygon(self._minimap, player_color,
                             ((px, py - 6), (px + 5, py + 5), (px - 5, py + 5)))

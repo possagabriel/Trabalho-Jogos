@@ -24,6 +24,10 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- PR #64 revisado: corrigida a dependência de ordem nos testes; 38 testes direcionados e 33 isolados aprovados; playtest continua pendente.
+
+- Mundo aberto: destinos selecionáveis com Esquerda/Direita no mapa, seta, distância e indicação de chegada; 38 testes direcionados passaram, falta playtest.
+
 - Mundo aberto: chuva curta de meteoros, minimapa local e mapa legível; planetas pequenos removidos, aguardando teste visual.
 - Saída da missão: retorno ao menu principal restaura a tela central e remove
   o tremor residual; clique e confirmação da pausa têm testes de regressão.
