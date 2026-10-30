@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex refinou pausa e confirmações, compartilhou a geometria com os controles e adicionou regressões de navegação e renderização.
+
 - Codex unificou os painéis do menu ORIGINAL e corrigiu o espaço dos resumos nos hubs, com regressões de cache, geometria e navegação.
 
 - Codex refez o sombreamento procedural das anomalias e adicionou regressões de sombra, volume, assimetria, cache e efeitos reduzidos.

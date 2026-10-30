@@ -5,6 +5,19 @@ from functools import lru_cache
 import pygame
 
 
+@lru_cache(maxsize=256)
+def texto_painel(fonte: pygame.font.Font, texto: str, cor: tuple[int, int, int],
+                 largura: int, altura: int) -> pygame.Surface:
+    """Cacheia texto ajustado à célula sem modificar a fonte compartilhada."""
+    arte = fonte.render(texto, True, cor)
+    escala = min(1.0, largura / max(1, arte.get_width()), altura / max(1, arte.get_height()))
+    if escala < 1:
+        arte = pygame.transform.smoothscale(
+            arte, (max(1, round(arte.get_width() * escala)),
+                   max(1, round(arte.get_height() * escala))))
+    return arte
+
+
 @lru_cache(maxsize=64)
 def painel_original(tamanho: tuple[int, int], fundo: tuple[int, int, int],
                      borda: tuple[int, int, int], *, selecionado: bool = False,

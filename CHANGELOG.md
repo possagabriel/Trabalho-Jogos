@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Pausa e confirmações ORIGINAL ganham painéis consistentes, rótulos diretos e foco por setas/Tab; desenho e clique compartilham a geometria da pausa.
 - Menus ORIGINAL recebem painéis com gradiente e relevo, seleção consistente e cartão de perfil integrado; abas de Jogar/Perfil reservam espaço para os resumos sem sobreposição.
 - Anomalias ganham sombreamento volumétrico: sombra negra, acreção assimétrica e arco de lente; portais exibem garganta espiral e estrelas ao fundo, com fluxo cacheado.
 - Mundo aberto: asteroides com facetas/crateras e meteoros cacheados por estilo; bosses patrulham arenas amplas e anunciam seis padrões de disparo, com mira travada e mudança por fase.

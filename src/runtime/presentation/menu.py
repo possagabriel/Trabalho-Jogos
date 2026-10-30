@@ -83,7 +83,7 @@ from src.runtime.domain.game_modes import (
     ModeStrategy,
     OpenWorldModeStrategy,
 )
-from src.runtime.infrastructure.graphics.menu_panels import painel_original
+from src.runtime.infrastructure.graphics.menu_panels import painel_original, texto_painel
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_botao_cartoon,
     desenhar_cantos,
@@ -322,6 +322,10 @@ class Dialogo:
         self.mensagem = mensagem
         self.funcao_confirmar = funcao_confirmar
         self.funcao_cancelar = funcao_cancelar
+        self.selecao = 0
+        self._overlay = pygame.Surface(
+            (self._layout.largura, self._layout.altura), pygame.SRCALPHA)
+        self._overlay.fill(NEGRO)
         self.ativo = True
         self._t0 = pygame.time.get_ticks()
         self._largura, self._altura = self._layout.px(540), self._layout.px(320)
@@ -346,9 +350,19 @@ class Dialogo:
             return
         if evento.type == pygame.KEYDOWN:
             if evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                self._confirmar()
+                (self._confirmar if self.selecao == 0 else self._cancelar)()
             elif evento.key == pygame.K_ESCAPE:
                 self._cancelar()
+            elif evento.key == pygame.K_LEFT:
+                self.selecao = 0
+            elif evento.key == pygame.K_RIGHT:
+                self.selecao = 1
+            elif evento.key == pygame.K_TAB:
+                self.selecao = 1 - self.selecao
+        elif evento.type == pygame.MOUSEMOTION:
+            for indice, rect in enumerate(self._retangulos()):
+                if rect.collidepoint(mouse_pos or evento.pos):
+                    self.selecao = indice
         elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
             confirmar, cancelar = self._retangulos()
             if confirmar.collidepoint(mouse_pos or evento.pos):
@@ -374,6 +388,9 @@ class Dialogo:
 
     def desenhar(self, tela, fonte_titulo, fonte_texto, mouse_pos=(0, 0),
                  tema=None):
+        if not opcoes_atuais().ativo:
+            self._desenhar_original(tela, fonte_titulo, fonte_texto, tema or tema_atual("NEON"))
+            return
         layout = self._layout
         tema = tema or {
             "primaria": (120, 90, 220), "secundaria": (0, 200, 120),
@@ -487,9 +504,10 @@ class Dialogo:
 
         # botoes cartoon (bolha)
         confirmar, cancelar = self._retangulos()
-        hover_conf = confirmar.collidepoint(mouse_pos)
-        hover_canc = cancelar.collidepoint(mouse_pos)
-        self._desenhar_botao_cartoon(tela, confirmar, "SIM, TENHO!",
+        hover_conf = self.selecao == 0
+        hover_canc = self.selecao == 1
+        rotulo = "SAIR" if "sair" in self.titulo.casefold() else "CONFIRMAR"
+        self._desenhar_botao_cartoon(tela, confirmar, rotulo,
                                      fonte_texto, (30, 160, 80), (20, 120, 60),
                                      hover_conf, alfa, layout, p)
         self._desenhar_botao_cartoon(tela, cancelar, "CANCELAR",
@@ -498,12 +516,61 @@ class Dialogo:
 
         # dica de teclado com visual cartoon
         dica = texto_suave(fonte_texto,
-                           "ENTER confirmar   |   ESC cancelar",
+                           "TAB escolher | ENTER selecionar | ESC cancelar",
                            (170, 175, 210), glow_cor=(40, 40, 80),
                            glow_raio=2)
         dica.set_alpha(int(210 * p))
         tela.blit(dica, dica.get_rect(center=(rect.centerx,
                                               rect.bottom - layout.px(22))))
+
+    def _desenhar_original(self, tela, fonte_titulo, fonte_texto, tema):
+        """Confirmação sóbria com mensagem legível e foco de teclado explícito."""
+        layout = self._layout
+        palavras, linhas, atual = self.mensagem.split(), [], ""
+        for palavra in palavras:
+            teste = f"{atual} {palavra}".strip()
+            if atual and fonte_texto.size(teste)[0] > self._largura - layout.px(64):
+                linhas.append(atual)
+                atual = palavra
+            else:
+                atual = teste
+        if atual:
+            linhas.append(atual)
+        passo = max(layout.px(28), fonte_texto.get_height() + 2)
+        altura = min(layout.altura - layout.px(32),
+                     max(self._altura, layout.px(190) + passo * len(linhas)))
+        self._rect = pygame.Rect(self._x, layout.y(0.5) - altura // 2, self._largura, altura)
+        rect = self._rect
+        p, _ = self._animacao()
+        self._overlay.set_alpha(round(190 * p))
+        tela.blit(self._overlay, (0, 0))
+        fundo = tuple(tema["fundo_painel"][:3])
+        tela.blit(painel_original(rect.size, fundo, tuple(tema["primaria"][:3]),
+                                  raio=layout.px(16), alpha=250), rect)
+
+        def texto(rotulo, fonte, cor, centro, largura, altura_texto):
+            arte = texto_painel(fonte, rotulo, tuple(cor[:3]), largura, altura_texto)
+            tela.blit(arte, arte.get_rect(center=centro))
+
+        texto("CONFIRMAÇÃO", layout.fonte_texto(15), tema["secundaria"],
+              (rect.centerx, rect.y + layout.px(23)), rect.w - layout.px(48), layout.px(22))
+        texto(self.titulo.upper(), fonte_titulo, MENU_COR_TEXTO,
+              (rect.centerx, rect.y + layout.px(62)), rect.w - layout.px(48), layout.px(42))
+        for indice, linha in enumerate(linhas):
+            texto(linha, fonte_texto, MENU_COR_TEXTO_SECUNDARIO,
+                  (rect.centerx, rect.y + layout.px(108) + indice * passo),
+                  rect.w - layout.px(64), passo - 2)
+        sair = "sair" in self.titulo.casefold()
+        for indice, (botao, rotulo) in enumerate(zip(
+                self._retangulos(), ("SAIR" if sair else "CONFIRMAR", "CANCELAR"))):
+            cor = tema["terciaria"] if indice == 0 and sair else tema["primaria"]
+            tela.blit(painel_original(botao.size, fundo, tuple(cor[:3]),
+                                      selecionado=indice == self.selecao, raio=layout.px(9)), botao)
+            texto(rotulo, fonte_texto, MENU_COR_TEXTO, botao.center,
+                  botao.w - layout.px(20), botao.h - layout.px(12))
+        texto("TAB / SETAS: ESCOLHER   ENTER: SELECIONAR   ESC: CANCELAR",
+              layout.fonte_texto(14), MENU_COR_TEXTO_SECUNDARIO,
+              (rect.centerx, rect.bottom - layout.px(15)), rect.w - layout.px(24), layout.px(18))
 
     def _desenhar_botao_cartoon(self, tela, rect, texto, fonte, cor_fundo,
                                 cor_borda, hover, alfa, layout, p=1.0):
