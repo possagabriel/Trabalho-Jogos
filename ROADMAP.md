@@ -24,7 +24,7 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
-- Menu ORIGINAL recomposto como hangar animado: nave central, título no topo, cinco cartões inferiores e resumo do perfil no sexto espaço; estrelas em parallax, órbitas e foco suave, com composição estática em efeitos reduzidos. 169 testes direcionados e Ruff aprovados; conferência jogando pendente.
+- Menu ORIGINAL com a disposição anterior em coluna e nova identidade de console orbital: azul-petróleo, seleção âmbar com texto escuro, recortes diagonais, ícones e tipografia próprios; animações respeitam efeitos reduzidos. 185 testes direcionados e Ruff aprovados; conferência jogando pendente.
 
 - Mapa e minimapa mostram o casco orientado pela mira/movimento e miniaturas reais das rochas, bosses e anomalias; tempestades aleatórias com 36 meteoros, aviso e corredor livre; menus ORIGINAL no estilo espacial sóbrio escolhido pelo usuário. 226 testes direcionados e Ruff aprovados; playtest pendente.
 

@@ -7,7 +7,7 @@ import pytest
 
 from src.infrastructure.graphics.comic_theme import PAPEL, usar_visual
 from src.infrastructure.ui.layout import Layout
-from src.runtime.infrastructure.graphics.menu_panels import BORDA_SOBRIA
+from src.runtime.infrastructure.graphics.menu_panels import BORDA_ORIGINAL
 from src.runtime.presentation.components import (
     BarraRolagem,
     Botao,
@@ -44,7 +44,7 @@ def test_tokens_resolvem_estilo_e_tema():
     comic = tokens_para("COMIC")
     assert original.estilo == "ORIGINAL"
     assert comic.estilo == "COMIC"
-    assert original.superficie.borda == BORDA_SOBRIA
+    assert original.superficie.borda == BORDA_ORIGINAL
     assert comic.superficie.fundo == PAPEL
     assert original.superficie.glow == original.botao.glow == 0
     assert original.superficie.raio == 4

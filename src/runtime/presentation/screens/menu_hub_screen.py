@@ -9,7 +9,8 @@ import pygame
 from src.infrastructure.graphics.theme import MENU_RESUMO_CONTINUAR_FONT_SIZE, tema_atual
 from src.runtime.infrastructure.graphics.menu_animation import FocoAnimado, desenhar_trilha_foco
 from src.runtime.infrastructure.graphics.menu_panels import (
-    TEXTO_SOBRIO,
+    TEXTO_ATIVO_ORIGINAL,
+    TEXTO_ORIGINAL,
     painel_original,
     texto_painel,
 )
@@ -98,7 +99,7 @@ class MenuHubScreen:
             pygame.draw.rect(surface, theme["primaria"], panel, 2, border_radius=16)
         title = "JOGAR" if self.kind == "JOGAR" else "PERFIL"
         title_surface = menu.fonte_cabecalho.render(
-            title, True, TEXTO_SOBRIO if original else theme["primaria"])
+            title, True, TEXTO_ORIGINAL if original else theme["primaria"])
         surface.blit(title_surface, title_surface.get_rect(
             midtop=(panel.centerx, panel.y + menu.layout.px(26))))
         for index, ((label, action), rect) in enumerate(zip(self.entries, self._rects())):
@@ -107,11 +108,12 @@ class MenuHubScreen:
             color = (105, 111, 135) if disabled else (
                 theme["primaria"] if selected else theme["secundaria"])
             if original and not disabled:
-                color = TEXTO_SOBRIO
+                color = TEXTO_ATIVO_ORIGINAL if selected else TEXTO_ORIGINAL
             if original:
                 surface.blit(painel_original(
                     rect.size, tuple(theme["fundo_painel"][:3]), tuple(color[:3]),
-                    selecionado=selected and not disabled, raio=menu.layout.px(10)), rect)
+                    selecionado=selected and not disabled,
+                    raio=menu.layout.px(10), botao=True), rect)
                 if not disabled:
                     desenhar_trilha_foco(surface, rect, menu.layout,
                                          menu.animacao_original.tempo, self.focos[index].valor,
@@ -161,8 +163,10 @@ class MenuHubScreen:
         surface.blit(heading, heading.get_rect(
             midtop=(rect.centerx, rect.y + menu.layout.px(8))))
         for index, detail in enumerate(details):
+            cor_detalhe = (TEXTO_ATIVO_ORIGINAL if color == TEXTO_ATIVO_ORIGINAL
+                           else (210, 220, 240))
             detail_surface = texto_painel(
-                font, detail, (210, 220, 240), rect.width - menu.layout.px(32),
+                font, detail, cor_detalhe, rect.width - menu.layout.px(32),
                 menu.layout.px(19))
             surface.blit(detail_surface, detail_surface.get_rect(
                 midtop=(rect.centerx, rect.y + menu.layout.px(39 + index * 21))))

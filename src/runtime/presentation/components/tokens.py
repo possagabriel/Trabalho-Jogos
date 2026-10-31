@@ -2,7 +2,7 @@
 
 Os valores estruturais usam "design px" (base 900x700) e devem ser
 convertidos pelos componentes com ``Layout.px``. As cores nunca são
-hardcoded nas telas: ORIGINAL usa superfícies sóbrias com acento do tema e COMIC
+hardcoded nas telas: ORIGINAL usa um console azul-petróleo/âmbar e COMIC
 usa a paleta de papel e tinta.
 """
 
@@ -28,11 +28,12 @@ from src.infrastructure.graphics.theme import (
     TEMAS_CORES,
 )
 from src.runtime.infrastructure.graphics.menu_panels import (
-    BORDA_SOBRIA,
-    FOCO_SOBRIO,
-    FUNDO_SOBRIO,
-    PAINEL_SOBRIO,
-    TEXTO_SOBRIO,
+    ACENTO_ORIGINAL,
+    BORDA_ORIGINAL,
+    FOCO_ORIGINAL,
+    FUNDO_ORIGINAL,
+    PAINEL_ORIGINAL,
+    TEXTO_ORIGINAL,
 )
 
 ESTILO_ORIGINAL = "ORIGINAL"
@@ -146,18 +147,18 @@ def _tokens_original(tema: dict) -> UITokens:
         tipografia=TipografiaTokens(),
         superficie=SuperficieTokens(
             estilo=ESTILO_ORIGINAL,
-            fundo=PAINEL_SOBRIO,
-            fundo_cabecalho=FUNDO_SOBRIO,
-            fundo_linha=PAINEL_SOBRIO,
-            fundo_destaque=FOCO_SOBRIO,
-            borda=BORDA_SOBRIA,
-            borda_forte=TEXTO_SOBRIO,
+            fundo=PAINEL_ORIGINAL,
+            fundo_cabecalho=FUNDO_ORIGINAL,
+            fundo_linha=PAINEL_ORIGINAL,
+            fundo_destaque=FOCO_ORIGINAL,
+            borda=BORDA_ORIGINAL,
+            borda_forte=ACENTO_ORIGINAL,
             texto=MENU_COR_TEXTO,
             texto_secundario=MENU_COR_TEXTO_SECUNDARIO,
             texto_desabilitado=MENU_COR_TEXTO_DESABILITADO,
-            destaque=TEXTO_SOBRIO,
+            destaque=ACENTO_ORIGINAL,
             destaque_secundario=tuple(round(a * 0.85 + b * 0.15)
-                                      for a, b in zip(TEXTO_SOBRIO, tema["primaria"])),
+                                      for a, b in zip(TEXTO_ORIGINAL, tema["primaria"])),
             sombra=VOID_BLACK,
             raio=4,
             raio_pequeno=4,
@@ -169,9 +170,9 @@ def _tokens_original(tema: dict) -> UITokens:
             altura=46,
             raio=4,
             preenchimento=18,
-            fundo=PAINEL_SOBRIO,
-            fundo_hover=FOCO_SOBRIO,
-            borda=BORDA_SOBRIA,
+            fundo=PAINEL_ORIGINAL,
+            fundo_hover=FOCO_ORIGINAL,
+            borda=BORDA_ORIGINAL,
             borda_hover=BRANCO,
             texto=BRANCO,
             texto_desabilitado=MENU_COR_TEXTO_DESABILITADO,

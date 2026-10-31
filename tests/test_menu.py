@@ -100,8 +100,8 @@ def test_menu_principal_tem_cinco_acoes_do_mesmo_tamanho():
     assert len({rect.size for rect in rects}) == 1
     assert all(not rect.colliderect(outro)
                for indice, rect in enumerate(rects) for outro in rects[indice + 1:])
-    assert rects[0].top == rects[1].top == rects[2].top
-    assert rects[3].top == rects[4].top > rects[0].bottom
+    assert len({rect.x for rect in rects}) == 1
+    assert all(a.bottom < b.top for a, b in zip(rects, rects[1:]))
     assert menu.destaque.y == menu.opcoes[0].y
     assert [option.texto for option in menu.opcoes] == ROTULOS_ESPERADOS
 
@@ -404,9 +404,10 @@ def test_contraste_do_rodape_sobre_fundo_real_inclui_planeta():
     assert min(ratios) >= 4.5
 
 
-def test_menu_comic_widescreen_separa_titulo_da_coluna_de_opcoes():
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_menu_widescreen_separa_titulo_da_coluna_de_opcoes(estilo):
     jogo, menu = novo_menu()
-    jogo.config["estilo_visual"] = "COMIC"
+    jogo.config["estilo_visual"] = estilo
     menu._aplicar_layout_opcoes()
 
     limite_titulo = menu.layout.px(520)

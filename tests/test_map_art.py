@@ -15,8 +15,9 @@ from src.runtime.infrastructure.graphics.map_art import (
     miniatura_nave,
 )
 from src.runtime.infrastructure.graphics.menu_panels import (
-    FOCO_SOBRIO,
-    TEXTO_SOBRIO,
+    ACENTO_ORIGINAL,
+    FOCO_ORIGINAL,
+    TEXTO_ORIGINAL,
     painel_original,
 )
 from src.runtime.infrastructure.graphics.meteor_shower import _arte_meteoro_ativo
@@ -81,12 +82,12 @@ def test_corpo_do_meteoro_perigoso_permanece_opaco_com_efeitos_reduzidos():
         assert reduzido.get_at((72 + dx, 72 + dy)).a == 255
 
 
-def test_menu_original_plano_com_foco_sublinhado_e_contraste():
+def test_menu_original_recortado_com_foco_lateral_e_contraste():
     painel = painel_original((300, 70), (0, 0, 0), (255, 0, 255), selecionado=True)
-    assert painel.get_at((150, 20))[:3] == FOCO_SOBRIO
-    assert painel.get_at((150, 45))[:3] == FOCO_SOBRIO
-    assert painel.get_at((150, 67))[:3] == TEXTO_SOBRIO
-    assert max(FOCO_SOBRIO) < 80 and min(TEXTO_SOBRIO) > 220
+    assert painel.get_at((150, 20))[:3] == FOCO_ORIGINAL
+    assert painel.get_at((150, 45))[:3] == FOCO_ORIGINAL
+    assert painel.get_at((3, 35))[:3] == ACENTO_ORIGINAL
+    assert max(FOCO_ORIGINAL) < 80 and min(TEXTO_ORIGINAL) > 220
 
 
 def test_meteoro_atinge_pelo_controlador_existente_e_respeita_intangibilidade():

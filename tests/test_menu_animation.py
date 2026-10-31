@@ -7,23 +7,7 @@ from src.infrastructure.ui.layout import Layout
 from src.runtime.infrastructure.graphics.menu_animation import (
     CenaMenuAnimada,
     FocoAnimado,
-    cartoes_menu_original,
 )
-
-
-@pytest.mark.parametrize("resolucao", [(900, 700), (1280, 720), (1920, 1080)])
-def test_original_usa_grade_de_cartoes_inferior_com_espaco_para_a_nave(resolucao):
-    layout = Layout(*resolucao)
-    rects = cartoes_menu_original(layout)
-    assert len(rects) == 6
-    assert len({rect.size for rect in rects}) == 1
-    assert rects[0].top == rects[1].top == rects[2].top
-    assert rects[3].top == rects[4].top == rects[5].top
-    for indice, rect in enumerate(rects):
-        assert pygame.Rect(0, 0, *resolucao).contains(rect)
-        assert rect.top > layout.y(0.55)
-        assert rect.bottom < layout.altura - layout.px(98)
-        assert all(not rect.colliderect(outro) for outro in rects[indice + 1:])
 
 
 def test_foco_avanca_sem_saltar_ou_ultrapassar_e_regride_ao_sair():

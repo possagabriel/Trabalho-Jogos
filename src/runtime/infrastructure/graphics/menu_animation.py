@@ -14,19 +14,9 @@ from src.runtime.infrastructure.graphics.nebula_background import desenhar_plane
 from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, linha_suave
 
 COR_ESTRELA = (137, 169, 198)
-COR_ORBITA = (54, 90, 119)
-COR_PLANETA = (84, 137, 183)
+COR_ORBITA = (47, 105, 120)
+COR_PLANETA = (76, 130, 141)
 COR_FOCO = (153, 217, 242)
-
-
-def cartoes_menu_original(layout: Layout) -> tuple[pygame.Rect, ...]:
-    """Reserva duas fileiras de três cartões sob a nave, antes do rodapé."""
-    margem, gap = layout.margem(30), layout.px(12)
-    largura = (layout.largura - margem * 2 - gap * 2) // 3
-    altura = layout.px(78)
-    return tuple(pygame.Rect(margem + (indice % 3) * (largura + gap),
-                             layout.y(0.61) + (indice // 3) * (altura + gap),
-                             largura, altura) for indice in range(6))
 
 
 @dataclass
@@ -87,8 +77,8 @@ class CenaMenuAnimada:
             ponto = (sx + self.parallax[0] * layout.px(camada * 4),
                      sy + self.parallax[1] * layout.px(camada * 4))
             desenhar_circulo(tela, COR_ESTRELA, ponto, max(1, layout.px(camada / 2)))
-        cx = layout.x(0.73) + layout.px(math.sin(self.tempo * 0.25) * 10)
-        cy = layout.y(0.39) + layout.px(math.cos(self.tempo * 0.22) * 5)
+        cx = layout.x(0.39) + layout.px(math.sin(self.tempo * 0.25) * 10)
+        cy = layout.y(0.56) + layout.px(math.cos(self.tempo * 0.22) * 5)
         cx += layout.px(self.parallax[0] * 8)
         cy += layout.px(self.parallax[1] * 5)
         arte = _planeta_menu(max(64, layout.px(210)))

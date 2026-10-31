@@ -1,6 +1,6 @@
 # Registro de uso de IA
 
-- Codex refez a composição do menu ORIGINAL a pedido do usuário, com hangar animado e cartões inferiores; testes de foco/geométrica precederam a lógica, 169 testes direcionados e Ruff passaram, sem screenshots ou benchmarks. Validação visual jogando pendente.
+- Codex remodelou a identidade visual do ORIGINAL e restaurou as opções em coluna a pedido do usuário: console orbital azul-petróleo/âmbar, ícones, recortes e tipografia; 185 testes direcionados e Ruff aprovados, incluindo contraste, navegação e efeitos reduzidos, sem screenshots ou benchmarks. Validação visual jogando pendente.
 
 - Codex implementou orientação e miniaturas nos mapas, tempestades com aviso/corredor e menus no visual espacial sóbrio escolhido pelo usuário; testes da lógica escritos primeiro, 226 testes direcionados e Ruff aprovados, sem capturas ou benchmarks. Playtest pendente.
 

@@ -21,9 +21,9 @@ from src.infrastructure.graphics.theme import (
     tema_atual,
 )
 from src.runtime.domain.entities.player import SKINS
-from src.runtime.infrastructure.graphics.menu_animation import cartoes_menu_original
 from src.runtime.infrastructure.graphics.menu_panels import (
-    TEXTO_SOBRIO,
+    ACENTO_ORIGINAL,
+    TEXTO_ORIGINAL,
     painel_original,
     texto_painel,
 )
@@ -75,9 +75,6 @@ class TelaPrincipalJogo:
     def cartao_rect(self) -> tuple[int, int, int, int]:
         """Retorna o retângulo lógico do cartão conforme a proporção da janela."""
         menu = self.menu
-        if menu.jogo.config["estilo_visual"] == "ORIGINAL":
-            rect = cartoes_menu_original(menu.layout)[5]
-            return rect.x, rect.y, rect.w, rect.h
         tokens = (MENU_CARTAO_PERFIL_RECT_4_3 if menu._layout_4_3()
                   else MENU_CARTAO_PERFIL_RECT)
         return tuple(menu.layout.px(value) for value in tokens)
@@ -125,9 +122,6 @@ class TelaPrincipalJogo:
     def _desenhar_cartao_perfil(self, tela, menu, tema) -> None:
         summary = menu.jogo.profile_service.menu_profile_summary()
         rect = pygame.Rect(*self.cartao_rect())
-        if menu.jogo.config["estilo_visual"] == "ORIGINAL":
-            self._desenhar_resumo_original(tela, rect, summary)
-            return
         margin = menu.layout.px(18)
         font = menu.layout.fonte_titulo(MENU_CARTAO_PERFIL_FONT_SIZE)
         font_small = menu.layout.fonte_texto(MENU_CARTAO_PERFIL_FONT_SIZE_PEQUENA)
@@ -139,7 +133,7 @@ class TelaPrincipalJogo:
 
         name = self._truncar_nome(font, summary["name"],
                                   rect.width - menu.layout.px(150))
-        cor_titulo = (TEXTO_SOBRIO if menu.jogo.config["estilo_visual"] == "ORIGINAL"
+        cor_titulo = (TEXTO_ORIGINAL if menu.jogo.config["estilo_visual"] == "ORIGINAL"
                       else tema["primaria"])
         title = self._text(font, f"PILOTO // {name}", cor_titulo)
         tela.blit(title, (rect.x + margin, rect.y + menu.layout.px(8)))
@@ -159,34 +153,25 @@ class TelaPrincipalJogo:
             tela.blit(text, (rect.x + margin, rect.y + menu.layout.px(42 + index * 22)))
 
     def desenhar_titulo_original(self, tela: pygame.Surface, superficies: dict) -> None:
-        """Centraliza a identidade acima da nave, com entrada e flutuação discretas."""
+        """Compõe a marca à esquerda com tipografia de console e selo orbital."""
         menu, layout = self.menu, self.menu.layout
         reduzido = menu.jogo.config["intensidade_flash"] != "NORMAL"
         p = 1.0 if reduzido else ease_out(menu._frac(0.08, 0.45))
         deslocamento = 0 if reduzido else layout.px((1 - p) * -12)
         flutuar = layout.px(math.sin(menu.animacao_original.tempo * 0.9) * 2)
-        titulo = superficies["incarnate"]
-        rect = titulo.get_rect(midtop=(layout.x(0.5), layout.y(0.075) + deslocamento + flutuar))
+        selo = pygame.Rect(layout.px(56), layout.px(126), layout.px(330), layout.px(30))
+        base = painel_original(selo.size, (0, 0, 0), ACENTO_ORIGINAL)
+        menu._blit_alfa(tela, base, selo.topleft, round(p * 255))
+        rotulo = texto_painel(layout.fonte_texto(16), "CONSOLE ORBITAL // NAVEGAÇÃO",
+                              ACENTO_ORIGINAL, selo.width - layout.px(24), selo.height)
+        menu._blit_alfa(tela, rotulo, rotulo.get_rect(center=selo.center).topleft, round(p * 255))
+        titulo = self._text(layout.fonte_texto(76), "INCARNATE", TEXTO_ORIGINAL)
+        rect = titulo.get_rect(topleft=(layout.px(56), layout.px(165) + deslocamento + flutuar))
         menu._blit_alfa(tela, titulo, rect.topleft, round(p * 255))
         sub = superficies["sub"]
-        rect = sub.get_rect(midtop=(layout.x(0.5), layout.y(0.21)))
+        rect = sub.get_rect(topleft=(layout.px(60), layout.px(292)))
         menu._blit_alfa(tela, sub, rect.topleft, round(p * 255))
 
-    def _desenhar_resumo_original(self, tela: pygame.Surface, rect: pygame.Rect,
-                                  resumo: dict | None) -> None:
-        layout = self.menu.layout
-        if resumo is None:
-            linhas = ("SEM PERFIL ATIVO", "Crie ou escolha um piloto", "em PERFIL")
-        else:
-            horas, resto = divmod(resumo["play_time"], 3600)
-            moedas = f"{resumo['coins']:,}".replace(",", ".")
-            linhas = (f"PILOTO // {resumo['name']}",
-                      f"{moedas} MOEDAS · {horas:02d}h{resto // 60:02d}",
-                      f"DIM. {resumo['dimension']} · BOSSES {resumo['bosses_defeated']}")
-        for indice, linha in enumerate(linhas):
-            arte = texto_painel(layout.fonte_texto(20 if indice == 0 else 18), linha,
-                                TEXTO_SOBRIO, rect.width - layout.px(28), layout.px(21))
-            tela.blit(arte, (rect.x + layout.px(14), rect.y + layout.px(8 + indice * 22)))
 
     @staticmethod
     def _truncar_nome(font, name: str, max_width: int) -> str:
