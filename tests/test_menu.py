@@ -103,6 +103,41 @@ def test_menu_principal_tem_cinco_acoes_do_mesmo_tamanho():
     assert [option.texto for option in menu.opcoes] == ROTULOS_ESPERADOS
 
 
+def test_tab_e_shift_tab_navegam_menu_e_hub():
+    _, menu = novo_menu()
+    for tela, atributo, quantidade in ((menu.tela_principal, "opcao_selecionada", 5),
+                                       (menu.telas["JOGAR"], "selection", 3)):
+        dono = menu if atributo == "opcao_selecionada" else tela
+        setattr(dono, atributo, 0)
+        tela.tratar_tecla(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_TAB, mod=0))
+        assert getattr(dono, atributo) == 1
+        tela.tratar_tecla(pygame.event.Event(
+            pygame.KEYDOWN, key=pygame.K_TAB, mod=pygame.KMOD_SHIFT))
+        assert getattr(dono, atributo) == 0
+        tela.tratar_tecla(pygame.event.Event(
+            pygame.KEYDOWN, key=pygame.K_TAB, mod=pygame.KMOD_SHIFT))
+        assert getattr(dono, atributo) == quantidade - 1
+
+
+@pytest.mark.parametrize("resolucao", ["900x700", "1920x1080"])
+def test_cartoes_do_hub_contem_resumos_longos_e_nao_encostam_no_voltar(resolucao):
+    from types import SimpleNamespace
+
+    jogo, menu = novo_menu()
+    jogo.config["resolucao"] = resolucao
+    hub = menu.jogar_hub
+    desenhos = []
+    tela = SimpleNamespace(blit=lambda surf, rect: desenhos.append(rect))
+    with mock.patch.object(hub, "_detalhes_cartao", return_value=("RESUMO " * 40,) * 2):
+        for (rotulo, acao), rect in zip(hub.entries, hub._rects()):
+            desenhos.clear()
+            hub._desenhar_cartao(tela, rect, rotulo, acao, MENU_COR_TEXTO)
+            assert len(desenhos) == 3
+            assert all(rect.contains(desenho) for desenho in desenhos)
+            assert all(a.bottom <= b.top for a, b in zip(desenhos, desenhos[1:]))
+    assert hub._rects()[-1].bottom < hub._back_rect().top
+
+
 def test_opcoes_originais_têm_painel_e_selecao_destacada_na_area_clicavel():
     """O painel desenhado coincide com a mesma área usada para clique."""
     jogo, menu = novo_menu()

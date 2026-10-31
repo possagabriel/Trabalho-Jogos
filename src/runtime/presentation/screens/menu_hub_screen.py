@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.infrastructure.graphics.theme import MENU_RESUMO_CONTINUAR_FONT_SIZE, tema_atual
-from src.runtime.infrastructure.graphics.menu_panels import painel_original
+from src.runtime.infrastructure.graphics.menu_panels import painel_original, texto_painel
 
 if TYPE_CHECKING:
     from src.runtime.presentation.menu import MenuPrincipal
@@ -112,7 +112,8 @@ class MenuHubScreen:
         pygame.draw.rect(surface, (8, 13, 32), hint_rect, border_radius=6)
         pygame.draw.rect(surface, theme["secundaria"], hint_rect, 1,
                          border_radius=6)
-        hint = menu.fonte_pequena.render("ESC  VOLTAR", True, (210, 220, 240))
+        hint = texto_painel(menu.fonte_pequena, "ESC  VOLTAR", (210, 220, 240),
+                            hint_rect.width - menu.layout.px(12), hint_rect.height)
         surface.blit(hint, hint.get_rect(center=hint_rect.center))
 
     def _badge(self, surface: pygame.Surface, rect: pygame.Rect,
@@ -128,7 +129,8 @@ class MenuHubScreen:
                          label: str, action: str,
                          color: tuple[int, int, int]) -> None:
         menu = self.menu
-        heading = menu.fonte_opcao.render(label, True, color)
+        heading = texto_painel(menu.fonte_opcao, label, tuple(color[:3]),
+                               rect.width - menu.layout.px(32), menu.layout.px(26))
         if self.kind != "JOGAR":
             surface.blit(heading, heading.get_rect(center=rect.center))
             return
@@ -136,15 +138,13 @@ class MenuHubScreen:
         font = menu.layout.fonte_texto(
             max(14, MENU_RESUMO_CONTINUAR_FONT_SIZE - 4))
         surface.blit(heading, heading.get_rect(
-            center=(rect.centerx, rect.y + menu.layout.px(20))))
+            midtop=(rect.centerx, rect.y + menu.layout.px(8))))
         for index, detail in enumerate(details):
-            detail_surface = self._text_cache.get(
-                (id(font), detail, (210, 220, 240)))
-            if detail_surface is None:
-                detail_surface = font.render(detail, True, (210, 220, 240))
-                self._text_cache[(id(font), detail, (210, 220, 240))] = detail_surface
+            detail_surface = texto_painel(
+                font, detail, (210, 220, 240), rect.width - menu.layout.px(32),
+                menu.layout.px(19))
             surface.blit(detail_surface, detail_surface.get_rect(
-                center=(rect.centerx, rect.y + menu.layout.px(47 + index * 20))))
+                midtop=(rect.centerx, rect.y + menu.layout.px(39 + index * 21))))
 
     def _detalhes_cartao(self, action: str) -> tuple[str, str]:
         service = self.menu.jogo.profile_service
@@ -174,7 +174,11 @@ class MenuHubScreen:
                 f"MOEDAS {coins} · TEMPO {hours:02d}h{minutes:02d}")
 
     def tratar_tecla(self, event: pygame.event.Event) -> bool:
-        if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+        if event.key == pygame.K_TAB:
+            passo = -1 if getattr(event, "mod", 0) & pygame.KMOD_SHIFT else 1
+            self.selection = (self.selection + passo) % len(self.entries)
+            self.menu._som("navegar")
+        elif event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
             self.menu._voltar_menu()
         elif event.key in (pygame.K_UP, pygame.K_w):
             self.selection = (self.selection - 1) % len(self.entries)

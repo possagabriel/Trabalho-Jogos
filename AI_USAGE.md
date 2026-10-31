@@ -1,5 +1,8 @@
 # Registro de uso de IA
 
+- Codex resolveu os conflitos da PR #68 com a main após a #67, preservou os recursos dos dois lados e unificou funções de seleção/rota do mapa; validação por testes direcionados e Ruff.
+
+- Codex refinou menus ORIGINAL, limitou perseguição dos tiros no LINEAR e melhorou mapa/minimapa; testes de lógica escritos primeiro, validação direcionada e Ruff, sem capturas ou suíte completa. Playtest visual pendente.
 - Codex refez o fundo aberto com gás, poeira e planetas sombreados, validando composição por semente, cache, contraste e transições entre setores.
 
 - Codex refinou pausa e confirmações, compartilhou a geometria com os controles e adicionou regressões de navegação e renderização.

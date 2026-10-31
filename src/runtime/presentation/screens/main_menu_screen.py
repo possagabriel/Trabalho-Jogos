@@ -152,7 +152,10 @@ class TelaPrincipalJogo:
     def tratar_tecla(self, evento: pygame.event.Event) -> bool:
         """Trata navegacao e digitacao do nome do jogador."""
         menu = self.menu
-        if evento.key in (pygame.K_UP, pygame.K_w):
+        if evento.key == pygame.K_TAB:
+            passo = -1 if getattr(evento, "mod", 0) & pygame.KMOD_SHIFT else 1
+            menu._selecionar((menu.opcao_selecionada + passo) % len(menu.opcoes))
+        elif evento.key in (pygame.K_UP, pygame.K_w):
             menu._selecionar((menu.opcao_selecionada - 1) % len(menu.opcoes))
         elif evento.key in (pygame.K_DOWN, pygame.K_s):
             menu._selecionar((menu.opcao_selecionada + 1) % len(menu.opcoes))

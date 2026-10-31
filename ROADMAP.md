@@ -24,6 +24,9 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- PR #68 sincronizada com a main após a #67: conflitos resolvidos preservando as melhorias dos dois trabalhos e unificando seleção/rota do mapa; 228 testes direcionados e Ruff aprovados.
+
+- Menus ORIGINAL: painéis com profundidade, cartões legíveis e Tab/Shift+Tab; LINEAR limita busca dos tiros a 2 s e duração a 5 s; mapa clicável com rota e minimapa com destino na borda e limite do Vazio. Testes direcionados e Ruff aprovados; playtest pendente.
 - Fundo aberto: nebulosas procedurais por setor, planetas sombreados e centro livre para combate; testes de identidade/cache/contraste aprovados, playtest visual pendente.
 
 - Pausa/confirmar saída: estilo ORIGINAL alinhado aos menus e navegação de ações por setas/Tab; validação visual pendente.

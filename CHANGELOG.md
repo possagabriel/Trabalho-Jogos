@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Menus ORIGINAL ganham painéis cacheados, foco por forma, cartões com resumos contidos e Tab/Shift+Tab; tiros guiados do LINEAR buscam por 2 s e expiram aos 5 s; mapa aberto recebe seleção por clique, rota direta e pares de portais, e o minimapa indica destinos distantes e o limite do Vazio.
 - Fundo do mundo aberto passa a usar nebulosas turbulentas e faixas de poeira, planetas com volume e objetos grandes na periferia, preservando o contraste da área central.
 - Pausa e confirmações ORIGINAL ganham painéis consistentes, rótulos diretos e foco por setas/Tab; desenho e clique compartilham a geometria da pausa.
 - Menus ORIGINAL recebem painéis com gradiente e relevo, seleção consistente e cartão de perfil integrado; abas de Jogar/Perfil reservam espaço para os resumos sem sobreposição.
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   restante e o especial informa a prontidão da Bomba Vortex.
 
 ### Fixed
+- Integração da PR #68 com a main preserva os menus e o mapa da #67, elimina duplicação de seleção/rota e mantém os tiros guiados limitados no LINEAR.
 - Arco do impulso desenha a circunferência completa, sem cruzar o medidor.
 - Rótulos de vida, energia, armas e chefes deixam de se sobrepor às barras;
   fontes acompanham mudanças de escala do HUD.

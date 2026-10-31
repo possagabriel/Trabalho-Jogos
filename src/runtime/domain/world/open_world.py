@@ -43,6 +43,7 @@ from src.runtime.infrastructure.graphics.meteor_shower import (
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_circulo,
     desenhar_painel,
+    desenhar_poligono,
     linha_suave,
     texto_suave,
 )
@@ -970,8 +971,7 @@ class OpenWorldRuntime:
             pygame.draw.line(surface, grid, (area.left, y), (area.right, y), 1)
 
         def point(world_x: float, world_y: float) -> tuple[int, int]:
-            return (area.left + round(world_x / self.width * area.width),
-                    area.top + round(world_y / self.height * area.height))
+            return self.ponto_mapa((world_x, world_y))
 
         self._draw_map_route(surface, edge)
 
@@ -989,10 +989,14 @@ class OpenWorldRuntime:
             x, y = point(*hole.position)
             pygame.draw.circle(surface, (230, 160, 104), (x, y), 7, 2)
             pygame.draw.circle(surface, (8, 11, 24), (x, y), 4)
-        for portal in self.anomalies.wormholes:
+        for numero, portal in enumerate(self.anomalies.wormholes):
             x, y = point(*portal.position)
             pygame.draw.ellipse(surface, (118, 216, 231),
                                 (x - 5, y - 9, 10, 18), 2)
+            rotulo = texto_suave(self._font_marker,
+                                 f"{numero + 1} > {portal.target + 1}", PAPEL)
+            surface.blit(rotulo, (min(x + 10, area.right - rotulo.get_width() - 4),
+                                  max(area.top + 4, y - rotulo.get_height() // 2)))
         rock_color = (153, 139, 120) if comic else (102, 138, 158)
         for rock in self.asteroids.asteroids:
             if rock.active():
@@ -1291,6 +1295,33 @@ class OpenWorldRuntime:
         y = area.centery + round((position[1] - center[1]) * area.height / 1800)
         return (x, y) if area.collidepoint(x, y) else None
 
+    def _minimap_target(self, position: tuple[float, float],
+                        area: pygame.Rect) -> tuple[tuple[int, int], bool]:
+        """Mantém o destino visível; destinos distantes apontam pela borda."""
+        local = self._local_map_point(position, (self.x, self.y), area)
+        if local is not None and area.inflate(-16, -16).collidepoint(local):
+            return local, False
+        dx = (position[0] - self.x) * area.width / 3200
+        dy = (position[1] - self.y) * area.height / 1800
+        escala = min((area.width / 2 - 9) / max(abs(dx), 0.001),
+                     (area.height / 2 - 9) / max(abs(dy), 0.001), 1.0)
+        return (round(area.centerx + dx * escala), round(area.centery + dy * escala)), True
+
+    def _draw_minimap_target(self, area: pygame.Rect) -> None:
+        """Distingue chegada local de direção distante por círculo e seta."""
+        marker, distante = self._minimap_target(self.destino_atual()[2], area)
+        if not distante:
+            desenhar_circulo(self._minimap, TINTA, marker, 8, espessura=4)
+            desenhar_circulo(self._minimap, PAPEL, marker, 8, espessura=2)
+            return
+        dx, dy = marker[0] - area.centerx, marker[1] - area.centery
+        norma = math.hypot(dx, dy) or 1
+        dx, dy = dx / norma, dy / norma
+        pontos = (marker, (marker[0] - dx * 9 - dy * 5, marker[1] - dy * 9 + dx * 5),
+                  (marker[0] - dx * 9 + dy * 5, marker[1] - dy * 9 - dx * 5))
+        desenhar_poligono(self._minimap, PAPEL, pontos)
+        desenhar_poligono(self._minimap, TINTA, pontos, espessura=1)
+
     def _draw_minimap(self, surface: pygame.Surface) -> None:
         self._place_hostiles_in_world()
         comic = opcoes_atuais().ativo
@@ -1308,6 +1339,13 @@ class OpenWorldRuntime:
         area = pygame.Rect(10, 30, 240, 138)
         pygame.draw.rect(self._minimap, (49, 42, 37) if comic else (15, 26, 49), area)
         pygame.draw.rect(self._minimap, frame, area, 1)
+        self._minimap.set_clip(area.inflate(-2, -2))
+        mundo = pygame.Rect(
+            area.centerx - round(self.x * area.width / 3200),
+            area.centery - round(self.y * area.height / 1800),
+            round(self.width * area.width / 3200), round(self.height * area.height / 1800))
+        # O limite real aparece quando a nave se aproxima do Vazio.
+        pygame.draw.rect(self._minimap, PAPEL, mundo, 2)
         for fraction in (0.25, 0.5, 0.75):
             x = area.left + round(area.width * fraction)
             y = area.top + round(area.height * fraction)
@@ -1319,6 +1357,8 @@ class OpenWorldRuntime:
         def point(position: tuple[float, float]) -> tuple[int, int] | None:
             return self._local_map_point(position, (self.x, self.y), area)
 
+        destino, _distante = self._minimap_target(self.destino_atual()[2], area)
+        linha_suave(self._minimap, frame, area.center, destino, 1)
         self._draw_minimap_terrain(point)
         view_start = point((self.camera_x, self.camera_y))
         if view_start is not None:
@@ -1329,14 +1369,13 @@ class OpenWorldRuntime:
             )
             pygame.draw.rect(self._minimap, frame, view.clip(area), 1)
         self._draw_minimap_contacts(point, comic)
-        destino = point(self.destino_atual()[2])
-        if destino is not None:
-            desenhar_circulo(self._minimap, PAPEL, destino, 8, espessura=2)
+        self._draw_minimap_target(area)
         px, py = area.center
         pygame.draw.polygon(self._minimap, player_color,
                             ((px, py - 6), (px + 5, py + 5), (px - 5, py + 5)))
         pygame.draw.polygon(self._minimap, (8, 20, 32),
                             ((px, py - 6), (px + 5, py + 5), (px - 5, py + 5)), 1)
+        self._minimap.set_clip(None)
         surface.blit(self._minimap, (LARGURA - self.MINIMAP_SIZE[0] - 16, 20))
 
     def _draw_minimap_terrain(

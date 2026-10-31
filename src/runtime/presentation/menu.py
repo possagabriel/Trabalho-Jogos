@@ -208,6 +208,14 @@ class OpcaoMenu:
                 selecionado=selecionado and not self.desabilitado,
                 raio=layout.px(10),
                 alpha=MENU_ALPHA_BOTAO_SELECIONADO if selecionado else MENU_ALPHA_BOTAO_NORMAL)
+            if selecionado and not self.desabilitado:
+                painel = painel.copy()
+                cx, cy = painel.get_width() - layout.px(19), painel.get_height() // 2
+                desenhar_poligono(painel, MENU_COR_TEXTO,
+                                  ((cx - layout.px(3), cy - layout.px(5)),
+                                   (cx + layout.px(3), cy),
+                                   (cx - layout.px(3), cy + layout.px(5))),
+                                  espessura=max(1, layout.px(2)))
             self._SUPERFICIES_BOTAO[chave] = painel
         self._blit(tela, painel, rect.centerx, rect.centery, alfa, centrado=True)
 
