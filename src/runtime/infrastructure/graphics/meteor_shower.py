@@ -5,8 +5,16 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass
+from functools import lru_cache
 
 import pygame
+
+from src.infrastructure.graphics.comic_theme import LARANJA, PAPEL, TINTA, opcoes_atuais
+from src.runtime.infrastructure.graphics.smooth import (
+    desenhar_circulo,
+    desenhar_glow,
+    desenhar_poligono,
+)
 
 INICIO_CHUVA = 5.0
 INTERVALO_CHUVA = 14.0
@@ -17,6 +25,35 @@ CAUDA_EXTERNA = (94, 119, 150)
 CAUDA_INTERNA = (158, 202, 223)
 CABECA_QUENTE = (255, 225, 180)
 FRAGMENTO = (173, 170, 160)
+
+
+@lru_cache(maxsize=12)
+def _quadros_meteoro(comprimento: int, angulo: int, comic: bool,
+                     reduzido: bool) -> tuple[pygame.Surface, ...]:
+    """Prepara cauda afilada e núcleo com fade suave em quadros reutilizáveis."""
+    base = pygame.Surface((144, 144), pygame.SRCALPHA)
+    centro = (72, 72)
+    externa = LARANJA if comic else CAUDA_EXTERNA
+    interna = PAPEL if comic else CAUDA_INTERNA
+    if not reduzido:
+        desenhar_glow(base, externa, centro, 11, 0.4)
+        desenhar_poligono(base, externa,
+                          ((68, 72), (84, 65), (72 + comprimento, 72), (84, 79)))
+    desenhar_poligono(base, interna,
+                      ((69, 72), (80, 69), (72 + comprimento, 72), (80, 75)))
+    desenhar_circulo(base, TINTA if comic else externa, centro, 5)
+    desenhar_circulo(base, CABECA_QUENTE, centro, 3)
+    if not reduzido:
+        desenhar_circulo(base, externa, (92, 81), 2)
+        desenhar_circulo(base, interna, (107, 68), 1)
+    base = pygame.transform.rotate(base, angulo)
+    quadros = []
+    for indice in range(16):
+        quadro = base.copy()
+        t = (indice + 0.5) / 16
+        quadro.set_alpha(round(255 * min(1.0, t * 5, (1 - t) * 5)))
+        quadros.append(quadro)
+    return tuple(quadros)
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,27 +124,10 @@ def desenhar_meteoro(tela: pygame.Surface, meteoro: MeteoroVisual,
     """
     if not 0.0 < idade < VIDA_METEORO:
         return
-    velocidade = math.hypot(meteoro.vx, meteoro.vy)
-    comprimento = min(meteoro.comprimento, idade * velocidade * 0.8)
-    if comprimento < 2.0:
-        return
-    brilho = min(1.0, idade * 8.0, (VIDA_METEORO - idade) * 5.0)
     centro = (round(meteoro.x + meteoro.vx * idade),
               round(meteoro.y + meteoro.vy * idade))
-    cauda = (round(centro[0] - meteoro.vx / velocidade * comprimento),
-             round(centro[1] - meteoro.vy / velocidade * comprimento))
-    meio = (round(centro[0] - meteoro.vx / velocidade * comprimento * 0.45),
-            round(centro[1] - meteoro.vy / velocidade * comprimento * 0.45))
-
-    def atenuar(cor: tuple[int, int, int]) -> tuple[int, int, int]:
-        return tuple(round(canal * brilho) for canal in cor)
-
-    if not reduzido:
-        pygame.draw.line(tela, atenuar(CAUDA_EXTERNA), cauda, centro, 4)
-    pygame.draw.line(tela, atenuar(CAUDA_INTERNA), cauda, centro, 2)
-    pygame.draw.line(tela, atenuar(CABECA_QUENTE), meio, centro, 1)
-    pygame.draw.circle(tela, atenuar(CABECA_QUENTE), centro, 2)
-    if not reduzido:
-        fragmento = (round((cauda[0] * 2 + centro[0]) / 3),
-                     round((cauda[1] * 2 + centro[1]) / 3) + 3)
-        pygame.draw.circle(tela, atenuar(FRAGMENTO), fragmento, 1)
+    angulo = round(math.degrees(math.atan2(meteoro.vy, -meteoro.vx)) / 5) * 5
+    comprimento = min(56, max(8, round(meteoro.comprimento / 8) * 8))
+    quadros = _quadros_meteoro(comprimento, angulo, opcoes_atuais().ativo, reduzido)
+    arte = quadros[min(15, int(idade / VIDA_METEORO * 16))]
+    tela.blit(arte, arte.get_rect(center=centro))

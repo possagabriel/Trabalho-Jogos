@@ -9,6 +9,7 @@ import pygame
 from src.core.constants import BRANCO, QUANTUM_CYAN, VERDE
 from src.core.settings import ACOES_CONTROLE, RESOLUCOES
 from src.infrastructure.graphics.theme import tema_atual
+from src.runtime.infrastructure.graphics.menu_panels import painel_original
 from src.runtime.infrastructure.graphics.smooth import retangulo_suave
 
 if TYPE_CHECKING:
@@ -58,6 +59,13 @@ class TelaConfiguracoesJogo:
                 progresso, dx_design=30, dy_design=18)
             y = menu._y_linha_config(deslocamento) + dy
             selecionada = indice == menu.config_selecao
+            if selecionada and menu.jogo.config["estilo_visual"] == "ORIGINAL":
+                area = pygame.Rect(painel.left + layout.px(18) + dx,
+                                   y - layout.px(22), painel.w - layout.px(36), layout.px(44))
+                fundo = painel_original(area.size, tuple(tema["fundo_painel"][:3]),
+                                         tuple(tema["primaria"][:3]), selecionado=True,
+                                         raio=layout.px(8))
+                menu._blit_alfa(tela, fundo, area, int(255 * alfa))
             cor_texto = BRANCO if selecionada else (190, 195, 235)
             texto = menu.fonte_media.render(rotulo, True, cor_texto)
             menu._blit_alfa(
@@ -65,7 +73,8 @@ class TelaConfiguracoesJogo:
                 int(255 * alfa))
             if selecionada:
                 retangulo_suave(
-                    tela, (255, 200, 100),
+                    tela, (tema["primaria"] if menu.jogo.config["estilo_visual"] == "ORIGINAL"
+                           else (255, 200, 100)),
                     pygame.Rect(indicador_x + dx, y - layout.px(24),
                                 layout.px(6), layout.px(30)),
                     3,

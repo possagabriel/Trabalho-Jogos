@@ -716,6 +716,20 @@ def test_alvos_do_hub_nao_se_sobrepoem(resolucao, estilo):
                        for outro in retangulos[indice + 1:])
 
 
+@pytest.mark.parametrize("resolucao", ["900x700", "1920x1080"])
+def test_resumos_do_hub_original_cabem_dentro_de_cada_cartao(resolucao):
+    jogo, menu = novo_menu()
+    jogo.config["resolucao"] = resolucao
+    jogo.config["estilo_visual"] = "ORIGINAL"
+    tela = mock.Mock()
+    for (rotulo, acao), rect in zip(menu.jogar_hub.entries, menu.jogar_hub._rects()):
+        tela.reset_mock()
+        menu.jogar_hub._desenhar_cartao(tela, rect, rotulo, acao, (225, 235, 255))
+        assert len(tela.blit.call_args_list) == 3
+        for chamada in tela.blit.call_args_list:
+            assert rect.contains(chamada.args[1])
+
+
 def test_hubs_mantem_a_mesma_estrutura_nos_dois_estilos():
     jogo, menu = novo_menu()
     estruturas = []

@@ -39,9 +39,7 @@ class MenuHubScreen:
         layout = self.menu.layout
         narrow = self.menu._layout_4_3()
         width = layout.px(620 if narrow else 700)
-        height = layout.px((350 if self.kind == "PERFIL" else 470)
-                           if narrow else
-                           (385 if self.kind == "PERFIL" else 470))
+        height = layout.px(450)
         return pygame.Rect(
             layout.x(0.5) - width // 2,
             layout.y(0.5) - height // 2,
@@ -53,9 +51,9 @@ class MenuHubScreen:
         panel = self._panel()
         layout = self.menu.layout
         narrow = self.menu._layout_4_3()
-        row_height = layout.px(86 if self.kind == "JOGAR" else (58 if narrow else 62))
+        row_height = layout.px(82)
         margin = layout.px(28 if narrow else 32)
-        gap = layout.px(10 if narrow else 14)
+        gap = layout.px(12)
         top = panel.y + layout.px(96 if narrow else 104)
         return [pygame.Rect(
             panel.x + margin,
@@ -77,9 +75,14 @@ class MenuHubScreen:
         menu = self.menu
         theme = tema_atual(menu.jogo.config["tema"])
         panel = self._panel()
-        surface.blit(painel_original(
-            panel.size, tuple(theme["fundo_painel"][:3]), tuple(theme["primaria"][:3]),
-            raio=menu.layout.px(16)), panel)
+        original = menu.jogo.config["estilo_visual"] == "ORIGINAL"
+        if original:
+            surface.blit(painel_original(
+                panel.size, tuple(theme["fundo_painel"][:3]),
+                tuple(theme["primaria"][:3]), raio=menu.layout.px(16)), panel)
+        else:
+            pygame.draw.rect(surface, (4, 7, 23), panel, border_radius=16)
+            pygame.draw.rect(surface, theme["primaria"], panel, 2, border_radius=16)
         title = "JOGAR" if self.kind == "JOGAR" else "PERFIL"
         title_surface = menu.fonte_cabecalho.render(title, True, theme["primaria"])
         surface.blit(title_surface, title_surface.get_rect(
@@ -89,13 +92,22 @@ class MenuHubScreen:
             disabled = action == "continuar" and not menu._tem_save()
             color = (105, 111, 135) if disabled else (
                 theme["primaria"] if selected else theme["secundaria"])
-            surface.blit(painel_original(
-                rect.size, tuple(theme["fundo_painel"][:3]), tuple(color[:3]),
-                selecionado=selected, raio=menu.layout.px(10)), rect)
+            if original:
+                surface.blit(painel_original(
+                    rect.size, tuple(theme["fundo_painel"][:3]), tuple(color[:3]),
+                    selecionado=selected and not disabled, raio=menu.layout.px(10)), rect)
+            else:
+                pygame.draw.rect(surface, (8, 13, 32), rect, border_radius=10)
+                pygame.draw.rect(surface, color, rect, 3 if selected else 1,
+                                 border_radius=10)
             self._desenhar_cartao(surface, rect, label, action, color)
             if self.kind == "PERFIL" and action == "memorias" \
                     and menu._novidades("memorias"):
                 self._badge(surface, rect, theme["terciaria"])
+            elif action == "continuar" and disabled and not original:
+                hint = menu.fonte_pequena.render("SEM SAVE", True, color)
+                surface.blit(hint, hint.get_rect(
+                    midright=(rect.right - menu.layout.px(14), rect.centery)))
         hint_rect = self._back_rect()
         pygame.draw.rect(surface, (8, 13, 32), hint_rect, border_radius=6)
         pygame.draw.rect(surface, theme["secundaria"], hint_rect, 1,

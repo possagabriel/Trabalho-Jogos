@@ -49,6 +49,21 @@ def test_tokens_resolvem_estilo_e_tema():
     assert original.superficie.glow > comic.superficie.glow
 
 
+def test_painel_original_cacheado_tem_profundidade_e_cantos_transparentes():
+    from src.runtime.infrastructure.graphics.menu_panels import painel_original
+
+    fundo, borda = (6, 12, 28), (70, 190, 220)
+    normal = painel_original((300, 80), fundo, borda)
+    foco = painel_original((300, 80), fundo, borda, selecionado=True)
+    assert normal is painel_original((300, 80), fundo, borda)
+    assert normal.get_at((0, 0)).a == 0
+    assert normal.get_at((150, 12)) != normal.get_at((150, 65))
+    assert pygame.image.tobytes(normal, "RGBA") != pygame.image.tobytes(foco, "RGBA")
+    antes = pygame.image.tobytes(normal, "RGBA")
+    _surface().blit(normal, (20, 20))
+    assert pygame.image.tobytes(normal, "RGBA") == antes
+
+
 @pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
 def test_painel_desenha_com_cabecalho_e_area_de_conteudo(estilo):
     layout = Layout(900, 700)
