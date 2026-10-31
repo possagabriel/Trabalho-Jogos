@@ -7,7 +7,11 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.infrastructure.graphics.theme import MENU_RESUMO_CONTINUAR_FONT_SIZE, tema_atual
-from src.runtime.infrastructure.graphics.menu_panels import painel_original, texto_painel
+from src.runtime.infrastructure.graphics.menu_panels import (
+    TEXTO_SOBRIO,
+    painel_original,
+    texto_painel,
+)
 
 if TYPE_CHECKING:
     from src.runtime.presentation.menu import MenuPrincipal
@@ -84,7 +88,8 @@ class MenuHubScreen:
             pygame.draw.rect(surface, (4, 7, 23), panel, border_radius=16)
             pygame.draw.rect(surface, theme["primaria"], panel, 2, border_radius=16)
         title = "JOGAR" if self.kind == "JOGAR" else "PERFIL"
-        title_surface = menu.fonte_cabecalho.render(title, True, theme["primaria"])
+        title_surface = menu.fonte_cabecalho.render(
+            title, True, TEXTO_SOBRIO if original else theme["primaria"])
         surface.blit(title_surface, title_surface.get_rect(
             midtop=(panel.centerx, panel.y + menu.layout.px(26))))
         for index, ((label, action), rect) in enumerate(zip(self.entries, self._rects())):
@@ -92,6 +97,8 @@ class MenuHubScreen:
             disabled = action == "continuar" and not menu._tem_save()
             color = (105, 111, 135) if disabled else (
                 theme["primaria"] if selected else theme["secundaria"])
+            if original and not disabled:
+                color = TEXTO_SOBRIO
             if original:
                 surface.blit(painel_original(
                     rect.size, tuple(theme["fundo_painel"][:3]), tuple(color[:3]),

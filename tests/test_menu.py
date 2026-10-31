@@ -287,18 +287,32 @@ def test_glitch_desligado_na_reducao_de_efeitos_e_titulo_em_cache():
     assert superficies_segunda_leitura is superficies
 
 
-def test_glitch_tem_pulsos_curto_com_frequencia_inferior_a_tres_por_segundo():
+def test_glitch_comic_tem_pulsos_com_frequencia_inferior_a_tres_por_segundo():
     jogo, menu = novo_menu()
     superf = {"incarnate_eco": pygame.Surface((4, 4), pygame.SRCALPHA),
               "incarnate_glitch_ciano": pygame.Surface((4, 4), pygame.SRCALPHA)}
     tela = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
-    with mock.patch.object(menu, "_blit_alfa") as desenhar:
+    with usar_visual({"estilo_visual": "COMIC"}), \
+            mock.patch.object(menu, "_blit_alfa") as desenhar:
         for instante, chamadas in ((0, 2), (41, 2), (42, 0), (649, 0),
                                    (650, 2)):
             desenhar.reset_mock()
             with mock.patch("pygame.time.get_ticks", return_value=instante):
                 menu._desenhar_glitch_titulo(tela, superf, 0)
             assert desenhar.call_count == chamadas
+
+
+def test_menu_original_nao_exibe_glitch_nem_placa_diagonal():
+    jogo, menu = novo_menu()
+    tela = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
+    with usar_visual({"estilo_visual": "ORIGINAL"}), \
+            mock.patch.object(menu, "_blit_alfa") as desenhar, \
+            mock.patch.object(menu, "_bloco_logo") as placa:
+        menu._desenhar_glitch_titulo(tela, {}, 0)
+        desenhar.assert_not_called()
+        menu.entrada_t = 10
+        menu._desenhar_bloco_titulo(tela, tema_atual(jogo.config["tema"]))
+        placa.assert_not_called()
 
 
 def test_continuar_sem_save_fica_visualmente_desabilitado_no_menu_original():

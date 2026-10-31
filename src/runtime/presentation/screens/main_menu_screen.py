@@ -19,7 +19,7 @@ from src.infrastructure.graphics.theme import (
     tema_atual,
 )
 from src.runtime.domain.entities.player import SKINS
-from src.runtime.infrastructure.graphics.menu_panels import painel_original
+from src.runtime.infrastructure.graphics.menu_panels import TEXTO_SOBRIO, painel_original
 from src.runtime.infrastructure.graphics.smooth import ease_out
 
 if TYPE_CHECKING:
@@ -122,7 +122,9 @@ class TelaPrincipalJogo:
 
         name = self._truncar_nome(font, summary["name"],
                                   rect.width - menu.layout.px(150))
-        title = self._text(font, f"PILOTO // {name}", tema["primaria"])
+        cor_titulo = (TEXTO_SOBRIO if menu.jogo.config["estilo_visual"] == "ORIGINAL"
+                      else tema["primaria"])
+        title = self._text(font, f"PILOTO // {name}", cor_titulo)
         tela.blit(title, (rect.x + margin, rect.y + menu.layout.px(8)))
         hours, remainder = divmod(summary["play_time"], 3600)
         minutes = remainder // 60

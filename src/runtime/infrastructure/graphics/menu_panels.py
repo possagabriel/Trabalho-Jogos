@@ -4,6 +4,20 @@ from functools import lru_cache
 
 import pygame
 
+FUNDO_SOBRIO = (12, 17, 25)
+PAINEL_SOBRIO = (20, 27, 37)
+FOCO_SOBRIO = (39, 51, 66)
+BORDA_SOBRIA = (58, 70, 85)
+TEXTO_SOBRIO = (239, 244, 249)
+
+
+@lru_cache(maxsize=4)
+def veu_menu_sobrio(tamanho: tuple[int, int]) -> pygame.Surface:
+    """Atenua o fundo espacial para separar texto e ações sem brilho extra."""
+    tela = pygame.Surface(tamanho, pygame.SRCALPHA)
+    tela.fill((*FUNDO_SOBRIO, 125))
+    return tela
+
 
 @lru_cache(maxsize=256)
 def texto_painel(fonte: pygame.font.Font, texto: str, cor: tuple[int, int, int],
@@ -22,24 +36,15 @@ def texto_painel(fonte: pygame.font.Font, texto: str, cor: tuple[int, int, int],
 def painel_original(tamanho: tuple[int, int], fundo: tuple[int, int, int],
                      borda: tuple[int, int, int], *, selecionado: bool = False,
                      raio: int = 12, alpha: int = 240) -> pygame.Surface:
-    """Prepara gradiente, relevo interno e indicador de foco dentro da área clicável."""
+    """Prepara uma superfície plana, escura e com foco sublinhado, sem glow."""
     largura, altura = tamanho
     tela = pygame.Surface(tamanho, pygame.SRCALPHA)
-    topo = tuple(round(a + (b - a) * (0.18 if selecionado else 0.06))
-                 for a, b in zip(fundo, borda))
-    for y in range(altura):
-        t = y / max(1, altura - 1)
-        cor = tuple(round(a + (b - a) * t) for a, b in zip(topo, fundo))
-        pygame.draw.line(tela, (*cor, alpha), (0, y), (largura - 1, y))
-    mascara = pygame.Surface(tamanho, pygame.SRCALPHA)
-    pygame.draw.rect(mascara, (255, 255, 255, 255), mascara.get_rect(), border_radius=raio)
-    tela.blit(mascara, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-    pygame.draw.rect(tela, (*borda, 220 if selecionado else 110), tela.get_rect(),
-                     2 if selecionado else 1, border_radius=raio)
-    interno = tela.get_rect().inflate(-6, -6)
-    pygame.draw.rect(tela, (*borda, 35), interno, 1, border_radius=max(1, raio - 2))
+    raio = min(4, raio)
+    cor = FOCO_SOBRIO if selecionado else PAINEL_SOBRIO
+    pygame.draw.rect(tela, (*cor, alpha), tela.get_rect(), border_radius=raio)
+    pygame.draw.rect(tela, (*BORDA_SOBRIA, 155), tela.get_rect(), 1, border_radius=raio)
     if selecionado:
-        margem = max(4, min(12, altura // 5))
-        pygame.draw.rect(tela, (*borda, 255),
-                         (2, margem, 3, max(1, altura - margem * 2)), border_radius=2)
+        margem = max(4, min(16, largura // 12))
+        pygame.draw.line(tela, (*TEXTO_SOBRIO, 255),
+                         (margem, altura - 3), (largura - margem - 1, altura - 3), 2)
     return tela

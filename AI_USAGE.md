@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex implementou orientação e miniaturas nos mapas, tempestades com aviso/corredor e menus no visual espacial sóbrio escolhido pelo usuário; testes da lógica escritos primeiro, 226 testes direcionados e Ruff aprovados, sem capturas ou benchmarks. Playtest pendente.
+
 - Codex resolveu os conflitos da PR #68 com a main após a #67, preservou os recursos dos dois lados e unificou funções de seleção/rota do mapa; validação por testes direcionados e Ruff.
 
 - Codex refinou menus ORIGINAL, limitou perseguição dos tiros no LINEAR e melhorou mapa/minimapa; testes de lógica escritos primeiro, validação direcionada e Ruff, sem capturas ou suíte completa. Playtest visual pendente.

@@ -12,7 +12,6 @@ import pygame
 from src.core.constants import ALTURA, LARGURA
 from src.core.event_bus import GameEventType, publicar_evento
 from src.infrastructure.graphics.comic_theme import (
-    CIANO,
     LARANJA,
     PAPEL,
     TINTA,
@@ -22,8 +21,10 @@ from src.infrastructure.ui.layout import Layout
 from src.runtime.domain.entities.bosses import Boss
 from src.runtime.domain.entities.enemies import Inimigo
 from src.runtime.domain.entities.minibosses.registry import criar_miniboss
+from src.runtime.domain.entities.player import SKINS, Jogador, Skin
 from src.runtime.domain.entities.powerups import PowerUp
 from src.runtime.domain.entities.weapons import Projetil
+from src.runtime.domain.systems.aiming import angulo_para_alvo
 from src.runtime.domain.world.anomalies import CosmicAnomalies
 from src.runtime.domain.world.asteroid_field import AsteroidField
 from src.runtime.domain.world.boss_patterns import (
@@ -31,14 +32,21 @@ from src.runtime.domain.world.boss_patterns import (
     descricao_padrao,
     posicao_patrulha,
 )
+from src.runtime.domain.world.meteor_storm import TempestadeMeteoros
 from src.runtime.domain.world.region_background import SectorBackground
 from src.runtime.domain.world.scenarios import CENARIOS, Cenario
 from src.runtime.domain.world.scroll import EstadoAvanco
 from src.runtime.infrastructure.graphics.fonts import fonte_texto
+from src.runtime.infrastructure.graphics.map_art import (
+    fundo_mapa,
+    miniatura_anomalia,
+    miniatura_entidade,
+    miniatura_fenda,
+    miniatura_nave,
+    miniatura_rocha,
+)
 from src.runtime.infrastructure.graphics.meteor_shower import (
-    desenhar_meteoro,
-    gerar_chuva,
-    janela_chuva,
+    desenhar_meteoro_ativo,
 )
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_circulo,
@@ -112,8 +120,9 @@ class OpenWorldRuntime:
         self._pending_dimension: int | None = None
         self._stars = self._build_stars()
         self._rifts = self._build_rifts()
-        self._chave_chuva: tuple[int, int, int] | None = None
-        self._meteoros = ()
+        self.tempestade = TempestadeMeteoros(random.Random(self._rng.getrandbits(64)))
+        self._angulo_nave = 0.0
+        self._skin_mapa = Skin(SKINS[0])
         if cooldowns:
             self.asteroids.restore(cooldowns, self.elapsed)
         self.background = SectorBackground(
@@ -398,6 +407,26 @@ class OpenWorldRuntime:
         self.asteroids.update(self.elapsed)
         if game is not None:
             self._update_combat(dt, keys, controls, game)
+        self._angulo_nave = self.angulo_nave()
+        self.tempestade.atualizar(dt, (self.x, self.y), (LARGURA, ALTURA))
+        self._colidir_meteoros(game)
+
+    def angulo_nave(self) -> float:
+        """Resolve a direção real em graus: mira, movimento ou última orientação."""
+        if self._aim_screen is not None:
+            return angulo_para_alvo((LARGURA / 2, ALTURA / 2 - 20), self._aim_screen)
+        if self.vx or self.vy:
+            return math.degrees(math.atan2(self.vx, -self.vy)) % 360
+        return self._angulo_nave
+
+    def _colidir_meteoros(self, game) -> None:
+        jogador = getattr(game, "jogador", None)
+        if jogador is None or not jogador.vivo or jogador.tempo_intangivel > 0:
+            return
+        if self.tempestade.atinge((self.x, self.y), jogador.raio):
+            game.combate_controller.aplicar_dano_jogador()
+            if not jogador.vivo:
+                game._fim_de_jogo()
 
     def _update_gravity(self, dt: float) -> None:
         """Integra a atração com amortecimento e velocidade limitada."""
@@ -768,8 +797,8 @@ class OpenWorldRuntime:
         self.camera_x = self.x - LARGURA / 2
         self.camera_y = self.y - ALTURA / 2
         self._stars = self._build_stars()
-        self._chave_chuva = None
-        self._meteoros = ()
+        self.tempestade = TempestadeMeteoros(random.Random(self._rng.getrandbits(64)))
+        self._angulo_nave = 0.0
         self.background = SectorBackground(
             next_dimension, self.SECTORS, (self.x, self.y))
         self._cenario = Cenario(next_dimension)
@@ -885,27 +914,41 @@ class OpenWorldRuntime:
             surface.blit(arte, arte.get_rect(center=(sx, sy)))
 
     def _draw_meteor_shower(self, surface: pygame.Surface) -> None:
-        """Desenha grupos curtos no plano de fundo, sem colisão ou flashes."""
-        janela = janela_chuva(self.elapsed)
-        if janela is None:
+        """Mantém avisos e corpos sólidos legíveis em qualquer qualidade gráfica."""
+        chuva = self.tempestade
+        if chuva.estado == "calma":
             return
-        ciclo, fase = janela
         try:
-            qualidade = self.visual_config["qualidade_grafica"]
-            efeitos = self.visual_config["intensidade_flash"]
+            reduzido = (self.visual_config["qualidade_grafica"] == "DESEMPENHO"
+                        or self.visual_config["intensidade_flash"] != "NORMAL")
         except (KeyError, TypeError):
-            qualidade, efeitos = "ALTA", "NORMAL"
-        reduzido = qualidade == "DESEMPENHO" or efeitos != "NORMAL"
-        quantidade = 2 if reduzido else 4
-        chave = (self.dimension, ciclo, quantidade)
-        if chave != self._chave_chuva:
-            self._meteoros = gerar_chuva(
-                9101 + self.dimension * 1009 + ciclo, LARGURA, ALTURA,
-                quantidade)
-            self._chave_chuva = chave
-        for meteoro in self._meteoros:
-            desenhar_meteoro(surface, meteoro, fase - meteoro.atraso,
-                             reduzido=reduzido)
+            reduzido = False
+        for meteoro in chuva.meteoros:
+            if chuva.estado == "ativa" and 0 <= meteoro.idade <= 6:
+                desenhar_meteoro_ativo(surface, self._screen_position((meteoro.x, meteoro.y)),
+                                       meteoro.raio, meteoro.vx, meteoro.vy, reduzido=reduzido)
+        self._draw_storm_warning(surface)
+
+    def _draw_storm_warning(self, surface: pygame.Surface) -> None:
+        """Anuncia a aproximação e demarca o corredor livre com linhas constantes."""
+        chuva = self.tempestade
+        aviso = ("METEOROS A CAMINHO · FAIXA LIVRE" if chuva.estado == "aviso"
+                  else "TEMPESTADE DE METEOROS")
+        texto = texto_suave(self._font_region, aviso, PAPEL)
+        layout = Layout(*surface.get_size())
+        rect = texto.get_rect(midtop=(layout.x(0.48), layout.y(0.12)))
+        desenhar_painel(surface, PAPEL, rect.inflate(24, 12), cor_fundo=TINTA,
+                        glow_raio=0, alpha=255)
+        surface.blit(texto, rect)
+        if chuva.estado == "aviso":
+            for lado in (-1, 1):
+                faixa = chuva.corredor + lado * chuva.LARGURA_CORREDOR / 2
+                if chuva.vertical:
+                    x = round(faixa - self.camera_x)
+                    linha_suave(surface, PAPEL, (x, 0), (x, ALTURA), 1)
+                else:
+                    y = round(faixa - self.camera_y)
+                    linha_suave(surface, PAPEL, (0, y), (LARGURA, y), 1)
 
     def _draw_void_border(self, surface: pygame.Surface) -> None:
         """Mantém o Vazio na borda visível da tela perto do limite externo."""
@@ -950,14 +993,13 @@ class OpenWorldRuntime:
                         (round(origem[0] + dx * inicio), round(origem[1] + dy * inicio)),
                         (round(origem[0] + dx * fim), round(origem[1] + dy * fim)), 1)
 
-    def render_map(self, surface: pygame.Surface) -> None:
+    def render_map(self, surface: pygame.Surface, player: Jogador | None = None) -> None:
         """Mostra todo o mundo no canvas lógico, ocupando a tela inteira."""
         comic = opcoes_atuais().ativo
         surface.fill((36, 33, 33) if comic else (5, 12, 29))
         area = self._area_mapa()
-        fill = (55, 51, 48) if comic else (13, 27, 49)
         edge = LARANJA if comic else (105, 203, 234)
-        pygame.draw.rect(surface, fill, area)
+        surface.blit(fundo_mapa(area.size, self.dimension, comic), area)
         pygame.draw.rect(surface, edge, area, 3)
         surface.blit(self._map_title, (42, 20))
         surface.blit(self._map_hint,
@@ -984,54 +1026,54 @@ class OpenWorldRuntime:
             surface.blit(label, (x + 19, y - label.get_height() // 2))
         for world_x, world_y, _radius in self._rifts:
             x, y = point(world_x, world_y)
-            pygame.draw.rect(surface, edge, (x - 4, y - 7, 8, 14), 2)
+            arte = miniatura_fenda(comic, 22)
+            surface.blit(arte, arte.get_rect(center=(x, y)))
         for hole in self.anomalies.black_holes:
             x, y = point(*hole.position)
-            pygame.draw.circle(surface, (230, 160, 104), (x, y), 7, 2)
-            pygame.draw.circle(surface, (8, 11, 24), (x, y), 4)
+            arte = miniatura_anomalia(False, comic, 38)
+            surface.blit(arte, arte.get_rect(center=(x, y)))
         for numero, portal in enumerate(self.anomalies.wormholes):
             x, y = point(*portal.position)
-            pygame.draw.ellipse(surface, (118, 216, 231),
-                                (x - 5, y - 9, 10, 18), 2)
+            arte = miniatura_anomalia(True, comic, 30)
+            surface.blit(arte, arte.get_rect(center=(x, y)))
             rotulo = texto_suave(self._font_marker,
                                  f"{numero + 1} > {portal.target + 1}", PAPEL)
-            surface.blit(rotulo, (min(x + 10, area.right - rotulo.get_width() - 4),
+            surface.blit(rotulo, (min(x + 18, area.right - rotulo.get_width() - 4),
                                   max(area.top + 4, y - rotulo.get_height() // 2)))
-        rock_color = (153, 139, 120) if comic else (102, 138, 158)
         for rock in self.asteroids.asteroids:
             if rock.active():
-                pygame.draw.circle(surface, rock_color, point(rock.x, rock.y), 1)
-        if not self.boss_defeated:
-            bx, by = point(*self.BOSS_LAIR)
-            pygame.draw.polygon(surface, (255, 207, 115),
-                                ((bx, by - 9), (bx + 9, by),
-                                 (bx, by + 9), (bx - 9, by)), 2)
-            surface.blit(self._boss_label,
-                         (min(bx + 14, area.right - self._boss_label.get_width() - 5),
-                          by - self._boss_label.get_height() // 2))
-        if not self.miniboss_defeated:
-            mx, my = point(*self._miniboss_world)
-            pygame.draw.polygon(surface, (255, 156, 203),
-                                ((mx, my - 7), (mx + 7, my),
-                                 (mx, my + 7), (mx - 7, my)), 2)
+                arte = miniatura_rocha(rock.shape, rock.radius, comic, 6)
+                surface.blit(arte, arte.get_rect(center=point(rock.x, rock.y)))
+        self._draw_map_encounters(surface, comic)
         camera = pygame.Rect(
             *point(self.camera_x, self.camera_y),
             max(2, round(LARGURA / self.width * area.width)),
             max(2, round(ALTURA / self.height * area.height)),
         )
         pygame.draw.rect(surface, (230, 238, 245), camera.clip(area), 2)
-        px, py = point(self.x, self.y)
-        pygame.draw.polygon(surface, CIANO,
-                            ((px, py - 11), (px - 8, py + 8),
-                             (px + 8, py + 8)))
-        pygame.draw.polygon(surface, PAPEL, ((px, py - 11),
-                                             (px - 8, py + 8),
-                                             (px + 8, py + 8)), 2)
+        if player is not None:
+            self._skin_mapa = player.skin
+        self._draw_map_ship(surface, point(self.x, self.y), 32)
         self._draw_map_legend(surface, area, comic)
         destino = point(*self.destino_atual()[2])
         desenhar_circulo(surface, TINTA, destino, 22, espessura=5)
         desenhar_circulo(surface, PAPEL, destino, 22, espessura=2)
         self._draw_navigation(surface, mapa=True)
+
+    def _draw_map_encounters(self, surface: pygame.Surface, comic: bool) -> None:
+        """Mostra os cascos reais dos encontros em suas posições do mundo."""
+        area = self._area_mapa()
+        if not self.boss_defeated:
+            bx, by = self.ponto_mapa(self.BOSS_LAIR)
+            arte = miniatura_entidade(self.boss, comic, 38)
+            surface.blit(arte, arte.get_rect(center=(bx, by)))
+            surface.blit(self._boss_label,
+                         (min(bx + 24, area.right - self._boss_label.get_width() - 5),
+                          by - self._boss_label.get_height() // 2))
+        if not self.miniboss_defeated:
+            ponto = self.ponto_mapa(self._miniboss_world)
+            arte = miniatura_entidade(self.miniboss, comic, 30)
+            surface.blit(arte, arte.get_rect(center=ponto))
 
     def _draw_map_legend(self, surface: pygame.Surface, area: pygame.Rect,
                          comic: bool) -> None:
@@ -1045,24 +1087,16 @@ class OpenWorldRuntime:
         )
         pygame.draw.rect(surface, (46, 42, 40) if comic else (8, 18, 35), box)
         pygame.draw.rect(surface, PAPEL if comic else (90, 153, 190), box, 1)
+        miniaturas = (
+            miniatura_nave(self._skin_mapa, 0, comic, 20),
+            miniatura_entidade(self.boss, comic, 20),
+            miniatura_entidade(self.miniboss, comic, 20), miniatura_fenda(comic, 20),
+            miniatura_anomalia(False, comic, 20), miniatura_anomalia(True, comic, 20))
         for index, label in enumerate(self._map_legend):
             x = box.left + 17 + index % 3 * 132
             y = box.top + 19 + index // 3 * 31
-            if index == 0:
-                pygame.draw.polygon(surface, CIANO,
-                                    ((x, y - 6), (x + 5, y + 5), (x - 5, y + 5)), 2)
-            elif index == 1:
-                pygame.draw.polygon(surface, (255, 207, 115),
-                                    ((x, y - 6), (x + 6, y), (x, y + 6), (x - 6, y)), 2)
-            elif index == 2:
-                pygame.draw.circle(surface, (255, 156, 203), (x, y), 5, 2)
-            elif index == 3:
-                pygame.draw.rect(surface, (178, 145, 213), (x - 4, y - 6, 8, 12), 2)
-            elif index == 4:
-                pygame.draw.circle(surface, (230, 160, 104), (x, y), 5, 2)
-            else:
-                pygame.draw.ellipse(surface, (118, 216, 231),
-                                    (x - 4, y - 7, 8, 14), 2)
+            arte = miniaturas[index]
+            surface.blit(arte, arte.get_rect(center=(x, y)))
             surface.blit(label, (x + 12, y - label.get_height() // 2))
 
     def _place_hostiles_in_world(self) -> None:
@@ -1260,21 +1294,17 @@ class OpenWorldRuntime:
 
     def _draw_ship(self, surface: pygame.Surface, player=None) -> None:
         center = (LARGURA // 2, ALTURA // 2)
+        self._angulo_nave = self.angulo_nave()
         if player is not None:
+            self._skin_mapa = player.skin
             player.x, player.y = center
             player.tilt += (self.vx / self.SPEED * 5 - player.tilt) * 0.15
-            if self._aim_screen is not None:
-                player.atualizar_mira(self._aim_screen)
-            elif self.vx or self.vy:
-                player.angulo_mira = math.degrees(
-                    math.atan2(self.vx, -self.vy)) % 360
-            else:
-                player.angulo_mira = None
+            player.angulo_mira = self._angulo_nave
             player.desenhar(surface, intensidade_propulsor=min(
                 1.5, math.hypot(self.vx, self.vy) / self.SPEED),
                 piscar=False)
             return
-        angle = math.atan2(self.vy, self.vx) if self.vx or self.vy else 0.0
+        angle = math.radians(self._angulo_nave - 90)
         cosine, sine = math.cos(angle), math.sin(angle)
         local = ((19, 0), (-13, -12), (-6, 0), (-13, 12))
         points = [(round(center[0] + x * cosine - y * sine),
@@ -1282,6 +1312,12 @@ class OpenWorldRuntime:
                   for x, y in local]
         pygame.draw.polygon(surface, (31, 207, 220), points)
         pygame.draw.polygon(surface, (225, 251, 255), points, 2)
+
+    def _draw_map_ship(self, surface: pygame.Surface,
+                        center: tuple[int, int], tamanho: int) -> None:
+        angulo = round(self.angulo_nave() / 5) * 5 % 360
+        arte = miniatura_nave(self._skin_mapa, angulo, opcoes_atuais().ativo, tamanho)
+        surface.blit(arte, arte.get_rect(center=center))
 
     def _draw_region_label(self, surface: pygame.Surface) -> None:
         surface.blit(self._region_label, (24, 20))
@@ -1328,7 +1364,6 @@ class OpenWorldRuntime:
         panel = (39, 33, 29, 238) if comic else (4, 9, 24, 218)
         frame = LARANJA if comic else (78, 129, 173)
         grid = (91, 76, 61) if comic else (31, 48, 74)
-        player_color = CIANO if comic else (110, 245, 255)
         self._minimap.fill(panel)
         pygame.draw.rect(self._minimap, frame,
                          (0, 0, *self.MINIMAP_SIZE), 2)
@@ -1370,11 +1405,7 @@ class OpenWorldRuntime:
             pygame.draw.rect(self._minimap, frame, view.clip(area), 1)
         self._draw_minimap_contacts(point, comic)
         self._draw_minimap_target(area)
-        px, py = area.center
-        pygame.draw.polygon(self._minimap, player_color,
-                            ((px, py - 6), (px + 5, py + 5), (px - 5, py + 5)))
-        pygame.draw.polygon(self._minimap, (8, 20, 32),
-                            ((px, py - 6), (px + 5, py + 5), (px - 5, py + 5)), 1)
+        self._draw_map_ship(self._minimap, area.center, 20)
         self._minimap.set_clip(None)
         surface.blit(self._minimap, (LARGURA - self.MINIMAP_SIZE[0] - 16, 20))
 
@@ -1385,23 +1416,23 @@ class OpenWorldRuntime:
         for rock in self.asteroids.nearby(self.x, self.y, 1700):
             marker = point((rock.x, rock.y)) if rock.active() else None
             if marker is not None:
-                pygame.draw.rect(self._minimap, (93, 112, 126),
-                                 (marker[0] - 1, marker[1] - 1, 3, 3))
+                arte = miniatura_rocha(rock.shape, rock.radius, opcoes_atuais().ativo, 6)
+                self._minimap.blit(arte, arte.get_rect(center=marker))
         for x, y, _radius in self._rifts:
             marker = point((x, y))
             if marker is not None:
-                pygame.draw.rect(self._minimap, (178, 145, 213),
-                                 (marker[0] - 3, marker[1] - 3, 6, 6), 1)
+                arte = miniatura_fenda(opcoes_atuais().ativo, 12)
+                self._minimap.blit(arte, arte.get_rect(center=marker))
         for hole in self.anomalies.black_holes:
             marker = point(hole.position)
             if marker is not None:
-                pygame.draw.circle(self._minimap, (230, 160, 104), marker, 4, 2)
+                arte = miniatura_anomalia(False, opcoes_atuais().ativo, 20)
+                self._minimap.blit(arte, arte.get_rect(center=marker))
         for portal in self.anomalies.wormholes:
             marker = point(portal.position)
             if marker is not None:
-                x, y = marker
-                pygame.draw.ellipse(self._minimap, (118, 216, 231),
-                                    (x - 3, y - 5, 6, 10), 1)
+                arte = miniatura_anomalia(True, opcoes_atuais().ativo, 16)
+                self._minimap.blit(arte, arte.get_rect(center=marker))
 
     def _draw_minimap_contacts(
             self, point: Callable[[tuple[float, float]], tuple[int, int] | None],
@@ -1415,11 +1446,9 @@ class OpenWorldRuntime:
                                        marker, 2)
         mini = point(self._miniboss_world) if self.miniboss.vida > 0 else None
         if mini is not None:
-            x, y = mini
-            pygame.draw.polygon(self._minimap, (255, 156, 203),
-                                ((x, y - 5), (x + 5, y), (x, y + 5), (x - 5, y)), 2)
+            arte = miniatura_entidade(self.miniboss, comic, 18)
+            self._minimap.blit(arte, arte.get_rect(center=mini))
         boss = point(self.BOSS_LAIR) if self.boss.vida > 0 else None
         if boss is not None:
-            x, y = boss
-            pygame.draw.polygon(self._minimap, (255, 210, 100),
-                                ((x, y - 6), (x + 6, y + 4), (x - 6, y + 4)), 2)
+            arte = miniatura_entidade(self.boss, comic, 22)
+            self._minimap.blit(arte, arte.get_rect(center=boss))

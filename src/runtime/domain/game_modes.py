@@ -222,7 +222,7 @@ class OpenWorldModeStrategy:
         with usar_visual(
                 game.config, acabamento_gpu=game.shader_comic_ativo()):
             if self.world.map_open:
-                self.world.render_map(surface)
+                self.world.render_map(surface, game.jogador)
                 return True
             self.world.render(surface, game.jogador)
             if game.estado is EstadoJogo.CUTSCENE:

@@ -15,6 +15,7 @@ from src.runtime.infrastructure.graphics.smooth import (
     desenhar_glow,
     desenhar_poligono,
 )
+from src.runtime.infrastructure.graphics.world_objects import arte_asteroide
 
 INICIO_CHUVA = 5.0
 INTERVALO_CHUVA = 14.0
@@ -25,6 +26,31 @@ CAUDA_EXTERNA = (94, 119, 150)
 CAUDA_INTERNA = (158, 202, 223)
 CABECA_QUENTE = (255, 225, 180)
 FRAGMENTO = (173, 170, 160)
+
+
+@lru_cache(maxsize=192)
+def _arte_meteoro_ativo(raio: int, angulo: int, comic: bool,
+                        reduzido: bool) -> pygame.Surface:
+    """Mantém o corpo opaco e do mesmo tamanho da colisão em todos os modos."""
+    base = pygame.Surface((144, 144), pygame.SRCALPHA)
+    cauda = 24 if reduzido else 60
+    cor = LARANJA if comic else CAUDA_INTERNA
+    desenhar_poligono(base, cor, ((72 - cauda, 72), (68, 66), (68, 78)))
+    forma = tuple((round(math.cos(i * math.tau / 7) * raio),
+                   round(math.sin(i * math.tau / 7) * raio)) for i in range(7))
+    corpo = arte_asteroide(forma, raio, comic)
+    base.blit(corpo, corpo.get_rect(center=(72, 72)))
+    return pygame.transform.rotate(base, angulo)
+
+
+def desenhar_meteoro_ativo(tela: pygame.Surface, centro: tuple[int, int], raio: int,
+                           vx: float, vy: float, *, reduzido: bool = False) -> None:
+    """Mostra a rocha perigosa sem fade, flashes ou alterações na trajetória."""
+    if not tela.get_rect().inflate(180, 180).collidepoint(centro):
+        return
+    angulo = round(math.degrees(math.atan2(-vy, vx)) / 5) * 5
+    arte = _arte_meteoro_ativo(raio, angulo, opcoes_atuais().ativo, reduzido)
+    tela.blit(arte, arte.get_rect(center=centro))
 
 
 @lru_cache(maxsize=12)

@@ -83,7 +83,12 @@ from src.runtime.domain.game_modes import (
     ModeStrategy,
     OpenWorldModeStrategy,
 )
-from src.runtime.infrastructure.graphics.menu_panels import painel_original, texto_painel
+from src.runtime.infrastructure.graphics.menu_panels import (
+    TEXTO_SOBRIO,
+    painel_original,
+    texto_painel,
+    veu_menu_sobrio,
+)
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_botao_cartoon,
     desenhar_cantos,
@@ -222,14 +227,13 @@ class OpcaoMenu:
         cor = (MENU_COR_TEXTO_DESABILITADO if self.desabilitado else
                MENU_COR_TEXTO if selecionado else MENU_COR_TEXTO_SECUNDARIO)
         fonte_base = fonte_sel if selecionado else fonte
+        rotulo_original = self.texto.split("//", 1)[-1].strip()
         fonte_ativa, rotulo = self._ajustar_rotulo(
-            fonte_base, self.texto, rect.width - layout.px(52), layout)
+            fonte_base, rotulo_original, rect.width - layout.px(52), layout)
         chave_texto = (id(fonte_ativa), rotulo, cor, selecionado)
         surf = self._texto_cache.get(chave_texto)
         if surf is None:
-            surf = texto_suave(fonte_ativa, rotulo, cor,
-                               primaria if selecionado else None,
-                               layout.px(3) if selecionado else 0, True)
+            surf = fonte_ativa.render(rotulo, True, cor)
             self._texto_cache[chave_texto] = surf
         texto_rect = surf.get_rect(midleft=(rect.x + layout.px(24), rect.centery))
         self._blit(tela, surf, texto_rect.x, texto_rect.centery, alfa)
@@ -262,10 +266,10 @@ class OpcaoMenu:
         altura_base = max(8, round(fonte_base.get_height() / layout.escala))
         minimo = MENU_FONTE_MINIMA_ROTULO
         for tamanho in range(altura_base, minimo - 1, -1):
-            fonte_ajustada = layout.fonte_titulo(tamanho)
+            fonte_ajustada = layout.fonte_texto(tamanho)
             if fonte_ajustada.size(texto)[0] <= largura_maxima:
                 return fonte_ajustada, texto
-        fonte_ajustada = layout.fonte_titulo(minimo)
+        fonte_ajustada = layout.fonte_texto(minimo)
         rotulo = texto
         while rotulo and fonte_ajustada.size(rotulo + "…")[0] > largura_maxima:
             rotulo = rotulo[:-1]
@@ -2434,7 +2438,8 @@ class MenuPrincipal:
         nome = (self.jogo.config["tema"], opcoes_atuais().estilo)
         if nome not in self._titulo_cache:
             titulo = texto_suave(self.fonte_logo, NOME_JOGO, BRANCO,
-                                 tema["primaria"], 16, True)
+                                 tema["primaria"] if opcoes_atuais().ativo else None,
+                                 16 if opcoes_atuais().ativo else 0, True)
             titulo_eco = texto_suave(self.fonte_logo, NOME_JOGO,
                                      tema["primaria"], None, 0, False)
             titulo_glitch_ciano = texto_suave(
@@ -2443,7 +2448,7 @@ class MenuPrincipal:
             sub = self._espacado(self.fonte_legenda, "ENTRE NA FENDA.", 4,
                                  cor_sub)
             tag = self._espacado(self.fonte_legenda, "// COMBATE DIMENSIONAL",
-                                 2, tema["secundaria"])
+                                 2, tema["secundaria"] if opcoes_atuais().ativo else TEXTO_SOBRIO)
             self._titulo_cache[nome] = {
                 "incarnate": titulo, "incarnate_eco": titulo_eco,
                 "incarnate_glitch_ciano": titulo_glitch_ciano,
@@ -2499,7 +2504,7 @@ class MenuPrincipal:
     # -------------------------------------------------------------- desenho
 
     def _desenhar_linhas_diagonais(self, tela, tema):
-        if self.entrada_t < 0.12:
+        if self.entrada_t < 0.12 or not opcoes_atuais().ativo:
             return
         layout = self.layout
         if opcoes_atuais().ativo:
@@ -2521,6 +2526,8 @@ class MenuPrincipal:
 
     def _desenhar_linha_titulo(self, tela, tema, x, y, alfa):
         """Linha de acento entre o titulo tipografico e o subtitulo."""
+        if not opcoes_atuais().ativo:
+            return
         layout = self.layout
         larg = layout.px(300)
         surf = pygame.Surface((larg, layout.px(14)), pygame.SRCALPHA)
@@ -2546,13 +2553,14 @@ class MenuPrincipal:
         p_sub = self._frac(0.55, 0.4)
         off = int((1 - ease_out_back(p_titulo)) * -layout.px(300))
         alfa = int(255 * ease_out(p_titulo))
-        if p_bloco > 0:
+        if p_bloco > 0 and opcoes_atuais().ativo:
             bloco = self._bloco_logo(tema)
             self._blit_alfa(tela, bloco, layout.ponto(TOPO_ESQUERDA, 36, 166),
                             255 * ease_out(p_bloco))
         alfa_eco = int(220 * ease_out(p_bloco))
-        self._blit_alfa(tela, ts["incarnate_eco"],
-                        (layout.px(62) + off, layout.px(171)), alfa_eco)
+        if opcoes_atuais().ativo:
+            self._blit_alfa(tela, ts["incarnate_eco"],
+                            (layout.px(62) + off, layout.px(171)), alfa_eco)
         self._blit_alfa(tela, ts["incarnate"],
                         (layout.px(56) + off, layout.px(165)), alfa)
         self._desenhar_glitch_titulo(tela, ts, off)
@@ -2569,7 +2577,7 @@ class MenuPrincipal:
                         (layout.px(60) + off, layout.px(tag_y)), alfa_sub)
 
     def _desenhar_seta(self, tela, tema):
-        if self.entrada_t < 0.7:
+        if self.entrada_t < 0.7 or not opcoes_atuais().ativo:
             return
         op = self.opcoes[self.opcao_selecionada]
         x = self.x_opcoes - self.layout.px(MENU_MARCADOR_RECUO)
@@ -2588,6 +2596,8 @@ class MenuPrincipal:
 
     def _desenhar_glitch_titulo(self, tela, superficies, deslocamento):
         """Aplica um pulso cromático curto, limitado e desligável nas opções."""
+        if not opcoes_atuais().ativo:
+            return
         intensidade = self.jogo.config["intensidade_flash"]
         if intensidade == "DESLIGADO":
             return
@@ -2626,7 +2636,7 @@ class MenuPrincipal:
             painel = pygame.Surface((layout.largura - margem * 2,
                                      altura_painel), pygame.SRCALPHA)
             painel.fill(MENU_COR_PAINEL_RODAPE + (MENU_ALPHA_PAINEL_RODAPE,))
-            pygame.draw.line(painel, tema["secundaria"] + (210,),
+            pygame.draw.line(painel, TEXTO_SOBRIO + (100,),
                              (0, 1), (painel.get_width(), 1), max(1, layout.px(2)))
             self._rodape_cache[chave_painel] = painel
         tela.blit(painel, (margem, topo))
@@ -2716,6 +2726,8 @@ class MenuPrincipal:
         layout = self.layout
         tema = tema_atual(self.jogo.config["tema"])
         self.fundo.desenhar(tela, cor_fundo_cutscene=cor_fundo_cutscene)
+        if not opcoes_atuais().ativo:
+            tela.blit(veu_menu_sobrio(tela.get_size()), (0, 0))
         at_root = self.subestado == "MENU"
         summary = self.jogo.profile_service.menu_profile_summary()
         if at_root:
@@ -2737,7 +2749,8 @@ class MenuPrincipal:
             ship_scale = 1.35 * layout.escala
         if not at_root or summary:
             self.nave.desenhar(tela, skin, ship_x, ship_y, ship_scale, tema)
-        self.hud.desenhar(tela, tema, self.jogo.config["estilo_visual"])
+        if opcoes_atuais().ativo:
+            self.hud.desenhar(tela, tema, self.jogo.config["estilo_visual"])
         if self.subestado == "PERFIS":
             self.profile_screen.draw(tela)
         elif self.subestado == "FASES":
