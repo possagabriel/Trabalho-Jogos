@@ -101,6 +101,35 @@ def test_fundo_atualiza_e_desenha():
 # FundoMenuParallax
 # ---------------------------------------------------------------------------
 
+def test_imagem_principal_usa_cover_cache_e_preserva_asset():
+    pygame.init()
+    imagem = pygame.Surface((400, 200))
+    imagem.fill((150, 0, 0))
+    imagem.fill((0, 150, 0), pygame.Rect(100, 0, 100, 200))
+    imagem.fill((0, 0, 150), pygame.Rect(200, 0, 100, 200))
+    antes = pygame.image.tobytes(imagem, "RGB")
+    with mock.patch("game.menu_scene.carregar_imagem", return_value=imagem) as carregar:
+        fundo = FundoMenuParallax(Layout(200, 200))
+        tela = pygame.Surface((200, 200))
+        assert fundo.desenhar_imagem_principal(tela)
+        assert tela.get_at((10, 100))[:3] == (0, 150, 0)
+        assert tela.get_at((190, 100))[:3] == (0, 0, 150)
+        assert fundo.desenhar_imagem_principal(tela)
+        fundo.set_layout(Layout(320, 180))
+        assert fundo.desenhar_imagem_principal(pygame.Surface((320, 180)))
+    carregar.assert_called_once_with("fundo-menuprincipal.png")
+    assert pygame.image.tobytes(imagem, "RGB") == antes
+
+
+def test_imagem_principal_ausente_permite_fallback_sem_repetir_leitura():
+    pygame.init()
+    with mock.patch("game.menu_scene.carregar_imagem", return_value=None) as carregar:
+        fundo = FundoMenuParallax(Layout(900, 700))
+        tela = pygame.Surface((900, 700))
+        assert not fundo.desenhar_imagem_principal(tela)
+        assert not fundo.desenhar_imagem_principal(tela)
+    carregar.assert_called_once()
+
 def test_fundo_menu_compila_parallax_uma_vez_em_baixa():
     pygame.init()
     cenario = mock.Mock()

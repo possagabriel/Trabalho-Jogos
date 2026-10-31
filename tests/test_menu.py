@@ -106,6 +106,25 @@ def test_menu_principal_tem_cinco_acoes_do_mesmo_tamanho():
     assert [option.texto for option in menu.opcoes] == ROTULOS_ESPERADOS
 
 
+def test_png_da_principal_nao_recebe_cena_procedural_e_submenus_preservam_fundo():
+    jogo, menu = novo_menu()
+    configurar_menu_original(jogo, menu)
+    tela = pygame.Surface((menu.layout.largura, menu.layout.altura))
+    with usar_visual({"estilo_visual": "ORIGINAL"}), \
+            mock.patch.object(menu.fundo, "desenhar_imagem_principal", return_value=True) as png, \
+            mock.patch.object(menu.fundo, "desenhar") as procedural, \
+            mock.patch.object(menu.animacao_original, "desenhar") as cena:
+        menu.desenhar(tela)
+        png.assert_called_once()
+        procedural.assert_not_called()
+        cena.assert_not_called()
+        menu.subestado = "CONFIG"
+        menu.desenhar(tela)
+        png.assert_called_once()
+        procedural.assert_called_once()
+        cena.assert_called_once()
+
+
 def test_tab_e_shift_tab_navegam_menu_e_hub():
     _, menu = novo_menu()
     for tela, atributo, quantidade in ((menu.tela_principal, "opcao_selecionada", 5),

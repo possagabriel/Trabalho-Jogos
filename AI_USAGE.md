@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex conectou `fundo-menuprincipal.png` à tela principal, com cover, cache e fallback; 138 testes direcionados e Ruff aprovados, incluindo preservação do asset e separação dos submenus. Sem screenshots ou alteração da imagem.
+
 - Codex refinou o menu ORIGINAL mantendo o estilo orbital: descrições por ação, guia de foco, botões segmentados e ícones de submenus; testes de geometria e estados escritos antes das alterações, 180 testes direcionados e Ruff aprovados. Conferência visual jogando pendente.
 
 - Codex remodelou a identidade visual do ORIGINAL e restaurou as opções em coluna a pedido do usuário: console orbital azul-petróleo/âmbar, ícones, recortes e tipografia; 185 testes direcionados e Ruff aprovados, incluindo contraste, navegação e efeitos reduzidos, sem screenshots ou benchmarks. Validação visual jogando pendente.

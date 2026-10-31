@@ -2757,11 +2757,14 @@ class MenuPrincipal:
         self._aplicar_layout_opcoes()
         layout = self.layout
         tema = tema_atual(self.jogo.config["tema"])
-        self.fundo.desenhar(tela, cor_fundo_cutscene=cor_fundo_cutscene)
-        if not opcoes_atuais().ativo:
+        at_root = self.subestado == "MENU"
+        imagem_principal = at_root and self.fundo.desenhar_imagem_principal(
+            tela, cor_fundo_cutscene=cor_fundo_cutscene)
+        if not imagem_principal:
+            self.fundo.desenhar(tela, cor_fundo_cutscene=cor_fundo_cutscene)
+        if not opcoes_atuais().ativo and not imagem_principal:
             tela.blit(veu_menu_original(tela.get_size()), (0, 0))
             self.animacao_original.desenhar(tela, layout)
-        at_root = self.subestado == "MENU"
         summary = self.jogo.profile_service.menu_profile_summary()
         if at_root:
             self.tela_principal.desenhar_fundo_cartao(tela, summary)
