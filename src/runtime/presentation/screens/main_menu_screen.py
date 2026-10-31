@@ -11,7 +11,6 @@ from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.infrastructure.graphics.theme import (
     MENU_CARTAO_PERFIL_ALPHA,
     MENU_CARTAO_PERFIL_COR,
-    MENU_CARTAO_PERFIL_ESPESSURA,
     MENU_CARTAO_PERFIL_FONT_SIZE,
     MENU_CARTAO_PERFIL_FONT_SIZE_PEQUENA,
     MENU_CARTAO_PERFIL_RECT,
@@ -25,8 +24,9 @@ from src.runtime.infrastructure.graphics.menu_panels import (
     ACENTO_ORIGINAL,
     BORDA_ORIGINAL,
     TEXTO_ORIGINAL,
+    cor_menu,
     icone_menu_original,
-    painel_original,
+    painel_menu,
     texto_painel,
 )
 from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, ease_out, linha_suave
@@ -57,16 +57,14 @@ class TelaPrincipalJogo:
         tema = tema_atual(menu.jogo.config["tema"])
         menu._desenhar_linhas_diagonais(tela, tema)
         menu._desenhar_bloco_titulo(tela, tema)
-        if not opcoes_atuais().ativo:
-            self.desenhar_contexto_original(tela)
-            self._desenhar_guia_original(tela)
+        self.desenhar_contexto_original(tela)
+        self._desenhar_guia_original(tela)
         for indice, opcao in enumerate(menu.opcoes):
             progresso = menu._frac(0.34 + indice * 0.07, 0.42)
-            original = not opcoes_atuais().ativo
-            if original and menu.jogo.config["intensidade_flash"] != "NORMAL":
+            if menu.jogo.config["intensidade_flash"] != "NORMAL":
                 progresso = 1.0
             deslocamento = int((1 - ease_out(progresso))
-                               * menu.layout.px(-12 if original else 18))
+                               * menu.layout.px(-12))
             opcao.desabilitado = False
             if indice == 1:
                 opcao.novo = bool(menu._novidades("hangar"))
@@ -102,7 +100,7 @@ class TelaPrincipalJogo:
         """Apresenta o significado da ação focada em um quadro do console orbital."""
         menu, layout = self.menu, self.menu.layout
         rect = self.contexto_rect()
-        painel = painel_original(rect.size, (0, 0, 0), BORDA_ORIGINAL, alpha=245)
+        painel = painel_menu(rect.size, (0, 0, 0), BORDA_ORIGINAL, alpha=245)
         tela.blit(painel, rect)
         titulo, linhas = self.contexto_opcao()
         indice = menu.opcoes[menu.opcao_selecionada].texto.split("//", 1)[0].strip()
@@ -123,11 +121,11 @@ class TelaPrincipalJogo:
         rects = [opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, layout)
                  for opcao in menu.opcoes]
         x = menu.x_opcoes - layout.px(12)
-        linha_suave(tela, BORDA_ORIGINAL, (x, rects[0].centery),
+        linha_suave(tela, cor_menu(BORDA_ORIGINAL), (x, rects[0].centery),
                      (x, rects[-1].centery), 1)
         for indice, rect in enumerate(rects):
             ativo = indice == menu.opcao_selecionada
-            cor = ACENTO_ORIGINAL if ativo else BORDA_ORIGINAL
+            cor = cor_menu(ACENTO_ORIGINAL if ativo else BORDA_ORIGINAL)
             desenhar_circulo(tela, cor, (x, rect.centery), layout.px(4 if ativo else 2))
 
     def cartao_rect(self) -> tuple[int, int, int, int]:
@@ -138,42 +136,16 @@ class TelaPrincipalJogo:
         return tuple(menu.layout.px(value) for value in tokens)
 
     def desenhar_fundo_cartao(self, tela: pygame.Surface, resumo) -> None:
-        """Desenha o painel do perfil antes da nave de prévia."""
+        """Desenha o cartão compartilhado antes da nave de prévia."""
         rect = pygame.Rect(*self.cartao_rect())
-        tema = tema_atual(self.menu.jogo.config["tema"])
-        border = tema["secundaria"] if resumo else tema["borda_fraco"]
-        if self.menu.jogo.config["estilo_visual"] == "ORIGINAL":
-            panel = painel_original(rect.size, MENU_CARTAO_PERFIL_COR,
-                                     tuple(border[:3]), alpha=MENU_CARTAO_PERFIL_ALPHA,
-                                     raio=self.menu.layout.px(12))
-            tela.blit(panel, rect)
-            return
-        key = (rect.size, tuple(border), tuple(tema["primaria"]))
-        panel = self._card_cache.get(key)
-        if panel is None:
-            panel = pygame.Surface(rect.size, pygame.SRCALPHA)
-            pygame.draw.rect(
-                panel, MENU_CARTAO_PERFIL_COR + (MENU_CARTAO_PERFIL_ALPHA,),
-                panel.get_rect(), border_radius=self.menu.layout.px(12),
-            )
-            pygame.draw.rect(
-                panel, border, panel.get_rect(), MENU_CARTAO_PERFIL_ESPESSURA,
-                border_radius=self.menu.layout.px(12),
-            )
-            pygame.draw.line(
-                panel, tema["primaria"],
-                (self.menu.layout.px(16), self.menu.layout.px(35)),
-                (rect.width - self.menu.layout.px(16), self.menu.layout.px(35)),
-                max(1, self.menu.layout.px(1)),
-            )
-            self._card_cache[key] = panel
-        tela.blit(panel, rect)
+        tela.blit(painel_menu(rect.size, MENU_CARTAO_PERFIL_COR, BORDA_ORIGINAL,
+                                alpha=MENU_CARTAO_PERFIL_ALPHA), rect)
 
     def _text(self, font, text: str, color: tuple[int, int, int]) -> pygame.Surface:
-        key = (id(font), text, tuple(color))
+        key = (opcoes_atuais(), id(font), text, tuple(color))
         surface = self._text_cache.get(key)
         if surface is None:
-            surface = font.render(text, True, color)
+            surface = texto_painel(font, text, color, max(1, font.size(text)[0]), font.get_height())
             self._text_cache[key] = surface
         return surface
 
@@ -218,12 +190,15 @@ class TelaPrincipalJogo:
         deslocamento = 0 if reduzido else layout.px((1 - p) * -12)
         flutuar = layout.px(math.sin(menu.animacao_original.tempo * 0.9) * 2)
         selo = pygame.Rect(layout.px(56), layout.px(126), layout.px(330), layout.px(30))
-        base = painel_original(selo.size, (0, 0, 0), ACENTO_ORIGINAL)
+        base = painel_menu(selo.size, (0, 0, 0), ACENTO_ORIGINAL)
         menu._blit_alfa(tela, base, selo.topleft, round(p * 255))
-        rotulo = texto_painel(layout.fonte_texto(16), "CONSOLE ORBITAL // NAVEGAÇÃO",
+        legenda = "CONSOLE COMIC // NAVEGAÇÃO" if opcoes_atuais().ativo else \
+            "CONSOLE ORBITAL // NAVEGAÇÃO"
+        rotulo = texto_painel(layout.fonte_texto(16), legenda,
                               ACENTO_ORIGINAL, selo.width - layout.px(24), selo.height)
         menu._blit_alfa(tela, rotulo, rotulo.get_rect(center=selo.center).topleft, round(p * 255))
-        titulo = self._text(layout.fonte_texto(76), "INCARNATE", TEXTO_ORIGINAL)
+        titulo = texto_painel(layout.fonte_texto(76), "INCARNATE", TEXTO_ORIGINAL,
+                              layout.px(530), layout.px(96))
         rect = titulo.get_rect(topleft=(layout.px(56), layout.px(165) + deslocamento + flutuar))
         menu._blit_alfa(tela, titulo, rect.topleft, round(p * 255))
         sub = superficies["sub"]

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- COMIC recebe a estrutura de menus do ORIGINAL, incluindo ajuda contextual, ícones, expositor do hangar e seis abas de configurações, com tipografia de quadrinhos, tinta/papel e retícula; caches distinguem os acabamentos e respeitam as opções de textura.
 - Configurações ORIGINAL passam a usar abas Áudio/Tela/Controles/Visual/Shader/Conforto, ajuda para cada opção e barras arrastáveis; Tab, rolagem e Ctrl+S complementam a navegação. Resolução, remapeamento, calibração e confirmação seguem o acabamento orbital sem piscar.
 - Hangar ORIGINAL recebe catálogo compacto, expositor da nave selecionada, plataforma orbital, estados de compra/equipagem e ações com ícones; a prévia compartilha o estilo e indica visuais bloqueados.
 - A tela principal usa `fundo-menuprincipal.png` sem deformação, mantendo o estilo dos controles e o fundo procedural nos submenus; carregamento e redimensionamento ficam em cache.

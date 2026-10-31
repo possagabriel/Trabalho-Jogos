@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.infrastructure.graphics.theme import MENU_RESUMO_CONTINUAR_FONT_SIZE, tema_atual
+from src.infrastructure.graphics.theme import MENU_RESUMO_CONTINUAR_FONT_SIZE
 from src.runtime.infrastructure.graphics.menu_animation import FocoAnimado, desenhar_trilha_foco
 from src.runtime.infrastructure.graphics.menu_panels import (
     ACENTO_ORIGINAL,
     TEXTO_ATIVO_ORIGINAL,
     TEXTO_ORIGINAL,
     icone_menu_original,
-    painel_original,
+    painel_menu,
     texto_painel,
 )
 
@@ -87,53 +87,30 @@ class MenuHubScreen:
         )
 
     def desenhar(self, surface: pygame.Surface) -> None:
-        """Desenha as opções do hub sobre o fundo atual do menu."""
-        menu = self.menu
-        theme = tema_atual(menu.jogo.config["tema"])
+        """Compartilha hierarquia, ícones e resumos nos dois acabamentos."""
+        menu, layout = self.menu, self.menu.layout
         panel = self._panel()
-        original = menu.jogo.config["estilo_visual"] == "ORIGINAL"
-        if original:
-            surface.blit(painel_original(
-                panel.size, tuple(theme["fundo_painel"][:3]),
-                tuple(theme["primaria"][:3]), raio=menu.layout.px(16)), panel)
-        else:
-            pygame.draw.rect(surface, (4, 7, 23), panel, border_radius=16)
-            pygame.draw.rect(surface, theme["primaria"], panel, 2, border_radius=16)
-        title = "JOGAR" if self.kind == "JOGAR" else "PERFIL"
-        title_surface = menu.fonte_cabecalho.render(
-            title, True, TEXTO_ORIGINAL if original else theme["primaria"])
-        surface.blit(title_surface, title_surface.get_rect(
-            midtop=(panel.centerx, panel.y + menu.layout.px(26))))
+        surface.blit(painel_menu(panel.size, (0, 0, 0), ACENTO_ORIGINAL,
+                                  raio=layout.px(16)), panel)
+        title = texto_painel(menu.fonte_cabecalho, self.kind, TEXTO_ORIGINAL,
+                             panel.w - layout.px(48), layout.px(42))
+        surface.blit(title, title.get_rect(midtop=(panel.centerx, panel.y + layout.px(26))))
         for index, ((label, action), rect) in enumerate(zip(self.entries, self._rects())):
-            selected = index == self.selection
             disabled = action == "continuar" and not menu._tem_save()
-            color = (105, 111, 135) if disabled else (
-                theme["primaria"] if selected else theme["secundaria"])
-            if original and not disabled:
-                color = TEXTO_ATIVO_ORIGINAL if selected else TEXTO_ORIGINAL
-            conteudo = rect
-            if original:
-                conteudo = self._desenhar_opcao_original(surface, rect, action, index, disabled)
-            else:
-                pygame.draw.rect(surface, (8, 13, 32), rect, border_radius=10)
-                pygame.draw.rect(surface, color, rect, 3 if selected else 1,
-                                 border_radius=10)
-            recuo = round(menu.layout.px(8) * self.focos[index].valor) if original else 0
+            selected = index == self.selection and not disabled
+            color = TEXTO_ATIVO_ORIGINAL if selected else TEXTO_ORIGINAL
+            conteudo = self._desenhar_opcao_original(surface, rect, action, index, disabled)
+            recuo = round(layout.px(8) * self.focos[index].valor)
             self._desenhar_cartao(surface, conteudo.move(recuo, 0), label, action, color)
-            if self.kind == "PERFIL" and action == "memorias" \
-                    and menu._novidades("memorias"):
-                self._badge(surface, rect, theme["terciaria"])
-            elif action == "continuar" and disabled and not original:
-                hint = menu.fonte_pequena.render("SEM SAVE", True, color)
-                surface.blit(hint, hint.get_rect(
-                    midright=(rect.right - menu.layout.px(14), rect.centery)))
-        self._desenhar_voltar(surface, theme, original)
+            if self.kind == "PERFIL" and action == "memorias" and menu._novidades("memorias"):
+                self._badge(surface, rect, ACENTO_ORIGINAL)
+        self._desenhar_voltar(surface)
 
     def _desenhar_opcao_original(self, surface: pygame.Surface, rect: pygame.Rect,
                                   action: str, index: int, disabled: bool) -> pygame.Rect:
         menu, layout = self.menu, self.menu.layout
         selected = index == self.selection and not disabled
-        surface.blit(painel_original(rect.size, (0, 0, 0), ACENTO_ORIGINAL,
+        surface.blit(painel_menu(rect.size, (0, 0, 0), ACENTO_ORIGINAL,
                                      selecionado=selected, raio=layout.px(10), botao=True), rect)
         icone = icone_menu_original(action, selected, layout.px(30), desabilitado=disabled)
         surface.blit(icone, icone.get_rect(center=(rect.x + layout.px(29), rect.centery)))
@@ -144,18 +121,13 @@ class MenuHubScreen:
         return pygame.Rect(rect.x + layout.px(56), rect.y,
                            rect.width - layout.px(72), rect.height)
 
-    def _desenhar_voltar(self, surface: pygame.Surface, theme: dict, original: bool) -> None:
+    def _desenhar_voltar(self, surface: pygame.Surface) -> None:
         menu = self.menu
         rect = self._back_rect()
-        if original:
-            hover = rect.collidepoint(menu.mouse)
-            surface.blit(painel_original(rect.size, (0, 0, 0), ACENTO_ORIGINAL,
-                                         selecionado=hover, raio=menu.layout.px(6)), rect)
-            cor = ACENTO_ORIGINAL if hover else TEXTO_ORIGINAL
-        else:
-            pygame.draw.rect(surface, (8, 13, 32), rect, border_radius=6)
-            pygame.draw.rect(surface, theme["secundaria"], rect, 1, border_radius=6)
-            cor = (210, 220, 240)
+        hover = rect.collidepoint(menu.mouse)
+        surface.blit(painel_menu(rect.size, (0, 0, 0), ACENTO_ORIGINAL,
+                                  selecionado=hover, botao=True, segmentado=False), rect)
+        cor = TEXTO_ATIVO_ORIGINAL if hover else TEXTO_ORIGINAL
         hint = texto_painel(menu.fonte_pequena, "ESC  VOLTAR", cor,
                             rect.width - menu.layout.px(12), rect.height)
         surface.blit(hint, hint.get_rect(center=rect.center))
@@ -165,16 +137,10 @@ class MenuHubScreen:
         menu = self.menu
         badge = pygame.Rect(0, 0, menu.layout.px(78), menu.layout.px(27))
         badge.midright = (rect.right - menu.layout.px(12), rect.centery)
-        if menu.jogo.config["estilo_visual"] == "ORIGINAL":
-            surface.blit(painel_original(badge.size, (0, 0, 0), ACENTO_ORIGINAL,
-                                         selecionado=True, botao=True,
-                                         raio=menu.layout.px(4)), badge)
-            text = texto_painel(menu.fonte_pequena, "NOVO", TEXTO_ATIVO_ORIGINAL,
-                                badge.width - menu.layout.px(10), badge.height - menu.layout.px(4))
-            surface.blit(text, text.get_rect(center=badge.center))
-            return
-        pygame.draw.rect(surface, color, badge, border_radius=7)
-        text = menu.fonte_pequena.render("NOVO", True, (255, 255, 255))
+        surface.blit(painel_menu(badge.size, (0, 0, 0), ACENTO_ORIGINAL,
+                                  selecionado=True, botao=True, segmentado=False), badge)
+        text = texto_painel(menu.fonte_pequena, "NOVO", TEXTO_ATIVO_ORIGINAL,
+                            badge.width - menu.layout.px(10), badge.height - menu.layout.px(4))
         surface.blit(text, text.get_rect(center=badge.center))
 
     def _desenhar_cartao(self, surface: pygame.Surface, rect: pygame.Rect,

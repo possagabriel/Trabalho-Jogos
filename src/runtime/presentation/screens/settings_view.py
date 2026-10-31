@@ -1,4 +1,4 @@
-"""Apresentação orbital e geometria das configurações no estilo ORIGINAL."""
+"""Geometria e apresentação compartilhadas das configurações dos dois estilos."""
 
 from __future__ import annotations
 
@@ -10,14 +10,16 @@ import pygame
 
 from src.core.constants import NEGRO
 from src.core.settings import ACOES_CONTROLE, RESOLUCOES
+from src.infrastructure.graphics.comic_theme import OpcoesVisuais, opcoes_atuais
 from src.runtime.infrastructure.graphics.menu_panels import (
     ACENTO_ORIGINAL,
     BORDA_ORIGINAL,
     FUNDO_ORIGINAL,
     TEXTO_ATIVO_ORIGINAL,
     TEXTO_ORIGINAL,
+    cor_menu,
     icone_menu_original,
-    painel_original,
+    painel_menu,
     texto_painel,
 )
 from src.runtime.infrastructure.graphics.smooth import linha_suave, retangulo_suave
@@ -103,10 +105,15 @@ def geometria_config_original(layout: Layout) -> GeometriaConfiguracoes:
     return GeometriaConfiguracoes(painel, abas, lista, contexto)
 
 
-@lru_cache(maxsize=128)
 def _paragrafo(fonte: pygame.font.Font, texto: str, cor: tuple,
                tamanho: tuple[int, int]) -> pygame.Surface:
     """Cacheia texto com quebra de palavras e ajuste à altura disponível."""
+    return _paragrafo_cache(fonte, texto, cor, tamanho, opcoes_atuais())
+
+
+@lru_cache(maxsize=256)
+def _paragrafo_cache(fonte: pygame.font.Font, texto: str, cor: tuple,
+                     tamanho: tuple[int, int], visual: OpcoesVisuais) -> pygame.Surface:
     largura, altura = tamanho
     linhas, atual = [], ""
     for palavra in texto.split():
@@ -127,7 +134,7 @@ def _paragrafo(fonte: pygame.font.Font, texto: str, cor: tuple,
 
 
 class PainelConfiguracoesOriginal:
-    """Desenha a mesma configuração existente como um console orbital."""
+    """Desenha a configuração existente com acabamento ORIGINAL ou COMIC."""
 
     def __init__(self, tela: TelaConfiguracoesJogo) -> None:
         self.tela = tela
@@ -168,13 +175,13 @@ class PainelConfiguracoesOriginal:
         destino.blit(arte, arte.get_rect(center=rect.center))
 
     def _painel(self, destino: pygame.Surface, rect: pygame.Rect, ativo: bool = False) -> None:
-        destino.blit(painel_original(rect.size, FUNDO_ORIGINAL, BORDA_ORIGINAL,
+        destino.blit(painel_menu(rect.size, FUNDO_ORIGINAL, BORDA_ORIGINAL,
                                        selecionado=ativo), rect)
 
     def _botao(self, destino: pygame.Surface, rect: pygame.Rect, rotulo: str,
                 icone: str, ativo: bool = False) -> None:
         layout = self.menu.layout
-        destino.blit(painel_original(rect.size, FUNDO_ORIGINAL, BORDA_ORIGINAL,
+        destino.blit(painel_menu(rect.size, FUNDO_ORIGINAL, BORDA_ORIGINAL,
                                        selecionado=ativo, botao=True), rect)
         arte = icone_menu_original(icone, ativo, layout.px(22))
         destino.blit(arte, arte.get_rect(center=(rect.x + layout.px(20), rect.centery)))
@@ -232,7 +239,7 @@ class PainelConfiguracoesOriginal:
         abas = zip(CATEGORIAS_CONFIG, self.geometria().abas)
         for indice, ((nome, _grupo), aba) in enumerate(abas):
             ativo = indice == categoria
-            destino.blit(painel_original(aba.size, FUNDO_ORIGINAL, BORDA_ORIGINAL,
+            destino.blit(painel_menu(aba.size, FUNDO_ORIGINAL, BORDA_ORIGINAL,
                                            selecionado=ativo, botao=True, segmentado=False), aba)
             self._texto(destino, nome, aba.inflate(-layout.px(10), -layout.px(6)), 18,
                          TEXTO_ATIVO_ORIGINAL if ativo else TEXTO_ORIGINAL)
@@ -261,13 +268,13 @@ class PainelConfiguracoesOriginal:
         if menu._eh_slider_config(tipo):
             fracao = self.tela.fracao_slider(indice)
             trilha = pygame.Rect(x0, rect.centery - layout.px(3), x1 - x0, layout.px(6))
-            retangulo_suave(destino, BORDA_ORIGINAL, trilha, layout.px(3))
+            retangulo_suave(destino, cor_menu(BORDA_ORIGINAL), trilha, layout.px(3))
             preenchido = trilha.copy()
             preenchido.w = max(1, round(trilha.w * fracao))
-            retangulo_suave(destino, ACENTO_ORIGINAL, preenchido, layout.px(3))
+            retangulo_suave(destino, cor_menu(ACENTO_ORIGINAL), preenchido, layout.px(3))
             marcador = pygame.Rect(x0 + preenchido.w - layout.px(4),
                                    rect.centery - layout.px(9), layout.px(8), layout.px(18))
-            retangulo_suave(destino, TEXTO_ORIGINAL, marcador, layout.px(2))
+            retangulo_suave(destino, cor_menu(TEXTO_ORIGINAL), marcador, layout.px(2))
             self._texto(destino, self.tela.valor_opcao(indice),
                          pygame.Rect(x1 + layout.px(8), rect.y,
                                      rect.right - x1 - layout.px(14), rect.h), 18)
@@ -338,9 +345,9 @@ class PainelConfiguracoesOriginal:
         layout, menu = self.menu.layout, self.menu
         menu._cabecalho_sub_animado(destino, "CONFIGURAÇÕES // AJUSTAR TELA", ACENTO_ORIGINAL)
         frame = menu._frame_janela()
-        retangulo_suave(destino, ACENTO_ORIGINAL, frame, 1, 2)
+        retangulo_suave(destino, cor_menu(ACENTO_ORIGINAL), frame, 1, 2)
         for dx, dy in ((layout.px(60), 0), (0, layout.px(60))):
-            linha_suave(destino, BORDA_ORIGINAL,
+            linha_suave(destino, cor_menu(BORDA_ORIGINAL),
                          (frame.centerx - dx, frame.centery - dy),
                          (frame.centerx + dx, frame.centery + dy), 1)
         cfg = menu.jogo.config

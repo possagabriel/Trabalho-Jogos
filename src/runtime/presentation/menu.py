@@ -29,8 +29,7 @@ from src.core.settings import (
     escala_visual,
 )
 from src.core.version import versao_projeto
-from src.infrastructure.graphics.comic_render import painel_tinta, texto_tinta
-from src.infrastructure.graphics.comic_theme import LARANJA, PAPEL, opcoes_atuais
+from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.infrastructure.graphics.theme import (
     MENU_4_3_LARGURA_COLUNA,
     MENU_4_3_X_COLUNA_FRACAO,
@@ -73,8 +72,6 @@ from src.infrastructure.ui.layout import (
     ALTURA_BASE,
     CENTRO,
     LARGURA_BASE,
-    TOPO_DIREITA,
-    TOPO_ESQUERDA,
     Layout,
 )
 from src.runtime.domain.entities.player import Jogador
@@ -92,22 +89,19 @@ from src.runtime.infrastructure.graphics.menu_panels import (
     ACENTO_ORIGINAL,
     TEXTO_ATIVO_ORIGINAL,
     TEXTO_ORIGINAL,
+    cor_menu,
     icone_menu_original,
-    painel_original,
+    painel_menu,
     texto_painel,
     veu_menu_original,
 )
 from src.runtime.infrastructure.graphics.smooth import (
-    desenhar_botao_cartoon,
     desenhar_cantos,
-    desenhar_estrela,
     desenhar_glow,
-    desenhar_painel_cartoon,
     desenhar_poligono,
     ease_out,
     ease_out_back,
     linha_suave,
-    painel_glass,
     retangulo_suave,
     texto_suave,
 )
@@ -205,24 +199,15 @@ class OpcaoMenu:
                  deslocamento, alfa, layout):
         self.deslocamento_visual = int(deslocamento)
         rect = self.get_rect(x, fonte, layout)
-        if opcoes_atuais().ativo:
-            painel = painel_tinta(rect.size, LARANJA if selecionado else PAPEL)
-            self._blit(tela, painel, rect.centerx, rect.centery, alfa, centrado=True)
-            surf = texto_tinta(self.texto, max(12, int(fonte.get_height() * .65)),
-                              LARANJA if selecionado else PAPEL)
-            self._blit(tela, surf, rect.x + layout.px(28), self.y, alfa)
-            if self.novo:
-                self._desenhar_selo(tela, rect, tema, alfa, layout)
-            return
         primaria = tema["primaria"]
         secundaria = tema["secundaria"]
-        chave = (rect.size, tuple(primaria), tuple(secundaria), selecionado,
+        chave = (opcoes_atuais(), rect.size, tuple(primaria), tuple(secundaria), selecionado,
                  self.desabilitado)
         painel = self._SUPERFICIES_BOTAO.get(chave)
         if painel is None:
             cor_borda = (MENU_COR_TEXTO_DESABILITADO if self.desabilitado else
                          primaria if selecionado else tema["borda_fraco"])
-            painel = painel_original(
+            painel = painel_menu(
                 rect.size, tuple(tema["fundo_painel"][:3]), tuple(cor_borda[:3]),
                 selecionado=selecionado and not self.desabilitado,
                 raio=layout.px(10),
@@ -243,7 +228,8 @@ class OpcaoMenu:
         rotulo_original = self.texto.split("//", 1)[-1].strip()
         fonte_ativa, rotulo = self._ajustar_rotulo(
             fonte_base, rotulo_original, rect.width - layout.px(118), layout)
-        chave_texto = (id(fonte_ativa), rotulo, cor, selecionado, bool(self.descricao))
+        chave_texto = (opcoes_atuais(), id(fonte_ativa), rotulo, cor, selecionado,
+                       bool(self.descricao))
         surf = self._texto_cache.get(chave_texto)
         if surf is None:
             surf = texto_painel(fonte_ativa, rotulo, cor, rect.width - layout.px(118),
@@ -277,7 +263,7 @@ class OpcaoMenu:
             pygame.draw.rect(surface, color, surface.get_rect(),
                              border_radius=layout.px(6))
             text = layout.fonte_texto(MENU_SELO_FONT_SIZE).render(
-                "NOVO", True, (255, 255, 255) if opcoes_atuais().ativo else TEXTO_ATIVO_ORIGINAL)
+                "NOVO", True, cor_menu(TEXTO_ATIVO_ORIGINAL))
             surface.blit(text, text.get_rect(center=surface.get_rect().center))
             OpcaoMenu._SUPERFICIES_SELO[key] = surface
         OpcaoMenu._blit(tela, surface, badge.centerx, badge.centery, alfa, centrado=True)
@@ -422,140 +408,8 @@ class Dialogo:
 
     def desenhar(self, tela, fonte_titulo, fonte_texto, mouse_pos=(0, 0),
                  tema=None):
-        if not opcoes_atuais().ativo:
-            self._desenhar_original(tela, fonte_titulo, fonte_texto, tema or tema_atual("NEON"))
-            return
-        layout = self._layout
-        tema = tema or {
-            "primaria": (120, 90, 220), "secundaria": (0, 200, 120),
-            "terciaria": (255, 70, 90), "fundo_painel": (12, 14, 32),
-            "borda_forte": (200, 200, 230),
-        }
-        p, escala = self._animacao()
-        t = pygame.time.get_ticks() * 0.001
-
-        # overlay de foco
-        overlay = pygame.Surface((layout.largura, layout.altura), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, int(190 * p)))
-        tela.blit(overlay, (0, 0))
-
-        # painel com entrada em escala (bounce cartoon)
-        largura = int(self._largura * (0.92 + 0.08 * escala))
-        altura = int(self._altura * (0.92 + 0.08 * escala))
-        x = self._x - (largura - self._largura) // 2
-        y = self._y - (altura - self._altura) // 2
-        rect = pygame.Rect(x, y, largura, altura)
-        self._rect = rect
-
-        # painel cartoon (borda grossa preta + fundo arredondado)
-        desenhar_painel_cartoon(tela, tema["primaria"], rect,
-                                cor_fundo=(14, 14, 30), raio_canto=24,
-                                espessura_borda=6, alpha=245, glow_raio=22)
-
-        alfa = int(255 * p)
-        pulso = 0.6 + 0.4 * math.sin(t * 3.0)
-
-        # estrelas decorativas animadas
-        for i, (sx, sy, sr) in enumerate([
-            (rect.x + layout.px(28), rect.y + layout.px(28), layout.px(10)),
-            (rect.right - layout.px(28), rect.y + layout.px(28), layout.px(8)),
-            (rect.x + layout.px(22), rect.bottom - layout.px(28), layout.px(7)),
-            (rect.right - layout.px(22), rect.bottom - layout.px(28), layout.px(9)),
-        ]):
-            rot = t * 60 + i * 72
-            cor_estrela = tema["secundaria"] if i % 2 == 0 else tema["terciaria"]
-            desenhar_estrela(tela, (sx, sy), sr, cor_estrela, pontas=4,
-                             rotacao=rot)
-
-        # icone de alerta cartoon (circulo com ! pulsante)
-        icone_cor = tema["terciaria"]
-        ix, iy = rect.centerx, rect.y + layout.px(50)
-        raio_icone = layout.px(24) + int(2 * pulso)
-        # sombra do circulo (em surface SRCALPHA para alpha funcionar)
-        sombra_size = raio_icone * 2 + 10
-        sombra_icone = pygame.Surface((sombra_size, sombra_size), pygame.SRCALPHA)
-        desenhar_circulo_suave(sombra_icone, (0, 0, 0, 100),
-                               (sombra_size // 2 + 3, sombra_size // 2 + 4),
-                               raio_icone)
-        tela.blit(sombra_icone, (ix - sombra_size // 2,
-                                 iy - sombra_size // 2))
-        # circulo de fundo
-        desenhar_circulo_suave(tela, icone_cor, (ix, iy), raio_icone)
-        # contorno preto
-        desenhar_circulo_suave(tela, (0, 0, 0), (ix, iy), raio_icone, 3)
-        # brilho interno (em surface SRCALPHA)
-        hl_size = raio_icone * 2 + 10
-        hl_icone = pygame.Surface((hl_size, hl_size), pygame.SRCALPHA)
-        desenhar_circulo_suave(hl_icone, (255, 255, 255, 80),
-                               (hl_size // 2 - raio_icone // 4,
-                                hl_size // 2 - raio_icone // 4),
-                               raio_icone // 3)
-        tela.blit(hl_icone, (ix - hl_size // 2, iy - hl_size // 2))
-        # exclamacao
-        retangulo_suave(tela, BRANCO,
-                         pygame.Rect(ix - 2, iy - layout.px(10), 5, layout.px(12)), 2)
-        desenhar_circulo_suave(tela, BRANCO, (ix, iy + layout.px(7)), 3)
-
-        # titulo com sombra cartoon
-        titulo_fonte = fonte_titulo
-        # sombra
-        sombra_surf = titulo_fonte.render(self.titulo, True, (0, 0, 0))
-        sombra_surf.set_alpha(int(160 * p))
-        tela.blit(sombra_surf, sombra_surf.get_rect(
-            center=(rect.centerx + 3, rect.y + layout.px(100) + 3)))
-        # titulo
-        titulo_surf = titulo_fonte.render(self.titulo, True,
-                                          tema["primaria"])
-        titulo_surf.set_alpha(alfa)
-        tela.blit(titulo_surf, titulo_surf.get_rect(
-            center=(rect.centerx, rect.y + layout.px(100))))
-
-        # mensagem (quebrada em linhas)
-        palavras = self.mensagem.split()
-        linhas, atual = [], []
-        for palavra in palavras:
-            teste = " ".join(atual + [palavra])
-            if fonte_texto.size(teste)[0] > self._largura - layout.px(70):
-                linhas.append(" ".join(atual))
-                atual = [palavra]
-            else:
-                atual.append(palavra)
-        if atual:
-            linhas.append(" ".join(atual))
-        y_texto = rect.y + layout.px(136)
-        for linha in linhas:
-            # sombra
-            sombra = fonte_texto.render(linha, True, (0, 0, 0))
-            sombra.set_alpha(int(120 * p))
-            tela.blit(sombra, sombra.get_rect(
-                center=(rect.centerx + 2, y_texto + 2)))
-            # texto
-            surface = fonte_texto.render(linha, True, (220, 225, 250))
-            surface.set_alpha(alfa)
-            tela.blit(surface, surface.get_rect(center=(rect.centerx,
-                                                        y_texto)))
-            y_texto += layout.px(32)
-
-        # botoes cartoon (bolha)
-        confirmar, cancelar = self._retangulos()
-        hover_conf = self.selecao == 0
-        hover_canc = self.selecao == 1
-        rotulo = "SAIR" if "sair" in self.titulo.casefold() else "CONFIRMAR"
-        self._desenhar_botao_cartoon(tela, confirmar, rotulo,
-                                     fonte_texto, (30, 160, 80), (20, 120, 60),
-                                     hover_conf, alfa, layout, p)
-        self._desenhar_botao_cartoon(tela, cancelar, "CANCELAR",
-                                     fonte_texto, (180, 40, 50), (130, 25, 30),
-                                     hover_canc, alfa, layout, p)
-
-        # dica de teclado com visual cartoon
-        dica = texto_suave(fonte_texto,
-                           "TAB escolher | ENTER selecionar | ESC cancelar",
-                           (170, 175, 210), glow_cor=(40, 40, 80),
-                           glow_raio=2)
-        dica.set_alpha(int(210 * p))
-        tela.blit(dica, dica.get_rect(center=(rect.centerx,
-                                              rect.bottom - layout.px(22))))
+        """Compartilha a composição da confirmação com o acabamento ativo."""
+        self._desenhar_original(tela, fonte_titulo, fonte_texto, tema or tema_atual("NEON"))
 
     def _desenhar_original(self, tela, fonte_titulo, fonte_texto, tema):
         """Confirmação sóbria com mensagem legível e foco de teclado explícito."""
@@ -579,7 +433,7 @@ class Dialogo:
         self._overlay.set_alpha(round(190 * p))
         tela.blit(self._overlay, (0, 0))
         fundo = tuple(tema["fundo_painel"][:3])
-        tela.blit(painel_original(rect.size, fundo, tuple(tema["primaria"][:3]),
+        tela.blit(painel_menu(rect.size, fundo, tuple(tema["primaria"][:3]),
                                   raio=layout.px(16), alpha=250), rect)
 
         def texto(rotulo, fonte, cor, centro, largura, altura_texto):
@@ -598,7 +452,7 @@ class Dialogo:
         for indice, (botao, rotulo) in enumerate(zip(
                 self._retangulos(), ("SAIR" if sair else "CONFIRMAR", "CANCELAR"))):
             cor = tema["terciaria"] if indice == 0 and sair else tema["primaria"]
-            tela.blit(painel_original(botao.size, fundo, tuple(cor[:3]),
+            tela.blit(painel_menu(botao.size, fundo, tuple(cor[:3]),
                                       selecionado=indice == self.selecao, raio=layout.px(9)), botao)
             texto(rotulo, fonte_texto, MENU_COR_TEXTO, botao.center,
                   botao.w - layout.px(20), botao.h - layout.px(12))
@@ -1166,24 +1020,13 @@ class MenuPrincipal:
         return 0
 
     def _rects_loja(self):
-        layout = self.layout
-        painel = self._painel_loja()
-        if self.jogo.config["estilo_visual"] == "ORIGINAL":
-            return geometria_hangar_original(layout, painel, len(self.jogo.loja.skins))[0]
-        colunas = 4
-        celula = (painel.width - layout.px(40)) // colunas
-        x_inicio = painel.x + layout.px(20)
-        y_inicio = painel.y + layout.px(54)
-        return [pygame.Rect(x_inicio + (i % colunas) * celula,
-                            y_inicio + (i // colunas) * layout.px(144),
-                            celula - layout.px(10), layout.px(132))
-                for i in range(len(self.jogo.loja.skins))]
+        return geometria_hangar_original(
+            self.layout, self._painel_loja(), len(self.jogo.loja.skins))[0]
 
     def _painel_loja(self) -> pygame.Rect:
         """Retorna o painel padronizado que contém a grade do hangar."""
         layout = self.layout
-        base = 1090 if self.jogo.config["estilo_visual"] == "ORIGINAL" else 860
-        largura = min(layout.largura - layout.px(80), layout.px(base))
+        largura = min(layout.largura - layout.px(80), layout.px(1090))
         altura = min(layout.altura - layout.px(210), layout.px(500))
         return pygame.Rect(layout.x(0.5) - largura // 2, layout.px(108),
                            largura, altura)
@@ -1543,11 +1386,8 @@ class MenuPrincipal:
         return self.layout.px(172) + indice * self.layout.px(54)
 
     def _track_slider(self):
-        """Posicoes x da trilha do slider (proporcionais a superficie)."""
-        if self.jogo.config["estilo_visual"] == "ORIGINAL":
-            return self.tela_configuracoes.original.trilha_slider()
-        _, _, inicio, fim, _ = self._grade_config()
-        return inicio, fim
+        """Compartilha a trilha do slider nos dois estilos."""
+        return self.tela_configuracoes.original.trilha_slider()
 
     def _grade_config(self):
         """Retorna a grade horizontal centralizada da tela de configuracoes.
@@ -1962,44 +1802,8 @@ class MenuPrincipal:
         return True
 
     def _desenhar_confirmacao_resolucao(self, tela, tema):
-        """Exibe a tela temporizada de confirmacao do novo modo de video."""
-        if self.jogo.config["estilo_visual"] == "ORIGINAL":
-            self.tela_configuracoes.original.desenhar_confirmacao(tela)
-            return
-        layout = self.layout
-        self._overlay_confirmacao_resolucao.fill((0, 0, 0, 205))
-        tela.blit(self._overlay_confirmacao_resolucao, (0, 0))
-        painel = pygame.Rect(layout.x(0.5) - layout.px(260), layout.y(0.5) - layout.px(145),
-                             layout.px(520), layout.px(290))
-        desenhar_painel_cartoon(tela, tema["primaria"], painel,
-                                cor_fundo=(10, 14, 32), raio_canto=layout.px(22),
-                                espessura_borda=layout.px(4), alpha=248,
-                                glow_raio=layout.px(26))
-        titulo = self.fonte_sub.render("MANTER ESTA RESOLUÇÃO?", True,
-                                       tema["secundaria"])
-        tela.blit(titulo, titulo.get_rect(center=(painel.centerx,
-                                                  painel.y + layout.px(52))))
-        modo = "TELA CHEIA" if self.jogo.config["tela_cheia"] else "JANELA"
-        detalhe = self.fonte_media.render(
-            f"{self.jogo.config['resolucao']}  //  {modo}", True, BRANCO)
-        tela.blit(detalhe, detalhe.get_rect(center=(painel.centerx,
-                                                    painel.y + layout.px(105))))
-        segundos = self._segundos_confirmacao_resolucao()
-        aviso = self.fonte_media.render(f"Reverte automaticamente em {segundos}s", True,
-                                        (255, 205, 100))
-        tela.blit(aviso, aviso.get_rect(center=(painel.centerx,
-                                                painel.y + layout.px(150))))
-        manter, reverter = self._botoes_confirmacao_resolucao()
-        desenhar_botao_cartoon(tela, "MANTER", manter, (32, 145, 78),
-                               fonte=self.fonte_media,
-                               hover=manter.collidepoint(self.mouse))
-        desenhar_botao_cartoon(tela, "REVERTER", reverter, (165, 48, 62),
-                               fonte=self.fonte_media,
-                               hover=reverter.collidepoint(self.mouse))
-        dica = self.fonte_pequena.render("ENTER: manter   //   ESC: reverter", True,
-                                         (165, 175, 210))
-        tela.blit(dica, dica.get_rect(center=(painel.centerx,
-                                               painel.bottom - layout.px(34))))
+        """Preserva a confirmação temporizada nos dois acabamentos."""
+        self.tela_configuracoes.original.desenhar_confirmacao(tela)
 
     def _desenhar_resolucoes(self, tela):
         layout = self.layout
@@ -2077,9 +1881,7 @@ class MenuPrincipal:
                                                     layout.y(0.5) + layout.px(20))))
 
     def _painel_config(self):
-        if self.jogo.config["estilo_visual"] == "ORIGINAL":
-            return self.tela_configuracoes.original.geometria().painel
-        return self._painel_central(620, 468, -16)
+        return self.tela_configuracoes.original.geometria().painel
 
     def _abrir_ajuste_tela(self):
         """Abre a calibracao de tela guardando o estado atual (cancelar)."""
@@ -2348,13 +2150,8 @@ class MenuPrincipal:
         p = self._frac_sub(0.04, 0.45)
         if p <= 0:
             return
-        if self.jogo.config["estilo_visual"] == "ORIGINAL":
-            surf = painel_original(rect.size, tuple(tema["fundo_painel"][:3]),
-                                    tuple(tema["primaria"][:3]), raio=layout.px(raio))
-        else:
-            surf = painel_glass(tema["primaria"], rect,
-                                cor_fundo=tema["fundo_painel"], raio_canto=raio,
-                                glow_raio=layout.px(22))
+        surf = painel_menu(rect.size, tuple(tema["fundo_painel"][:3]),
+                            tuple(tema["primaria"][:3]), raio=layout.px(raio))
         escala = 0.9 + 0.1 * ease_out_back(p)
         if abs(escala - 1.0) > 0.01:
             surf = pygame.transform.smoothscale(
@@ -2539,25 +2336,8 @@ class MenuPrincipal:
     # -------------------------------------------------------------- desenho
 
     def _desenhar_linhas_diagonais(self, tela, tema):
-        if self.entrada_t < 0.12 or not opcoes_atuais().ativo:
-            return
-        layout = self.layout
-        if opcoes_atuais().ativo:
-            prim = tema["primaria"]
-            cor1 = tuple(int(c * 0.85) for c in prim)
-            linha_suave(tela, cor1, layout.ponto(TOPO_ESQUERDA, 30, 470),
-                        layout.ponto(TOPO_ESQUERDA, 470, 180), 2)
-            linha_suave(tela, tema["borda_fraco"],
-                        layout.ponto(TOPO_ESQUERDA, 66, 470),
-                        layout.ponto(TOPO_ESQUERDA, 506, 180), 1)
-            linha_suave(tela, cor1, layout.ponto(TOPO_DIREITA, 0, 330),
-                        layout.ponto(TOPO_ESQUERDA, 640, 486), 1)
-            return
-        discreta = tema["borda_fraco"]
-        linha_suave(tela, discreta, layout.ponto(TOPO_ESQUERDA, 30, 485),
-                    layout.ponto(TOPO_ESQUERDA, 430, 405), 1)
-        linha_suave(tela, discreta, layout.ponto(TOPO_ESQUERDA, 70, 510),
-                    layout.ponto(TOPO_ESQUERDA, 470, 430), 1)
+        """A composição compartilhada reserva o espaço livre para a ajuda."""
+        return
 
     def _desenhar_linha_titulo(self, tela, tema, x, y, alfa):
         """Linha de acento entre o titulo tipografico e o subtitulo."""
@@ -2581,42 +2361,7 @@ class MenuPrincipal:
         tela.blit(surf, (x, y))
 
     def _desenhar_bloco_titulo(self, tela, tema):
-        if not opcoes_atuais().ativo:
-            self.tela_principal.desenhar_titulo_original(tela, self._titulo_surfaces(tema))
-            return
-        layout = self.layout
-        ts = self._titulo_surfaces(tema)
-        p_titulo = self._frac(0.10, 0.5)
-        p_bloco = self._frac(0.06, 0.28)
-        p_sub = self._frac(0.55, 0.4)
-        off = int((1 - ease_out_back(p_titulo)) * -layout.px(300))
-        alfa = int(255 * ease_out(p_titulo))
-        if not opcoes_atuais().ativo and self.jogo.config["intensidade_flash"] != "NORMAL":
-            off, alfa, p_sub = 0, 255, 1.0
-        if p_bloco > 0 and opcoes_atuais().ativo:
-            bloco = self._bloco_logo(tema)
-            self._blit_alfa(tela, bloco, layout.ponto(TOPO_ESQUERDA, 36, 166),
-                            255 * ease_out(p_bloco))
-        alfa_eco = int(220 * ease_out(p_bloco))
-        if opcoes_atuais().ativo:
-            self._blit_alfa(tela, ts["incarnate_eco"],
-                            (layout.px(62) + off, layout.px(171)), alfa_eco)
-        flutuar = (0 if opcoes_atuais().ativo else
-                    layout.px(math.sin(self.animacao_original.tempo * 0.9) * 2))
-        self._blit_alfa(tela, ts["incarnate"],
-                        (layout.px(56) + off, layout.px(165) + flutuar), alfa)
-        self._desenhar_glitch_titulo(tela, ts, off)
-        alfa_sub = int(255 * ease_out(p_sub))
-        linha_y = 280 if opcoes_atuais().ativo else 272
-        subtitulo_y = 302 if opcoes_atuais().ativo else 288
-        tag_y = 334 if opcoes_atuais().ativo else 320
-        self._desenhar_linha_titulo(tela, tema, layout.px(60) + off,
-                                    layout.px(linha_y),
-                                    alfa_sub)
-        self._blit_alfa(tela, ts["sub"],
-                        (layout.px(60) + off, layout.px(subtitulo_y)), alfa_sub)
-        self._blit_alfa(tela, ts["tag"],
-                        (layout.px(60) + off, layout.px(tag_y)), alfa_sub)
+        self.tela_principal.desenhar_titulo_original(tela, self._titulo_surfaces(tema))
 
     def _desenhar_seta(self, tela, tema):
         if self.entrada_t < 0.7 or not opcoes_atuais().ativo:
@@ -2659,9 +2404,6 @@ class MenuPrincipal:
                         (x + MENU_GLITCH_OFFSET + ajuste, y), alfa)
 
     def _desenhar_rodape(self, tela, tema):
-        if opcoes_atuais().ativo:
-            self._desenhar_rodape_comic(tela)
-            return
         layout = self.layout
         p = self._frac(0.85, 0.3)
         if p <= 0:
@@ -2785,18 +2527,11 @@ class MenuPrincipal:
             ship_x = card_x + card_width - layout.px(66)
             ship_y = card_y + layout.px(62)
             ship_scale = 0.92 * layout.escala
-        elif self.jogo.config["estilo_visual"] == "ORIGINAL":
+        else:
             ship_x = layout.px(MENU_X_NAVE)
             ship_y = layout.px(MENU_Y_NAVE)
             ship_scale = 1.35 * layout.escala
-        else:
-            ship_x = layout.largura - layout.px(92)
-            ship_y = layout.altura - layout.px(158)
-            ship_scale = 1.35 * layout.escala
-        if not at_root or summary or self.jogo.config["estilo_visual"] == "ORIGINAL":
-            self.nave.desenhar(tela, skin, ship_x, ship_y, ship_scale, tema)
-        if opcoes_atuais().ativo:
-            self.hud.desenhar(tela, tema, self.jogo.config["estilo_visual"])
+        self.nave.desenhar(tela, skin, ship_x, ship_y, ship_scale, tema)
         if self.subestado == "PERFIS":
             self.profile_screen.draw(tela)
         elif self.subestado == "FASES":
@@ -2827,10 +2562,9 @@ class MenuPrincipal:
     def atualizar(self):
         self._aplicar_layout_opcoes()
         reduzido = self.jogo.config["intensidade_flash"] != "NORMAL"
-        original = self.jogo.config["estilo_visual"] == "ORIGINAL"
         mouse = (self.mouse[0] / max(1, self.layout.largura) * 2 - 1,
                  self.mouse[1] / max(1, self.layout.altura) * 2 - 1)
-        self.animacao_original.atualizar(1 / 60, mouse, reduzido=reduzido or not original)
+        self.animacao_original.atualizar(1 / 60, mouse, reduzido=reduzido)
         for indice, opcao in enumerate(self.opcoes):
             opcao.foco_animado.atualizar(indice == self.opcao_selecionada, 1 / 60,
                                          reduzido=reduzido)
@@ -2840,7 +2574,7 @@ class MenuPrincipal:
         self.perfil_hub.atualizar_animacao(1 / 60, reduzido=reduzido)
         self.fundo.atualizar()
         self.hud.atualizar()
-        if not original or not reduzido:
+        if not reduzido:
             self.nave.atualizar()
         self.destaque.atualizar()
         self.transicao.atualizar()
