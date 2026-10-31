@@ -6,11 +6,8 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.core.constants import BRANCO, QUANTUM_CYAN, VERDE
+from src.core.constants import QUANTUM_CYAN, VERDE
 from src.core.settings import ACOES_CONTROLE, RESOLUCOES
-from src.infrastructure.graphics.theme import tema_atual
-from src.runtime.infrastructure.graphics.menu_panels import painel_original
-from src.runtime.infrastructure.graphics.smooth import retangulo_suave
 from src.runtime.presentation.screens.settings_view import (
     CATEGORIAS_CONFIG,
     PainelConfiguracoesOriginal,
@@ -37,82 +34,14 @@ class TelaConfiguracoesJogo:
         return grupo[inicio:inicio + 6]
 
     def desenhar(self, tela: pygame.Surface) -> None:
-        """Renderiza configuracoes gerais ou encaminha para o submodo ativo."""
-        menu = self.menu
-        if menu.jogo.config["estilo_visual"] == "ORIGINAL":
-            self.original.desenhar(tela)
-            return
-        layout = menu.layout
-        tema = tema_atual(menu.jogo.config["tema"])
-        if menu.config_submodo == "ajuste":
-            menu._desenhar_ajuste(tela)
-            return
-        titulos = {
-            "controles": "CONTROLES",
-            "resolucao": "RESOLUÇÃO",
-        }
-        titulo = titulos.get(menu.config_submodo, "CONFIGURAÇÕES")
-        menu._cabecalho_sub_animado(tela, titulo, tema["primaria"])
-        if menu.remapando:
-            menu._desenhar_remapando(tela)
-            return
-        if menu.config_submodo == "controles":
-            menu._desenhar_controles(tela)
-            return
-        if menu.config_submodo == "resolucao":
-            menu._desenhar_resolucoes(tela)
-            return
-        painel = menu._painel_config()
-        menu._painel_sub(tela, painel, tema)
-        menu._detalhe_painel(tela, painel, tema, tema["secundaria"])
-        rotulo_x, indicador_x, controle_x, _, percentual_x = menu._grade_config()
-        linhas = menu._linhas_config()
-        inicio, fim = menu._config_visiveis()
-        for deslocamento in range(fim - inicio):
-            indice = inicio + deslocamento
-            rotulo, tipo = linhas[indice]
-            progresso = menu._frac_sub(0.12 + deslocamento * 0.05, 0.35)
-            dx, dy, alfa = menu._entrada_anim(
-                progresso, dx_design=30, dy_design=18)
-            y = menu._y_linha_config(deslocamento) + dy
-            selecionada = indice == menu.config_selecao
-            if selecionada and menu.jogo.config["estilo_visual"] == "ORIGINAL":
-                area = pygame.Rect(painel.left + layout.px(18) + dx,
-                                   y - layout.px(22), painel.w - layout.px(36), layout.px(44))
-                fundo = painel_original(area.size, tuple(tema["fundo_painel"][:3]),
-                                         tuple(tema["primaria"][:3]), selecionado=True,
-                                         raio=layout.px(8))
-                menu._blit_alfa(tela, fundo, area, int(255 * alfa))
-            cor_texto = BRANCO if selecionada else (190, 195, 235)
-            texto = menu.fonte_media.render(rotulo, True, cor_texto)
-            menu._blit_alfa(
-                tela, texto, texto.get_rect(midleft=(rotulo_x + dx, y)),
-                int(255 * alfa))
-            if selecionada:
-                retangulo_suave(
-                    tela, (tema["primaria"] if menu.jogo.config["estilo_visual"] == "ORIGINAL"
-                           else (255, 200, 100)),
-                    pygame.Rect(indicador_x + dx, y - layout.px(24),
-                                layout.px(6), layout.px(30)),
-                    3,
-                )
-            self._desenhar_valor(
-                tela, indice, tipo, y, dx, alfa, tema, controle_x, percentual_x,
-            )
-        if len(linhas) > menu._CONFIG_VISIVEIS:
-            menu._desenhar_indicador_config(tela, painel, inicio, fim)
-        botoes = menu._botoes_rodape(["SALVAR", "VOLTAR"])
-        for indice, botao in enumerate(botoes):
-            botao.atualizar(menu.mouse)
-            progresso = menu._frac_sub(0.62 + indice * 0.06, 0.25)
-            menu._desenhar_botao_entrada(
-                tela, botao, menu.fonte_media, progresso)
+        """Renderiza abas e subtelas com o acabamento visual ativo."""
+        self.original.desenhar(tela)
 
     def tratar_tecla(self, evento: pygame.event.Event) -> bool:
         """Trata navegacao e abertura dos submodos de configuracao."""
         menu = self.menu
         self._arraste = None
-        if menu.jogo.config["estilo_visual"] == "ORIGINAL" and not menu.config_submodo:
+        if not menu.config_submodo:
             return self._tecla_original(evento)
         if menu.config_submodo == "controles":
             if evento.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
@@ -210,8 +139,7 @@ class TelaConfiguracoesJogo:
     def tratar_ponteiro(self, evento: pygame.event.Event) -> bool:
         """Trata rolagem e prévia do arraste, aplicando o slider ao soltar."""
         menu = self.menu
-        if (menu.subestado != "CONFIG" or menu.jogo.config["estilo_visual"] != "ORIGINAL"
-                or menu.config_submodo == "ajuste"):
+        if menu.subestado != "CONFIG" or menu.config_submodo == "ajuste":
             self._arraste = None
             return False
         if evento.type == pygame.MOUSEWHEEL:
@@ -263,47 +191,8 @@ class TelaConfiguracoesJogo:
             menu._ajustar_config(1)
 
     def tratar_clique(self, pos: tuple[int, int]) -> None:
-        """Trata cliques nos controles e acoes da tela."""
-        menu, layout = self.menu, self.menu.layout
-        if menu.jogo.config["estilo_visual"] == "ORIGINAL":
-            self._clique_original(pos)
-            return
-        if menu.remapando:
-            return
-        if menu.config_submodo == "resolucao":
-            menu._clique_resolucao(pos)
-            return
-        if menu.config_submodo == "controles":
-            painel = menu._painel_controles()
-            for indice, acao in enumerate(ACOES_CONTROLE):
-                rect = pygame.Rect(
-                    painel.x + layout.px(30),
-                    painel.y + layout.px(64) + indice * layout.px(48),
-                    painel.width - layout.px(60), layout.px(40))
-                if rect.collidepoint(pos):
-                    menu.controle_selecao, menu.remapando = indice, acao
-                    menu._som("navegar")
-                    return
-            return
-        inicio, fim = menu._config_visiveis()
-        linhas = menu._linhas_config()
-        for deslocamento in range(fim - inicio):
-            indice = inicio + deslocamento
-            if abs(pos[1] - menu._y_linha_config(deslocamento)) >= 24:
-                continue
-            menu.config_selecao = indice
-            if menu._eh_slider_config(linhas[indice][1]):
-                menu._aplicar_slider(indice, menu._slider_fracao(pos[0]))
-            else:
-                self._abrir_selecao()
-            return
-        salvar, voltar = menu._botoes_rodape(["SALVAR", "VOLTAR"])
-        if salvar.rect.collidepoint(pos):
-            menu.jogo.config.salvar()
-            menu.notificacoes.adicionar("Configuracoes salvas!", "sucesso")
-            menu._som("equipar")
-        elif voltar.rect.collidepoint(pos):
-            menu._voltar_menu()
+        """Trata os controles compartilhados nas coordenadas lógicas."""
+        self._clique_original(pos)
 
     def _clique_original(self, pos: tuple[int, int]) -> None:
         menu = self.menu

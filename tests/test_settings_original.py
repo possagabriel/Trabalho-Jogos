@@ -15,12 +15,12 @@ from src.runtime.presentation.screens.settings_view import (
 )
 
 
-def nova_configuracao():
+def nova_configuracao(estilo="ORIGINAL"):
     from game.core import Jogo
 
     jogo = Jogo()
     jogo.config.salvar = mock.Mock(return_value=True)
-    jogo.config["estilo_visual"] = "ORIGINAL"
+    jogo.config["estilo_visual"] = estilo
     jogo.menu._abrir_config()
     jogo.menu.sub_anim = jogo.menu.sub_anim_total
     return jogo, jogo.menu.tela_configuracoes
@@ -85,8 +85,9 @@ def test_clique_no_rotulo_ou_fora_do_painel_nao_altera_volume():
     assert jogo.config["musica_volume"] == antes
 
 
-def test_arrastar_slider_mostra_previa_e_aplica_ao_soltar(monkeypatch):
-    jogo, tela = nova_configuracao()
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_arrastar_slider_mostra_previa_e_aplica_ao_soltar(monkeypatch, estilo):
+    jogo, tela = nova_configuracao(estilo)
     menu = jogo.menu
     monkeypatch.setattr(menu, "_pos_logica", lambda pos: pos)
     rect = tela.original.linhas()[0][1]
@@ -120,8 +121,9 @@ def test_abas_e_roda_do_mouse_navegam_sem_mudar_valores():
         salvar.assert_not_called()
 
 
-def test_resolucao_original_exige_confirmacao_e_permite_reverter(monkeypatch):
-    jogo, tela = nova_configuracao()
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_resolucao_original_exige_confirmacao_e_permite_reverter(monkeypatch, estilo):
+    jogo, tela = nova_configuracao(estilo)
     menu = jogo.menu
     monkeypatch.setattr(jogo, "_aplicar_modo_video", lambda: None)
     anterior = jogo.config["resolucao"]
@@ -135,7 +137,7 @@ def test_resolucao_original_exige_confirmacao_e_permite_reverter(monkeypatch):
         assert menu._resolucao_pendente["resolucao"] == anterior
         assert menu.resolucao_selecao == indice
         salvar.assert_not_called()
-        with usar_visual({"estilo_visual": "ORIGINAL"}):
+        with usar_visual(jogo.config):
             menu._desenhar_confirmacao_resolucao(destino, {})
         menu.tratar_eventos(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE))
         assert jogo.config["resolucao"] == anterior
@@ -175,13 +177,14 @@ def test_atalho_de_salvar_e_seta_esquerda_nos_controles_ligado_desligado():
 
 
 @pytest.mark.parametrize("tamanho", [(900, 700), (1920, 1080)])
-def test_desenho_de_todas_as_opcoes_e_subtelas_preserva_valores(tamanho):
-    jogo, tela = nova_configuracao()
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_desenho_de_todas_as_opcoes_e_subtelas_preserva_valores(tamanho, estilo):
+    jogo, tela = nova_configuracao(estilo)
     menu = jogo.menu
     menu.layout = Layout(*tamanho)
     antes = deepcopy(jogo.config._dados)
     destino = pygame.Surface(tamanho, pygame.SRCALPHA)
-    with usar_visual({"estilo_visual": "ORIGINAL", "intensidade_flash": "REDUZIDO"}):
+    with usar_visual({"estilo_visual": estilo, "intensidade_flash": "REDUZIDO"}):
         for indice in range(29):
             menu.config_selecao = indice
             assert tela.valor_opcao(indice)

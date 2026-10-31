@@ -23,11 +23,11 @@ def test_grade_e_expositor_cabem_sem_sobreposicao(tamanho):
         assert all(not rect.colliderect(outro) for outro in cards[indice + 1:])
 
 
-def novo_hangar():
+def novo_hangar(estilo="ORIGINAL"):
     from game.core import Jogo
 
     jogo = Jogo()
-    jogo.config["estilo_visual"] = "ORIGINAL"
+    jogo.config["estilo_visual"] = estilo
     jogo.menu.subestado = "LOJA"
     return jogo, jogo.menu.tela_loja
 
@@ -63,15 +63,16 @@ def test_desenho_e_selecao_do_hangar_nao_gastam_moedas_nem_equipam():
     assert antes == (jogo.loja.moedas, jogo.loja.skin_atual, jogo.loja.lista_desbloqueadas())
 
 
-def test_botao_previa_abre_skin_bloqueada_e_escape_fecha_sem_equipar():
-    jogo, hangar = novo_hangar()
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_botao_previa_abre_skin_bloqueada_e_escape_fecha_sem_equipar(estilo):
+    jogo, hangar = novo_hangar(estilo)
     menu = jogo.menu
     menu.loja_selecao = 1
     antes = (jogo.loja.moedas, jogo.loja.skin_atual, jogo.loja.lista_desbloqueadas())
     hangar.tratar_clique(menu._botoes_loja()["prévia"].rect.center)
     assert menu.preview_skin is jogo.loja.skins[1]
     tela = pygame.Surface((menu.layout.largura, menu.layout.altura), pygame.SRCALPHA)
-    with usar_visual({"estilo_visual": "ORIGINAL"}):
+    with usar_visual(jogo.config):
         hangar.desenhar(tela)
     hangar.tratar_tecla(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
     assert menu.preview_skin is jogo.loja.skins[1]

@@ -7,8 +7,7 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.core.constants import DOURADO, NEGRO
-from src.infrastructure.graphics.theme import tema_atual
+from src.core.constants import NEGRO
 from src.runtime.infrastructure.graphics.map_art import miniatura_nave
 from src.runtime.infrastructure.graphics.menu_panels import (
     ACENTO_ORIGINAL,
@@ -17,7 +16,7 @@ from src.runtime.infrastructure.graphics.menu_panels import (
     TEXTO_ATIVO_ORIGINAL,
     TEXTO_ORIGINAL,
     icone_menu_original,
-    painel_original,
+    painel_menu,
     plataforma_hangar,
     texto_painel,
 )
@@ -58,8 +57,7 @@ class TelaLojaJogo:
         menu = self.menu
         if menu.preview_skin:
             if evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                if (menu.preview_skin.desbloqueada or
-                        menu.jogo.config["estilo_visual"] != "ORIGINAL"):
+                if menu.preview_skin.desbloqueada:
                     self.acao("equipar")
                     menu.preview_skin = None
             elif evento.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
@@ -87,56 +85,8 @@ class TelaLojaJogo:
         return True
 
     def desenhar(self, tela: pygame.Surface) -> None:
-        """Renderiza o cabecalho, cards, acoes e preview da loja."""
-        menu = self.menu
-        if menu.jogo.config["estilo_visual"] == "ORIGINAL":
-            self._desenhar_original(tela)
-            return
-        layout = menu.layout
-        tema = tema_atual(menu.jogo.config["tema"])
-        menu._cabecalho_sub_animado(tela, "HANGAR DE VISUAIS", tema["primaria"])
-        painel = menu._painel_loja()
-        menu._painel_sub(tela, painel, tema)
-        menu._detalhe_painel(tela, painel, tema, tema["secundaria"])
-        dx, dy, alfa = menu._entrada_anim(
-            menu._frac_sub(0.06, 0.3), dx_design=-16)
-        moedas = f"Moedas: {menu.jogo.loja.moedas:,}".replace(",", ".")
-        moeda = menu.fonte_media.render(moedas, True, DOURADO)
-        menu._blit_alfa(
-            tela,
-            moeda,
-            (painel.x + layout.px(20) + dx, painel.y + layout.px(17) + dy),
-            int(255 * alfa),
-        )
-        atual = menu.jogo.loja.pegar_skin(menu.jogo.loja.skin_atual)
-        total = len(menu.jogo.loja.skins)
-        desbloqueadas = len(menu.jogo.loja.lista_desbloqueadas())
-        resumo_visual = (
-            f"Visual atual: {atual.nome}  //  "
-            f"{desbloqueadas}/{total} desbloqueados"
-        )
-        skin_atual = menu.fonte_media.render(
-            resumo_visual, True, tema["secundaria"])
-        menu._blit_alfa(tela, skin_atual, skin_atual.get_rect(
-            topright=(painel.right - layout.px(20) - dx,
-                      painel.y + layout.px(17) + dy)), int(255 * alfa))
-        cards = menu._rects_loja()
-        for indice, skin in enumerate(menu.jogo.loja.skins):
-            entrada = menu._frac_sub(0.16 + (indice % 4) * 0.05 + (indice // 4) * 0.09, 0.35)
-            menu._desenhar_cartao_skin(tela, cards[indice], skin, indice == menu.loja_selecao,
-                                       cards[indice].collidepoint(menu.mouse), tema, entrada)
-        for indice, botao in enumerate(menu._botoes_loja().values()):
-            botao.atualizar(menu.mouse)
-            menu._desenhar_botao_entrada(tela, botao, menu.fonte_media,
-                                         menu._frac_sub(0.6 + indice * 0.05, 0.25))
-        selecionada = menu.jogo.loja.skins[menu.loja_selecao]
-        dx, dy, alfa = menu._entrada_anim(menu._frac_sub(0.62, 0.25), dy_design=16)
-        descricao = menu.fonte_pequena.render(selecionada.descricao, True, (170, 175, 220))
-        menu._blit_alfa(tela, descricao, descricao.get_rect(
-            center=(layout.x(0.5) + dx,
-                    layout.altura - layout.px(91) + dy)), int(255 * alfa))
-        if menu.preview_skin:
-            menu._desenhar_preview_overlay(tela)
+        """Renderiza a estrutura compartilhada com o acabamento visual ativo."""
+        self._desenhar_original(tela)
 
     def estado_selecao(self) -> tuple[str, str, str]:
         """Informa estado, orientação e ação principal sem alterar a loja."""
@@ -160,7 +110,7 @@ class TelaLojaJogo:
         menu, layout, loja = self.menu, self.menu.layout, self.menu.jogo.loja
         menu._cabecalho_sub_animado(tela, "HANGAR // CASCOS", ACENTO_ORIGINAL)
         painel = menu._painel_loja()
-        tela.blit(painel_original(painel.size, FUNDO_ORIGINAL, BORDA_ORIGINAL), painel)
+        tela.blit(painel_menu(painel.size, FUNDO_ORIGINAL, BORDA_ORIGINAL), painel)
         resumo = (f"{loja.moedas:,} MOEDAS  ·  "
                    f"{len(loja.lista_desbloqueadas())}/{len(loja.skins)} VISUAIS LIBERADOS")
         self._texto(tela, resumo.replace(",", "."),
@@ -179,13 +129,13 @@ class TelaLojaJogo:
     def _desenhar_card_original(self, tela: pygame.Surface, rect: pygame.Rect,
                                  skin: Skin, selecionada: bool) -> None:
         menu, layout = self.menu, self.menu.layout
-        tela.blit(painel_original(rect.size, FUNDO_ORIGINAL, BORDA_ORIGINAL,
+        tela.blit(painel_menu(rect.size, FUNDO_ORIGINAL, BORDA_ORIGINAL,
                                    selecionado=selecionada, raio=layout.px(8)), rect)
         self._texto(tela, skin.nome.upper(),
                      pygame.Rect(rect.x + layout.px(6), rect.y + layout.px(6),
                                  rect.w - layout.px(12), layout.px(23)))
         tamanho = max(8, min(layout.px(56), rect.h - layout.px(64)))
-        arte = miniatura_nave(skin, 0, False, tamanho)
+        arte = miniatura_nave(skin, 0, menu.jogo.config["estilo_visual"] == "COMIC", tamanho)
         tela.blit(arte, arte.get_rect(center=rect.center))
         estado = ("EM USO" if skin.id == menu.jogo.loja.skin_atual else
                    "LIBERADA" if skin.desbloqueada else f"{skin.preco:,} MOEDAS")
@@ -197,7 +147,7 @@ class TelaLojaJogo:
     def _desenhar_expositor(self, tela: pygame.Surface, rect: pygame.Rect) -> None:
         menu, layout = self.menu, self.menu.layout
         skin = menu.jogo.loja.skins[menu.loja_selecao]
-        tela.blit(painel_original(rect.size, FUNDO_ORIGINAL, BORDA_ORIGINAL,
+        tela.blit(painel_menu(rect.size, FUNDO_ORIGINAL, BORDA_ORIGINAL,
                                    selecionado=True), rect)
 
         def linha(texto: str, y: int, tamanho: int = 18,
@@ -210,7 +160,8 @@ class TelaLojaJogo:
         linha(skin.nome.upper(), 34, 28)
         piso = plataforma_hangar((rect.w - layout.px(20), layout.px(160)))
         tela.blit(piso, piso.get_rect(center=(rect.centerx, rect.y + layout.px(149))))
-        arte = miniatura_nave(skin, 0, False, min(layout.px(130), rect.w - layout.px(44)))
+        arte = miniatura_nave(skin, 0, menu.jogo.config["estilo_visual"] == "COMIC",
+                              min(layout.px(130), rect.w - layout.px(44)))
         flutuar = (layout.px(math.sin(menu.animacao_original.tempo * 1.8) * 4)
                    if menu.jogo.config["intensidade_flash"] == "NORMAL" else 0)
         tela.blit(arte, arte.get_rect(center=(rect.centerx, rect.y + layout.px(143) + flutuar)))
@@ -226,7 +177,7 @@ class TelaLojaJogo:
         _estado, _detalhe, principal = self.estado_selecao()
         for nome, botao in menu._botoes_loja().items():
             ativo = botao.rect.collidepoint(menu.mouse) or nome == principal
-            tela.blit(painel_original(botao.rect.size, FUNDO_ORIGINAL, BORDA_ORIGINAL,
+            tela.blit(painel_menu(botao.rect.size, FUNDO_ORIGINAL, BORDA_ORIGINAL,
                                        selecionado=ativo, botao=True), botao.rect)
             icone = icone_menu_original(nome, ativo, layout.px(22))
             tela.blit(icone, icone.get_rect(center=(botao.rect.x + layout.px(19),
@@ -245,10 +196,10 @@ class TelaLojaJogo:
         tela.blit(self._overlay_original, (0, 0))
         rect = pygame.Rect(0, 0, layout.px(620), layout.px(420))
         rect.center = (layout.x(.5), layout.y(.47))
-        tela.blit(painel_original(rect.size, FUNDO_ORIGINAL, BORDA_ORIGINAL), rect)
+        tela.blit(painel_menu(rect.size, FUNDO_ORIGINAL, BORDA_ORIGINAL), rect)
         self._texto(tela, skin.nome.upper(), pygame.Rect(rect.x, rect.y + layout.px(20),
                                                         rect.w, layout.px(34)), 30, ACENTO_ORIGINAL)
-        arte = miniatura_nave(skin, 0, False, layout.px(200))
+        arte = miniatura_nave(skin, 0, menu.jogo.config["estilo_visual"] == "COMIC", layout.px(200))
         tela.blit(arte, arte.get_rect(center=rect.center))
         self._texto(tela, skin.descricao, pygame.Rect(rect.x + layout.px(20),
                      rect.bottom - layout.px(84), rect.w - layout.px(40), layout.px(28)), 22)
@@ -263,7 +214,7 @@ class TelaLojaJogo:
             bloqueado = indice == 0 and not skin.desbloqueada
             ativo = botao.collidepoint(menu.mouse) and not bloqueado
             rotulo = "BLOQUEADA" if bloqueado else "EQUIPAR" if indice == 0 else "FECHAR"
-            tela.blit(painel_original(botao.size, FUNDO_ORIGINAL, BORDA_ORIGINAL,
+            tela.blit(painel_menu(botao.size, FUNDO_ORIGINAL, BORDA_ORIGINAL,
                                        selecionado=ativo, botao=True), botao)
             icone = icone_menu_original(nome, ativo, layout.px(22), desabilitado=bloqueado)
             tela.blit(icone, icone.get_rect(center=(botao.x + layout.px(20), botao.centery)))
@@ -316,8 +267,7 @@ class TelaLojaJogo:
             fechar = pygame.Rect(layout.x(0.5) + layout.px(10), layout.altura - layout.px(120),
                                  layout.px(160), layout.px(48))
             if equipar.collidepoint(pos):
-                if (menu.preview_skin.desbloqueada or
-                        menu.jogo.config["estilo_visual"] != "ORIGINAL"):
+                if menu.preview_skin.desbloqueada:
                     self.acao("equipar")
                     menu.preview_skin = None
             elif fechar.collidepoint(pos):

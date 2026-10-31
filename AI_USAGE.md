@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex unificou a estrutura de menus COMIC/ORIGINAL e preservou o acabamento de quadrinhos no COMIC; testes de paleta/cache escritos primeiro, 212 testes direcionados e Ruff aprovados, incluindo navegação, arraste, confirmação de vídeo e preservação de preferências/progresso. Sem dependências, screenshots ou alteração de gameplay; conferência jogando pendente.
+
 - Codex reorganizou as configurações ORIGINAL em abas orbitais, com ajuda contextual, arraste com prévia e subtelas consistentes; testes de geometria/categorias escritos primeiro, 207 testes direcionados e Ruff aprovados. Sem novas dependências, screenshots ou mudança de gameplay; conferência jogando pendente.
 
 - Codex refinou o hangar ORIGINAL no estilo orbital com expositor, catálogo responsivo e prévia consistente; testes de geometria/estados escritos primeiro, 200 testes direcionados e Ruff aprovados. Sem screenshots, novas dependências ou mudanças na economia; conferência jogando pendente.
