@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- ORIGINAL preserva as opções em coluna e recebe identidade de console orbital azul-petróleo/âmbar, botões recortados com ícones próprios, seleção com texto escuro e nova tipografia; movimento reduzido e navegação por setas/Tab preservados.
+- ORIGINAL preserva as opções em coluna com identidade orbital azul-petróleo/âmbar, botões recortados e segmentados, ícones próprios, seleção com texto escuro e nova tipografia; um quadro descreve a ação focada, os hubs recebem ícones e Voltar integrado ao estilo, e as dicas refletem setas/Tab.
 - Menus ORIGINAL adotam superfícies planas escuras, botões limpos e foco sublinhado; saem o glow dos botões, a placa diagonal e o glitch do título. Mapa/minimapa usam o casco equipado orientado e miniaturas da arte do jogo.
 - Menus ORIGINAL ganham painéis cacheados, foco por forma, cartões com resumos contidos e Tab/Shift+Tab; tiros guiados do LINEAR buscam por 2 s e expiram aos 5 s; mapa aberto recebe seleção por clique, rota direta e pares de portais, e o minimapa indica destinos distantes e o limite do Vazio.
 - Fundo do mundo aberto passa a usar nebulosas turbulentas e faixas de poeira, planetas com volume e objetos grandes na periferia, preservando o contraste da área central.

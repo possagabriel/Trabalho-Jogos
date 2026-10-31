@@ -2689,7 +2689,7 @@ class MenuPrincipal:
                         (layout.largura - margem - versao.get_width()
                          - layout.px(8), topo + layout.px(7)), alfa)
 
-        hint = "SETAS/WASD NAVEGAR   |   ENTER SELECIONAR   |   ESC SAIR"
+        hint = "SETAS / TAB NAVEGAR   |   ENTER SELECIONAR   |   ESC SAIR"
         surf2 = self._espacado(f, hint, 1, MENU_COR_TEXTO_SECUNDARIO)
         self._blit_alfa(tela, surf2,
                         (layout.largura // 2 - surf2.get_width() // 2,

@@ -23,14 +23,24 @@ from src.infrastructure.graphics.theme import (
 from src.runtime.domain.entities.player import SKINS
 from src.runtime.infrastructure.graphics.menu_panels import (
     ACENTO_ORIGINAL,
+    BORDA_ORIGINAL,
     TEXTO_ORIGINAL,
+    icone_menu_original,
     painel_original,
     texto_painel,
 )
-from src.runtime.infrastructure.graphics.smooth import ease_out
+from src.runtime.infrastructure.graphics.smooth import desenhar_circulo, ease_out, linha_suave
 
 if TYPE_CHECKING:
     from src.runtime.presentation.menu import MenuPrincipal
+
+CONTEXTOS_ORIGINAL = {
+    "JOGAR": ("Campanha LINEAR e MUNDO ABERTO.", "Escolha seu próximo destino."),
+    "HANGAR": ("Conheça os cascos e seus visuais.", "Veja o que seu saldo permite liberar."),
+    "PERFIL": ("Pilotos, melhores voos e memórias.", "Acompanhe a história do seu perfil."),
+    "CONFIGURAÇÕES": ("Áudio, vídeo e controles de voo.", "Ajuste o jogo ao seu jeito."),
+    "SAIR": ("Encerre a sessão pelo menu.", "Uma confirmação aparece antes de sair."),
+}
 
 
 class TelaPrincipalJogo:
@@ -47,6 +57,9 @@ class TelaPrincipalJogo:
         tema = tema_atual(menu.jogo.config["tema"])
         menu._desenhar_linhas_diagonais(tela, tema)
         menu._desenhar_bloco_titulo(tela, tema)
+        if not opcoes_atuais().ativo:
+            self.desenhar_contexto_original(tela)
+            self._desenhar_guia_original(tela)
         for indice, opcao in enumerate(menu.opcoes):
             progresso = menu._frac(0.34 + indice * 0.07, 0.42)
             original = not opcoes_atuais().ativo
@@ -71,6 +84,51 @@ class TelaPrincipalJogo:
         menu._desenhar_seta(tela, tema)
         self._desenhar_cartao_perfil(tela, menu, tema)
         menu._desenhar_rodape(tela, tema)
+
+    def contexto_rect(self) -> pygame.Rect:
+        """Reserva a área explicativa sem alcançar perfil, título ou coluna."""
+        menu, layout = self.menu, self.menu.layout
+        x = layout.px(56)
+        largura = min(layout.px(530), menu.x_opcoes - x - layout.px(24))
+        return pygame.Rect(x, layout.px(350), max(1, largura), layout.px(112))
+
+    def contexto_opcao(self) -> tuple[str, tuple[str, str]]:
+        """Descreve o destino selecionado com base no catálogo de opções."""
+        opcao = self.menu.opcoes[self.menu.opcao_selecionada]
+        titulo = opcao.texto.split("//", 1)[-1].strip()
+        return titulo, CONTEXTOS_ORIGINAL[titulo]
+
+    def desenhar_contexto_original(self, tela: pygame.Surface) -> None:
+        """Apresenta o significado da ação focada em um quadro do console orbital."""
+        menu, layout = self.menu, self.menu.layout
+        rect = self.contexto_rect()
+        painel = painel_original(rect.size, (0, 0, 0), BORDA_ORIGINAL, alpha=245)
+        tela.blit(painel, rect)
+        titulo, linhas = self.contexto_opcao()
+        indice = menu.opcoes[menu.opcao_selecionada].texto.split("//", 1)[0].strip()
+        icone = icone_menu_original(indice, False, layout.px(36))
+        tela.blit(icone, icone.get_rect(center=(rect.x + layout.px(29), rect.centery)))
+        x = rect.x + layout.px(62)
+        largura = rect.right - x - layout.px(16)
+        arte = texto_painel(layout.fonte_titulo(20), titulo, ACENTO_ORIGINAL,
+                            largura, layout.px(24))
+        tela.blit(arte, (x, rect.y + layout.px(14)))
+        for indice, linha in enumerate(linhas):
+            arte = texto_painel(layout.fonte_texto(18), linha, TEXTO_ORIGINAL,
+                                largura, layout.px(22))
+            tela.blit(arte, (x, rect.y + layout.px(44 + indice * 26)))
+
+    def _desenhar_guia_original(self, tela: pygame.Surface) -> None:
+        menu, layout = self.menu, self.menu.layout
+        rects = [opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, layout)
+                 for opcao in menu.opcoes]
+        x = menu.x_opcoes - layout.px(12)
+        linha_suave(tela, BORDA_ORIGINAL, (x, rects[0].centery),
+                     (x, rects[-1].centery), 1)
+        for indice, rect in enumerate(rects):
+            ativo = indice == menu.opcao_selecionada
+            cor = ACENTO_ORIGINAL if ativo else BORDA_ORIGINAL
+            desenhar_circulo(tela, cor, (x, rect.centery), layout.px(4 if ativo else 2))
 
     def cartao_rect(self) -> tuple[int, int, int, int]:
         """Retorna o retângulo lógico do cartão conforme a proporção da janela."""

@@ -77,8 +77,8 @@ class CenaMenuAnimada:
             ponto = (sx + self.parallax[0] * layout.px(camada * 4),
                      sy + self.parallax[1] * layout.px(camada * 4))
             desenhar_circulo(tela, COR_ESTRELA, ponto, max(1, layout.px(camada / 2)))
-        cx = layout.x(0.39) + layout.px(math.sin(self.tempo * 0.25) * 10)
-        cy = layout.y(0.56) + layout.px(math.cos(self.tempo * 0.22) * 5)
+        cx = layout.x(0.48) + layout.px(math.sin(self.tempo * 0.25) * 10)
+        cy = layout.y(0.34) + layout.px(math.cos(self.tempo * 0.22) * 5)
         cx += layout.px(self.parallax[0] * 8)
         cy += layout.px(self.parallax[1] * 5)
         arte = _planeta_menu(max(64, layout.px(210)))

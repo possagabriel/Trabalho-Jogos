@@ -1,6 +1,7 @@
 """Nova linguagem visual do ORIGINAL com a disposição anterior em coluna."""
 
 import pygame
+import pytest
 
 from src.runtime.infrastructure.graphics.menu_panels import (
     ACENTO_ORIGINAL,
@@ -45,3 +46,37 @@ def test_textos_essenciais_tem_contraste_minimo_em_ambos_os_estados():
                           (TEXTO_ATIVO_ORIGINAL, ACENTO_ORIGINAL)):
         maior, menor = sorted((luminancia(texto), luminancia(fundo)), reverse=True)
         assert (maior + .05) / (menor + .05) >= 4.5
+
+
+@pytest.mark.parametrize("resolucao", ["900x700", "1920x1080"])
+def test_descricao_da_acao_cabe_entre_titulo_perfil_e_botoes(resolucao):
+    from game.core import Jogo
+
+    jogo = Jogo()
+    menu = jogo.menu
+    jogo.config["estilo_visual"] = "ORIGINAL"
+    jogo.config["resolucao"] = resolucao
+    menu._aplicar_layout_opcoes()
+    painel = menu.tela_principal.contexto_rect()
+    perfil = pygame.Rect(*menu.tela_principal.cartao_rect())
+    assert painel.top >= menu.layout.px(340)
+    assert painel.bottom < perfil.top
+    assert painel.right < menu.opcoes[0].get_rect(
+        menu.x_opcoes, menu.fonte_opcao, menu.layout).left
+    for indice in range(5):
+        menu.opcao_selecionada = indice
+        titulo, linhas = menu.tela_principal.contexto_opcao()
+        assert titulo == menu.opcoes[indice].texto.split("//", 1)[-1].strip()
+        assert len(linhas) == 2 and all(linhas)
+        tela = pygame.Surface((menu.layout.largura, menu.layout.altura), pygame.SRCALPHA)
+        menu.tela_principal.desenhar_contexto_original(tela)
+        assert painel.contains(tela.get_bounding_rect())
+
+
+def test_icones_secundarios_e_desabilitados_preservam_o_cache():
+    normal = icone_menu_original("recordes", False, 32)
+    desabilitado = icone_menu_original("recordes", False, 32, desabilitado=True)
+    livro = icone_menu_original("memorias", False, 32)
+    assert normal is icone_menu_original("recordes", False, 32)
+    assert pygame.image.tobytes(normal, "RGBA") != pygame.image.tobytes(desabilitado, "RGBA")
+    assert pygame.image.tobytes(normal, "RGBA") != pygame.image.tobytes(livro, "RGBA")
