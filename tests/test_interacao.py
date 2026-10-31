@@ -225,8 +225,7 @@ def _verificar_navegacao_controles(estilo):
     jogo.config["estilo_visual"] = estilo
     menu = jogo.menu
     menu._abrir_config()
-    navegacao = ([pygame.K_TAB, pygame.K_TAB, pygame.K_DOWN] if estilo == "ORIGINAL" else
-                 [pygame.K_DOWN] * 5)
+    navegacao = [pygame.K_TAB, pygame.K_TAB, pygame.K_DOWN]
     for codigo in navegacao:
         tecla(codigo)
         jogo._tratar_eventos()
