@@ -24,6 +24,18 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Fundo aberto: nebulosas procedurais por setor, planetas sombreados e centro livre para combate; testes de identidade/cache/contraste aprovados, playtest visual pendente.
+
+- Pausa/confirmar saída: estilo ORIGINAL alinhado aos menus e navegação de ações por setas/Tab; validação visual pendente.
+
+- Menus ORIGINAL: painéis cacheados com profundidade, foco consistente e resumos contidos nos cartões; conferir aparência jogando.
+
+- Anomalias: acreção e lente preenchidas, horizonte negro e túneis profundos com fluxo cacheado; revisão visual jogando pendente.
+
+- Mundo aberto: rochas e meteoros refinados; bosses móveis sem perseguição, aviso de mira e padrões por dimensão/fase; playtest de dificuldade e visual pendente.
+
+- Mundo aberto: mapa clicável com rota direta, contexto de combate/setor e propulsor por movimento; falta playtest visual.
+
 - Menu: foco do teclado preservado com mouse parado; HUD com contraste e acentos revisados.
 
 - Anomalias: buraco negro com disco em camadas e portais com túnel/pares identificados; efeitos reduzidos estáticos, 38 testes direcionados passaram, falta playtest visual.

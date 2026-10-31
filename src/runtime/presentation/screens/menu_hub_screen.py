@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.infrastructure.graphics.theme import MENU_RESUMO_CONTINUAR_FONT_SIZE, tema_atual
+from src.runtime.infrastructure.graphics.menu_panels import painel_original
 
 if TYPE_CHECKING:
     from src.runtime.presentation.menu import MenuPrincipal
@@ -38,9 +39,7 @@ class MenuHubScreen:
         layout = self.menu.layout
         narrow = self.menu._layout_4_3()
         width = layout.px(620 if narrow else 700)
-        height = layout.px((350 if self.kind == "PERFIL" else 420)
-                           if narrow else
-                           (385 if self.kind == "PERFIL" else 370))
+        height = layout.px(450)
         return pygame.Rect(
             layout.x(0.5) - width // 2,
             layout.y(0.5) - height // 2,
@@ -52,9 +51,9 @@ class MenuHubScreen:
         panel = self._panel()
         layout = self.menu.layout
         narrow = self.menu._layout_4_3()
-        row_height = layout.px(58 if narrow else 62)
+        row_height = layout.px(82)
         margin = layout.px(28 if narrow else 32)
-        gap = layout.px(10 if narrow else 14)
+        gap = layout.px(12)
         top = panel.y + layout.px(96 if narrow else 104)
         return [pygame.Rect(
             panel.x + margin,
@@ -76,8 +75,14 @@ class MenuHubScreen:
         menu = self.menu
         theme = tema_atual(menu.jogo.config["tema"])
         panel = self._panel()
-        pygame.draw.rect(surface, (4, 7, 23), panel, border_radius=16)
-        pygame.draw.rect(surface, theme["primaria"], panel, 2, border_radius=16)
+        original = menu.jogo.config["estilo_visual"] == "ORIGINAL"
+        if original:
+            surface.blit(painel_original(
+                panel.size, tuple(theme["fundo_painel"][:3]),
+                tuple(theme["primaria"][:3]), raio=menu.layout.px(16)), panel)
+        else:
+            pygame.draw.rect(surface, (4, 7, 23), panel, border_radius=16)
+            pygame.draw.rect(surface, theme["primaria"], panel, 2, border_radius=16)
         title = "JOGAR" if self.kind == "JOGAR" else "PERFIL"
         title_surface = menu.fonte_cabecalho.render(title, True, theme["primaria"])
         surface.blit(title_surface, title_surface.get_rect(
@@ -87,14 +92,19 @@ class MenuHubScreen:
             disabled = action == "continuar" and not menu._tem_save()
             color = (105, 111, 135) if disabled else (
                 theme["primaria"] if selected else theme["secundaria"])
-            pygame.draw.rect(surface, (8, 13, 32), rect, border_radius=10)
-            pygame.draw.rect(surface, color, rect, 3 if selected else 1,
-                             border_radius=10)
+            if original:
+                surface.blit(painel_original(
+                    rect.size, tuple(theme["fundo_painel"][:3]), tuple(color[:3]),
+                    selecionado=selected and not disabled, raio=menu.layout.px(10)), rect)
+            else:
+                pygame.draw.rect(surface, (8, 13, 32), rect, border_radius=10)
+                pygame.draw.rect(surface, color, rect, 3 if selected else 1,
+                                 border_radius=10)
             self._desenhar_cartao(surface, rect, label, action, color)
             if self.kind == "PERFIL" and action == "memorias" \
                     and menu._novidades("memorias"):
                 self._badge(surface, rect, theme["terciaria"])
-            elif action == "continuar" and disabled:
+            elif action == "continuar" and disabled and not original:
                 hint = menu.fonte_pequena.render("SEM SAVE", True, color)
                 surface.blit(hint, hint.get_rect(
                     midright=(rect.right - menu.layout.px(14), rect.centery)))
@@ -126,7 +136,7 @@ class MenuHubScreen:
         font = menu.layout.fonte_texto(
             max(14, MENU_RESUMO_CONTINUAR_FONT_SIZE - 4))
         surface.blit(heading, heading.get_rect(
-            center=(rect.centerx, rect.y + menu.layout.px(15))))
+            center=(rect.centerx, rect.y + menu.layout.px(20))))
         for index, detail in enumerate(details):
             detail_surface = self._text_cache.get(
                 (id(font), detail, (210, 220, 240)))
@@ -134,7 +144,7 @@ class MenuHubScreen:
                 detail_surface = font.render(detail, True, (210, 220, 240))
                 self._text_cache[(id(font), detail, (210, 220, 240))] = detail_surface
             surface.blit(detail_surface, detail_surface.get_rect(
-                center=(rect.centerx, rect.y + menu.layout.px(37 + index * 17))))
+                center=(rect.centerx, rect.y + menu.layout.px(47 + index * 20))))
 
     def _detalhes_cartao(self, action: str) -> tuple[str, str]:
         service = self.menu.jogo.profile_service

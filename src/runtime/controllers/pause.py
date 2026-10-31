@@ -9,6 +9,7 @@ import pygame
 from src.core.constants import ALTURA, LARGURA
 from src.core.settings import TEMAS
 from src.runtime.presentation.menu import Dialogo
+from src.runtime.presentation.screens.pause_screen import geometria_config_pausa, geometria_pausa
 
 if TYPE_CHECKING:
     from src.runtime.application.core import Jogo
@@ -92,16 +93,22 @@ class ControladorPausa:
     def clique_config(self, pos: tuple[int, int]) -> None:
         """Aplica a configuracao ou acao selecionada pelo mouse."""
         jogo = self.jogo
-        painel = pygame.Rect(LARGURA // 2 - 270, ALTURA // 2 - 215, 540, 430)
-        for indice in range(4):
-            linha = pygame.Rect(painel.x + 24, painel.y + 70 + indice * 70, 492, 44)
+        if jogo.config["estilo_visual"] == "ORIGINAL":
+            painel, linhas, botoes = geometria_config_pausa(jogo.layout)
+        else:
+            painel = pygame.Rect(LARGURA // 2 - 270, ALTURA // 2 - 215, 540, 430)
+            linhas = tuple(pygame.Rect(painel.x + 24, painel.y + 70 + i * 70, 492, 44)
+                           for i in range(4))
+            botoes = (pygame.Rect(painel.x + 30, painel.bottom - 56, 150, 42),
+                      pygame.Rect(painel.right - 180, painel.bottom - 56, 150, 42))
+        for indice, linha in enumerate(linhas):
             if linha.collidepoint(pos):
                 jogo._pausa_config_selecao = indice
                 self.ajustar_config(indice, 1)
                 return
-        if pygame.Rect(painel.x + 30, painel.bottom - 56, 150, 42).collidepoint(pos):
+        if botoes[0].collidepoint(pos):
             jogo._pausa_mostrando_config = False
-        elif pygame.Rect(painel.right - 180, painel.bottom - 56, 150, 42).collidepoint(pos):
+        elif botoes[1].collidepoint(pos):
             jogo.config["musica_volume"] = 0.8
             jogo.config["efeitos_volume"] = 0.8
             jogo.config["tema"] = "NEON"
@@ -113,6 +120,11 @@ class ControladorPausa:
 
     def colidir_opcao(self, pos: tuple[int, int]) -> int | None:
         """Retorna a opcao da pausa posicionada sob o cursor."""
+        if self.jogo.config["estilo_visual"] == "ORIGINAL":
+            for indice, botao in enumerate(geometria_pausa(self.jogo.layout)[1]):
+                if botao.collidepoint(pos):
+                    return indice
+            return None
         painel = pygame.Rect(LARGURA // 2 - 220, ALTURA // 2 - 210, 440, 420)
         for indice in range(3):
             botao = pygame.Rect(LARGURA // 2 - 160, painel.y + 118 + indice * 74, 320, 54)
@@ -143,7 +155,7 @@ class ControladorPausa:
         jogo._pausa_dialogo = Dialogo(
             "Sair da Missao",
             "Tem certeza que deseja voltar ao menu? O progresso desta sessao sera salvo.",
-            self.confirmar_saida, lambda: None)
+            self.confirmar_saida, lambda: None, layout=jogo.layout)
 
     def confirmar_saida(self) -> None:
         """Salva a sessao e retorna ao menu principal."""

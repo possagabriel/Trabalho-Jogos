@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Fundo do mundo aberto passa a usar nebulosas turbulentas e faixas de poeira, planetas com volume e objetos grandes na periferia, preservando o contraste da área central.
+- Pausa e confirmações ORIGINAL ganham painéis consistentes, rótulos diretos e foco por setas/Tab; desenho e clique compartilham a geometria da pausa.
+- Menus ORIGINAL recebem painéis com gradiente e relevo, seleção consistente e cartão de perfil integrado; abas de Jogar/Perfil reservam espaço para os resumos sem sobreposição.
+- Anomalias ganham sombreamento volumétrico: sombra negra, acreção assimétrica e arco de lente; portais exibem garganta espiral e estrelas ao fundo, com fluxo cacheado.
+- Mundo aberto: asteroides com facetas/crateras e meteoros cacheados por estilo; bosses patrulham arenas amplas e anunciam seis padrões de disparo, com mira travada e mudança por fase.
+- Mundo aberto ganha seleção de destino por clique, rota pontilhada, setor e encontro ativo no painel; propulsor desliga parado e rastros respeitam efeitos reduzidos.
 - Menu mantém o foco do teclado; HUD ganha acentos nos painéis e texto com contraste reforçado.
 - HUD de combate reorganizado com painéis de maior contraste, nome do piloto,
   alerta de casco crítico, atalhos visíveis e textos ajustados ao espaço.

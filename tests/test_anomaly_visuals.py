@@ -79,3 +79,45 @@ def test_camadas_sao_reutilizadas_durante_animacao() -> None:
     for tempo in (0.3, 0.7, 1.4):
         anomalias.render(tela, portal.x - 300, portal.y - 250, False, tempo=tempo)
     assert faltas == (camada_anomalia.cache_info().misses, legenda_anomalia.cache_info().misses)
+
+
+@pytest.mark.parametrize("comic", [False, True])
+def test_horizonte_permanece_escuro_e_disco_tem_volume(comic):
+    from src.runtime.infrastructure.graphics.anomaly_visuals import CENTRO, camada_anomalia
+
+    arte = camada_anomalia(False, comic, False)
+    nucleo = arte.get_at(CENTRO)
+    assert max(nucleo[:3]) <= 12
+    assert nucleo.a == 255
+    # A acreção tem área preenchida e gradientes, em vez de apenas contornos.
+    cores = {tuple(arte.get_at((x, CENTRO[1] + 25)))
+             for x in range(CENTRO[0] - 170, CENTRO[0] + 170)}
+    assert sum(cor[3] > 100 for cor in cores) > 25
+
+
+def test_portal_tem_profundidade_preenchida_e_arte_nao_vaza_na_borda():
+    from src.runtime.infrastructure.graphics.anomaly_visuals import CENTRO, camada_anomalia
+
+    arte = camada_anomalia(True, False, False)
+    pontos = [arte.get_at((CENTRO[0] + x, CENTRO[1])) for x in range(-55, 56)]
+    assert all(cor.a > 150 for cor in pontos)
+    assert len({tuple(cor[:3]) for cor in pontos}) > 30
+    assert all(arte.get_at((x, 0)).a == 0 for x in range(arte.get_width()))
+
+
+def test_fluxo_reutiliza_quadros_e_preserva_o_horizonte():
+    from src.runtime.infrastructure.graphics.anomaly_visuals import CENTRO, _fluxo_anomalia
+
+    quadros = _fluxo_anomalia(False, False)
+    assert quadros is _fluxo_anomalia(False, False)
+    assert all(quadro.get_at(CENTRO).a == 0 for quadro in quadros)
+    assert len({pygame.image.tobytes(quadro, "RGBA") for quadro in quadros}) > 1
+
+
+def test_disco_tem_brilho_assimetrico():
+    from src.runtime.infrastructure.graphics.anomaly_visuals import CENTRO, camada_anomalia
+
+    arte = camada_anomalia(False, False, False)
+    esquerda = arte.get_at((CENTRO[0] - 110, CENTRO[1]))
+    direita = arte.get_at((CENTRO[0] + 110, CENTRO[1]))
+    assert sum(esquerda[:3]) > sum(direita[:3])

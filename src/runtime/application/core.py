@@ -84,6 +84,7 @@ from src.runtime.presentation.dimension_transition import (
 from src.runtime.presentation.equipment_overlay import desenhar_menu_equipamento
 from src.runtime.presentation.hud import HudJogo
 from src.runtime.presentation.menu import Dialogo, MenuPrincipal
+from src.runtime.presentation.screens.pause_screen import desenhar_pausa_original
 from src.runtime.presentation.screens.upgrade_screen import TelaMelhorias
 from src.runtime.presentation.ui import (
     desenhar_barra,
@@ -1193,6 +1194,9 @@ class Jogo:
 
     def _desenhar_pausa_principal(self, tema, t):
         """Menu de pausa principal com 3 opcoes interativas."""
+        if self.config["estilo_visual"] == "ORIGINAL":
+            desenhar_pausa_original(self, tema)
+            return
         pw, ph = 440, 420
         painel = pygame.Rect(LARGURA // 2 - pw // 2, ALTURA // 2 - ph // 2,
                              pw, ph)
@@ -1298,6 +1302,9 @@ class Jogo:
 
     def _desenhar_pausa_config(self, tema, t):
         """Sub-painel de configuracoes dentro da pausa."""
+        if self.config["estilo_visual"] == "ORIGINAL":
+            desenhar_pausa_original(self, tema, configuracoes=True)
+            return
         pw, ph = 540, 430
         painel = pygame.Rect(LARGURA // 2 - pw // 2, ALTURA // 2 - ph // 2,
                              pw, ph)

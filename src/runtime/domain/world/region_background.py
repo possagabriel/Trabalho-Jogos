@@ -9,6 +9,9 @@ import pygame
 
 from src.core.constants import ALTURA, LARGURA
 from src.runtime.domain.world.scenarios import CENARIOS
+from src.runtime.infrastructure.graphics.nebula_background import criar_fundo_nebuloso
+from src.runtime.infrastructure.graphics.nebula_background import desenhar_planeta as _planeta
+from src.runtime.infrastructure.graphics.smooth import luz_radial
 
 
 def _misturar(a: tuple[int, int, int], b: tuple[int, int, int],
@@ -19,71 +22,13 @@ def _misturar(a: tuple[int, int, int], b: tuple[int, int, int],
 
 def _estrela(surface: pygame.Surface, center: tuple[int, int], radius: int,
              color: tuple[int, int, int]) -> None:
-    """Desenha estrelas de tamanhos distintos, da anã à supergigante."""
-    x, y = center
-    halo = _misturar(color, (25, 31, 48), 0.55)
-    pygame.draw.circle(surface, halo, center, radius + max(5, radius // 3), 2)
-    pygame.draw.circle(surface, color, center, radius)
-    pygame.draw.circle(surface, _misturar(color, (255, 255, 240), 0.55),
-                       (x - radius // 4, y - radius // 4), max(2, radius // 3))
-    reach = radius + max(10, radius // 2)
-    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-        pygame.draw.line(surface, halo, (x + dx * radius, y + dy * radius),
-                         (x + dx * reach, y + dy * reach), 2)
-
-
-def _planeta(surface: pygame.Surface, center: tuple[int, int], radius: int,
-             color: tuple[int, int, int], *, rings: bool = False,
-             craters: bool = False) -> None:
-    """Compõe um corpo rochoso, gasoso ou gelado com sombra e relevo."""
-    x, y = center
-    shade = _misturar(color, (9, 15, 31), 0.65)
-    light = _misturar(color, (210, 228, 240), 0.35)
-    if rings:
-        pygame.draw.ellipse(surface, light,
-                            (x - radius * 2, y - radius // 3,
-                             radius * 4, radius * 2 // 3), 4)
-    pygame.draw.circle(surface, shade, center, radius)
-    pygame.draw.circle(surface, color,
-                       (x - radius // 7, y - radius // 9), radius * 6 // 7)
-    pygame.draw.circle(surface, light,
-                       (x - radius // 3, y - radius // 3), max(4, radius // 7), 2)
-    if craters:
-        for dx, dy, size in ((-0.33, 0.12, 0.13), (0.12, -0.27, 0.08),
-                             (0.29, 0.32, 0.11)):
-            pygame.draw.circle(surface, shade,
-                               (x + round(radius * dx), y + round(radius * dy)),
-                               max(2, round(radius * size)), 2)
-    else:
-        for offset in (-0.32, -0.04, 0.25):
-            yy = y + round(radius * offset)
-            span = round(radius * math.sqrt(max(0.0, 1 - offset * offset)))
-            pygame.draw.arc(surface, light,
-                            (x - span, yy - 11, span * 2, 22), 0.2, 2.9, 2)
-    if rings:
-        pygame.draw.arc(surface, light,
-                        (x - radius * 2, y - radius // 3,
-                         radius * 4, radius * 2 // 3), math.pi, math.tau, 4)
-
-
-def _nebulosa(surface: pygame.Surface, center: tuple[int, int],
-              color: tuple[int, int, int], rng: random.Random) -> None:
-    """Acumula camadas translúcidas de gás e poeira com estrelas jovens."""
-    veil = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
-    for index in range(9):
-        radius_x = 65 + index * 20
-        radius_y = 35 + index * 12
-        x = center[0] + rng.randrange(-110, 111)
-        y = center[1] + rng.randrange(-85, 86)
-        pygame.draw.ellipse(veil, (*color, 12 + index),
-                            (x - radius_x, y - radius_y,
-                             radius_x * 2, radius_y * 2))
-    surface.blit(veil, (0, 0))
-    for _ in range(18):
-        x = center[0] + rng.randrange(-180, 181)
-        y = center[1] + rng.randrange(-120, 121)
-        pygame.draw.circle(surface, _misturar(color, (236, 240, 250), 0.5),
-                           (x, y), rng.choice((1, 1, 2)))
+    """Estrela distante com emissão radial suave e núcleo quente."""
+    halo = luz_radial(color, radius * 2, 0.18)
+    surface.blit(halo, halo.get_rect(center=center))
+    for raio in range(radius, 0, -1):
+        t = 1 - raio / radius
+        cor = tuple(min(210, round(c * (0.35 + t * 0.5))) for c in color)
+        pygame.draw.circle(surface, cor, center, raio)
 
 
 def _cometa(surface: pygame.Surface, head: tuple[int, int],
@@ -203,10 +148,9 @@ class SectorBackground:
         if comic:
             top = _misturar((37, 37, 43), accent, 0.22)
             bottom = _misturar((52, 46, 43), accent, 0.16)
-        result = pygame.Surface((LARGURA, ALTURA))
-        for y in range(ALTURA):
-            color = _misturar(top, bottom, y / max(1, ALTURA - 1))
-            pygame.draw.line(result, color, (0, y), (LARGURA, y))
+        gas = _misturar(scene["cores_principais"][0], accent, 0.25)
+        result = criar_fundo_nebuloso((LARGURA, ALTURA), top, bottom, gas,
+                                      self.dimension * 1009 + sector * 97, comic)
 
         for _ in range(95):
             x, y = rng.randrange(LARGURA), rng.randrange(ALTURA)
@@ -226,47 +170,36 @@ class SectorBackground:
         """Atribui uma silhueta própria a cada uma das seis áreas."""
         jitter = rng.randrange(-55, 56)
         if sector == 0:
-            _estrela(surface, (970 + jitter, 430), 43, (230, 181, 94))
-            _planeta(surface, (320 + jitter, 395), 126,
+            _estrela(surface, (1110 + jitter, 145), 32, (230, 181, 94))
+            _planeta(surface, (125 + jitter, 535), 154,
                      _misturar(accent, (145, 111, 91), 0.5), craters=True)
             for _ in range(55):
                 x = rng.randrange(105, 575)
                 y = 500 + round(math.sin(x / 55) * 24) + rng.randrange(-16, 17)
                 pygame.draw.circle(surface, accent, (x, y), rng.choice((1, 2)))
         elif sector == 1:
-            _estrela(surface, (1030 + jitter, 400), 94, (183, 97, 103))
+            _estrela(surface, (1190 + jitter, 85), 104, (183, 97, 103))
             _estrela(surface, (240 + jitter, 175), 13, (157, 207, 235))
             nodes = ((190, 335), (300, 230), (390, 315), (520, 205),
                      (650, 360), (780, 265), (940, 335))
-            for start, end in zip(nodes, nodes[1:]):
-                pygame.draw.line(surface, _misturar(accent, (178, 204, 224), 0.45),
-                                 start, end, 2)
             for point in nodes:
-                pygame.draw.circle(surface, (181, 215, 235), point, 5)
+                pygame.draw.circle(surface, _misturar(accent, (181, 215, 235), 0.35),
+                                   (point[0], point[1] // 2), 2)
             _cometa(surface, (710, 115), (159, 216, 230), 125)
         elif sector == 2:
-            _estrela(surface, (1100, 195), 115, (217, 142, 93))
-            _planeta(surface, (420 + jitter, 410), 162,
+            _estrela(surface, (1150, 135), 80, (217, 142, 93))
+            _planeta(surface, (140 + jitter, 530), 175,
                      _misturar(accent, (165, 132, 96), 0.55), rings=True)
         elif sector == 3:
-            _nebulosa(surface, (830, 350), _misturar(accent, (100, 133, 180), 0.4), rng)
-            center = (780 + jitter, 360)
+            center = (1020 + jitter, 175)
             _galaxia(surface, center, accent)
             _estrela(surface, center, 22, (212, 198, 181))
         elif sector == 4:
-            _nebulosa(surface, (625, 355), _misturar(accent, (105, 69, 135), 0.45), rng)
-            center = (635 + jitter, 360)
-            pygame.draw.ellipse(surface, (191, 115, 176),
-                                (center[0] - 240, center[1] - 70, 480, 140), 7)
-            pygame.draw.circle(surface, (170, 160, 213), center, 118, 3)
-            pygame.draw.circle(surface, (5, 8, 19), center, 108)
-            for _ in range(9):
-                _cometa(surface,
-                        (rng.randrange(110, 1170), rng.randrange(110, 620)),
-                        (157, 177, 205), rng.randrange(35, 95))
+            # Faixa distante na periferia; nenhum falso perigo ocupa o centro.
+            _galaxia(surface, (1080 + jitter, 170), _misturar(accent, (15, 20, 34), 0.6))
+            _estrela(surface, (180, 560), 9, (157, 177, 205))
         else:
-            _nebulosa(surface, (380, 270), _misturar(accent, (98, 144, 177), 0.55), rng)
-            _planeta(surface, (920 + jitter, 415), 142,
+            _planeta(surface, (1140 + jitter, 535), 180,
                      _misturar(accent, (110, 172, 198), 0.6), craters=True)
             _estrela(surface, (265, 470), 16, (153, 218, 234))
             _cometa(surface, (655, 130), (151, 216, 231), 135)
