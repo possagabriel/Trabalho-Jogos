@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Configurações ORIGINAL organizadas em seis abas orbitais, ajuda contextual, sliders arrastáveis e subtelas de vídeo/controles consistentes; 207 testes direcionados e Ruff aprovados, conferência jogando pendente.
+
 - Hangar ORIGINAL com catálogo de quatro colunas, expositor lateral, preços/estados claros e prévia orbital; cache e efeitos reduzidos preservados. 200 testes direcionados e Ruff aprovados; conferência jogando pendente.
 
 - Principal usa `images/fundo-menuprincipal.png` em cover centralizado, com cache e fallback procedural; controles orbitais preservados e submenus mantêm o fundo atual. 138 testes direcionados e Ruff aprovados; conferência jogando pendente.

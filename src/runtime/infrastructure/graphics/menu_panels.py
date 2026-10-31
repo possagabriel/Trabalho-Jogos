@@ -53,7 +53,7 @@ def texto_painel(fonte: pygame.font.Font, texto: str, cor: tuple[int, int, int],
 def painel_original(tamanho: tuple[int, int], fundo: tuple[int, int, int],
                      borda: tuple[int, int, int], *, selecionado: bool = False,
                      raio: int = 12, alpha: int = 240,
-                     botao: bool = False) -> pygame.Surface:
+                     botao: bool = False, segmentado: bool = True) -> pygame.Surface:
     """Cacheia um painel recortado; botões ativos recebem preenchimento âmbar."""
     largura, altura = tamanho
     tela = pygame.Surface(tamanho, pygame.SRCALPHA)
@@ -65,7 +65,7 @@ def painel_original(tamanho: tuple[int, int], fundo: tuple[int, int, int],
            FOCO_ORIGINAL if selecionado else PAINEL_ORIGINAL)
     contorno = TEXTO_ATIVO_ORIGINAL if botao and selecionado else BORDA_ORIGINAL
     pygame.draw.polygon(tela, (*cor, alpha), pontos)
-    if botao and altura >= 44:
+    if botao and segmentado and altura >= 44:
         faixa = min(60, round(altura * .85))
         tom = tuple(round(c * .88) for c in cor)
         pygame.draw.polygon(tela, (*tom, alpha),
@@ -79,7 +79,7 @@ def painel_original(tamanho: tuple[int, int], fundo: tuple[int, int, int],
                      (min(largura - corte - 2, corte + 52), 2), 2)
     if selecionado:
         pygame.draw.line(tela, (*detalhe, 255), (3, corte), (3, altura - corte - 1), 3)
-        if botao and altura >= 44:
+        if botao and segmentado and altura >= 44:
             x, y = largura - 21, altura // 2
             pygame.draw.lines(tela, (*detalhe, alpha), False,
                                ((x - 4, y - 5), (x + 2, y), (x - 4, y + 5)), 2)

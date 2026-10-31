@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Configurações ORIGINAL passam a usar abas Áudio/Tela/Controles/Visual/Shader/Conforto, ajuda para cada opção e barras arrastáveis; Tab, rolagem e Ctrl+S complementam a navegação. Resolução, remapeamento, calibração e confirmação seguem o acabamento orbital sem piscar.
 - Hangar ORIGINAL recebe catálogo compacto, expositor da nave selecionada, plataforma orbital, estados de compra/equipagem e ações com ícones; a prévia compartilha o estilo e indica visuais bloqueados.
 - A tela principal usa `fundo-menuprincipal.png` sem deformação, mantendo o estilo dos controles e o fundo procedural nos submenus; carregamento e redimensionamento ficam em cache.
 - ORIGINAL preserva as opções em coluna com identidade orbital azul-petróleo/âmbar, botões recortados e segmentados, ícones próprios, seleção com texto escuro e nova tipografia; um quadro descreve a ação focada, os hubs recebem ícones e Voltar integrado ao estilo, e as dicas refletem setas/Tab.

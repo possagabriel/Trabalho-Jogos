@@ -1544,6 +1544,8 @@ class MenuPrincipal:
 
     def _track_slider(self):
         """Posicoes x da trilha do slider (proporcionais a superficie)."""
+        if self.jogo.config["estilo_visual"] == "ORIGINAL":
+            return self.tela_configuracoes.original.trilha_slider()
         _, _, inicio, fim, _ = self._grade_config()
         return inicio, fim
 
@@ -1961,6 +1963,9 @@ class MenuPrincipal:
 
     def _desenhar_confirmacao_resolucao(self, tela, tema):
         """Exibe a tela temporizada de confirmacao do novo modo de video."""
+        if self.jogo.config["estilo_visual"] == "ORIGINAL":
+            self.tela_configuracoes.original.desenhar_confirmacao(tela)
+            return
         layout = self.layout
         self._overlay_confirmacao_resolucao.fill((0, 0, 0, 205))
         tela.blit(self._overlay_confirmacao_resolucao, (0, 0))
@@ -2072,6 +2077,8 @@ class MenuPrincipal:
                                                     layout.y(0.5) + layout.px(20))))
 
     def _painel_config(self):
+        if self.jogo.config["estilo_visual"] == "ORIGINAL":
+            return self.tela_configuracoes.original.geometria().painel
         return self._painel_central(620, 468, -16)
 
     def _abrir_ajuste_tela(self):
@@ -2872,6 +2879,8 @@ class MenuPrincipal:
             return self._tratar_confirmacao_resolucao(evento)
         if self.remapando:
             return self._tratar_remap(evento)
+        if self.subestado == "CONFIG" and self.tela_configuracoes.tratar_ponteiro(evento):
+            return True
         if evento.type == pygame.MOUSEMOTION:
             self.mouse = self._pos_logica(evento.pos)
             if self.subestado == "MENU":

@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex reorganizou as configurações ORIGINAL em abas orbitais, com ajuda contextual, arraste com prévia e subtelas consistentes; testes de geometria/categorias escritos primeiro, 207 testes direcionados e Ruff aprovados. Sem novas dependências, screenshots ou mudança de gameplay; conferência jogando pendente.
+
 - Codex refinou o hangar ORIGINAL no estilo orbital com expositor, catálogo responsivo e prévia consistente; testes de geometria/estados escritos primeiro, 200 testes direcionados e Ruff aprovados. Sem screenshots, novas dependências ou mudanças na economia; conferência jogando pendente.
 
 - Codex conectou `fundo-menuprincipal.png` à tela principal, com cover, cache e fallback; 138 testes direcionados e Ruff aprovados, incluindo preservação do asset e separação dos submenus. Sem screenshots ou alteração da imagem.
