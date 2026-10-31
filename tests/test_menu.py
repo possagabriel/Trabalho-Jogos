@@ -98,7 +98,10 @@ def test_menu_principal_tem_cinco_acoes_do_mesmo_tamanho():
     rects = [opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
              for opcao in menu.opcoes]
     assert len({rect.size for rect in rects}) == 1
-    assert all(b.top - a.bottom > 0 for a, b in zip(rects, rects[1:]))
+    assert all(not rect.colliderect(outro)
+               for indice, rect in enumerate(rects) for outro in rects[indice + 1:])
+    assert rects[0].top == rects[1].top == rects[2].top
+    assert rects[3].top == rects[4].top > rects[0].bottom
     assert menu.destaque.y == menu.opcoes[0].y
     assert [option.texto for option in menu.opcoes] == ROTULOS_ESPERADOS
 
@@ -287,18 +290,70 @@ def test_glitch_desligado_na_reducao_de_efeitos_e_titulo_em_cache():
     assert superficies_segunda_leitura is superficies
 
 
-def test_glitch_tem_pulsos_curto_com_frequencia_inferior_a_tres_por_segundo():
+def test_glitch_comic_tem_pulsos_com_frequencia_inferior_a_tres_por_segundo():
     jogo, menu = novo_menu()
     superf = {"incarnate_eco": pygame.Surface((4, 4), pygame.SRCALPHA),
               "incarnate_glitch_ciano": pygame.Surface((4, 4), pygame.SRCALPHA)}
     tela = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
-    with mock.patch.object(menu, "_blit_alfa") as desenhar:
+    with usar_visual({"estilo_visual": "COMIC"}), \
+            mock.patch.object(menu, "_blit_alfa") as desenhar:
         for instante, chamadas in ((0, 2), (41, 2), (42, 0), (649, 0),
                                    (650, 2)):
             desenhar.reset_mock()
             with mock.patch("pygame.time.get_ticks", return_value=instante):
                 menu._desenhar_glitch_titulo(tela, superf, 0)
             assert desenhar.call_count == chamadas
+
+
+def test_menu_original_nao_exibe_glitch_nem_placa_diagonal():
+    jogo, menu = novo_menu()
+    tela = pygame.Surface(jogo.tela.get_size(), pygame.SRCALPHA)
+    with usar_visual({"estilo_visual": "ORIGINAL"}), \
+            mock.patch.object(menu, "_blit_alfa") as desenhar, \
+            mock.patch.object(menu, "_bloco_logo") as placa:
+        menu._desenhar_glitch_titulo(tela, {}, 0)
+        desenhar.assert_not_called()
+        menu.entrada_t = 10
+        menu._desenhar_bloco_titulo(tela, tema_atual(jogo.config["tema"]))
+        placa.assert_not_called()
+
+
+def test_animacao_do_foco_preserva_cliques_do_menu_e_dos_hubs():
+    jogo, menu = novo_menu()
+    jogo.config["estilo_visual"] = "ORIGINAL"
+    jogo.config["intensidade_flash"] = "NORMAL"
+    menu._aplicar_layout_opcoes()
+    rects = [opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
+             for opcao in menu.opcoes]
+    hub_rects = menu.jogar_hub._rects()
+    menu._selecionar(3)
+    menu.jogar_hub.selection = 2
+    for _ in range(30):
+        menu.atualizar()
+    assert menu.opcoes[3].foco_animado.valor > 0.99
+    assert menu.jogar_hub.focos[2].valor > 0.99
+    assert rects == [opcao.get_rect(menu.x_opcoes, menu.fonte_opcao, menu.layout)
+                     for opcao in menu.opcoes]
+    assert hub_rects == menu.jogar_hub._rects()
+
+
+@pytest.mark.parametrize("efeitos", ["REDUZIDO", "DESLIGADO"])
+def test_menu_reduzido_remove_movimento_continuo_e_aplica_foco_imediato(efeitos):
+    jogo, menu = novo_menu()
+    jogo.config["estilo_visual"] = "ORIGINAL"
+    jogo.config["intensidade_flash"] = "NORMAL"
+    menu.atualizar()
+    tempo_nave = menu.nave.tempo
+    assert menu.animacao_original.tempo > 0
+    jogo.config["intensidade_flash"] = efeitos
+    menu._selecionar(2)
+    for _ in range(10):
+        menu.atualizar()
+    assert menu.animacao_original.tempo == 0
+    assert menu.animacao_original.parallax == (0.0, 0.0)
+    assert menu.nave.tempo == tempo_nave
+    assert menu.opcoes[2].foco_animado.valor == 1
+    assert menu.opcoes[0].foco_animado.valor == 0
 
 
 def test_continuar_sem_save_fica_visualmente_desabilitado_no_menu_original():
@@ -349,8 +404,10 @@ def test_contraste_do_rodape_sobre_fundo_real_inclui_planeta():
     assert min(ratios) >= 4.5
 
 
-def test_menu_widescreen_separa_titulo_da_coluna_de_opcoes():
-    _, menu = novo_menu()
+def test_menu_comic_widescreen_separa_titulo_da_coluna_de_opcoes():
+    jogo, menu = novo_menu()
+    jogo.config["estilo_visual"] = "COMIC"
+    menu._aplicar_layout_opcoes()
 
     limite_titulo = menu.layout.px(520)
     inicio_opcoes = menu.x_opcoes - menu.layout.px(46)
@@ -854,8 +911,8 @@ def test_menu_principal_compartilha_opcoes_uniformes_e_cartao(
     assert [item.texto for item in menu.opcoes] == ROTULOS_ESPERADOS
     assert all(item.principal for item in menu.opcoes)
     assert len({rect.size for rect in rects}) == 1
-    assert all(rect.bottom <= seguinte.top
-               for rect, seguinte in zip(rects, rects[1:]))
+    assert all(not rect.colliderect(outro)
+               for indice, rect in enumerate(rects) for outro in rects[indice + 1:])
     assert all(0 <= rect.left < rect.right <= menu.layout.largura
                and 0 <= rect.top < rect.bottom <= menu.layout.altura
                for rect in rects)

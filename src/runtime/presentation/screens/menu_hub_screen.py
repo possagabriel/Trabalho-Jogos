@@ -7,7 +7,12 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.infrastructure.graphics.theme import MENU_RESUMO_CONTINUAR_FONT_SIZE, tema_atual
-from src.runtime.infrastructure.graphics.menu_panels import painel_original, texto_painel
+from src.runtime.infrastructure.graphics.menu_animation import FocoAnimado, desenhar_trilha_foco
+from src.runtime.infrastructure.graphics.menu_panels import (
+    TEXTO_SOBRIO,
+    painel_original,
+    texto_painel,
+)
 
 if TYPE_CHECKING:
     from src.runtime.presentation.menu import MenuPrincipal
@@ -21,6 +26,14 @@ class MenuHubScreen:
         self.kind = kind
         self.selection = 0
         self._text_cache: dict[tuple, pygame.Surface] = {}
+        self.focos = [FocoAnimado() for _ in self.entries]
+        self.efeitos_reduzidos = False
+
+    def atualizar_animacao(self, dt: float, *, reduzido: bool = False) -> None:
+        """Move o foco das opções sem deslocar suas áreas clicáveis."""
+        self.efeitos_reduzidos = reduzido
+        for indice, foco in enumerate(self.focos):
+            foco.atualizar(indice == self.selection, dt, reduzido=reduzido)
 
     @property
     def entries(self) -> tuple[tuple[str, str], ...]:
@@ -84,7 +97,8 @@ class MenuHubScreen:
             pygame.draw.rect(surface, (4, 7, 23), panel, border_radius=16)
             pygame.draw.rect(surface, theme["primaria"], panel, 2, border_radius=16)
         title = "JOGAR" if self.kind == "JOGAR" else "PERFIL"
-        title_surface = menu.fonte_cabecalho.render(title, True, theme["primaria"])
+        title_surface = menu.fonte_cabecalho.render(
+            title, True, TEXTO_SOBRIO if original else theme["primaria"])
         surface.blit(title_surface, title_surface.get_rect(
             midtop=(panel.centerx, panel.y + menu.layout.px(26))))
         for index, ((label, action), rect) in enumerate(zip(self.entries, self._rects())):
@@ -92,15 +106,22 @@ class MenuHubScreen:
             disabled = action == "continuar" and not menu._tem_save()
             color = (105, 111, 135) if disabled else (
                 theme["primaria"] if selected else theme["secundaria"])
+            if original and not disabled:
+                color = TEXTO_SOBRIO
             if original:
                 surface.blit(painel_original(
                     rect.size, tuple(theme["fundo_painel"][:3]), tuple(color[:3]),
                     selecionado=selected and not disabled, raio=menu.layout.px(10)), rect)
+                if not disabled:
+                    desenhar_trilha_foco(surface, rect, menu.layout,
+                                         menu.animacao_original.tempo, self.focos[index].valor,
+                                         reduzido=self.efeitos_reduzidos)
             else:
                 pygame.draw.rect(surface, (8, 13, 32), rect, border_radius=10)
                 pygame.draw.rect(surface, color, rect, 3 if selected else 1,
                                  border_radius=10)
-            self._desenhar_cartao(surface, rect, label, action, color)
+            recuo = round(menu.layout.px(8) * self.focos[index].valor) if original else 0
+            self._desenhar_cartao(surface, rect.move(recuo, 0), label, action, color)
             if self.kind == "PERFIL" and action == "memorias" \
                     and menu._novidades("memorias"):
                 self._badge(surface, rect, theme["terciaria"])

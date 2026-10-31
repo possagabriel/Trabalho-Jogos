@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- ORIGINAL ganha nova composição de hangar com nave central, título no topo e cartões inferiores com descrições; estrelas, órbitas e foco animam a tela sem glitch, com alternativa estática e navegação por setas/Tab.
+- Menus ORIGINAL adotam superfícies planas escuras, botões limpos e foco sublinhado; saem o glow dos botões, a placa diagonal e o glitch do título. Mapa/minimapa usam o casco equipado orientado e miniaturas da arte do jogo.
 - Menus ORIGINAL ganham painéis cacheados, foco por forma, cartões com resumos contidos e Tab/Shift+Tab; tiros guiados do LINEAR buscam por 2 s e expiram aos 5 s; mapa aberto recebe seleção por clique, rota direta e pares de portais, e o minimapa indica destinos distantes e o limite do Vazio.
 - Fundo do mundo aberto passa a usar nebulosas turbulentas e faixas de poeira, planetas com volume e objetos grandes na periferia, preservando o contraste da área central.
 - Pausa e confirmações ORIGINAL ganham painéis consistentes, rótulos diretos e foco por setas/Tab; desenho e clique compartilham a geometria da pausa.
@@ -82,6 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   de apóstrofo em novos nomes foi revista na seção Unreleased.
 
 ### Added
+- Tempestades desviáveis no mundo aberto: 36 meteoros por grupo, intervalos aleatórios de 14–28 s, aviso de 2 s, corredor livre e colisão pelo corpo da rocha; a redução de efeitos preserva obstáculos e trajetórias.
 - Mundo aberto ganha spawn aleatório seguro, fundos procedurais distintos com
   estrelas, planetas, luas, asteroides, meteoroides, cometas, nebulosas e
   galáxias, além de buracos negros gravitacionais e portais de teleporte.
