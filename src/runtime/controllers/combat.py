@@ -265,7 +265,9 @@ class ControladorCombate:
         self._processando_lote = True
         for proj in originais:
             if proj.teleguiado:
-                proj.atualizar_teleguiado(sessao.jogador.x, sessao.jogador.y)
+                proj.atualizar_teleguiado(
+                    sessao.jogador.x, sessao.jogador.y,
+                    limitar_perseguicao=getattr(sessao, "modo_atual", "linear") == "linear")
             else:
                 proj.atualizar()
             # Projeteis explosivos precisam avaliar a detonacao antes do

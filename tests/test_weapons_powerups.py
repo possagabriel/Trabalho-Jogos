@@ -114,6 +114,50 @@ def test_projetil_teleguiado():
     assert proj.tempo == 1
 
 
+def test_teleguiado_linear_perde_busca_e_expira_mesmo_dentro_da_tela():
+    proj = Projetil(400, 300, 1, 0, 1, (255, 255, 255), 5, teleguiado=True)
+    for _ in range(120):
+        proj.atualizar_teleguiado(proj.x + 100, proj.y)
+    velocidade = (proj.vel_x, proj.vel_y)
+    proj.atualizar_teleguiado(proj.x, proj.y + 100)
+    assert (proj.vel_x, proj.vel_y) == velocidade
+    proj.tempo = 299
+    proj.x, proj.y = 400, 300
+    assert not proj.saiu_da_tela()
+    proj.atualizar_teleguiado(400, 400)
+    assert proj.saiu_da_tela()
+
+
+def test_teleguiado_pode_preservar_busca_do_mundo_aberto():
+    proj = Projetil(400, 300, 1, 0, 1, (255, 255, 255), 5, teleguiado=True)
+    proj.tempo = 300
+    proj.atualizar_teleguiado(400, 400, limitar_perseguicao=False)
+    assert proj.vel_y > 0
+    assert not proj.saiu_da_tela()
+
+
+def test_tiro_comum_nao_recebe_limite_de_teleguiado():
+    proj = Projetil(400, 300, 0, 0, 1, (255, 255, 255), 5)
+    proj.tempo = 300
+    assert not proj.saiu_da_tela()
+
+
+def test_controlador_limita_teleguiado_apenas_no_linear():
+    from types import SimpleNamespace
+
+    from src.runtime.controllers.combat import ControladorCombate
+
+    for modo in ("linear", "mundo_aberto"):
+        proj = Projetil(400, 300, 0, 0, 1, (255, 255, 255), 5,
+                        teleguiado=True, origem="inimigo")
+        proj.tempo = 299
+        sessao = SimpleNamespace(
+            modo_atual=modo, projeteis=[proj], inimigos=[],
+            jogador=SimpleNamespace(x=600, y=300, rect=pygame.Rect(590, 290, 20, 20)))
+        ControladorCombate(sessao).atualizar_projeteis()
+        assert bool(sessao.projeteis) == (modo == "mundo_aberto")
+
+
 def test_projetil_refletir():
     proj = Projetil(100, 100, 5, 5, 1, (255, 255, 255), 4)
     proj.refletir()

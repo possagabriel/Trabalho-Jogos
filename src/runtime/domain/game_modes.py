@@ -180,6 +180,12 @@ class OpenWorldModeStrategy:
         game.boss_intro = 0
 
     def handle_event(self, game: Jogo, event: pygame.event.Event) -> bool:
+        if (self.world is not None and self.world.map_open
+                and game.estado is EstadoJogo.JOGANDO
+                and event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)):
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                self.world.selecionar_destino_mapa(game.menu._pos_logica(event.pos))
+            return True
         if (self.world is not None and game.estado is EstadoJogo.JOGANDO
                 and event.type == pygame.KEYDOWN):
             if event.key == pygame.K_m:

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Menus ORIGINAL ganham painéis cacheados, foco por forma, cartões com resumos contidos e Tab/Shift+Tab; tiros guiados do LINEAR buscam por 2 s e expiram aos 5 s; mapa aberto recebe seleção por clique, rota direta e pares de portais, e o minimapa indica destinos distantes e o limite do Vazio.
 - Menu mantém o foco do teclado; HUD ganha acentos nos painéis e texto com contraste reforçado.
 - HUD de combate reorganizado com painéis de maior contraste, nome do piloto,
   alerta de casco crítico, atalhos visíveis e textos ajustados ao espaço.

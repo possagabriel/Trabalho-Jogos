@@ -181,6 +181,58 @@ def test_minimapa_local_centraliza_nave_e_descarta_alvos_distantes():
     assert OpenWorldRuntime._local_map_point((9000.0, 4000.0), center, area) is None
 
 
+@pytest.mark.parametrize("offset", [(9000, 0), (-9000, 0), (0, 9000),
+                                   (0, -9000), (9000, -9000)])
+def test_minimapa_indica_destinos_distantes_dentro_da_borda(offset):
+    world = OpenWorldRuntime((6000, 6000))
+    area = pygame.Rect(10, 30, 240, 138)
+    alvo = (world.x + offset[0], world.y + offset[1])
+    marker, distante = world._minimap_target(alvo, area)
+    assert distante
+    assert area.inflate(-12, -12).collidepoint(marker)
+    assert (marker[0] - area.centerx) * offset[0] >= 0
+    assert (marker[1] - area.centery) * offset[1] >= 0
+
+
+def test_minimapa_destino_local_nao_vira_seta_de_borda():
+    world = OpenWorldRuntime((6000, 6000))
+    area = pygame.Rect(10, 30, 240, 138)
+    marker, distante = world._minimap_target((6100, 6000), area)
+    assert not distante
+    assert marker == world._local_map_point((6100, 6000), (6000, 6000), area)
+
+
+def test_clique_no_mapa_seleciona_apenas_marcadores_sem_mover_nave():
+    world = OpenWorldRuntime()
+    area = pygame.Rect(42, 68, LARGURA - 84, ALTURA - 120)
+    inicio = (world.x, world.y, world.elapsed)
+    alvo = world.SECTORS[0][1]
+    ponto = world._map_point(alvo, area)
+    assert world.selecionar_destino_mapa(ponto)
+    assert world.destino_atual()[0] == "setor_0"
+    assert not world.selecionar_destino_mapa((0, 0))
+    assert world.destino_atual()[0] == "setor_0"
+    assert (world.x, world.y, world.elapsed) == inicio
+
+
+def test_clique_do_mapa_converte_coordenadas_e_consumo_impede_disparo():
+    strategy = OpenWorldModeStrategy()
+    strategy.world = OpenWorldRuntime()
+    world = strategy.world
+    world.map_open = True
+    area = pygame.Rect(42, 68, LARGURA - 84, ALTURA - 120)
+    ponto = world._map_point(world.SECTORS[0][1], area)
+    game = SimpleNamespace(
+        estado=EstadoJogo.JOGANDO, menu_equipamento=False, controles={},
+        menu=SimpleNamespace(_pos_logica=lambda pos: (pos[0] // 2, pos[1] // 2)))
+    evento = pygame.event.Event(
+        pygame.MOUSEBUTTONDOWN, button=1, pos=(ponto[0] * 2, ponto[1] * 2))
+    assert strategy.handle_event(game, evento)
+    assert world.destino_atual()[0] == "setor_0"
+    assert world.map_open
+    assert strategy.handle_event(game, pygame.event.Event(pygame.MOUSEBUTTONUP, button=1))
+
+
 def test_boss_do_mundo_orbita_em_duas_dimensoes_e_vitoria_abre_a_proxima():
     world = OpenWorldRuntime()
     world.boss_active = True

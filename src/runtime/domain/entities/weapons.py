@@ -7,7 +7,7 @@ from typing import Literal, TypeAlias
 
 import pygame
 
-from src.core.constants import ALTURA, AZUL_CLARO, BRANCO, CIANO, LARANJA, LARGURA, ROXO, VERDE
+from src.core.constants import ALTURA, AZUL_CLARO, BRANCO, CIANO, FPS, LARANJA, LARGURA, ROXO, VERDE
 from src.infrastructure.graphics.comic_render import trilha_tinta
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.runtime.infrastructure.graphics.cel_shading import (
@@ -65,6 +65,8 @@ class Projetil:
 
     CRESCIMENTO_ION = 6
     ALCANCE_ION = 2 * max(LARGURA, ALTURA)
+    DURACAO_BUSCA = 2 * FPS
+    DURACAO_TELEGUIADO = 5 * FPS
 
     def __init__(self, x: float, y: float, vel_x: float, vel_y: float,
                  dano: int, cor: Cor, raio: float,
@@ -79,6 +81,7 @@ class Projetil:
         self.tipo = tipo
         self.origem = origem
         self.teleguiado = teleguiado
+        self._perseguicao_limitada = False
         self.refletor = refletor
         self.tempo = 0
         self.speed = math.hypot(vel_x, vel_y) or 1
@@ -119,14 +122,16 @@ class Projetil:
         self.y += self.vel_y
         self.tempo += 1
 
-    def atualizar_teleguiado(self, alvo_x: float, alvo_y: float) -> None:
-        dx, dy = alvo_x - self.x, alvo_y - self.y
-        norma = math.hypot(dx, dy) or 1
-        self.vel_x += (dx / norma * self.speed - self.vel_x) * 0.1
-        self.vel_y += (dy / norma * self.speed - self.vel_y) * 0.1
-        self.x += self.vel_x
-        self.y += self.vel_y
-        self.tempo += 1
+    def atualizar_teleguiado(self, alvo_x: float, alvo_y: float, *,
+                            limitar_perseguicao: bool = True) -> None:
+        """Busca por dois segundos; depois segue a última trajetória até expirar."""
+        self._perseguicao_limitada = limitar_perseguicao
+        if not limitar_perseguicao or self.tempo < self.DURACAO_BUSCA:
+            dx, dy = alvo_x - self.x, alvo_y - self.y
+            norma = math.hypot(dx, dy) or 1
+            self.vel_x += (dx / norma * self.speed - self.vel_x) * 0.1
+            self.vel_y += (dy / norma * self.speed - self.vel_y) * 0.1
+        self.atualizar()
 
     def refletir(self) -> None:
         """Inverte a direcao do projetil (usado pelo campo de forca)."""
@@ -138,6 +143,8 @@ class Projetil:
     def saiu_da_tela(self) -> bool:
         if self.tipo == "ion":
             return self.tempo > 14
+        if self._perseguicao_limitada and self.tempo >= self.DURACAO_TELEGUIADO:
+            return True
         return not (-30 <= self.x <= LARGURA + 30 and
                     -30 <= self.y <= ALTURA + 30)
 

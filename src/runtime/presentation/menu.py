@@ -43,7 +43,6 @@ from src.infrastructure.graphics.theme import (
     MENU_COR_TEXTO,
     MENU_COR_TEXTO_DESABILITADO,
     MENU_COR_TEXTO_SECUNDARIO,
-    MENU_ESPESSURA_BOTAO,
     MENU_FONTE_MINIMA_ROTULO,
     MENU_FONTE_PRINCIPAL,
     MENU_FONTE_PRINCIPAL_SELECIONADA,
@@ -84,6 +83,7 @@ from src.runtime.domain.game_modes import (
     ModeStrategy,
     OpenWorldModeStrategy,
 )
+from src.runtime.infrastructure.graphics.menu_panels import painel_original
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_botao_cartoon,
     desenhar_cantos,
@@ -201,26 +201,22 @@ class OpcaoMenu:
                  self.desabilitado)
         painel = self._SUPERFICIES_BOTAO.get(chave)
         if painel is None:
-            painel = pygame.Surface(rect.size, pygame.SRCALPHA)
-            fundo = (5, 10, 28, MENU_ALPHA_BOTAO_SELECIONADO if selecionado
-                     else MENU_ALPHA_BOTAO_NORMAL)
+            fundo = tema["fundo_painel"][:3]
             cor_borda = secundaria if selecionado else tema["borda_fraco"]
             if self.desabilitado:
-                fundo = (8, 10, 20, MENU_ALPHA_BOTAO_NORMAL)
                 cor_borda = MENU_COR_TEXTO_DESABILITADO
-            pygame.draw.rect(painel, fundo, painel.get_rect(), border_radius=8)
-            pygame.draw.rect(
-                painel, cor_borda + (235 if selecionado else 150,),
-                painel.get_rect(), MENU_ESPESSURA_BOTAO, border_radius=8,
-            )
-            if selecionado:
-                pygame.draw.rect(painel, primaria + (230,),
-                                 (0, layout.px(8), max(1, layout.px(4)),
-                                  max(1, rect.height - layout.px(16))))
-                pygame.draw.line(painel, primaria + (230,),
-                                 (layout.px(14), layout.px(7)),
-                                 (rect.width - layout.px(14), layout.px(7)),
-                                 max(1, layout.px(2)))
+            painel = painel_original(
+                rect.size, tuple(fundo), tuple(cor_borda[:3]),
+                selecionado=selecionado and not self.desabilitado, raio=layout.px(10),
+                alpha=MENU_ALPHA_BOTAO_SELECIONADO if selecionado else MENU_ALPHA_BOTAO_NORMAL)
+            if selecionado and not self.desabilitado:
+                painel = painel.copy()
+                cx, cy = painel.get_width() - layout.px(19), painel.get_height() // 2
+                desenhar_poligono(painel, MENU_COR_TEXTO,
+                                  ((cx - layout.px(3), cy - layout.px(5)),
+                                   (cx + layout.px(3), cy),
+                                   (cx - layout.px(3), cy + layout.px(5))),
+                                  espessura=max(1, layout.px(2)))
             self._SUPERFICIES_BOTAO[chave] = painel
         self._blit(tela, painel, rect.centerx, rect.centery, alfa, centrado=True)
 
