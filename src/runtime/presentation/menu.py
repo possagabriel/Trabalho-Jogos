@@ -83,6 +83,12 @@ from src.runtime.domain.game_modes import (
     ModeStrategy,
     OpenWorldModeStrategy,
 )
+from src.runtime.infrastructure.graphics.menu_animation import (
+    CenaMenuAnimada,
+    FocoAnimado,
+    cartoes_menu_original,
+    desenhar_trilha_foco,
+)
 from src.runtime.infrastructure.graphics.menu_panels import (
     TEXTO_SOBRIO,
     painel_original,
@@ -154,6 +160,8 @@ class OpcaoMenu:
     def __init__(self, texto, y, funcao):
         self.texto = texto
         self.y = y
+        self.x = None
+        self.descricao = ""
         self.funcao = funcao
         self.hover = False
         self.desabilitado = False
@@ -163,12 +171,16 @@ class OpcaoMenu:
         self.altura_painel = self.ALTURA_PAINEL
         self.principal = False
         self.novo = False
+        self.foco_animado = FocoAnimado()
+        self.tempo_animacao = 0.0
+        self.efeitos_reduzidos = False
 
     def get_rect(self, x, fonte, layout):
         """Retorna a mesma área de interação para todas as opções."""
         largura = layout.px(self.largura_painel)
         altura = layout.px(self.altura_painel)
-        return pygame.Rect(x + self.deslocamento_visual, self.y - altura // 2,
+        return pygame.Rect((x if self.x is None else self.x) + self.deslocamento_visual,
+                           self.y - altura // 2,
                            largura, altura)
 
     def atualizar(self, mouse_pos, x, fonte, layout):
@@ -223,6 +235,9 @@ class OpcaoMenu:
                                   espessura=max(1, layout.px(2)))
             self._SUPERFICIES_BOTAO[chave] = painel
         self._blit(tela, painel, rect.centerx, rect.centery, alfa, centrado=True)
+        if alfa >= 250:
+            desenhar_trilha_foco(tela, rect, layout, self.tempo_animacao,
+                                 self.foco_animado.valor, reduzido=self.efeitos_reduzidos)
 
         cor = (MENU_COR_TEXTO_DESABILITADO if self.desabilitado else
                MENU_COR_TEXTO if selecionado else MENU_COR_TEXTO_SECUNDARIO)
@@ -230,13 +245,23 @@ class OpcaoMenu:
         rotulo_original = self.texto.split("//", 1)[-1].strip()
         fonte_ativa, rotulo = self._ajustar_rotulo(
             fonte_base, rotulo_original, rect.width - layout.px(52), layout)
-        chave_texto = (id(fonte_ativa), rotulo, cor, selecionado)
+        chave_texto = (id(fonte_ativa), rotulo, cor, selecionado, bool(self.descricao))
         surf = self._texto_cache.get(chave_texto)
         if surf is None:
-            surf = fonte_ativa.render(rotulo, True, cor)
+            surf = (texto_painel(fonte_ativa, rotulo, cor, rect.width - layout.px(52),
+                                  layout.px(28)) if self.descricao else
+                    fonte_ativa.render(rotulo, True, cor))
             self._texto_cache[chave_texto] = surf
-        texto_rect = surf.get_rect(midleft=(rect.x + layout.px(24), rect.centery))
+        recuo = round(layout.px(10) * self.foco_animado.valor)
+        texto_y = rect.centery - (layout.px(8) if self.descricao else 0)
+        texto_rect = surf.get_rect(midleft=(rect.x + layout.px(24) + recuo, texto_y))
         self._blit(tela, surf, texto_rect.x, texto_rect.centery, alfa)
+        if self.descricao:
+            detalhe = texto_painel(layout.fonte_texto(18), self.descricao,
+                                   MENU_COR_TEXTO_SECUNDARIO, rect.width - layout.px(48),
+                                   layout.px(20))
+            self._blit(tela, detalhe, rect.x + layout.px(24),
+                        rect.bottom - layout.px(17), alfa)
         if self.novo:
             self._desenhar_selo(tela, rect, tema, alfa, layout)
 
@@ -672,6 +697,7 @@ class MenuPrincipal:
         self.layout = layout or Layout()
         self.subestado = "MENU"
         self.fundo = FundoMenuParallax(self.layout)
+        self.animacao_original = CenaMenuAnimada()
         self.hud = HudMenu(self.layout)
         self.nave = NaveMenu()
         self.destaque = DestaqueMenu(self.layout)
@@ -828,14 +854,32 @@ class MenuPrincipal:
         """Aplica a hierarquia comum e ajusta a coluna para janela 4:3."""
         estilo = self.jogo.config["estilo_visual"]
         narrow = self._layout_4_3()
-        layout_key = (estilo, narrow)
+        layout_key = (estilo, narrow, self.layout.largura, self.layout.altura)
         if layout_key == self._estilo_layout_opcoes:
+            return
+        if estilo == "ORIGINAL":
+            descricoes = ("Campanha e exploração", "Naves e visuais", "Pilotos e memórias",
+                           "Áudio, vídeo e controles", "Encerrar o jogo")
+            for opcao, rect, descricao in zip(self.opcoes, cartoes_menu_original(self.layout),
+                                               descricoes):
+                opcao.x, opcao.y = rect.x, rect.centery
+                opcao.largura_painel = rect.width / self.layout.escala
+                opcao.altura_painel = rect.height / self.layout.escala
+                opcao.principal = True
+                opcao.descricao = descricao
+                opcao.deslocamento_visual = 0
+            self.x_opcoes = self.opcoes[0].x
+            self._estilo_layout_opcoes = layout_key
+            self.destaque.y = self.opcoes[self.opcao_selecionada].y
+            self.destaque.alvo = self.destaque.y
             return
         largura = MENU_4_3_LARGURA_COLUNA if narrow else MENU_LARGURA_COLUNA
         x_proposto = self.layout.x(
             MENU_4_3_X_COLUNA_FRACAO if narrow else MENU_X_COLUNA_FRACAO)
         alturas = MENU_4_3_Y_OPCOES if narrow else MENU_Y_OPCOES
         for indice, opcao in enumerate(self.opcoes):
+            opcao.x = None
+            opcao.descricao = ""
             opcao.y = self.layout.y(alturas[indice])
             opcao.largura_painel = largura
             opcao.altura_painel = MENU_ALTURA_OPCAO
@@ -2546,6 +2590,9 @@ class MenuPrincipal:
         tela.blit(surf, (x, y))
 
     def _desenhar_bloco_titulo(self, tela, tema):
+        if not opcoes_atuais().ativo:
+            self.tela_principal.desenhar_titulo_original(tela, self._titulo_surfaces(tema))
+            return
         layout = self.layout
         ts = self._titulo_surfaces(tema)
         p_titulo = self._frac(0.10, 0.5)
@@ -2553,6 +2600,8 @@ class MenuPrincipal:
         p_sub = self._frac(0.55, 0.4)
         off = int((1 - ease_out_back(p_titulo)) * -layout.px(300))
         alfa = int(255 * ease_out(p_titulo))
+        if not opcoes_atuais().ativo and self.jogo.config["intensidade_flash"] != "NORMAL":
+            off, alfa, p_sub = 0, 255, 1.0
         if p_bloco > 0 and opcoes_atuais().ativo:
             bloco = self._bloco_logo(tema)
             self._blit_alfa(tela, bloco, layout.ponto(TOPO_ESQUERDA, 36, 166),
@@ -2561,8 +2610,10 @@ class MenuPrincipal:
         if opcoes_atuais().ativo:
             self._blit_alfa(tela, ts["incarnate_eco"],
                             (layout.px(62) + off, layout.px(171)), alfa_eco)
+        flutuar = (0 if opcoes_atuais().ativo else
+                    layout.px(math.sin(self.animacao_original.tempo * 0.9) * 2))
         self._blit_alfa(tela, ts["incarnate"],
-                        (layout.px(56) + off, layout.px(165)), alfa)
+                        (layout.px(56) + off, layout.px(165) + flutuar), alfa)
         self._desenhar_glitch_titulo(tela, ts, off)
         alfa_sub = int(255 * ease_out(p_sub))
         linha_y = 280 if opcoes_atuais().ativo else 272
@@ -2728,13 +2779,17 @@ class MenuPrincipal:
         self.fundo.desenhar(tela, cor_fundo_cutscene=cor_fundo_cutscene)
         if not opcoes_atuais().ativo:
             tela.blit(veu_menu_sobrio(tela.get_size()), (0, 0))
+            self.animacao_original.desenhar(tela, layout)
         at_root = self.subestado == "MENU"
         summary = self.jogo.profile_service.menu_profile_summary()
         if at_root:
             self.tela_principal.desenhar_fundo_cartao(tela, summary)
         skin_id = summary["skin_id"] if summary else self.jogo.loja.skin_atual
         skin = self.jogo.loja.pegar_skin(skin_id)
-        if at_root and summary:
+        if at_root and self.jogo.config["estilo_visual"] == "ORIGINAL":
+            ship_x, ship_y = layout.x(0.5), layout.y(0.39)
+            ship_scale = 2.0 * layout.escala
+        elif at_root and summary:
             card_x, card_y, card_width, _ = self.tela_principal.cartao_rect()
             ship_x = card_x + card_width - layout.px(66)
             ship_y = card_y + layout.px(62)
@@ -2747,7 +2802,7 @@ class MenuPrincipal:
             ship_x = layout.largura - layout.px(92)
             ship_y = layout.altura - layout.px(158)
             ship_scale = 1.35 * layout.escala
-        if not at_root or summary:
+        if not at_root or summary or self.jogo.config["estilo_visual"] == "ORIGINAL":
             self.nave.desenhar(tela, skin, ship_x, ship_y, ship_scale, tema)
         if opcoes_atuais().ativo:
             self.hud.desenhar(tela, tema, self.jogo.config["estilo_visual"])
@@ -2780,9 +2835,22 @@ class MenuPrincipal:
 
     def atualizar(self):
         self._aplicar_layout_opcoes()
+        reduzido = self.jogo.config["intensidade_flash"] != "NORMAL"
+        original = self.jogo.config["estilo_visual"] == "ORIGINAL"
+        mouse = (self.mouse[0] / max(1, self.layout.largura) * 2 - 1,
+                 self.mouse[1] / max(1, self.layout.altura) * 2 - 1)
+        self.animacao_original.atualizar(1 / 60, mouse, reduzido=reduzido or not original)
+        for indice, opcao in enumerate(self.opcoes):
+            opcao.foco_animado.atualizar(indice == self.opcao_selecionada, 1 / 60,
+                                         reduzido=reduzido)
+            opcao.tempo_animacao = self.animacao_original.tempo
+            opcao.efeitos_reduzidos = reduzido
+        self.jogar_hub.atualizar_animacao(1 / 60, reduzido=reduzido)
+        self.perfil_hub.atualizar_animacao(1 / 60, reduzido=reduzido)
         self.fundo.atualizar()
         self.hud.atualizar()
-        self.nave.atualizar()
+        if not original or not reduzido:
+            self.nave.atualizar()
         self.destaque.atualizar()
         self.transicao.atualizar()
         self.transicao_missao.atualizar()

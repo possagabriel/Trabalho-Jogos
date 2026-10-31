@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.infrastructure.graphics.theme import MENU_RESUMO_CONTINUAR_FONT_SIZE, tema_atual
+from src.runtime.infrastructure.graphics.menu_animation import FocoAnimado, desenhar_trilha_foco
 from src.runtime.infrastructure.graphics.menu_panels import (
     TEXTO_SOBRIO,
     painel_original,
@@ -25,6 +26,14 @@ class MenuHubScreen:
         self.kind = kind
         self.selection = 0
         self._text_cache: dict[tuple, pygame.Surface] = {}
+        self.focos = [FocoAnimado() for _ in self.entries]
+        self.efeitos_reduzidos = False
+
+    def atualizar_animacao(self, dt: float, *, reduzido: bool = False) -> None:
+        """Move o foco das opções sem deslocar suas áreas clicáveis."""
+        self.efeitos_reduzidos = reduzido
+        for indice, foco in enumerate(self.focos):
+            foco.atualizar(indice == self.selection, dt, reduzido=reduzido)
 
     @property
     def entries(self) -> tuple[tuple[str, str], ...]:
@@ -103,11 +112,16 @@ class MenuHubScreen:
                 surface.blit(painel_original(
                     rect.size, tuple(theme["fundo_painel"][:3]), tuple(color[:3]),
                     selecionado=selected and not disabled, raio=menu.layout.px(10)), rect)
+                if not disabled:
+                    desenhar_trilha_foco(surface, rect, menu.layout,
+                                         menu.animacao_original.tempo, self.focos[index].valor,
+                                         reduzido=self.efeitos_reduzidos)
             else:
                 pygame.draw.rect(surface, (8, 13, 32), rect, border_radius=10)
                 pygame.draw.rect(surface, color, rect, 3 if selected else 1,
                                  border_radius=10)
-            self._desenhar_cartao(surface, rect, label, action, color)
+            recuo = round(menu.layout.px(8) * self.focos[index].valor) if original else 0
+            self._desenhar_cartao(surface, rect.move(recuo, 0), label, action, color)
             if self.kind == "PERFIL" and action == "memorias" \
                     and menu._novidades("memorias"):
                 self._badge(surface, rect, theme["terciaria"])
