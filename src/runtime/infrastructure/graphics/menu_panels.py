@@ -15,6 +15,19 @@ TEXTO_ATIVO_ORIGINAL = (14, 32, 42)
 ICONE_DESABILITADO_ORIGINAL = (112, 136, 145)
 
 
+@lru_cache(maxsize=8)
+def plataforma_hangar(tamanho: tuple[int, int]) -> pygame.Surface:
+    """Prepara o piso e os anéis do expositor sem superfícies novas por quadro."""
+    tela = pygame.Surface(tamanho, pygame.SRCALPHA)
+    largura, altura = tamanho
+    for proporcao in (.95, .72, .42):
+        rect = pygame.Rect(0, 0, round(largura * proporcao), round(altura * proporcao * .5))
+        rect.center = (largura // 2, altura * 3 // 4)
+        pygame.draw.ellipse(tela, BORDA_ORIGINAL if proporcao == .95 else ACENTO_ORIGINAL,
+                            rect, 1)
+    return tela
+
+
 @lru_cache(maxsize=4)
 def veu_menu_original(tamanho: tuple[int, int]) -> pygame.Surface:
     """Atenua o fundo espacial para separar texto e ações sem brilho extra."""
@@ -73,6 +86,30 @@ def painel_original(tamanho: tuple[int, int], fundo: tuple[int, int, int],
     return tela
 
 
+def _desenhar_simbolo_hangar(arte: pygame.Surface, indice: str, cor: tuple,
+                            espessura: int) -> None:
+    """Completa os símbolos de transação e inspeção na superfície em construção."""
+    tamanho = arte.get_width()
+    centro, raio = tamanho // 2, tamanho * 0.36
+    if indice == "comprar":
+        pygame.draw.circle(arte, cor, (centro, centro), round(raio), espessura)
+        pygame.draw.line(arte, cor, (centro, tamanho * .29), (centro, tamanho * .71), espessura)
+        pygame.draw.line(arte, cor, (tamanho * .29, centro), (tamanho * .71, centro), espessura)
+    elif indice == "equipar":
+        pygame.draw.lines(arte, cor, False, ((tamanho * .18, tamanho * .52),
+                                            (tamanho * .4, tamanho * .74),
+                                            (tamanho * .82, tamanho * .26)), espessura)
+    elif indice == "prévia":
+        pygame.draw.ellipse(arte, cor, (tamanho * .08, tamanho * .28,
+                                        tamanho * .84, tamanho * .44), espessura)
+        pygame.draw.circle(arte, cor, (centro, centro), round(tamanho * .12), espessura)
+    else:
+        pygame.draw.lines(arte, cor, False, ((tamanho * .46, tamanho * .2),
+                                            (tamanho * .16, centro),
+                                            (tamanho * .46, tamanho * .8)), espessura)
+        pygame.draw.line(arte, cor, (tamanho * .2, centro), (tamanho * .84, centro), espessura)
+
+
 @lru_cache(maxsize=128)
 def icone_menu_original(indice: str, selecionado: bool, tamanho: int, *,
                         desabilitado: bool = False) -> pygame.Surface:
@@ -83,7 +120,9 @@ def icone_menu_original(indice: str, selecionado: bool, tamanho: int, *,
     centro, raio = tamanho // 2, tamanho * 0.36
     espessura = max(1, round(tamanho / 14))
     indice = indice.lstrip("0")
-    if indice in ("1", "linear"):
+    if indice in ("comprar", "equipar", "prévia", "voltar"):
+        _desenhar_simbolo_hangar(arte, indice, cor, espessura)
+    elif indice in ("1", "linear"):
         pygame.draw.polygon(arte, cor, ((tamanho * .28, tamanho * .2),
                                        (tamanho * .78, tamanho * .5),
                                        (tamanho * .28, tamanho * .8)), espessura)

@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Hangar ORIGINAL com catálogo de quatro colunas, expositor lateral, preços/estados claros e prévia orbital; cache e efeitos reduzidos preservados. 200 testes direcionados e Ruff aprovados; conferência jogando pendente.
+
 - Principal usa `images/fundo-menuprincipal.png` em cover centralizado, com cache e fallback procedural; controles orbitais preservados e submenus mantêm o fundo atual. 138 testes direcionados e Ruff aprovados; conferência jogando pendente.
 
 - Menu ORIGINAL em coluna mantém a identidade orbital e recebe guia de foco, descrições das ações, ícones nos submenus e botões segmentados; contraste e redução de efeitos preservados. 180 testes direcionados e Ruff aprovados; conferência jogando pendente.

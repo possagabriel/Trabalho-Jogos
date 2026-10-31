@@ -136,7 +136,7 @@ from src.runtime.presentation.screens.menu_screens import (
 from src.runtime.presentation.screens.profile_screen import ProfileScreen
 from src.runtime.presentation.screens.records_screen import TelaRecordesJogo
 from src.runtime.presentation.screens.settings_screen import TelaConfiguracoesJogo
-from src.runtime.presentation.screens.store_screen import TelaLojaJogo
+from src.runtime.presentation.screens.store_screen import TelaLojaJogo, geometria_hangar_original
 from src.runtime.presentation.ui import BotaoNeon
 
 __all__ = ["ARQUIVO_RECORDES", "SistemaProgressao", "Dialogo", "MenuPrincipal"]
@@ -1168,6 +1168,8 @@ class MenuPrincipal:
     def _rects_loja(self):
         layout = self.layout
         painel = self._painel_loja()
+        if self.jogo.config["estilo_visual"] == "ORIGINAL":
+            return geometria_hangar_original(layout, painel, len(self.jogo.loja.skins))[0]
         colunas = 4
         celula = (painel.width - layout.px(40)) // colunas
         x_inicio = painel.x + layout.px(20)
@@ -1180,7 +1182,8 @@ class MenuPrincipal:
     def _painel_loja(self) -> pygame.Rect:
         """Retorna o painel padronizado que contém a grade do hangar."""
         layout = self.layout
-        largura = min(layout.largura - layout.px(80), layout.px(860))
+        base = 1090 if self.jogo.config["estilo_visual"] == "ORIGINAL" else 860
+        largura = min(layout.largura - layout.px(80), layout.px(base))
         altura = min(layout.altura - layout.px(210), layout.px(500))
         return pygame.Rect(layout.x(0.5) - largura // 2, layout.px(108),
                            largura, altura)

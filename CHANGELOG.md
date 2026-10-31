@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Hangar ORIGINAL recebe catálogo compacto, expositor da nave selecionada, plataforma orbital, estados de compra/equipagem e ações com ícones; a prévia compartilha o estilo e indica visuais bloqueados.
 - A tela principal usa `fundo-menuprincipal.png` sem deformação, mantendo o estilo dos controles e o fundo procedural nos submenus; carregamento e redimensionamento ficam em cache.
 - ORIGINAL preserva as opções em coluna com identidade orbital azul-petróleo/âmbar, botões recortados e segmentados, ícones próprios, seleção com texto escuro e nova tipografia; um quadro descreve a ação focada, os hubs recebem ícones e Voltar integrado ao estilo, e as dicas refletem setas/Tab.
 - Menus ORIGINAL adotam superfícies planas escuras, botões limpos e foco sublinhado; saem o glow dos botões, a placa diagonal e o glitch do título. Mapa/minimapa usam o casco equipado orientado e miniaturas da arte do jogo.
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   restante e o especial informa a prontidão da Bomba Vortex.
 
 ### Fixed
+- Botão PRÉVIA do hangar abre a nave selecionada; no ORIGINAL, a prévia bloqueada mantém a equipagem desabilitada e pode ser fechada por Esc.
 - Integração da PR #68 com a main preserva os menus e o mapa da #67, elimina duplicação de seleção/rota e mantém os tiros guiados limitados no LINEAR.
 - Arco do impulso desenha a circunferência completa, sem cruzar o medidor.
 - Rótulos de vida, energia, armas e chefes deixam de se sobrepor às barras;
