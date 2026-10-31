@@ -1,5 +1,17 @@
 # Registro de uso de IA
 
+- Codex reorganizou as configurações ORIGINAL em abas orbitais, com ajuda contextual, arraste com prévia e subtelas consistentes; testes de geometria/categorias escritos primeiro, 207 testes direcionados e Ruff aprovados. Sem novas dependências, screenshots ou mudança de gameplay; conferência jogando pendente.
+
+- Codex refinou o hangar ORIGINAL no estilo orbital com expositor, catálogo responsivo e prévia consistente; testes de geometria/estados escritos primeiro, 200 testes direcionados e Ruff aprovados. Sem screenshots, novas dependências ou mudanças na economia; conferência jogando pendente.
+
+- Codex conectou `fundo-menuprincipal.png` à tela principal, com cover, cache e fallback; 138 testes direcionados e Ruff aprovados, incluindo preservação do asset e separação dos submenus. Sem screenshots ou alteração da imagem.
+
+- Codex refinou o menu ORIGINAL mantendo o estilo orbital: descrições por ação, guia de foco, botões segmentados e ícones de submenus; testes de geometria e estados escritos antes das alterações, 180 testes direcionados e Ruff aprovados. Conferência visual jogando pendente.
+
+- Codex remodelou a identidade visual do ORIGINAL e restaurou as opções em coluna a pedido do usuário: console orbital azul-petróleo/âmbar, ícones, recortes e tipografia; 185 testes direcionados e Ruff aprovados, incluindo contraste, navegação e efeitos reduzidos, sem screenshots ou benchmarks. Validação visual jogando pendente.
+
+- Codex implementou orientação e miniaturas nos mapas, tempestades com aviso/corredor e menus no visual espacial sóbrio escolhido pelo usuário; testes da lógica escritos primeiro, 226 testes direcionados e Ruff aprovados, sem capturas ou benchmarks. Playtest pendente.
+
 - Codex resolveu os conflitos da PR #68 com a main após a #67, preservou os recursos dos dois lados e unificou funções de seleção/rota do mapa; validação por testes direcionados e Ruff.
 
 - Codex refinou menus ORIGINAL, limitou perseguição dos tiros no LINEAR e melhorou mapa/minimapa; testes de lógica escritos primeiro, validação direcionada e Ruff, sem capturas ou suíte completa. Playtest visual pendente.

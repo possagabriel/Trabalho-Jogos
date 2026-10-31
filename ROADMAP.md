@@ -24,6 +24,16 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Configurações ORIGINAL organizadas em seis abas orbitais, ajuda contextual, sliders arrastáveis e subtelas de vídeo/controles consistentes; 207 testes direcionados e Ruff aprovados, conferência jogando pendente.
+
+- Hangar ORIGINAL com catálogo de quatro colunas, expositor lateral, preços/estados claros e prévia orbital; cache e efeitos reduzidos preservados. 200 testes direcionados e Ruff aprovados; conferência jogando pendente.
+
+- Principal usa `images/fundo-menuprincipal.png` em cover centralizado, com cache e fallback procedural; controles orbitais preservados e submenus mantêm o fundo atual. 138 testes direcionados e Ruff aprovados; conferência jogando pendente.
+
+- Menu ORIGINAL em coluna mantém a identidade orbital e recebe guia de foco, descrições das ações, ícones nos submenus e botões segmentados; contraste e redução de efeitos preservados. 180 testes direcionados e Ruff aprovados; conferência jogando pendente.
+
+- Mapa e minimapa mostram o casco orientado pela mira/movimento e miniaturas reais das rochas, bosses e anomalias; tempestades aleatórias com 36 meteoros, aviso e corredor livre; menus ORIGINAL no estilo espacial sóbrio escolhido pelo usuário. 226 testes direcionados e Ruff aprovados; playtest pendente.
+
 - PR #68 sincronizada com a main após a #67: conflitos resolvidos preservando as melhorias dos dois trabalhos e unificando seleção/rota do mapa; 228 testes direcionados e Ruff aprovados.
 
 - Menus ORIGINAL: painéis com profundidade, cartões legíveis e Tab/Shift+Tab; LINEAR limita busca dos tiros a 2 s e duração a 5 s; mapa clicável com rota e minimapa com destino na borda e limite do Vazio. Testes direcionados e Ruff aprovados; playtest pendente.

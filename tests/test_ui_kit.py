@@ -6,8 +6,8 @@ import pygame
 import pytest
 
 from src.infrastructure.graphics.comic_theme import PAPEL, usar_visual
-from src.infrastructure.graphics.theme import TEMAS_CORES
 from src.infrastructure.ui.layout import Layout
+from src.runtime.infrastructure.graphics.menu_panels import BORDA_ORIGINAL
 from src.runtime.presentation.components import (
     BarraRolagem,
     Botao,
@@ -44,12 +44,13 @@ def test_tokens_resolvem_estilo_e_tema():
     comic = tokens_para("COMIC")
     assert original.estilo == "ORIGINAL"
     assert comic.estilo == "COMIC"
-    assert original.superficie.borda == TEMAS_CORES["MAGMA"]["secundaria"]
+    assert original.superficie.borda == BORDA_ORIGINAL
     assert comic.superficie.fundo == PAPEL
-    assert original.superficie.glow > comic.superficie.glow
+    assert original.superficie.glow == original.botao.glow == 0
+    assert original.superficie.raio == 4
 
 
-def test_painel_original_cacheado_tem_profundidade_e_cantos_transparentes():
+def test_painel_original_cacheado_e_plano_com_cantos_transparentes():
     from src.runtime.infrastructure.graphics.menu_panels import painel_original
 
     fundo, borda = (6, 12, 28), (70, 190, 220)
@@ -57,7 +58,7 @@ def test_painel_original_cacheado_tem_profundidade_e_cantos_transparentes():
     foco = painel_original((300, 80), fundo, borda, selecionado=True)
     assert normal is painel_original((300, 80), fundo, borda)
     assert normal.get_at((0, 0)).a == 0
-    assert normal.get_at((150, 12)) != normal.get_at((150, 65))
+    assert normal.get_at((150, 12)) == normal.get_at((150, 65))
     assert pygame.image.tobytes(normal, "RGBA") != pygame.image.tobytes(foco, "RGBA")
     antes = pygame.image.tobytes(normal, "RGBA")
     _surface().blit(normal, (20, 20))

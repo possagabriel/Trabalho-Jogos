@@ -11,6 +11,11 @@ from src.core.settings import ACOES_CONTROLE, RESOLUCOES
 from src.infrastructure.graphics.theme import tema_atual
 from src.runtime.infrastructure.graphics.menu_panels import painel_original
 from src.runtime.infrastructure.graphics.smooth import retangulo_suave
+from src.runtime.presentation.screens.settings_view import (
+    CATEGORIAS_CONFIG,
+    PainelConfiguracoesOriginal,
+    categoria_config,
+)
 
 if TYPE_CHECKING:
     from src.runtime.presentation.menu import MenuPrincipal
@@ -21,10 +26,22 @@ class TelaConfiguracoesJogo:
 
     def __init__(self, menu: MenuPrincipal) -> None:
         self.menu = menu
+        self.original = PainelConfiguracoesOriginal(self)
+        self._arraste: tuple[int, float] | None = None
+
+    def indices_visiveis_original(self) -> tuple[int, ...]:
+        """Mantém a opção selecionada visível dentro de sua categoria."""
+        selecao = self.menu.config_selecao
+        grupo = CATEGORIAS_CONFIG[categoria_config(selecao)][1]
+        inicio = min(max(0, grupo.index(selecao) - 3), max(0, len(grupo) - 6))
+        return grupo[inicio:inicio + 6]
 
     def desenhar(self, tela: pygame.Surface) -> None:
         """Renderiza configuracoes gerais ou encaminha para o submodo ativo."""
         menu = self.menu
+        if menu.jogo.config["estilo_visual"] == "ORIGINAL":
+            self.original.desenhar(tela)
+            return
         layout = menu.layout
         tema = tema_atual(menu.jogo.config["tema"])
         if menu.config_submodo == "ajuste":
@@ -94,8 +111,11 @@ class TelaConfiguracoesJogo:
     def tratar_tecla(self, evento: pygame.event.Event) -> bool:
         """Trata navegacao e abertura dos submodos de configuracao."""
         menu = self.menu
+        self._arraste = None
+        if menu.jogo.config["estilo_visual"] == "ORIGINAL" and not menu.config_submodo:
+            return self._tecla_original(evento)
         if menu.config_submodo == "controles":
-            if evento.key == pygame.K_ESCAPE:
+            if evento.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
                 menu.config_submodo, menu.sub_anim = None, 0.0
             elif evento.key in (pygame.K_UP, pygame.K_DOWN):
                 passo = 1 if evento.key == pygame.K_DOWN else -1
@@ -107,7 +127,7 @@ class TelaConfiguracoesJogo:
             menu._som("navegar")
             return True
         if menu.config_submodo == "resolucao":
-            if evento.key == pygame.K_ESCAPE:
+            if evento.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
                 menu.config_submodo, menu.sub_anim = None, 0.0
             elif evento.key in (pygame.K_UP, pygame.K_DOWN):
                 passo = 1 if evento.key == pygame.K_DOWN else -1
@@ -144,6 +164,84 @@ class TelaConfiguracoesJogo:
         menu._som("navegar")
         return True
 
+    def _mover_original(self, passo: int, circular: bool = True) -> None:
+        menu = self.menu
+        grupo = CATEGORIAS_CONFIG[categoria_config(menu.config_selecao)][1]
+        posicao = grupo.index(menu.config_selecao) + passo
+        posicao = posicao % len(grupo) if circular else max(0, min(len(grupo) - 1, posicao))
+        menu.config_selecao = grupo[posicao]
+        menu._rolar_config(menu.config_selecao)
+        menu._som("navegar")
+
+    def _trocar_categoria(self, indice: int) -> None:
+        self.menu.config_selecao = CATEGORIAS_CONFIG[indice % len(CATEGORIAS_CONFIG)][1][0]
+        self.menu._rolar_config(self.menu.config_selecao)
+        self.menu._som("navegar")
+
+    def _ajustar_original(self, passo: int) -> None:
+        self.menu._ajustar_config(1 if self.menu.config_selecao in (3, 10) else passo)
+
+    def _salvar(self) -> None:
+        sucesso = self.menu.jogo.config.salvar() is not False
+        self.menu.notificacoes.adicionar(
+            "Configurações salvas!" if sucesso else "Não foi possível salvar as configurações.",
+            "sucesso" if sucesso else "erro")
+        self.menu._som("equipar" if sucesso else "erro")
+
+    def _tecla_original(self, evento: pygame.event.Event) -> bool:
+        menu = self.menu
+        if evento.key in (pygame.K_TAB, pygame.K_PAGEUP, pygame.K_PAGEDOWN):
+            passo = -1 if evento.key == pygame.K_PAGEUP or (
+                evento.key == pygame.K_TAB and getattr(evento, "mod", 0) & pygame.KMOD_SHIFT) else 1
+            self._trocar_categoria(categoria_config(menu.config_selecao) + passo)
+        elif evento.key in (pygame.K_UP, pygame.K_w, pygame.K_DOWN, pygame.K_s):
+            if evento.key == pygame.K_s and getattr(evento, "mod", 0) & pygame.KMOD_CTRL:
+                self._salvar()
+            else:
+                self._mover_original(-1 if evento.key in (pygame.K_UP, pygame.K_w) else 1)
+        elif evento.key in (pygame.K_LEFT, pygame.K_RIGHT):
+            self._ajustar_original(-1 if evento.key == pygame.K_LEFT else 1)
+        elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            self._abrir_selecao()
+        elif evento.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+            menu._voltar_menu()
+        return True
+
+    def tratar_ponteiro(self, evento: pygame.event.Event) -> bool:
+        """Trata rolagem e prévia do arraste, aplicando o slider ao soltar."""
+        menu = self.menu
+        if (menu.subestado != "CONFIG" or menu.jogo.config["estilo_visual"] != "ORIGINAL"
+                or menu.config_submodo == "ajuste"):
+            self._arraste = None
+            return False
+        if evento.type == pygame.MOUSEWHEEL:
+            self._arraste = None
+            if menu.config_submodo in ("resolucao", "controles"):
+                resolucao = menu.config_submodo == "resolucao"
+                atributo = "resolucao_selecao" if resolucao else "controle_selecao"
+                total = len(RESOLUCOES if resolucao else ACOES_CONTROLE)
+                selecao = max(0, min(total - 1, getattr(menu, atributo) - evento.y))
+                setattr(menu, atributo, selecao)
+                if resolucao:
+                    menu._rolar_resolucao(selecao)
+                menu._som("navegar")
+            else:
+                self._mover_original(-evento.y, circular=False)
+            return True
+        if self._arraste is None:
+            return False
+        if evento.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONUP):
+            if evento.type == pygame.MOUSEBUTTONUP and evento.button != 1:
+                return False
+            menu.mouse = menu._pos_logica(evento.pos)
+            indice, _fracao = self._arraste
+            self._arraste = (indice, menu._slider_fracao(menu.mouse[0]))
+            if evento.type == pygame.MOUSEBUTTONUP:
+                menu._aplicar_slider(*self._arraste)
+                self._arraste = None
+            return True
+        return False
+
     def _abrir_selecao(self) -> None:
         """Abre ou ajusta o controle atualmente selecionado."""
         menu = self.menu
@@ -167,6 +265,9 @@ class TelaConfiguracoesJogo:
     def tratar_clique(self, pos: tuple[int, int]) -> None:
         """Trata cliques nos controles e acoes da tela."""
         menu, layout = self.menu, self.menu.layout
+        if menu.jogo.config["estilo_visual"] == "ORIGINAL":
+            self._clique_original(pos)
+            return
         if menu.remapando:
             return
         if menu.config_submodo == "resolucao":
@@ -204,6 +305,104 @@ class TelaConfiguracoesJogo:
         elif voltar.rect.collidepoint(pos):
             menu._voltar_menu()
 
+    def _clique_original(self, pos: tuple[int, int]) -> None:
+        menu = self.menu
+        self._arraste = None
+        if menu.remapando or menu.config_submodo == "ajuste":
+            return
+        if menu.config_submodo:
+            self._clique_submodo_original(pos)
+            return
+        for indice, aba in enumerate(self.original.geometria().abas):
+            if aba.collidepoint(pos):
+                self._trocar_categoria(indice)
+                return
+        for indice, rect in self.original.linhas():
+            if rect.collidepoint(pos):
+                menu.config_selecao = indice
+                tipo = menu._linhas_config()[indice][1]
+                x0, x1 = self.original.trilha_slider()
+                if menu._eh_slider_config(tipo):
+                    if x0 - menu.layout.px(8) <= pos[0] <= x1 + menu.layout.px(8):
+                        fracao = menu._slider_fracao(pos[0])
+                        menu._aplicar_slider(indice, fracao)
+                        self._arraste = (indice, fracao)
+                elif pos[0] >= x0:
+                    if tipo in ("resolucao", "controles", "ajuste"):
+                        self._abrir_selecao()
+                    else:
+                        self._ajustar_original(-1 if pos[0] < x0 + menu.layout.px(24) else 1)
+                return
+        salvar, voltar = menu._botoes_rodape(["SALVAR", "VOLTAR"])
+        if salvar.rect.collidepoint(pos):
+            self._salvar()
+        elif voltar.rect.collidepoint(pos):
+            menu._voltar_menu()
+
+    def _clique_submodo_original(self, pos: tuple[int, int]) -> None:
+        menu = self.menu
+        for indice, rect in self.original.linhas_submodo(menu.config_submodo):
+            if rect.collidepoint(pos):
+                if menu.config_submodo == "controles":
+                    menu.controle_selecao, menu.remapando = indice, ACOES_CONTROLE[indice]
+                    menu._som("navegar")
+                else:
+                    menu.resolucao_selecao = indice
+                    menu._rolar_resolucao(indice)
+                    menu._aplicar_resolucao(indice)
+                return
+        if menu._botoes_rodape(["VOLTAR"])[0].rect.collidepoint(pos):
+            menu.config_submodo, menu.sub_anim = None, 0.0
+            menu._som("navegar")
+
+    def fracao_slider(self, indice: int) -> float:
+        """Lê a posição do slider, incluindo a prévia de um arraste ativo."""
+        if self._arraste is not None and self._arraste[0] == indice:
+            return self._arraste[1]
+        config = self.menu.jogo.config
+        tipo = self.menu._linhas_config()[indice][1]
+        if self.menu._eh_slider_shader(tipo):
+            valor = self.menu._fracao_controle_shader(tipo)
+        elif indice == 4:
+            valor = config["sensibilidade"] - .5
+        else:
+            valor = config["musica_volume" if indice == 0 else "efeitos_volume"]
+        return max(0.0, min(1.0, valor))
+
+    def valor_opcao(self, indice: int) -> str:
+        """Formata o valor e o estado efetivo de qualquer opção do catálogo."""
+        menu, config = self.menu, self.menu.jogo.config
+        tipo = menu._linhas_config()[indice][1]
+        if menu._eh_slider_config(tipo):
+            base = self.fracao_slider(indice)
+            if indice == 4 or tipo == "saturacao_shader":
+                base += .5
+            return f"{round(base * 100)}%"
+        valores = {
+            "resolucao": config["resolucao"],
+            "tema": config["tema"],
+            "aspecto": "FUNDO NAS BORDAS" if config["aspecto"] == "PREENCHE" else "ÁREAS SEGURAS",
+            "controles": "PERSONALIZAR",
+            "ajuste": "CALIBRAR",
+            "qualidade": config["qualidade_grafica"],
+            "toggle": "LIGADO" if config["tela_cheia"] else "DESLIGADO",
+            "desempenho": "LIGADO" if config["mostrar_desempenho"] else "DESLIGADO",
+            "shader_comic": menu.jogo.status_shader_comic(),
+            "tons_shader": f"{config['tons_shader']} TONS",
+        }
+        for chave in ("estilo_visual", "qualidade_comic",
+                       "intensidade_flash", "intensidade_tremor"):
+            valores[chave] = config[chave]
+        for chave in ("hachuras_shader", "preservar_interface", "comic_papel", "comic_halftone",
+                       "comic_hachuras", "line_boil", "mostrar_hitbox", "mira_ativa"):
+            valores[chave] = "LIGADO" if config[chave] else "DESLIGADO"
+        if config["qualidade_comic"] == "BAIXA":
+            for chave in ("comic_papel", "comic_halftone", "comic_hachuras"):
+                valores[chave] = "INATIVO (BAIXA)"
+        if config["qualidade_comic"] != "ALTA":
+            valores["line_boil"] = "INATIVO (ALTA)"
+        return valores.get(tipo, "")
+
     def _desenhar_valor(
         self, tela, indice, tipo, y, dx, alfa, tema, controle_x, percentual_x,
     ) -> None:
@@ -237,34 +436,9 @@ class TelaConfiguracoesJogo:
             menu._blit_alfa(
                 tela, texto, texto.get_rect(midleft=posicao), int(255 * alfa))
         else:
-            valores = {
-                "resolucao": menu.jogo.config["resolucao"],
-                "tema": menu.jogo.config["tema"],
-                "aspecto": ("FUNDO NAS BORDAS"
-                            if menu.jogo.config["aspecto"] == "PREENCHE"
-                            else "ÁREAS SEGURAS"),
-                "controles": "PERSONALIZAR >",
-                "ajuste": "CALIBRAR >",
-                "qualidade": menu.jogo.config["qualidade_grafica"],
-                "desempenho": ("LIGADO" if menu.jogo.config["mostrar_desempenho"]
-                                else "DESLIGADO"),
-                "shader_comic": menu.jogo.status_shader_comic(),
-            }
-            for chave in ("estilo_visual", "qualidade_comic",
-                          "intensidade_flash", "intensidade_tremor"):
-                valores[chave] = menu.jogo.config[chave]
-            valores["tons_shader"] = f"{menu.jogo.config['tons_shader']} TONS"
-            for chave in (
-                    "hachuras_shader", "preservar_interface", "comic_papel",
-                    "comic_halftone", "comic_hachuras", "line_boil",
-                    "mostrar_hitbox", "mira_ativa"):
-                valores[chave] = "LIGADO" if menu.jogo.config[chave] else "DESLIGADO"
-            if menu.jogo.config["qualidade_comic"] == "BAIXA":
-                for chave in ("comic_papel", "comic_halftone", "comic_hachuras"):
-                    valores[chave] = "INATIVO (BAIXA)"
-            if menu.jogo.config["qualidade_comic"] != "ALTA":
-                valores["line_boil"] = "INATIVO (ALTA)"
-            valor = valores.get(tipo, "")
+            valor = self.valor_opcao(indice)
+            if tipo in ("controles", "ajuste"):
+                valor += " >"
             cor = (tema["secundaria"] if tipo in ("resolucao", "qualidade")
                    else QUANTUM_CYAN if tipo in ("aspecto", "desempenho")
                    else (200, 150, 255))

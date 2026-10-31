@@ -2,7 +2,7 @@
 
 Os valores estruturais usam "design px" (base 900x700) e devem ser
 convertidos pelos componentes com ``Layout.px``. As cores nunca são
-hardcoded nas telas: ORIGINAL usa o tema ativo (NEON/AURORA/MAGMA) e COMIC
+hardcoded nas telas: ORIGINAL usa um console azul-petróleo/âmbar e COMIC
 usa a paleta de papel e tinta.
 """
 
@@ -26,6 +26,14 @@ from src.infrastructure.graphics.theme import (
     MENU_COR_TEXTO_DESABILITADO,
     MENU_COR_TEXTO_SECUNDARIO,
     TEMAS_CORES,
+)
+from src.runtime.infrastructure.graphics.menu_panels import (
+    ACENTO_ORIGINAL,
+    BORDA_ORIGINAL,
+    FOCO_ORIGINAL,
+    FUNDO_ORIGINAL,
+    PAINEL_ORIGINAL,
+    TEXTO_ORIGINAL,
 )
 
 ESTILO_ORIGINAL = "ORIGINAL"
@@ -139,35 +147,36 @@ def _tokens_original(tema: dict) -> UITokens:
         tipografia=TipografiaTokens(),
         superficie=SuperficieTokens(
             estilo=ESTILO_ORIGINAL,
-            fundo=tuple(tema["fundo_painel"]),
-            fundo_cabecalho=(13, 22, 45),
-            fundo_linha=(16, 27, 51),
-            fundo_destaque=(43, 33, 18),
-            borda=tuple(tema["secundaria"]),
-            borda_forte=tuple(tema["primaria"]),
+            fundo=PAINEL_ORIGINAL,
+            fundo_cabecalho=FUNDO_ORIGINAL,
+            fundo_linha=PAINEL_ORIGINAL,
+            fundo_destaque=FOCO_ORIGINAL,
+            borda=BORDA_ORIGINAL,
+            borda_forte=ACENTO_ORIGINAL,
             texto=MENU_COR_TEXTO,
             texto_secundario=MENU_COR_TEXTO_SECUNDARIO,
             texto_desabilitado=MENU_COR_TEXTO_DESABILITADO,
-            destaque=tuple(tema["secundaria"]),
-            destaque_secundario=tuple(tema["primaria"]),
+            destaque=ACENTO_ORIGINAL,
+            destaque_secundario=tuple(round(a * 0.85 + b * 0.15)
+                                      for a, b in zip(TEXTO_ORIGINAL, tema["primaria"])),
             sombra=VOID_BLACK,
-            raio=14,
-            raio_pequeno=8,
-            espessura=2,
-            alpha=225,
-            glow=18,
+            raio=4,
+            raio_pequeno=4,
+            espessura=1,
+            alpha=245,
+            glow=0,
         ),
         botao=BotaoTokens(
             altura=46,
-            raio=12,
+            raio=4,
             preenchimento=18,
-            fundo=(18, 22, 44),
-            fundo_hover=(30, 38, 70),
-            borda=tuple(tema["primaria"]),
+            fundo=PAINEL_ORIGINAL,
+            fundo_hover=FOCO_ORIGINAL,
+            borda=BORDA_ORIGINAL,
             borda_hover=BRANCO,
             texto=BRANCO,
             texto_desabilitado=MENU_COR_TEXTO_DESABILITADO,
-            glow=12,
+            glow=0,
         ),
     )
 

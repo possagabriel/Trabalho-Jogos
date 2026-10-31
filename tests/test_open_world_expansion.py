@@ -37,6 +37,34 @@ class Teclas:
         return key in self.pressed
 
 
+@pytest.mark.parametrize("mira,velocidade,esperado", [
+    ((LARGURA // 2 + 100, ALTURA // 2 - 20), (0, -360), 90),
+    ((LARGURA // 2, ALTURA // 2 + 80), (360, 0), 180),
+    (None, (-360, 0), 270), (None, (0, -360), 0),
+])
+def test_orientacao_do_mapa_usa_mira_antes_do_movimento(mira, velocidade, esperado):
+    world = OpenWorldRuntime()
+    world._aim_screen = mira
+    world.vx, world.vy = velocidade
+    assert world.angulo_nave() == pytest.approx(esperado)
+
+
+def test_nave_parada_preserva_ultima_orientacao_no_mapa():
+    world = OpenWorldRuntime()
+    world.vx = 360
+    world._draw_ship(pygame.Surface((LARGURA, ALTURA)))
+    world.vx = 0
+    assert world.angulo_nave() == 90
+
+
+def test_mapa_pausa_tambem_a_tempestade():
+    world = OpenWorldRuntime()
+    antes = world.tempestade.proxima_chuva
+    world.map_open = True
+    world.update(0.05, Teclas(), {})
+    assert world.tempestade.proxima_chuva == antes
+
+
 def test_mapa_ampliado_distribui_asteroides_por_toda_a_area():
     world = OpenWorldRuntime()
 

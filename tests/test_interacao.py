@@ -213,11 +213,22 @@ def test_tecla_loja_escape_volta():
 
 
 def test_tecla_config_entra_em_controles_e_sai():
+    _verificar_navegacao_controles("COMIC")
+
+
+def test_tecla_config_original_abas_entram_em_controles_e_saem():
+    _verificar_navegacao_controles("ORIGINAL")
+
+
+def _verificar_navegacao_controles(estilo):
     jogo = novo_jogo_estado()
+    jogo.config["estilo_visual"] = estilo
     menu = jogo.menu
     menu._abrir_config()
-    for _ in range(5):  # posiciona em CONTROLES (selecao 5)
-        tecla(pygame.K_DOWN)
+    navegacao = ([pygame.K_TAB, pygame.K_TAB, pygame.K_DOWN] if estilo == "ORIGINAL" else
+                 [pygame.K_DOWN] * 5)
+    for codigo in navegacao:
+        tecla(codigo)
         jogo._tratar_eventos()
     assert menu.config_selecao == 5
     tecla(pygame.K_RETURN)

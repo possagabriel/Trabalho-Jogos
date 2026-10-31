@@ -311,7 +311,7 @@ class FundoCinematico:
 
 
 class FundoMenuParallax:
-    """Fundo do menu composto uma vez com ``ParallaxBackground`` em BAIXA.
+    """Imagem da principal e fundo procedural dos submenus, ambos em cache.
 
     O gameplay anima as camadas a cada quadro; o menu reutiliza a mesma
     composição do cenário 1 como superfície estática em cache. A troca de
@@ -330,10 +330,14 @@ class FundoMenuParallax:
         self._cache_tamanho = (0, 0)
         self._cache_estilo: tuple | None = None
         self._tingidos: dict[tuple[int, int, int], pygame.Surface] = {}
+        self._imagem_carregada = False
+        self._imagem_principal: pygame.Surface | None = None
+        self._cache_imagem: pygame.Surface | None = None
+        self._tingidos_imagem: dict[tuple[int, int, int], pygame.Surface] = {}
 
     def set_layout(self, layout: Layout) -> None:
         """Atualiza o canvas lógico sem recompilar a composição nativa."""
-        if layout is self._layout and self._cache is not None:
+        if layout is self._layout and (self._cache is not None or self._cache_imagem is not None):
             return
         self._layout = layout
         self._descartar_cache()
@@ -343,6 +347,33 @@ class FundoMenuParallax:
         self._cache_tamanho = (0, 0)
         self._cache_estilo = None
         self._tingidos.clear()
+        self._cache_imagem = None
+        self._tingidos_imagem.clear()
+
+    def desenhar_imagem_principal(
+        self, tela: pygame.Surface,
+        cor_fundo_cutscene: tuple[int, int, int] | None = None,
+    ) -> bool:
+        """Desenha o PNG em cover; devolve falso para permitir fallback sem a imagem."""
+        if not self._imagem_carregada:
+            self._imagem_principal = carregar_imagem("fundo-menuprincipal.png")
+            self._imagem_carregada = True
+        if self._imagem_principal is None:
+            return False
+        if self._cache_imagem is None:
+            self._cache_imagem = self._recortar_cover(self._imagem_principal)
+        fundo = self._cache_imagem
+        if cor_fundo_cutscene is not None:
+            chave = tuple(cor_fundo_cutscene)
+            tingido = self._tingidos_imagem.get(chave)
+            if tingido is None:
+                from src.runtime.presentation.cutscene_raster import filtrar_fundo_cutscene
+
+                tingido = filtrar_fundo_cutscene(fundo, chave)
+                self._tingidos_imagem[chave] = tingido
+            fundo = tingido
+        tela.blit(fundo, (0, 0))
+        return True
 
     @staticmethod
     def _chave_estilo() -> tuple:
@@ -390,7 +421,7 @@ class FundoMenuParallax:
     @property
     def cache_estatico(self) -> bool:
         """Indica se a composição já foi preparada neste layout."""
-        return self._cache is not None
+        return self._cache is not None or self._cache_imagem is not None
 
     @property
     def qualidade(self) -> str:
