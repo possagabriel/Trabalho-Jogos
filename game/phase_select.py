@@ -20,9 +20,14 @@ from src.infrastructure.graphics.comic_theme import (
     PAPEL,
     opcoes_atuais,
 )
+from src.runtime.infrastructure.graphics.map_art import miniatura_nave
 from src.runtime.infrastructure.graphics.menu_panels import (
     ACENTO_ORIGINAL,
+    BORDA_ORIGINAL,
+    FUNDO_ORIGINAL,
+    TEXTO_ATIVO_ORIGINAL,
     TEXTO_ORIGINAL,
+    cor_menu,
     painel_menu,
     texto_painel,
 )
@@ -371,12 +376,59 @@ class PhaseSelectScreen:
         self.jogo.progresso.salvar_arquivo()
         return True
 
+    def _legenda(self, surface: pygame.Surface, texto: str, rect: pygame.Rect,
+                 *, destaque: bool = False, tamanho: int = 20) -> None:
+        fonte = self._fonte("legenda", tamanho)
+        arte = texto_painel(fonte, texto,
+                            TEXTO_ATIVO_ORIGINAL if destaque else TEXTO_ORIGINAL,
+                            max(1, rect.w - self.layout.px(12)),
+                            max(1, rect.h - self.layout.px(4)))
+        surface.blit(arte, arte.get_rect(center=rect.center))
+
+    def _draw_routes(self, surface: pygame.Surface) -> None:
+        """Reutiliza o diagrama de navegação; as rotas são somente decorativas."""
+        chave = ("rotas", surface.get_size(), opcoes_atuais().ativo)
+        if chave not in self._overlays:
+            arte = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+            cor = cor_menu(BORDA_ORIGINAL)
+            for anterior, proxima in zip(range(len(self.phases) - 1),
+                                         range(1, len(self.phases))):
+                origem = self.card_rect(anterior).center
+                destino = self.card_rect(proxima).center
+                dobra = (destino[0], origem[1])
+                pygame.draw.lines(arte, (*cor, 130), False,
+                                   (origem, dobra, destino), max(1, self.layout.px(2)))
+            self._overlays[chave] = arte
+        surface.blit(self._overlays[chave], (0, 0))
+
+    def _draw_pilot(self, surface: pygame.Surface) -> None:
+        """Mostra o casco equipado na mesma posição usada pela interação."""
+        loja = self.jogo.loja
+        skin = loja.pegar_skin(loja.skin_atual)
+        arte = miniatura_nave(skin, 0, opcoes_atuais().ativo, self.layout.px(42))
+        surface.blit(arte, arte.get_rect(center=self.ship_position()))
+
+    def _draw_context(self, surface: pygame.Surface) -> None:
+        rect = self._rect(225, 642, 650, 46)
+        surface.blit(painel_menu(rect.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL), rect)
+        if self.interaction_phase is None:
+            concluidas = sum(status == PhaseStatus.COMPLETED for status in self.statuses.values())
+            texto = f"CAMPANHA {concluidas}/{len(self.phases)} · WASD / SETAS MOVER · L OFICINA"
+        else:
+            phase = self.phases[self.interaction_phase]
+            if self.statuses[phase.id] == PhaseStatus.LOCKED:
+                texto = "ACESSO BLOQUEADO · CONCLUA A FASE ANTERIOR"
+            else:
+                texto = f"FASE {phase.ordem} · ENTER ABRIR OPÇÕES · L OFICINA"
+        self._legenda(surface, texto, rect, tamanho=18)
+
     def draw(self, surface):
         comic = opcoes_atuais().ativo
         if comic:
             desenhar_fundo(surface, self.selected + 1)
         else:
-            surface.fill((5, 7, 20))
+            surface.fill(FUNDO_ORIGINAL)
+        self._draw_routes(surface)
         title_font = self._fonte("titulo", 46, titulo=True)
         font = self._fonte("normal", 27)
         small = self._fonte("pequena", 21)
@@ -432,37 +484,43 @@ class PhaseSelectScreen:
             overlay = self._overlay(
                 (max(1, rect.w - margem * 2),
                  max(1, rect.h - margem * 2)),
-                (13, 12, 16, 125 if comic and not locked
-                 else 145 if not locked else 205))
+                (*FUNDO_ORIGINAL, 65 if not locked else 180))
             surface.blit(overlay, (rect.x + margem, rect.y + margem))
             if not comic:
                 pygame.draw.rect(
                     surface, border, rect,
                     self.layout.px(4 if interacting else 2),
                     border_radius=max(1, self.layout.px(10)))
-            num = self._texto(f"FASE {phase.ordem}", 18, PAPEL if comic else border, small)
-            surface.blit(num, num.get_rect(
-                center=(rect.centerx, rect.y + self.layout.px(25))))
+            faixa = pygame.Rect(rect.x + margem, rect.y + margem,
+                                  rect.w - margem * 2, self.layout.px(26))
+            surface.blit(painel_menu(faixa.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL,
+                                     selecionado=interacting, botao=True,
+                                     segmentado=False), faixa)
+            self._legenda(surface, f"CAPÍTULO {phase.ordem:02d}", faixa,
+                          destaque=interacting, tamanho=17)
             nome = phase.nome.split("—")[-1].strip().upper()
-            label = self._texto(
-                nome, 25,
-                PAPEL if comic else
-                (245, 247, 255) if not locked else (105, 110, 135), font)
-            surface.blit(label, label.get_rect(center=(rect.centerx, rect.centery)))
+            rodape = pygame.Rect(rect.x + margem, rect.bottom - self.layout.px(65),
+                                 rect.w - margem * 2, self.layout.px(65) - margem)
+            surface.blit(painel_menu(rodape.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL), rodape)
+            self._legenda(surface, nome, pygame.Rect(
+                rodape.x, rodape.y + self.layout.px(3), rodape.w, self.layout.px(27)))
             status_text = {
-                PhaseStatus.LOCKED: "BLOQUEADA",
-                PhaseStatus.AVAILABLE: "DISPONÍVEL",
-                PhaseStatus.COMPLETED: "CONCLUÍDA",
+                PhaseStatus.LOCKED: "× BLOQUEADA",
+                PhaseStatus.AVAILABLE: "› DISPONÍVEL",
+                PhaseStatus.COMPLETED: "✓ CONCLUÍDA",
             }[status]
-            mark = self._texto(status_text, 17, PAPEL if comic else border, small)
-            surface.blit(mark, mark.get_rect(
-                center=(rect.centerx, rect.bottom - self.layout.px(22))))
+            self._legenda(surface, status_text, pygame.Rect(
+                rodape.x, rodape.bottom - self.layout.px(24), rodape.w, self.layout.px(22)),
+                tamanho=16)
             if interacting and not locked:
-                prompt = self._texto(
-                    "ENTER: OPÇÕES", 17,
-                    PAPEL if comic else (255, 235, 175), small)
-                surface.blit(prompt, prompt.get_rect(
-                    center=(rect.centerx, rect.bottom + self.layout.px(18))))
+                prompt = self._rect(0, 0, 190, 28)
+                prompt.midtop = (rect.centerx, rect.bottom + self.layout.px(8))
+                surface.blit(painel_menu(prompt.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL,
+                                         selecionado=True, botao=True,
+                                         segmentado=False), prompt)
+                self._legenda(surface, "ENTER: OPÇÕES", prompt, destaque=True, tamanho=16)
+        self._draw_pilot(surface)
+        self._draw_context(surface)
         if self.phase_menu_open:
             self._draw_phase_menu(surface, font, small)
         if self.index_open:
@@ -481,20 +539,16 @@ class PhaseSelectScreen:
         phase = self.phases[self.selected]
         panel = self._rect(265, 180, 370, 335)
         self._painel(surface, panel, (32, 30, 58), LARANJA, 4)
-        title = self._texto(phase.nome.upper(), 27, PAPEL, font)
-        surface.blit(title, title.get_rect(
-            center=(panel.centerx, panel.y + self.layout.px(52))))
+        self._legenda(surface, phase.nome.upper(),
+                      self._rect(280, 210, 340, 42), tamanho=24)
         options = ("JOGAR FASE", "VER ÍNDICE", "VOLTAR AO LOBBY")
         for i, text in enumerate(options):
             rect = self._rect(313, 280 + i * 66, 274, 48)
             selected = i == self.phase_menu_selection
-            destaque = LARANJA if selected else FERRUGEM
-            self._painel(
-                surface, rect,
-                (225, 112, 92) if selected else (65, 62, 94),
-                destaque, 3 if selected else 2)
-            label = self._texto(text, 20, PAPEL, small)
-            surface.blit(label, label.get_rect(center=rect.center))
+            surface.blit(painel_menu(rect.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL,
+                                     selecionado=selected, botao=True,
+                                     segmentado=False), rect)
+            self._legenda(surface, text, rect, destaque=selected)
         hint = self._texto(
             "↑↓ escolher  •  ENTER confirmar  •  ESC fechar",
             17, CIANO if opcoes_atuais().ativo else (170, 175, 205), small)

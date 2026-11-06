@@ -2536,9 +2536,6 @@ class MenuPrincipal:
             self.profile_screen.draw(tela)
         elif self.subestado == "FASES":
             self.phase_screen.draw(tela)
-            ship_x, ship_y = self.phase_screen.ship_position()
-            self.nave.desenhar(tela, skin, ship_x, ship_y,
-                               1.8 * layout.escala, tema)
         else:
             self.telas[self.subestado].desenhar(tela)
         self.notificacoes.desenhar(tela, self.fonte_media)

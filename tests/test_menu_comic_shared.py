@@ -147,3 +147,20 @@ def test_lobby_loja_memorias_e_recordes_em_duas_resolucoes(estilo, tamanho):
                                wraps=menu.tela_recordes._desenhar_comic) as comic:
             menu.tela_recordes.desenhar(destino)
             assert comic.call_count == int(estilo == "COMIC")
+
+
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_lobby_exibe_casco_na_posicao_real_sem_mudar_interacao(estilo):
+    jogo, menu = novo_menu()
+    lobby = menu.phase_screen
+    antes = [lobby.card_rect(i) for i in range(len(lobby.phases))]
+    lobby.ship_x, lobby.ship_y = 410, 340
+    destino = pygame.Surface((menu.layout.largura, menu.layout.altura))
+    with usar_visual({"estilo_visual": estilo}), mock.patch(
+            "game.phase_select.miniatura_nave", return_value=pygame.Surface((40, 40))
+    ) as miniatura:
+        lobby.draw(destino)
+        miniatura.assert_called_once()
+        assert miniatura.call_args.args[2] == (estilo == "COMIC")
+    assert (lobby.ship_x, lobby.ship_y) == (410, 340)
+    assert [lobby.card_rect(i) for i in range(len(lobby.phases))] == antes
