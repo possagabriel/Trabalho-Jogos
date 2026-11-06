@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Cinco fundos gerados em `images/fases/` integrados às prévias e à campanha ORIGINAL/COMIC, inclusive parallax; lobby mantém composição minimalista e recebe hover, oficina clicável e opções por mouse. Testes direcionados e Ruff; playtest pendente.
+
 - Lobby refeito como menu minimalista nos dois estilos: lista lateral por setas/Tab/clique, prévia ampla em cover e uma ação principal; testes direcionados e Ruff, conferência jogando pendente.
 
 - Lobby e oficina com cabeçalho/painéis reorganizados nos dois estilos; memórias com cartões e clique delimitado; recordes COMIC em cinco quadros. Testes direcionados e Ruff; conferência jogando pendente.

@@ -180,3 +180,21 @@ def test_lobby_minimalista_separa_lista_previa_e_acao(tamanho):
         assert not previa.colliderect(lobby.card_rect(i))
     assert not previa.colliderect(lobby._play_rect())
     assert pygame.Rect((0, 0), tamanho).contains(previa)
+
+
+def test_lobby_opcoes_aceitam_clique_e_oficina_nao_vaza_selecao():
+    jogo, menu = novo_menu()
+    lobby = menu.phase_screen
+    lobby.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
+                                          pos=lobby._play_rect().center))
+    assert lobby.phase_menu_open
+    with mock.patch.object(lobby, "confirm") as confirmar:
+        lobby.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
+                                              pos=lobby._rect(313, 280, 274, 48).center))
+        confirmar.assert_called_once()
+    lobby.phase_menu_open = False
+    lobby.shop_open = True
+    antes = lobby.selected
+    lobby.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
+                                          pos=lobby.card_rect(1).center))
+    assert lobby.selected == antes

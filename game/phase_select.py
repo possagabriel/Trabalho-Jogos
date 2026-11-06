@@ -195,15 +195,14 @@ class PhaseSelectScreen:
         rect = self._rect(670, 20, 205, 48)
         self._painel(surface, rect, (24, 28, 48), LARANJA, 2)
         saldo = self._formatar_moedas(self._saldo_moedas())
-        texto = self._texto(f"MOEDAS // {saldo}", 17, PAPEL, small)
-        surface.blit(texto, texto.get_rect(center=rect.center))
+        self._legenda(surface, f"OFICINA · {saldo} MOEDAS", rect, tamanho=17)
 
     def _default_phases(self):
-        names = [("lealdade", "Fase 1 — Lealdade", "fundo-vermelho.png"),
-                 ("funcao", "Fase 2 — Função", "imagem-fundo3.png"),
-                 ("identidade", "Fase 3 — Identidade", "imagem-fundo4.png"),
-                 ("silencio", "Fase 4 — Silêncio", "imagem-fundo5.png"),
-                 ("descarte", "Fase 5 — Descarte", "Fundo-roxo.png")]
+        names = [("lealdade", "Fase 1 — Lealdade", "fases/lealdade.png"),
+                 ("funcao", "Fase 2 — Função", "fases/funcao.png"),
+                 ("identidade", "Fase 3 — Identidade", "fases/identidade.png"),
+                 ("silencio", "Fase 4 — Silêncio", "fases/silencio.png"),
+                 ("descarte", "Fase 5 — Descarte", "fases/descarte.png")]
         return [PhaseData(i, n, bg, k, None if k == 1 else names[k-2][0])
                 for k, (i, n, bg) in enumerate(names, 1)]
 
@@ -241,10 +240,28 @@ class PhaseSelectScreen:
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEMOTION:
+            mudou = self.mouse != event.pos
             self.mouse = event.pos
+            if mudou and not (self.phase_menu_open or self.index_open or self.shop_open):
+                for indice in range(len(self.phases)):
+                    if self.card_rect(indice).collidepoint(event.pos):
+                        self.selected = indice
+                        break
             return
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.phase_menu_open or self.index_open or self.shop_open:
+            if self.index_open:
+                return
+            if self.phase_menu_open:
+                for indice in range(3):
+                    if self._option_rect(indice).collidepoint(event.pos):
+                        self.phase_menu_selection = indice
+                        self.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
+                        break
+                return
+            if self._rect(670, 20, 205, 48).collidepoint(event.pos):
+                self.shop_open = not self.shop_open
+                return
+            if self.shop_open:
                 return
             if self._rect(25, 650, 180, 38).collidepoint(event.pos):
                 self.jogo.menu._voltar_menu()
@@ -330,6 +347,9 @@ class PhaseSelectScreen:
 
     def _play_rect(self) -> pygame.Rect:
         return self._rect(650, 548, 220, 44)
+
+    def _option_rect(self, indice: int) -> pygame.Rect:
+        return self._rect(313, 280 + indice * 66, 274, 48)
 
     def ship_position(self):
         return self._ponto(self.ship_x, self.ship_y)
@@ -444,6 +464,11 @@ class PhaseSelectScreen:
                 destaque=selecionado, tamanho=14)
         self._draw_preview(surface)
         phase = self.phases[self.selected]
+        self._legenda(surface, f"CAPÍTULO {phase.ordem:02d} / {len(self.phases):02d}",
+                      self._rect(280, 104, 590, 22), tamanho=16)
+        concluidas = sum(estado == PhaseStatus.COMPLETED for estado in self.statuses.values())
+        self._legenda(surface, f"CAMPANHA {concluidas}/{len(self.phases)}",
+                      self._rect(30, 552, 220, 32), tamanho=17)
         self._legenda(surface, phase.nome.upper(), self._rect(280, 515, 590, 30), tamanho=26)
         bloqueada = self.statuses[phase.id] == PhaseStatus.LOCKED
         detalhe = "CONCLUA A FASE ANTERIOR" if bloqueada else "PRONTA PARA INICIAR"
@@ -477,7 +502,7 @@ class PhaseSelectScreen:
                       self._rect(280, 210, 340, 42), tamanho=24)
         options = ("JOGAR FASE", "VER ÍNDICE", "VOLTAR AO LOBBY")
         for i, text in enumerate(options):
-            rect = self._rect(313, 280 + i * 66, 274, 48)
+            rect = self._option_rect(i)
             selected = i == self.phase_menu_selection
             surface.blit(painel_menu(rect.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL,
                                      selecionado=selected, botao=True,
