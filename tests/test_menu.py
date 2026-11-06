@@ -1097,7 +1097,7 @@ def test_lobby_comic_usa_fundo_lettering_e_paineis_de_tinta():
             lobby.draw(tela)
 
     fundo.assert_called_once()
-    assert paineis.call_count >= len(lobby.phases) + 2
+    assert paineis.call_count >= 3
 
 
 def test_cancelar_novo_jogo_preserva_campanha():

@@ -150,17 +150,33 @@ def test_lobby_loja_memorias_e_recordes_em_duas_resolucoes(estilo, tamanho):
 
 
 @pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
-def test_lobby_exibe_casco_na_posicao_real_sem_mudar_interacao(estilo):
+def test_lobby_minimalista_seleciona_sem_iniciar_fase_bloqueada(estilo):
+    jogo, menu = novo_menu()
+    jogo.config["estilo_visual"] = estilo
+    lobby = menu.phase_screen
+    lobby.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN))
+    assert lobby.selected == 1
+    lobby.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
+    assert not lobby.phase_menu_open
+    lobby.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
+                                          pos=lobby.card_rect(0).center))
+    assert lobby.selected == 0
+    lobby.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
+    assert lobby.phase_menu_open
+    lobby.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
+                                          pos=lobby.card_rect(1).center))
+    assert lobby.selected == 0
+
+
+@pytest.mark.parametrize("tamanho", [(900, 700), (1920, 1080)])
+def test_lobby_minimalista_separa_lista_previa_e_acao(tamanho):
+    from game.layout import Layout
+
     jogo, menu = novo_menu()
     lobby = menu.phase_screen
-    antes = [lobby.card_rect(i) for i in range(len(lobby.phases))]
-    lobby.ship_x, lobby.ship_y = 410, 340
-    destino = pygame.Surface((menu.layout.largura, menu.layout.altura))
-    with usar_visual({"estilo_visual": estilo}), mock.patch(
-            "game.phase_select.miniatura_nave", return_value=pygame.Surface((40, 40))
-    ) as miniatura:
-        lobby.draw(destino)
-        miniatura.assert_called_once()
-        assert miniatura.call_args.args[2] == (estilo == "COMIC")
-    assert (lobby.ship_x, lobby.ship_y) == (410, 340)
-    assert [lobby.card_rect(i) for i in range(len(lobby.phases))] == antes
+    lobby.set_layout(Layout(*tamanho))
+    previa = lobby._preview_rect()
+    for i in range(len(lobby.phases)):
+        assert not previa.colliderect(lobby.card_rect(i))
+    assert not previa.colliderect(lobby._play_rect())
+    assert pygame.Rect((0, 0), tamanho).contains(previa)

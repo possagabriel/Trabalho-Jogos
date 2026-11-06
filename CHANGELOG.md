@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- Lobby recebe rotas entre capítulos, cartões com arte/nome/estado separados, foco nas opções e ajuda contextual; casco equipado fica sob os modais nos dois estilos.
+- Lobby adota composição minimalista nos dois estilos, com lista lateral, prévia grande sem deformação e seleção por setas/Tab/clique; fases bloqueadas mantêm acesso restrito e Esc fecha a oficina.
 - Lobby e loja do lobby ganham hierarquia e saldo legível nos dois estilos; memórias recebem cartões responsivos e clique delimitado; recordes COMIC usam colunas para piloto, nível e pontos.
 - COMIC recebe a estrutura de menus do ORIGINAL, incluindo ajuda contextual, ícones, expositor do hangar e seis abas de configurações, com tipografia de quadrinhos, tinta/papel e retícula; caches distinguem os acabamentos e respeitam as opções de textura.
 - Configurações ORIGINAL passam a usar abas Áudio/Tela/Controles/Visual/Shader/Conforto, ajuda para cada opção e barras arrastáveis; Tab, rolagem e Ctrl+S complementam a navegação. Resolução, remapeamento, calibração e confirmação seguem o acabamento orbital sem piscar.
