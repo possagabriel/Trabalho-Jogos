@@ -2,6 +2,8 @@
 
 from unittest.mock import Mock
 
+import pytest
+
 from src.core.event_bus import GameEventType, publicar_evento
 from src.runtime.application.core import Jogo
 from src.runtime.domain.world.scroll import EstadoAvanco
@@ -161,3 +163,68 @@ def test_botao_pular_exige_clique_de_confirmacao(tmp_path, monkeypatch):
     clique(1100, 40)
     clique(480, 375)
     assert jogo.progresso.cenas_vistas == ["introducao"]
+
+
+def test_confirmacao_de_pulo_congela_cena_e_permite_cancelar_por_tab(tmp_path, monkeypatch):
+    import pygame
+
+    jogo = _jogo(tmp_path, monkeypatch)
+    controle = jogo.cutscene_controller
+    controle.iniciar_gatilho("inicio")
+    controle.confirmacao_pulo = True
+    antes = (controle.sequenciador.indice, controle.sequenciador.tempo)
+    controle.atualizar(10)
+    assert (controle.sequenciador.indice, controle.sequenciador.tempo) == antes
+    controle.tratar_evento(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_TAB))
+    controle.tratar_evento(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
+    assert not controle.confirmacao_pulo
+    assert controle.ativo
+    assert not jogo.progresso.cenas_vistas
+
+
+def test_historico_congela_fala_sem_alterar_progresso(tmp_path, monkeypatch):
+    import pygame
+
+    jogo = _jogo(tmp_path, monkeypatch)
+    controle = jogo.cutscene_controller
+    controle.iniciar_gatilho("capitulo_abertura:1")
+    controle.sequenciador.confirmar()  # título
+    controle.atualizar(.3)
+    antes = controle.sequenciador.texto_visivel
+    controle.segurando_pulo = True
+    controle.tratar_evento(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_h))
+    assert not controle.segurando_pulo
+    assert controle.historico_aberto
+    controle.atualizar(30)
+    assert controle.sequenciador.texto_visivel == antes
+    controle.tratar_evento(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_h, repeat=True))
+    assert controle.historico_aberto
+    controle.tratar_evento(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE))
+    assert not controle.historico_aberto
+    assert controle.ativo and not jogo.progresso.cenas_vistas
+
+
+
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_cena_renderiza_todos_os_interlocutores_e_historico(tmp_path, monkeypatch, estilo):
+    import pygame
+
+    from src.core.constants import ALTURA, LARGURA
+    from src.infrastructure.graphics.comic_theme import usar_visual
+    from src.runtime.domain.story import Cena
+
+    jogo = _jogo(tmp_path, monkeypatch)
+    controle = jogo.cutscene_controller
+    tela = pygame.Surface((LARGURA, ALTURA))
+    with usar_visual({"estilo_visual": estilo}):
+        for chave in controle.catalogo.personagens:
+            cena = Cena(f"teste_{chave}", "teste", (
+                {"tipo": "fala", "personagem": chave, "texto": "Uma voz que escolheu continuar."},
+            ))
+            controle.sequenciador.iniciar(cena)
+            controle.caixa.desenhar(tela, controle, (120, 160, 255))
+            controle.sequenciador.confirmar()
+            controle.caixa.desenhar(tela, controle, (120, 160, 255))
+            controle.historico_aberto = True
+            controle.caixa.desenhar(tela, controle, (120, 160, 255))
+            controle.historico_aberto = False

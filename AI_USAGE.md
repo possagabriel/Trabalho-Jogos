@@ -1,5 +1,17 @@
 # Registro de uso de IA
 
+- Codex ampliou o roteiro para 161 falas, preservando gatilhos, revelações e âncoras do capítulo 2; gerou dez retratos com image_gen integrado e registrou os prompts em `images/personagens/README.md`. Implementou palco animado e histórico sem spoilers, com testes de leitura/cache/limites escritos primeiro e validação direcionada/Ruff. Sem screenshots ou alterações no combate; playtest narrativo pendente.
+
+- Codex gerou seis artes COMIC com image_gen integrado, usando as artes locais ORIGINAL como referência das fases e criando um lobby exclusivo; prompts/proveniência em `images/fases/README.md`. Refinou índice, cutscenes e popups, com testes de quebra/navegação/pausa escritos primeiro, validação direcionada e Ruff. Sem screenshots, dependências ou mudança de roteiro/progressão; playtest pendente.
+
+- Codex gerou cinco artes com image_gen integrado, registrou prompts/proveniência/licença em `images/fases/README.md` e integrou os arquivos ao lobby e à campanha ORIGINAL/COMIC com parallax. Refinou seleção e cliques do lobby; testes de lógica/cache escritos primeiro, validação direcionada e Ruff. Sem screenshots ou mudança de balanceamento; playtest pendente.
+
+- Codex refez o lobby na direção minimalista escolhida pelo usuário: lista e prévia ampla em cover, navegação discreta e isolamento dos modais; testes de seleção/bloqueio/geometria escritos primeiro e validação direcionada com Ruff. Sem screenshots ou alterações nas regras de combate/progressão; conferência jogando pendente.
+
+- Codex refinou novamente o lobby nos dois estilos com rotas cacheadas, cartões legíveis e casco integrado à ordem dos modais; teste da renderização do casco escrito antes da implementação, validação direcionada e Ruff. Sem screenshots ou mudanças nas hitboxes/progressão; conferência jogando pendente.
+
+- Codex refinou lobby, oficina e memórias nos dois estilos e recordes apenas no COMIC; validação direcionada de menus/cutscenes, resoluções 900×700 e 1920×1080 e Ruff. Sem screenshots, dependências ou mudança de balanceamento; conferência jogando pendente.
+
 - Codex unificou a estrutura de menus COMIC/ORIGINAL e preservou o acabamento de quadrinhos no COMIC; testes de paleta/cache escritos primeiro, 212 testes direcionados e Ruff aprovados, incluindo navegação, arraste, confirmação de vídeo e preservação de preferências/progresso. Sem dependências, screenshots ou alteração de gameplay; conferência jogando pendente.
 
 - Codex reorganizou as configurações ORIGINAL em abas orbitais, com ajuda contextual, arraste com prévia e subtelas consistentes; testes de geometria/categorias escritos primeiro, 207 testes direcionados e Ruff aprovados. Sem novas dependências, screenshots ou mudança de gameplay; conferência jogando pendente.

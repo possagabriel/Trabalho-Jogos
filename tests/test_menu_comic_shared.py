@@ -106,3 +106,107 @@ def test_menus_e_subtelas_preservam_preferencias_e_progresso(estilo):
             menu.desenhar(jogo.tela)
     assert jogo.config._dados == antes
     assert progresso == (jogo.loja.moedas, jogo.loja.skin_atual, jogo.loja.lista_desbloqueadas())
+
+
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_memorias_ignora_clique_fora_dos_cartoes(estilo):
+    jogo, menu = novo_menu()
+    jogo.config["estilo_visual"] = estilo
+    from src.runtime.presentation.screens.memory_archive_screen import TelaArquivoMemorias
+
+    arquivo = TelaArquivoMemorias(menu)
+    with mock.patch.object(arquivo, "_ids", return_value=["introducao"]), \
+            mock.patch.object(jogo.cutscene_controller, "rever") as rever:
+        linha = arquivo._linhas()[0]
+        arquivo.tratar_clique((linha.left - 1, linha.centery))
+        rever.assert_not_called()
+        arquivo.tratar_clique(linha.center)
+        rever.assert_called_once_with("introducao")
+
+
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+@pytest.mark.parametrize("tamanho", [(900, 700), (1920, 1080)])
+def test_lobby_loja_memorias_e_recordes_em_duas_resolucoes(estilo, tamanho):
+    from game.layout import Layout
+    from src.runtime.presentation.screens.memory_archive_screen import TelaArquivoMemorias
+
+    jogo, menu = novo_menu()
+    jogo.config["estilo_visual"] = estilo
+    menu.layout = Layout(*tamanho)
+    menu.phase_screen.set_layout(menu.layout)
+    destino = pygame.Surface(tamanho)
+    arquivo = TelaArquivoMemorias(menu)
+    assert destino.get_rect().contains(arquivo._painel())
+    for rect in arquivo._linhas():
+        assert arquivo._painel().contains(rect)
+    menu.phase_screen.shop_open = True
+    with usar_visual(jogo.config):
+        menu.phase_screen.draw(destino)
+        arquivo.desenhar(destino)
+        with mock.patch.object(menu.tela_recordes, "_desenhar_comic",
+                               wraps=menu.tela_recordes._desenhar_comic) as comic:
+            menu.tela_recordes.desenhar(destino)
+            assert comic.call_count == int(estilo == "COMIC")
+
+
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_lobby_minimalista_seleciona_sem_iniciar_fase_bloqueada(estilo):
+    jogo, menu = novo_menu()
+    jogo.config["estilo_visual"] = estilo
+    lobby = menu.phase_screen
+    lobby.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN))
+    assert lobby.selected == 1
+    lobby.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
+    assert not lobby.phase_menu_open
+    lobby.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
+                                          pos=lobby.card_rect(0).center))
+    assert lobby.selected == 0
+    lobby.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
+    assert lobby.phase_menu_open
+    lobby.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
+                                          pos=lobby.card_rect(1).center))
+    assert lobby.selected == 0
+
+
+@pytest.mark.parametrize("tamanho", [(900, 700), (1920, 1080)])
+def test_lobby_minimalista_separa_lista_previa_e_acao(tamanho):
+    from game.layout import Layout
+
+    jogo, menu = novo_menu()
+    lobby = menu.phase_screen
+    lobby.set_layout(Layout(*tamanho))
+    previa = lobby._preview_rect()
+    for i in range(len(lobby.phases)):
+        assert not previa.colliderect(lobby.card_rect(i))
+    assert not previa.colliderect(lobby._play_rect())
+    assert pygame.Rect((0, 0), tamanho).contains(previa)
+
+
+def test_lobby_opcoes_aceitam_clique_e_oficina_nao_vaza_selecao():
+    jogo, menu = novo_menu()
+    lobby = menu.phase_screen
+    lobby.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
+                                          pos=lobby._play_rect().center))
+    assert lobby.phase_menu_open
+    with mock.patch.object(lobby, "confirm") as confirmar:
+        lobby.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
+                                              pos=lobby._rect(313, 280, 274, 48).center))
+        confirmar.assert_called_once()
+    lobby.phase_menu_open = False
+    lobby.shop_open = True
+    antes = lobby.selected
+    lobby.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
+                                          pos=lobby.card_rect(1).center))
+    assert lobby.selected == antes
+
+
+def test_indice_volta_por_clique_e_tab_navega_popup():
+    jogo, menu = novo_menu()
+    lobby = menu.phase_screen
+    lobby.index_open = True
+    lobby.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
+                                          pos=lobby._index_back_rect().center))
+    assert not lobby.index_open and lobby.phase_menu_open
+    lobby.phase_menu_selection = 0
+    lobby.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_TAB, mod=0))
+    assert lobby.phase_menu_selection == 1

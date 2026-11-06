@@ -327,3 +327,33 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def test_fundos_gerados_tem_cache_comic_independente_do_original():
+    from src.infrastructure.graphics.comic_theme import usar_visual
+    from src.runtime.domain.world import scenarios
+
+    for indice, nome in enumerate(("lealdade", "funcao", "identidade", "silencio", "descarte"), 1):
+        caminho = f"fases/{nome}.png"
+        assert scenarios._FUNDO_POR_CENARIO[indice] == caminho
+        assert scenarios.carregar_imagem(caminho) is not None
+    cenario = Cenario(1)
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        original = cenario.obter_fundo_visual()
+        assert original is cenario.fundo_estatico
+    with usar_visual({"estilo_visual": "COMIC"}):
+        comic = cenario.obter_fundo_visual()
+        assert comic is cenario.obter_fundo_visual()
+        assert comic is not original
+        assert comic.get_size() == original.get_size()
+
+
+def test_artes_comic_sao_arquivos_separados_sem_modificar_original():
+    from src.runtime.domain.world import scenarios
+
+    for indice, nome in enumerate(("lealdade", "funcao", "identidade", "silencio", "descarte"), 1):
+        original = scenarios._imagem_fundo(indice)
+        comic = scenarios._imagem_fundo(indice, comic=True)
+        assert comic is not None and original is not None
+        assert comic is not original
+        assert pygame.image.tobytes(comic, "RGB") != pygame.image.tobytes(original, "RGB")

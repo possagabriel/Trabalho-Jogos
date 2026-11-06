@@ -91,6 +91,7 @@ from src.runtime.infrastructure.graphics.menu_panels import (
     TEXTO_ORIGINAL,
     cor_menu,
     icone_menu_original,
+    linhas_painel,
     painel_menu,
     texto_painel,
     veu_menu_original,
@@ -311,20 +312,32 @@ class SistemaNotificacao:
     def desenhar(self, tela, fonte):
         layout = self._layout
         y = layout.px(24)
-        altura_toast = layout.px(44)
-        for notif in self.notificacoes[:]:
-            texto = fonte.render(notif["mensagem"], True, BRANCO)
-            largura = texto.get_width() + layout.px(48)
-            fundo = pygame.Surface((largura, altura_toast), pygame.SRCALPHA)
-            cor = self.CORES[notif["tipo"]]
-            rect = pygame.Rect(0, 0, largura, altura_toast)
-            retangulo_suave(fundo, cor + (int(notif["alpha"] * 0.85),), rect, 8)
-            retangulo_suave(fundo, BRANCO + (int(notif["alpha"]),), rect, 8, 1)
-            x = layout.largura - largura - layout.px(20)
-            tela.blit(fundo, (x, y))
-            texto.set_alpha(notif["alpha"])
-            tela.blit(texto, (x + layout.px(24), y + layout.px(11)))
-            y += layout.px(54)
+        largura = min(layout.px(420), layout.largura - layout.px(40))
+        for notif in self.notificacoes:
+            chave = (fonte, largura, opcoes_atuais().ativo)
+            if notif.get("chave_arte") != chave:
+                linhas = linhas_painel(fonte, notif["mensagem"], largura - layout.px(36))
+                passo = fonte.get_linesize() + layout.px(2)
+                altura = layout.px(46) + passo * min(5, len(linhas))
+                # Cada aviso possui sua cópia; o fade nunca altera o cache compartilhado.
+                arte = painel_menu((largura, altura), (0, 0, 0), ACENTO_ORIGINAL).copy()
+                rotulo = {"sucesso": "CONCLUÍDO", "erro": "NÃO FOI POSSÍVEL",
+                          "conquista": "CONQUISTA", "info": "INFORMAÇÃO"}.get(
+                              notif["tipo"], "INFORMAÇÃO")
+                titulo = texto_painel(layout.fonte_texto(15), rotulo, TEXTO_ORIGINAL,
+                                      largura - layout.px(36), layout.px(20))
+                arte.blit(titulo, (layout.px(18), layout.px(10)))
+                for indice, linha in enumerate(linhas[:5]):
+                    texto = texto_painel(fonte, linha, TEXTO_ORIGINAL,
+                                         largura - layout.px(36), passo)
+                    arte.blit(texto, (layout.px(18), layout.px(36) + indice * passo))
+                notif["arte"], notif["chave_arte"] = arte, chave
+            arte = notif["arte"]
+            if y + arte.get_height() > layout.altura - layout.px(24):
+                break
+            arte.set_alpha(notif["alpha"])
+            tela.blit(arte, (layout.largura - largura - layout.px(20), y))
+            y += arte.get_height() + layout.px(10)
 
 
 class Dialogo:
@@ -414,16 +427,8 @@ class Dialogo:
     def _desenhar_original(self, tela, fonte_titulo, fonte_texto, tema):
         """Confirmação sóbria com mensagem legível e foco de teclado explícito."""
         layout = self._layout
-        palavras, linhas, atual = self.mensagem.split(), [], ""
-        for palavra in palavras:
-            teste = f"{atual} {palavra}".strip()
-            if atual and fonte_texto.size(teste)[0] > self._largura - layout.px(64):
-                linhas.append(atual)
-                atual = palavra
-            else:
-                atual = teste
-        if atual:
-            linhas.append(atual)
+        linhas = linhas_painel(fonte_texto, self.mensagem,
+                                self._largura - layout.px(64))
         passo = max(layout.px(28), fonte_texto.get_height() + 2)
         altura = min(layout.altura - layout.px(32),
                      max(self._altura, layout.px(190) + passo * len(linhas)))
@@ -453,8 +458,10 @@ class Dialogo:
                 self._retangulos(), ("SAIR" if sair else "CONFIRMAR", "CANCELAR"))):
             cor = tema["terciaria"] if indice == 0 and sair else tema["primaria"]
             tela.blit(painel_menu(botao.size, fundo, tuple(cor[:3]),
-                                      selecionado=indice == self.selecao, raio=layout.px(9)), botao)
-            texto(rotulo, fonte_texto, MENU_COR_TEXTO, botao.center,
+                                      selecionado=indice == self.selecao, botao=True,
+                                      segmentado=False, raio=layout.px(9)), botao)
+            cor_texto = TEXTO_ATIVO_ORIGINAL if indice == self.selecao else TEXTO_ORIGINAL
+            texto(rotulo, fonte_texto, cor_texto, botao.center,
                   botao.w - layout.px(20), botao.h - layout.px(12))
         texto("TAB / SETAS: ESCOLHER   ENTER: SELECIONAR   ESC: CANCELAR",
               layout.fonte_texto(14), MENU_COR_TEXTO_SECUNDARIO,
@@ -2536,9 +2543,6 @@ class MenuPrincipal:
             self.profile_screen.draw(tela)
         elif self.subestado == "FASES":
             self.phase_screen.draw(tela)
-            ship_x, ship_y = self.phase_screen.ship_position()
-            self.nave.desenhar(tela, skin, ship_x, ship_y,
-                               1.8 * layout.escala, tema)
         else:
             self.telas[self.subestado].desenhar(tela)
         self.notificacoes.desenhar(tela, self.fonte_media)

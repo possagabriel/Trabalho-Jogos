@@ -306,11 +306,14 @@ class ParallaxBackground:
     def _base(self, cor_fundo_cutscene: tuple[int, int, int] | None = None) -> ScrollingLayer:
         opcoes = opcoes_atuais()
         chave = (opcoes.ativo, opcoes.qualidade, opcoes.papel, opcoes.halftone,
-                 cor_fundo_cutscene)
+                 opcoes.hachuras, cor_fundo_cutscene)
         if chave not in self._bases:
             if opcoes.ativo:
-                fonte = fundo_comic((LARGURA, ALTURA), self.cenario.id,
-                                    opcoes.qualidade, opcoes.papel, opcoes.halftone)
+                if self.cenario.id <= 5 and self.cenario.fundo_imagem is not None:
+                    fonte = self.cenario.obter_fundo_visual()
+                else:
+                    fonte = fundo_comic((LARGURA, ALTURA), self.cenario.id,
+                                        opcoes.qualidade, opcoes.papel, opcoes.halftone)
             else:
                 fonte = self.cenario.fundo_estatico
                 if cor_fundo_cutscene is not None:

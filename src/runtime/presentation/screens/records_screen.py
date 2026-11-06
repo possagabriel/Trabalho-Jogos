@@ -6,6 +6,14 @@ from typing import TYPE_CHECKING
 
 import pygame
 
+from src.infrastructure.graphics.comic_theme import opcoes_atuais
+from src.runtime.infrastructure.graphics.menu_panels import (
+    ACENTO_ORIGINAL,
+    TEXTO_ATIVO_ORIGINAL,
+    TEXTO_ORIGINAL,
+    painel_menu,
+    texto_painel,
+)
 from src.runtime.presentation.components import (
     Botao,
     CabecalhoTela,
@@ -40,6 +48,9 @@ class TelaRecordesJogo:
 
     def desenhar(self, tela: pygame.Surface) -> None:
         """Renderiza um painel de recordes em formato de arquivo de voo."""
+        if opcoes_atuais().ativo:
+            self._desenhar_comic(tela)
+            return
         menu = self.menu
         layout = menu.layout
         tk = tokens_atuais(menu.jogo.config["tema"])
@@ -89,6 +100,56 @@ class TelaRecordesJogo:
             tokens=tk,
             progresso=menu._frac_sub(0.6, 0.25),
         )
+
+    def _desenhar_comic(self, tela: pygame.Surface) -> None:
+        """Organiza o placar em cinco quadros com colunas de largura estável."""
+        menu, layout = self.menu, self.menu.layout
+        painel = menu._painel_recordes()
+        tela.blit(painel_menu(painel.size, (0, 0, 0), ACENTO_ORIGINAL), painel)
+
+        def texto(rotulo: str, rect: pygame.Rect, selecionado: bool = False) -> None:
+            cor = TEXTO_ATIVO_ORIGINAL if selecionado else TEXTO_ORIGINAL
+            arte = texto_painel(menu.fonte_media, rotulo, cor,
+                                max(1, rect.w - layout.px(16)), rect.h - layout.px(6))
+            tela.blit(arte, arte.get_rect(center=rect.center))
+
+        margem = layout.px(24)
+        texto("RECORDES // GALERIA DE PILOTOS", pygame.Rect(
+            painel.x + margem, painel.y + layout.px(16),
+            painel.w - margem * 2, layout.px(38)))
+        lista = menu.jogo.recordes
+        topo = painel.y + layout.px(72)
+        altura = max(1, (painel.h - layout.px(150)) // 5)
+        for i, registro in enumerate(lista[:5]):
+            rect = pygame.Rect(painel.x + margem, topo + i * altura,
+                               painel.w - margem * 2, altura - layout.px(8))
+            primeiro = i == 0
+            tela.blit(painel_menu(rect.size, (0, 0, 0), ACENTO_ORIGINAL,
+                                  selecionado=primeiro, botao=True, segmentado=False), rect)
+            for x, w, rotulo in ((0, .12, f"{i + 1:02d}"),
+                                 (.12, .44, str(registro['nome']).upper()),
+                                 (.56, .16, f"NV {registro['nivel']:02d}"),
+                                 (.72, .28, f"{_pontos(registro['pontos'])} PTS")):
+                texto(rotulo, pygame.Rect(rect.x + round(rect.w * x), rect.y,
+                                          round(rect.w * w), rect.h), primeiro)
+        if not lista:
+            texto("SEU PRIMEIRO VOO COMEÇA UMA HISTÓRIA.", pygame.Rect(
+                painel.x + margem, topo, painel.w - margem * 2, altura * 2))
+        jogador = menu.jogo.progresso.jogador
+        estatisticas = menu.jogo.progresso.dados["estatisticas"]
+        liberadas = len(menu.jogo.loja.lista_desbloqueadas())
+        total = len(menu.jogo.loja.skins)
+        texto(f"PILOTO: {jogador['nome'].upper()} · VISUAIS {liberadas}/{total}", pygame.Rect(
+            painel.x + margem, painel.bottom - layout.px(66),
+            painel.w - margem * 2, layout.px(26)))
+        texto(f"{estatisticas['inimigos_derrotados']} ABATES · "
+              f"{jogador['bosses_derrotados']} CHEFES DERROTADOS", pygame.Rect(
+                  painel.x + margem, painel.bottom - layout.px(36),
+                  painel.w - margem * 2, layout.px(26)))
+        botao = self.botao_voltar()
+        tela.blit(painel_menu(botao.rect.size, (0, 0, 0), ACENTO_ORIGINAL,
+                              botao=True), botao.rect)
+        texto("ESC  VOLTAR", botao.rect)
 
     def _desenhar_ranking(
         self,

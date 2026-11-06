@@ -167,8 +167,8 @@ def test_capitulo_dois_preserva_falas_e_gatilhos_do_roteiro():
     for cena_id, (gatilho, falas) in esperado.items():
         cena = catalogo.cena(cena_id)
         assert cena is not None and cena.gatilho == gatilho
-        assert [(p["personagem"], p["texto"]) for p in cena.passos
-                if p["tipo"] == "fala"] == falas
+        atuais = iter((p["personagem"], p["texto"]) for p in cena.passos if p["tipo"] == "fala")
+        assert all(any(atual == ancora for atual in atuais) for ancora in falas)
     pos_boss = catalogo.cena("cap2_pos_boss")
     assert any(p.get("texto") ==
                "OBJETIVO DE DEFESA: INSTALAÇÃO // OCUPANTES: HIBERNADOS"
@@ -299,3 +299,37 @@ def test_capitulo_seis_tem_final_narrativo_sem_fade():
         "capitulo_fim:6", "final",
     ]
     assert all(passo["tipo"] != "fade" for cena in validas for passo in cena.passos)
+
+
+def test_falas_esperam_leitor_e_historico_nao_expoe_futuro():
+    cena = carregar_catalogo({
+        "personagens": {"jonathan": {"nome": "Jonathan", "retrato": "nave"}},
+        "cenas": [{"id": "leitura", "gatilho": "inicio", "passos": [
+            {"tipo": "fala", "personagem": "jonathan", "texto": "Primeira lembrança."},
+            {"tipo": "fala", "personagem": "jonathan", "texto": "Outra voz."},
+        ]}],
+    }).cena("leitura")
+    seq = SequenciadorCena()
+    seq.iniciar(cena)
+    seq.atualizar(600)
+    assert seq.indice == 0 and seq.leitura_concluida
+    assert seq.historico == []
+    seq.confirmar()
+    assert seq.historico == [{"personagem": "jonathan", "texto": "Primeira lembrança."}]
+    assert seq.indice == 1 and not seq.leitura_concluida
+    seq.iniciar(cena)
+    assert not seq.historico
+
+
+def test_revelar_fala_completa_nao_depende_de_arredondamento_do_tempo():
+    from src.runtime.domain.story import Cena
+
+    for tamanho in range(1, 240):
+        texto = "a" * tamanho
+        seq = SequenciadorCena(velocidade=37)
+        seq.iniciar(Cena("leitura", "teste", (
+            {"tipo": "fala", "personagem": "jonathan", "texto": texto},
+        )))
+        seq.confirmar()
+        assert seq.texto_visivel == texto
+        assert seq.indice == 0

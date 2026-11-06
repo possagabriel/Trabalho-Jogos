@@ -4,13 +4,24 @@ from __future__ import annotations
 
 import math
 import random
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 import pygame
 
 from src.core.constants import ALTURA, LARGURA, NOME_JOGO, VOID_BLACK
 from src.infrastructure.graphics.comic_theme import CIANO, LARANJA, TINTA, opcoes_atuais
+from src.runtime.infrastructure.assets import carregar_imagem
 from src.runtime.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
+from src.runtime.infrastructure.graphics.menu_panels import (
+    ACENTO_ORIGINAL,
+    FUNDO_ORIGINAL,
+    TEXTO_ATIVO_ORIGINAL,
+    TEXTO_ORIGINAL,
+    linhas_painel,
+    painel_menu,
+    texto_painel,
+)
 from src.runtime.infrastructure.graphics.smooth import desenhar_painel, desenhar_painel_cartoon
 
 if TYPE_CHECKING:
@@ -25,12 +36,36 @@ def _painel(tela, cor, rect, **opcoes):
     desenhar(tela, cor, rect, **opcoes)
 
 
+@lru_cache(maxsize=24)
+def _arte_personagem(caminho: str) -> pygame.Surface | None:
+    imagem = carregar_imagem(caminho)
+    if imagem is None:
+        return None
+    return pygame.transform.smoothscale(imagem, (300, 300))
+
+
+@lru_cache(maxsize=12)
+def _onda_transmissao(quadro: int) -> pygame.Surface:
+    arte = pygame.Surface((180, 26), pygame.SRCALPHA)
+    for indice in range(24):
+        altura = round(4 + 16 * abs(math.sin(indice * .7 + quadro * math.tau / 12)))
+        pygame.draw.line(arte, CIANO, (indice * 7 + 5, 13 - altura // 2),
+                         (indice * 7 + 5, 13 + altura // 2), 2)
+    return arte
+
+
 class DialogueBox:
     """Desenha a narrativa sobre a superfície lógica sem alocar retratos por quadro."""
 
     BOTAO_PULAR = pygame.Rect(1050, 20, 200, 46)
     BOTAO_CONFIRMAR = pygame.Rect(385, 350, 220, 55)
     BOTAO_CANCELAR = pygame.Rect(675, 350, 220, 55)
+    BOTAO_HISTORICO = pygame.Rect(round(LARGURA * .655), round(ALTURA * .028),
+                                round(LARGURA * .15), round(ALTURA * .064))
+    AREA_FALA = pygame.Rect(round(LARGURA * .05), round(ALTURA * .60),
+                           round(LARGURA * .90), round(ALTURA * .34))
+    BOTAO_AVANCAR = pygame.Rect(round(LARGURA * .785), round(ALTURA * .888),
+                               round(LARGURA * .15), round(ALTURA * .040))
 
     def __init__(self, personagens: dict[str, dict[str, str]]) -> None:
         self._fonte = fonte_texto(27)
@@ -39,9 +74,24 @@ class DialogueBox:
         self._fonte_auxiliar = fonte_texto(21)
         self._glifos: dict[tuple[str, tuple[int, int, int]], pygame.Surface] = {}
         self._icones = {chave: valor["retrato"] for chave, valor in personagens.items()}
+        self._caminhos = {valor["retrato"]: valor["imagem"]
+                          for valor in personagens.values() if "imagem" in valor}
+        self._interlocutor = None
+        self._cena_palco = None
         self._retratos = {
             icone: self._criar_retrato(icone) for icone in set(self._icones.values())
         }
+        self._retratos_palco = {
+            icone: pygame.transform.smoothscale(arte, (300, 300))
+            for icone, arte in self._retratos.items()
+        }
+        self._retratos_apagados = {}
+        for icone, arte in self._retratos_palco.items():
+            copia = arte.copy()
+            copia.set_alpha(100)
+            self._retratos_apagados[icone] = copia
+        for quadro in range(12):
+            _onda_transmissao(quadro)
         self._titulos: dict[
             tuple[str, tuple[int, int, int], bool], pygame.Surface
         ] = {}
@@ -55,6 +105,10 @@ class DialogueBox:
         self._fade = pygame.Surface((LARGURA, ALTURA))
 
     def _criar_retrato(self, icone: str) -> pygame.Surface:
+        if icone in self._caminhos:
+            arte = _arte_personagem(self._caminhos[icone])
+            if arte is not None:
+                return arte
         superficie = pygame.Surface((132, 132), pygame.SRCALPHA)
         superficie.fill((32, 37, 47, 255))
         cor = CIANO if icone == "nave" else LARANJA
@@ -140,22 +194,107 @@ class DialogueBox:
         return cor
 
     def _texto(self, tela: pygame.Surface, texto: str, x: int, y: int,
-               largura: int, cor: tuple[int, int, int]) -> None:
-        inicio = x
-        for letra in texto:
-            if letra == "\n":
-                x, y = inicio, y + 34
-                continue
-            glifo = self._glifo(letra, cor)
-            largura_glifo = max(1, glifo.get_width() - 6)
-            if x + largura_glifo > inicio + largura and letra == " ":
-                x, y = inicio, y + 34
-                continue
-            if x + largura_glifo > inicio + largura:
-                x, y = inicio, y + 34
-            tela.blit(glifo, (x, y))
-            x += largura_glifo
+               largura: int, cor: tuple[int, int, int], completo: str | None = None) -> None:
+        # O tamanho é escolhido pelo texto completo, evitando saltos durante a revelação.
+        completo = completo if completo is not None else texto
+        altura = max(1, round(ALTURA * .86) - y)
+        for tamanho in range(27, 13, -1):
+            fonte = fonte_texto(tamanho)
+            linhas = linhas_painel(fonte, completo, largura - 8)
+            passo = fonte.get_linesize() + 3
+            if len(linhas) * passo <= altura:
+                break
+        cursor = 0
+        for indice, linha in enumerate(linhas):
+            inicio = completo.find(linha, cursor)
+            cursor = inicio + len(linha)
+            visiveis = max(0, len(texto) - inicio)
+            trecho = linha[:visiveis]
+            if trecho:
+                arte = self._texto_outline(fonte, trecho, cor, 2)
+                tela.blit(arte, (x, y + indice * passo))
 
+    def _rotulo(self, tela: pygame.Surface, texto: str, rect: pygame.Rect,
+                *, tamanho: int = 20, ativo: bool = False) -> None:
+        arte = texto_painel(fonte_texto(tamanho), texto,
+                            TEXTO_ATIVO_ORIGINAL if ativo else TEXTO_ORIGINAL,
+                            max(1, rect.w - 12), max(1, rect.h - 4))
+        tela.blit(arte, arte.get_rect(center=rect.center))
+
+    def _palco(self, tela: pygame.Surface, controle: ControladorCutscene,
+               personagem: str) -> None:
+        catalogo = controle.catalogo.personagens
+        if self._cena_palco is not controle.sequenciador.cena:
+            self._cena_palco = controle.sequenciador.cena
+            self._interlocutor = None
+        if personagem != "jonathan":
+            self._interlocutor = personagem
+        for lado, chave in enumerate(("jonathan", self._interlocutor)):
+            if chave not in catalogo:
+                continue
+            icone = self._icones[chave]
+            if chave == personagem and controle.retrato_atual:
+                icone = controle.retrato_atual
+            if icone not in self._retratos_palco:
+                self._retratos_palco[icone] = pygame.transform.smoothscale(
+                    self.obter_retrato(icone), (300, 300))
+                copia = self._retratos_palco[icone].copy()
+                copia.set_alpha(100)
+                self._retratos_apagados[icone] = copia
+            ativo = chave == personagem
+            tempo = controle.sequenciador.tempo
+            entrada = 1 if controle.efeitos_reduzidos else min(1., tempo / .35)
+            deslocamento = 0 if controle.efeitos_reduzidos else round(3 * math.sin(tempo * 1.3))
+            x = round(LARGURA * (.12 if lado == 0 else .645))
+            x += round((1 - entrada) * (-18 if lado == 0 else 18)) if ativo else 0
+            y = round(ALTURA * .145) + (deslocamento if ativo else 0)
+            moldura = pygame.Rect(x - 6, y - 6, 312, 312)
+            tela.blit(painel_menu(moldura.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL,
+                                  selecionado=ativo), moldura)
+            arte = (self._retratos_palco if ativo else self._retratos_apagados)[icone]
+            tela.blit(arte, (x, y))
+        if not controle.sequenciador.leitura_concluida:
+            quadro = 0 if controle.efeitos_reduzidos else int(controle.sequenciador.tempo * 6) % 12
+            onda = _onda_transmissao(quadro)
+            tela.blit(onda, onda.get_rect(center=(LARGURA // 2, round(ALTURA * .36))))
+
+    def _historico(self, tela: pygame.Surface, controle: ControladorCutscene) -> None:
+        tela.blit(self._sombra, (0, 0))
+        painel = pygame.Rect(round(LARGURA * .07), round(ALTURA * .12),
+                            round(LARGURA * .86), round(ALTURA * .76))
+        tela.blit(painel_menu(painel.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL), painel)
+        self._rotulo(tela, "HISTÓRICO DESTA CENA · APENAS O QUE VOCÊ JÁ LEU",
+                      pygame.Rect(painel.x + 20, painel.y + 14, painel.w - 40, 32))
+        linhas = controle.transcricao
+        inicio = controle.historico_inicio
+        for i, registro in enumerate(linhas[inicio:inicio + 4]):
+            y = painel.y + 68 + i * 104
+            nome = controle.catalogo.personagens[registro["personagem"]]["nome"]
+            self._rotulo(tela, nome, pygame.Rect(painel.x + 24, y, painel.w - 48, 24), tamanho=17)
+            fonte = fonte_texto(23)
+            for tamanho in range(23, 15, -1):
+                fonte = fonte_texto(tamanho)
+                quebradas = linhas_painel(fonte, registro["texto"], painel.w - 64)
+                if len(quebradas) <= 3:
+                    break
+            for j, texto in enumerate(quebradas):
+                arte = texto_painel(fonte, texto, TEXTO_ORIGINAL, painel.w - 64, 24)
+                tela.blit(arte, (painel.x + 32, y + 28 + j * 24))
+        if not linhas:
+            self._rotulo(tela, "As falas reveladas aparecerão aqui.",
+                          pygame.Rect(painel.x + 24, painel.centery, painel.w - 48, 40))
+        self._rotulo(tela, "↑↓ / RODA DO MOUSE  PERCORRER · H / ESC  VOLTAR À CENA",
+                      pygame.Rect(painel.x + 24, painel.bottom - 36, painel.w - 48, 24), tamanho=16)
+
+    def _cabecalho_cena(self, tela: pygame.Surface, controle: ControladorCutscene) -> None:
+        cena = controle.sequenciador.cena
+        if cena is not None:
+            self._rotulo(tela, cena.nome or cena.id, pygame.Rect(24, 20, 780, 30), tamanho=22)
+            total = sum(p["tipo"] == "fala" for p in cena.passos)
+            if total:
+                atual = min(total, len(controle.sequenciador.historico) + 1)
+                self._rotulo(tela, f"{atual:02d} / {total:02d} · ESC PAUSAR",
+                              pygame.Rect(24, 52, 500, 24), tamanho=16)
     def desenhar(self, tela: pygame.Surface, controle: ControladorCutscene,
                 cor_dimensao: tuple[int, int, int]) -> None:
         """Desenha o passo corrente, controles e confirmação de pulo."""
@@ -168,7 +307,8 @@ class DialogueBox:
         tela.blit(self._sombra, (0, 0))
         tipo = passo["tipo"]
         if tipo == "glitch":
-            indice = int(controle.sequenciador.tempo * 12) % len(self._estaticas)
+            indice = (0 if controle.efeitos_reduzidos else
+                      int(controle.sequenciador.tempo * 2) % len(self._estaticas))
             tela.blit(self._estaticas[indice], (0, 0))
             texto = passo.get("texto", "")
             if texto:
@@ -178,18 +318,26 @@ class DialogueBox:
             self._titulo(tela, passo["texto"].replace("{titulo_jogo}", NOME_JOGO),
                          cor_dimensao)
         elif tipo == "fala":
-            painel = pygame.Rect(110, 500, 1060, 184)
-            cor_acento = self._cor_acento(cor_dimensao)
-            _painel(tela, cor_acento, painel,
-                                    espessura_borda=4, glow_raio=0)
+            self._palco(tela, controle, passo["personagem"])
+            painel = self.AREA_FALA
+            tela.blit(painel_menu(painel.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL), painel)
             personagem = controle.catalogo.personagens[passo["personagem"]]
-            icone = controle.retrato_atual or self._icones[passo["personagem"]]
-            tela.blit(self.obter_retrato(icone), (132, 525))
-            nome = self._texto_outline(self._fonte_nome, personagem["nome"],
-                                       cor_acento, 3)
-            tela.blit(nome, (288, 519))
+            self._rotulo(tela, personagem["nome"], pygame.Rect(
+                painel.x + 24, painel.y + 12, round(painel.w * .5), 36), tamanho=30)
+            self._rotulo(tela, personagem.get("cargo", "TRANSMISSÃO"), pygame.Rect(
+                painel.centerx, painel.y + 16, round(painel.w * .45), 28), tamanho=16)
             self._texto(tela, controle.sequenciador.texto_visivel,
-                        288, 566, 850, (244, 244, 247))
+                        painel.x + 32, painel.y + 65, painel.w - 64,
+                        TEXTO_ORIGINAL, passo.get("texto", ""))
+            pronto = controle.sequenciador.leitura_concluida
+            tela.blit(painel_menu(self.BOTAO_AVANCAR.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL,
+                                  selecionado=pronto, botao=True,
+                                  segmentado=False), self.BOTAO_AVANCAR)
+            self._rotulo(tela, "CONTINUAR ›" if pronto else "REVELAR TEXTO", self.BOTAO_AVANCAR,
+                          ativo=pronto, tamanho=18)
+            self._rotulo(tela, "ENTER / CLIQUE  ·  A HISTÓRIA ESPERA POR VOCÊ",
+                          pygame.Rect(painel.x + 24, self.BOTAO_AVANCAR.y,
+                                      round(painel.w * .70), self.BOTAO_AVANCAR.h), tamanho=16)
         elif tipo == "fade":
             progresso = min(1.0, controle.sequenciador.tempo / max(0.001, passo["duracao"]))
             alfa = int(255 * (1 - progresso if passo.get("direcao") == "entrada"
@@ -197,6 +345,14 @@ class DialogueBox:
             self._fade.fill(VOID_BLACK)
             self._fade.set_alpha(alfa)
             tela.blit(self._fade, (0, 0))
+        self._cabecalho_cena(tela, controle)
+        tela.blit(painel_menu(self.BOTAO_HISTORICO.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL,
+                              botao=True, segmentado=False), self.BOTAO_HISTORICO)
+        self._rotulo(tela, "H  HISTÓRICO", self.BOTAO_HISTORICO, tamanho=18)
+        if controle.historico_aberto:
+            self._historico(tela, controle)
+            self._rotulo(tela, "H  VOLTAR À CENA", self.BOTAO_HISTORICO, tamanho=16)
+            return
         cor_acento = self._cor_acento(cor_dimensao)
         _painel(tela, cor_acento, self.BOTAO_PULAR,
                                 cor_fundo=(32, 37, 47), espessura_borda=4,
@@ -212,11 +368,15 @@ class DialogueBox:
                                     espessura_borda=4, glow_raio=0)
             texto = self._fonte_nome.render("Pular esta cena?", True, (244, 244, 247))
             tela.blit(texto, texto.get_rect(center=(640, 312)))
-            for rect, rotulo in ((self.BOTAO_CONFIRMAR, "PULAR"),
-                                 (self.BOTAO_CANCELAR, "CANCELAR")):
-                _painel(tela, cor_acento, rect,
-                                        espessura_borda=4, glow_raio=0)
-                texto_botao = self._fonte_auxiliar.render(rotulo, True, (244, 244, 247))
+            for indice, (rect, rotulo) in enumerate(((self.BOTAO_CONFIRMAR, "PULAR"),
+                                                     (self.BOTAO_CANCELAR, "CONTINUAR CENA"))):
+                selecionado = indice == controle.selecao_pulo
+                tela.blit(painel_menu(rect.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL,
+                                      selecionado=selecionado, botao=True,
+                                      segmentado=False), rect)
+                texto_botao = texto_painel(self._fonte_auxiliar, rotulo,
+                                           TEXTO_ATIVO_ORIGINAL if selecionado else TEXTO_ORIGINAL,
+                                           rect.w - 16, rect.h - 10)
                 tela.blit(texto_botao, texto_botao.get_rect(center=rect.center))
 
     def _titulo(self, tela: pygame.Surface, texto: str,
@@ -228,6 +388,12 @@ class DialogueBox:
                 self._fonte_titulo, texto, cor_titulo, 4,
             )
         superficie = self._titulos[chave]
+        if superficie.get_width() > LARGURA * .88:
+            fator = LARGURA * .88 / superficie.get_width()
+            superficie = pygame.transform.smoothscale(superficie, (
+                round(superficie.get_width() * fator),
+                max(1, round(superficie.get_height() * fator))))
+            self._titulos[chave] = superficie
         tela.blit(superficie, superficie.get_rect(center=(LARGURA // 2, ALTURA // 2)))
 
     def desenhar_seletor(self, tela: pygame.Surface, controle: ControladorCutscene,

@@ -1092,12 +1092,14 @@ def test_lobby_comic_usa_fundo_lettering_e_paineis_de_tinta():
         with mock.patch.object(
             phase_select, "desenhar_fundo", wraps=phase_select.desenhar_fundo,
         ) as fundo, mock.patch.object(
-            phase_select, "painel_tinta", wraps=phase_select.painel_tinta,
+            phase_select, "painel_menu", wraps=phase_select.painel_menu,
         ) as paineis:
             lobby.draw(tela)
 
-    fundo.assert_called_once()
-    assert paineis.call_count >= len(lobby.phases) + 2
+    fundo.assert_not_called()
+    assert "fases/lobby-comic.png" in lobby._thumbs
+    assert "fases/lealdade-comic.png" in lobby._thumbs
+    assert paineis.call_count >= 3
 
 
 def test_cancelar_novo_jogo_preserva_campanha():

@@ -6,6 +6,7 @@ import random
 import pygame
 
 from src.core.constants import ALTURA, LARGURA
+from src.infrastructure.graphics.comic_pipeline import posterizar
 from src.infrastructure.graphics.comic_render import desenhar_fundo
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.runtime.infrastructure.assets import carregar_imagem
@@ -34,17 +35,21 @@ def _superficie_alpha(raio, cor):
 # Imagens de fundo por cenario (na pasta images/)
 # ---------------------------------------------------------------------------
 
-# Base pictorica de cada dimensao no visual original. O oceano recebe uma
-# colorizacao e formas proprias sobre a imagem azul; nenhum fundo e repetido
-# sem tratamento visual especifico.
+# As cinco fases do lobby compartilham suas artes com a campanha.
+# A sexta dimensão mantém o cenário existente.
 _FUNDO_PADRAO = "imagem-fundo.png"
 _FUNDO_POR_CENARIO = {
-    1: "imagem-fundo.png",
-    2: "fundo-vermelho.png",
-    3: "imagem-fundo.png",
-    4: "imagem-fundo3.png",
-    5: "imagens-fundo2.png",
+    1: "fases/lealdade.png",
+    2: "fases/funcao.png",
+    3: "fases/identidade.png",
+    4: "fases/silencio.png",
+    5: "fases/descarte.png",
     6: "imagem-fundo4.png",
+}
+
+_FUNDO_COMIC_POR_CENARIO = {
+    indice: nome.replace(".png", "-comic.png")
+    for indice, nome in _FUNDO_POR_CENARIO.items() if indice <= 5
 }
 
 _CACHE_FUNDO = {"imagens": {}, "carregada": False}
@@ -85,7 +90,7 @@ def _ajustar_cover(img, larg, alt):
     return img
 
 
-def _imagem_fundo(cenario_id=None):
+def _imagem_fundo(cenario_id=None, *, comic: bool = False):
     """Carrega o fundo do cenario no canvas logico e o cacheia.
 
     Cada cenario usa a imagem mapeada em ``_FUNDO_POR_CENARIO``; os demais
@@ -93,7 +98,7 @@ def _imagem_fundo(cenario_id=None):
     """
     if not _CACHE_FUNDO["carregada"]:
         _CACHE_FUNDO["carregada"] = True
-        caminhos = set(_FUNDO_POR_CENARIO.values())
+        caminhos = set(_FUNDO_POR_CENARIO.values()) | set(_FUNDO_COMIC_POR_CENARIO.values())
         caminhos.add(_FUNDO_PADRAO)
         for nome in caminhos:
             img = carregar_imagem(nome)
@@ -102,7 +107,8 @@ def _imagem_fundo(cenario_id=None):
             _CACHE_FUNDO["imagens"][nome] = _ajustar_cover(img, LARGURA, ALTURA)
     if cenario_id is None:
         return _CACHE_FUNDO["imagens"].get(_FUNDO_PADRAO)
-    nome = _FUNDO_POR_CENARIO.get(cenario_id, _FUNDO_PADRAO)
+    catalogo = _FUNDO_COMIC_POR_CENARIO if comic else _FUNDO_POR_CENARIO
+    nome = catalogo.get(cenario_id, _FUNDO_POR_CENARIO.get(cenario_id, _FUNDO_PADRAO))
     imagem = _CACHE_FUNDO["imagens"].get(nome)
     if imagem is None and nome != _FUNDO_PADRAO:
         imagem = _CACHE_FUNDO["imagens"].get(_FUNDO_PADRAO)
@@ -203,6 +209,7 @@ class Cenario:
         self.efeitos = []
         self.fundo_imagem = _imagem_fundo(self.id)
         self.fundo_estatico = self._criar_fundo_estatico()
+        self._fundos_comic: dict[bool, pygame.Surface] = {}
         self.nebulosas.clear()  # Ja compostas; libera as surfaces grandes.
         self.luzes_ambiente = self._criar_luzes_ambiente()
         self._efeitos_alpha = {}
@@ -259,6 +266,10 @@ class Cenario:
     def _criar_fundo_estatico(self):
         """Compoe a paisagem unica de cada dimensao uma vez por cenario."""
         fundo = pygame.Surface((LARGURA, ALTURA))
+        if self.fundo_imagem is not None and self.id <= 5:
+            fundo.blit(self.fundo_imagem, (0, 0))
+            _reduzir_contraste_fundo(fundo)
+            return fundo
         if self.fundo_imagem is None:
             fundo.blit(self.gradiente, (0, 0))
         elif self.id == 3:
@@ -390,13 +401,31 @@ class Cenario:
 
     # ----- desenho -----
 
+    def obter_fundo_visual(self) -> pygame.Surface:
+        """Entrega a arte estática com acabamento em cache, sem mutar o original."""
+        opcoes = opcoes_atuais()
+        if not opcoes.ativo:
+            return self.fundo_estatico
+        if opcoes.hachuras not in self._fundos_comic:
+            imagem = _imagem_fundo(self.id, comic=True)
+            if self.id <= 5 and imagem is not None:
+                arte = imagem.copy()
+                _reduzir_contraste_fundo(arte)
+            else:
+                arte = posterizar(self.fundo_estatico.copy(), opcoes.hachuras)
+            self._fundos_comic[opcoes.hachuras] = arte
+        return self._fundos_comic[opcoes.hachuras]
+
     def desenhar(self, tela: pygame.Surface, acabamento_cutscene: bool = False) -> None:
         if self.parallax is not None:
             cor = self.cor_transicao if acabamento_cutscene and self.fundo_imagem else None
             self.parallax.desenhar(tela, cor_fundo_cutscene=cor)
             return
         if opcoes_atuais().ativo:
-            desenhar_fundo(tela, self.id)
+            if self.id <= 5 and self.fundo_imagem is not None:
+                tela.blit(self.obter_fundo_visual(), (0, 0))
+            else:
+                desenhar_fundo(tela, self.id)
             return
         fundo = self.fundo_estatico
         if acabamento_cutscene and self.fundo_imagem is not None:

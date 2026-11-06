@@ -30,3 +30,9 @@ Texto fornecido pelo usuário em 24/10/2026. Integrado ao JSON de produção na 
 ## Encerramento
 
 **Jonathan:** "Vou seguir essas ordens até descobrir quem as escreveu."
+
+## Edição narrativa ampliada
+
+As falas acima permanecem como âncoras na expansão solicitada em 06/11/2026.
+O roteiro completo de produção, com trechos intermediários novos, está em
+[`roteiro-cutscenes.md`](roteiro-cutscenes.md) e `src/runtime/story/cenas_pt_BR.json`.
