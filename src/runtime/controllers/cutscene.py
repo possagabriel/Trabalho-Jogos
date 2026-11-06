@@ -45,6 +45,8 @@ class ControladorCutscene:
         self._musica_pausada = False
         self.seletor_debug = False
         self.indice_debug = 0
+        self.historico_aberto = False
+        self.historico_inicio = 0
         self._bus = EventBus()
         referencia = weakref.ref(self)
         bus = self._bus
@@ -74,6 +76,16 @@ class ControladorCutscene:
         """Informa à apresentação se os efeitos rápidos devem ficar estáticos."""
         jogo = self._jogo()
         return jogo is None or jogo.config["intensidade_flash"] != "NORMAL"
+
+    @property
+    def transcricao(self) -> list[dict[str, str]]:
+        """Expõe somente falas lidas e a parte já revelada da fala corrente."""
+        linhas = list(self.sequenciador.historico)
+        passo = self.sequenciador.passo
+        if passo and passo["tipo"] == "fala" and self.sequenciador.texto_visivel:
+            linhas.append({"personagem": passo["personagem"],
+                           "texto": self.sequenciador.texto_visivel})
+        return linhas
 
     def tem_pos_boss(self, cenario_id: int) -> bool:
         """Informa ao avanço se existe cena antes da retomada."""
@@ -136,6 +148,7 @@ class ControladorCutscene:
                 self.estado_anterior = jogo.estado
             cena = self.fila.popleft()
             self.retrato_atual = None
+            self.historico_aberto = False
             self.pausado = False
             self.confirmacao_pulo = False
             self.selecao_pulo = 0
@@ -189,7 +202,8 @@ class ControladorCutscene:
     def atualizar(self, dt: float) -> None:
         """Avança apenas narrativa e rolagem visual durante a cena."""
         jogo = self._jogo()
-        if jogo is None or self.pausado or self.confirmacao_pulo or not self.ativo:
+        if (jogo is None or self.pausado or self.confirmacao_pulo
+                or self.historico_aberto or not self.ativo):
             return
         if self.segurando_pulo and not self.confirmacao_pulo:
             self.tempo_pulo += dt
@@ -231,6 +245,34 @@ class ControladorCutscene:
                     self.fila.append(self.catalogo.cenas[ids[self.indice_debug]])
                     self._iniciar_proxima()
             return
+        if evento.type == pygame.KEYDOWN and getattr(evento, "repeat", False):
+            return
+        if self.historico_aberto:
+            if evento.type == pygame.KEYDOWN:
+                if evento.key in (pygame.K_h, pygame.K_ESCAPE, pygame.K_BACKSPACE):
+                    self.historico_aberto = False
+                elif evento.key in (pygame.K_UP, pygame.K_w):
+                    self.historico_inicio = max(0, self.historico_inicio - 1)
+                elif evento.key in (pygame.K_DOWN, pygame.K_s):
+                    self.historico_inicio = min(max(0, len(self.transcricao) - 4),
+                                                self.historico_inicio + 1)
+            elif evento.type == pygame.MOUSEWHEEL:
+                self.historico_inicio = max(0, min(max(0, len(self.transcricao) - 4),
+                                                  self.historico_inicio - evento.y))
+            elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                if self.caixa.BOTAO_HISTORICO.collidepoint(jogo.menu._pos_logica(evento.pos)):
+                    self.historico_aberto = False
+            return
+        pedir_historico = evento.type == pygame.KEYDOWN and evento.key == pygame.K_h
+        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+            pedir_historico = self.caixa.BOTAO_HISTORICO.collidepoint(
+                jogo.menu._pos_logica(evento.pos))
+        if pedir_historico and self.ativo and not self.confirmacao_pulo:
+            self.segurando_pulo = False
+            self.tempo_pulo = 0.0
+            self.historico_aberto = True
+            self.historico_inicio = max(0, len(self.transcricao) - 4)
+            return
         if evento.type == pygame.KEYUP and evento.key == pygame.K_BACKSPACE:
             self.segurando_pulo = False
             self.tempo_pulo = 0.0
@@ -248,7 +290,7 @@ class ControladorCutscene:
                     self.pular_direto()
                 elif self.caixa.BOTAO_CANCELAR.collidepoint(pos):
                     self.confirmacao_pulo = False
-            elif not self.pausado:
+            elif not self.pausado and self.caixa.AREA_FALA.collidepoint(pos):
                 self.sequenciador.confirmar()
             return
         if evento.type != pygame.KEYDOWN:

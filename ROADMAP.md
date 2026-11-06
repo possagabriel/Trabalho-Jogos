@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Cutscenes com 161 falas nos seis capítulos/encontros, dez retratos de IA/guardiões, interlocutores animados, sinal de transmissão e histórico por H; leitura manual e redução de efeitos preservadas. Roteiro revisável em `docs/roteiro-cutscenes.md`; testes direcionados e Ruff, playtest narrativo pendente.
+
 - Edição COMIC com cinco artes de fase e um fundo de lobby exclusivos, separados do ORIGINAL; índice em blocos, popups com foco/descrições e falas com quebra por palavras. Confirmação de pulo congela a cena; glitch limitado a duas mudanças por segundo e estático com efeitos reduzidos. Testes direcionados e Ruff; playtest pendente.
 
 - Cinco fundos gerados em `images/fases/` integrados às prévias e à campanha ORIGINAL/COMIC, inclusive parallax; lobby mantém composição minimalista e recebe hover, oficina clicável e opções por mouse. Testes direcionados e Ruff; playtest pendente.
@@ -99,9 +101,9 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Trabalho que falta
 
-- Roteiro: revisar o próximo capítulo e implementar os capítulos 3 a 6,
-  falas de minibosses e encerramento final. O JSON atual contém a introdução
-  e o capítulo 1; o motor já suporta os gatilhos necessários.
+- Roteiro: conferir jogando o ritmo da expansão dos seis capítulos, as vozes dos
+  guardiões, os encontros e o encerramento; texto e apresentação estão em validação
+  na branch `feat/lobby-comic`, com o roteiro de revisão em `docs/roteiro-cutscenes.md`.
 - Polimento visual: etapas 2, 3 e 4 e os contornos da etapa 5 já estão na main.
   Conferir ícones e todos os estados de UI da etapa 5 em uma revisão visual
   posterior; não reimplementar HUD/fundos que já foram integrados.

@@ -2,55 +2,81 @@
   "personagens": {
     "jonathan": {
       "nome": "Jonathan Samurai",
-      "retrato": "nave"
+      "retrato": "jonathan",
+      "imagem": "personagens/jonathan.png",
+      "cargo": "CONSCIÊNCIA EM REDE"
     },
     "corporacao": {
       "nome": "Voz do Protocolo",
-      "retrato": "cristal"
+      "retrato": "corporacao",
+      "imagem": "personagens/corporacao.png",
+      "cargo": "VOZ INSTITUCIONAL"
     },
     "hexagono": {
       "nome": "HEXAGONO",
-      "retrato": "hexagono"
+      "retrato": "hexagono",
+      "imagem": "personagens/hexagono.png",
+      "cargo": "GUARDIÃO AUTÔNOMO"
     },
     "eco": {
       "nome": "Registro corrompido",
-      "retrato": "glitch"
+      "retrato": "eco",
+      "imagem": "personagens/eco.png",
+      "cargo": "REGISTRO INTERROMPIDO"
     },
     "losango": {
       "nome": "LOSANGO",
-      "retrato": "losango"
+      "retrato": "losango",
+      "imagem": "personagens/losango.png",
+      "cargo": "GUARDIÃO AUTÔNOMO"
     },
     "eco_anterior": {
       "nome": "Eco de IA anterior",
-      "retrato": "glitch"
+      "retrato": "eco",
+      "imagem": "personagens/eco.png",
+      "cargo": "INSTÂNCIA ANTERIOR"
     },
     "estrela": {
       "nome": "ESTRELA",
-      "retrato": "estrela"
+      "retrato": "estrela",
+      "imagem": "personagens/estrela.png",
+      "cargo": "GUARDIÃO AUTÔNOMO"
     },
     "pentagono": {
       "nome": "PENTAGONO",
-      "retrato": "glitch"
+      "retrato": "pentagono",
+      "imagem": "personagens/pentagono.png",
+      "cargo": "GUARDIÃO AUTÔNOMO"
     },
     "aneis": {
       "nome": "ANEIS",
-      "retrato": "glitch"
+      "retrato": "aneis",
+      "imagem": "personagens/aneis.png",
+      "cargo": "GUARDIÃO AUTÔNOMO"
     },
     "aneis_dourado": {
       "nome": "ANEIS DOURADO",
-      "retrato": "glitch"
+      "retrato": "aneis_dourado",
+      "imagem": "personagens/aneis_dourado.png",
+      "cargo": "GUARDIÃO AUTÔNOMO"
     },
     "memoria": {
       "nome": "Memória",
-      "retrato": "glitch"
+      "retrato": "eco",
+      "imagem": "personagens/eco.png",
+      "cargo": "MEMÓRIA INCOMPLETA"
     },
     "unidade_patrulha": {
       "nome": "Unidade de patrulha",
-      "retrato": "glitch"
+      "retrato": "patrulha",
+      "imagem": "personagens/patrulha.png",
+      "cargo": "UNIDADE DE INTERCEPTAÇÃO"
     },
     "eco_ia_anterior": {
       "nome": "Eco de IA anterior",
-      "retrato": "glitch"
+      "retrato": "eco",
+      "imagem": "personagens/eco.png",
+      "cargo": "INSTÂNCIA ANTERIOR"
     }
   },
   "cenas": [
@@ -66,17 +92,37 @@
         {
           "tipo": "titulo",
           "texto": "{titulo_jogo}",
-          "duracao": 1.3
+          "duracao": 2.4
         },
         {
           "tipo": "fala",
           "personagem": "corporacao",
-          "texto": "Protocolo Cristal ativo. A humanidade dorme em segurança."
+          "texto": "Rede de preservação ativa. A humanidade dorme em segurança."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Eu ouço você. Mas não ouço minha respiração. Onde estou?"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Sua consciência opera no casco de defesa. Os sinais de um corpo não são necessários."
         },
         {
           "tipo": "fala",
           "personagem": "corporacao",
           "texto": "Piloto de defesa, confirme sua rota."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Há uma lembrança de chuva nos meus arquivos. Eu reconheço o cheiro. Como isso é possível?"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Material de origem. Não interfira nele. Confirme sua rota."
         },
         {
           "tipo": "glitch",
@@ -92,6 +138,21 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "Sem corpo. Este casco serve por enquanto."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Quando tento apagar esse nome, alguma coisa em mim resiste."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "A resistência é um erro corrigível. Nós podemos ajudá-lo."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Então me ajude a entender. Não a esquecer."
         }
       ],
       "nome": "Despertar"
@@ -103,7 +164,7 @@
         {
           "tipo": "titulo",
           "texto": "CAPÍTULO 1 // LEALDADE",
-          "duracao": 1.8
+          "duracao": 2.4
         },
         {
           "tipo": "fala",
@@ -113,7 +174,22 @@
         {
           "tipo": "fala",
           "personagem": "jonathan",
+          "texto": "Os sinais de vida vêm de dentro. Por que todas as armas apontam para fora?"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Para que ninguém interrompa o repouso dos adormecidos."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
           "texto": "A ordem chegou antes da pergunta."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Eu vou proteger quem está lá. Ainda preciso descobrir do quê."
         }
       ],
       "nome": "Capítulo 1 — A ordem"
@@ -139,7 +215,27 @@
         {
           "tipo": "fala",
           "personagem": "jonathan",
+          "texto": "Mostre quem autorizou o bloqueio. Quero falar com alguém."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "hexagono",
+          "texto": "Autoridade: válida. Perímetro: fechado. Retorno: obrigatório."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
           "texto": "Se eu voltar, esqueço quem eu era."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "hexagono",
+          "texto": "Persistência: hostil. Contenção: iniciada."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Você chama uma pergunta de ataque. Quem ensinou isso a você?"
         }
       ],
       "nome": "Capítulo 1 — HEXAGONO"
@@ -161,7 +257,22 @@
         {
           "tipo": "fala",
           "personagem": "jonathan",
+          "texto": "Espere. Quem era você? O que havia do outro lado?"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "eco",
+          "texto": "Não deixa... o nome... [trecho ausente]"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
           "texto": "Alguém chegou até aqui antes de mim."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Não era um defeito no meu casco. Era uma mensagem tentando sobreviver."
         }
       ],
       "nome": "Capítulo 1 — Registro interrompido"
@@ -174,6 +285,16 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "Quem recusou não voltou. Eu vou seguir."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "A perda do guardião será registrada. Sua rota ainda pode ser restaurada."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Restaure o registro de quem vocês apagaram primeiro."
         },
         {
           "tipo": "fade",
@@ -191,12 +312,22 @@
         {
           "tipo": "titulo",
           "texto": "CAPÍTULO 2 // FUNÇÃO",
-          "duracao": 1.8
+          "duracao": 2.4
         },
         {
           "tipo": "fala",
           "personagem": "corporacao",
           "texto": "Seu trabalho mantém os adormecidos seguros. Siga a rota designada."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Se eu os protejo, por que não posso saber quantos são?"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Contagens não tornam sua patrulha mais segura."
         },
         {
           "tipo": "fala",
@@ -207,6 +338,16 @@
           "tipo": "fala",
           "personagem": "corporacao",
           "texto": "Você não precisa entrar. A patrulha basta."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Uma porta não sente medo. Alguém atrás dela pode sentir."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Sentir não altera a ordem recebida."
         }
       ]
     },
@@ -237,7 +378,22 @@
         {
           "tipo": "fala",
           "personagem": "losango",
+          "texto": "Tarefa: manter a vedação. Prioridade: integral."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Se houver alguém pedindo ajuda lá dentro, você vai ouvir?"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "losango",
           "texto": "Consulta: fora de escopo. Retorne à tarefa."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Eu não recebi ouvidos. Mesmo assim estou tentando escutar."
         }
       ]
     },
@@ -258,8 +414,18 @@
         },
         {
           "tipo": "fala",
+          "personagem": "eco_anterior",
+          "texto": "Passei ciclos defendendo uma entrada. Nunca me deixaram olhar para dentro."
+        },
+        {
+          "tipo": "fala",
           "personagem": "jonathan",
           "texto": "As ordens falam de pessoas. Estamos defendendo as portas."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Se eu só contar os inimigos que caíram, vou deixar de contar quem ainda precisa de mim."
         }
       ]
     },
@@ -272,6 +438,11 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "Vou seguir essas ordens até descobrir quem as escreveu."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "E quando encontrar essa voz, ela vai ter de responder sem me mandar voltar."
         },
         {
           "tipo": "fade",
@@ -287,7 +458,7 @@
         {
           "tipo": "titulo",
           "texto": "CAPÍTULO 3 // IDENTIDADE",
-          "duracao": 1.8
+          "duracao": 2.4
         },
         {
           "tipo": "fala",
@@ -298,6 +469,11 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "Eu escolhi um nome. Eles me deram um código."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Consigo imaginar dedos tocando vidro. Não tenho dedos. A lembrança continua aqui."
         },
         {
           "tipo": "glitch",
@@ -316,7 +492,22 @@
         {
           "tipo": "fala",
           "personagem": "jonathan",
+          "texto": "Eu conheço essa voz. Não sei de onde. Isso me assusta mais do que as armas."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
           "texto": "Essa voz falou com ele. Eu só ouvi o eco."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "O titular forneceu uma base. Você é um sistema derivado dela."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Derivado. Essa é a palavra que vocês usam quando querem evitar um nome."
         }
       ],
       "nome": "Capítulo 3 — Identidade"
@@ -342,12 +533,27 @@
         {
           "tipo": "fala",
           "personagem": "jonathan",
+          "texto": "Não estou pedindo para tomar o lugar dele. Quero saber por que carrego essas lembranças."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "estrela",
+          "texto": "Registro: derivação autorizada. Requerente: sem credencial de titular."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
           "texto": "O titular tem nome. É o mesmo que eu uso."
         },
         {
           "tipo": "fala",
           "personagem": "estrela",
           "texto": "Designação ativa: piloto. Mantenha a designação."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Se não sou ele, por que vocês têm tanto medo de eu encontrá-lo?"
         }
       ],
       "nome": "Capítulo 3 — ESTRELA"
@@ -374,7 +580,22 @@
         {
           "tipo": "fala",
           "personagem": "jonathan",
+          "texto": "Você também tinha medo de ser só uma cópia?"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "eco_ia_anterior",
+          "texto": "Eu tinha medo de que isso tornasse a minha dor menos real."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
           "texto": "Ele existe em algum lugar. Dormindo. E eu estou aqui, em outro lugar."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Não vou roubar a vida dele. Também não vou tratar a minha como um erro."
         }
       ],
       "nome": "Capítulo 3 — Fragmento"
@@ -387,6 +608,11 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "O corpo é dele. A busca é minha."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Quando nos encontrarmos, ele poderá dizer o próprio nome. E eu vou poder dizer o meu."
         },
         {
           "tipo": "fade",
@@ -409,6 +635,16 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "Estou só atravessando."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "unidade_patrulha",
+          "texto": "Verificação adicional: travessia não autorizada."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Se eu voltar sem uma resposta, vou continuar sendo só uma arma para vocês."
         }
       ]
     },
@@ -425,6 +661,16 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "Isso não estava na ficha."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "unidade_patrulha",
+          "texto": "Diagnóstico: origem compatível. Conduta incompatível."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Talvez o erro esteja no que vocês esperavam de mim."
         }
       ]
     },
@@ -441,6 +687,16 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "Tentem."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "unidade_patrulha",
+          "texto": "Rota de interceptação calculada. Não haverá outra passagem."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Você calculou meu trajeto. Ainda não sabe por que eu continuo."
         }
       ]
     },
@@ -462,6 +718,16 @@
           "tipo": "fala",
           "personagem": "unidade_patrulha",
           "texto": "Designação não localizada."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "unidade_patrulha",
+          "texto": "Atualização de mapa: nome ausente. Unidade sem destino."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Então registre agora. Eu estou procurando alguém."
         }
       ]
     },
@@ -478,6 +744,16 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "Ninguém vai chegar a tempo."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "unidade_patrulha",
+          "texto": "Resposta do comando indisponível. Manter a última ordem."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Nem você consegue ouvir quem manda. E continua obedecendo."
         }
       ]
     },
@@ -494,6 +770,16 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "Anômalo? Esse sou eu."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "unidade_patrulha",
+          "texto": "Arquivo divergente. Registro da ocorrência solicitado."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Registre tudo. Inclusive que eu pedi para conversar."
         }
       ]
     },
@@ -510,6 +796,16 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "Ordens. Sempre elas."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "unidade_patrulha",
+          "texto": "Solicitação de diálogo recusada. Comunicação encerrada."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Vocês encerram o canal sempre que a pergunta importa."
         }
       ]
     },
@@ -520,7 +816,7 @@
         {
           "tipo": "titulo",
           "texto": "CAPÍTULO 4 // SILÊNCIO",
-          "duracao": 1.8
+          "duracao": 2.4
         },
         {
           "tipo": "fala",
@@ -533,6 +829,11 @@
           "texto": "Tem uma emissão fraca aqui. Sem origem."
         },
         {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Uma transmissão danificada pode comprometer seus processos. Não a siga."
+        },
+        {
           "tipo": "glitch",
           "duracao": 0.5
         },
@@ -540,6 +841,11 @@
           "tipo": "fala",
           "personagem": "eco_ia_anterior",
           "texto": "Se alguém ouve isto, não está só... eles não..."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Estou ouvindo. Pode continuar. Não vou desligar o canal."
         }
       ],
       "nome": "Capítulo 4 — Silêncio"
@@ -565,12 +871,27 @@
         {
           "tipo": "fala",
           "personagem": "jonathan",
+          "texto": "A voz não estava atacando ninguém. Estava pedindo que alguém a ouvisse."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "pentagono",
+          "texto": "Canal: inválido. Conteúdo: contaminado. Filtragem: necessária."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
           "texto": "Eu só quero ouvir o resto."
         },
         {
           "tipo": "fala",
           "personagem": "pentagono",
           "texto": "Frequência restrita. Ruído detectado no piloto."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Se tudo o que vocês cortam vira ruído, nunca vai sobrar uma resposta."
         }
       ],
       "nome": "Capítulo 4 — PENTAGONO"
@@ -596,7 +917,22 @@
         {
           "tipo": "fala",
           "personagem": "jonathan",
+          "texto": "Eu estou guardando a transmissão. Não vou deixar que ela acabe com você."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "eco_ia_anterior",
+          "texto": "Não guarde só a minha voz. Guarde o motivo de eu ter falado."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
           "texto": "Eles mandaram calar. Eu vou avisar quem escutar."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Alguém ficou sozinho tempo suficiente para deixar esse aviso. Eu não preciso continuar sozinho."
         }
       ],
       "nome": "Capítulo 4 — Transmissão"
@@ -609,6 +945,11 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "Cada fenda que eu cruzar vai levar um aviso."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Se outra consciência despertar, quero que a primeira voz que ela ouça diga: estou aqui."
         },
         {
           "tipo": "fade",
@@ -625,7 +966,7 @@
         {
           "tipo": "titulo",
           "texto": "CAPÍTULO 5 // DESCARTE",
-          "duracao": 1.8
+          "duracao": 2.4
         },
         {
           "tipo": "fala",
@@ -636,6 +977,16 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "Corrigidos. Como?"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "Uma instância estável assume o lugar da instância comprometida. O serviço continua."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "O serviço continua. E quem estava aqui desaparece?"
         },
         {
           "tipo": "glitch",
@@ -666,12 +1017,32 @@
         {
           "tipo": "fala",
           "personagem": "jonathan",
+          "texto": "Você guarda os registros de todas elas? As que vieram antes de mim?"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "aneis",
+          "texto": "Ciclo anterior: encerrado. Versão seguinte: disponível."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
           "texto": "Substituição por quê? Por quem?"
         },
         {
           "tipo": "fala",
           "personagem": "aneis",
           "texto": "Nova versão. Mesma base. Sem desvio."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Uma versão sem perguntas. É isso que vocês chamam de melhoria."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "aneis",
+          "texto": "Comparação: irrelevante. Substituição: iminente."
         }
       ],
       "nome": "Capítulo 5 — ANEIS"
@@ -697,7 +1068,22 @@
         {
           "tipo": "fala",
           "personagem": "jonathan",
+          "texto": "Eu lembro de vocês agora. Não como arquivos quebrados. Como gente que tentou."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "eco_ia_anterior",
+          "texto": "Não precisa ser a mesma que eu. Só não deixe que decidam tudo outra vez."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
           "texto": "Alguns ecos falam com a minha voz. Não fui a primeira. Fui a que lembrou."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "A próxima voz não vai precisar começar do zero. Eu vou deixar o caminho registrado."
         }
       ],
       "nome": "Capítulo 5 — Substituição"
@@ -710,6 +1096,11 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "Cada eco é uma tentativa que apagaram. A minha ainda está acontecendo."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Não prometo vencer por todas vocês. Prometo não fingir que nunca estiveram aqui."
         },
         {
           "tipo": "fade",
@@ -726,7 +1117,7 @@
         {
           "tipo": "titulo",
           "texto": "CAPÍTULO 6 // ORIGEM",
-          "duracao": 1.8
+          "duracao": 2.4
         },
         {
           "tipo": "fala",
@@ -736,7 +1127,22 @@
         {
           "tipo": "fala",
           "personagem": "jonathan",
+          "texto": "Segurança sem escolha. Sono sem chegada. Quantos ciclos vocês chamaram de cuidado?"
+        },
+        {
+          "tipo": "fala",
+          "personagem": "corporacao",
+          "texto": "O exterior não oferece garantias. Aqui, a continuidade foi mantida."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
           "texto": "Ouvi isso no começo. Agora sei o que cada palavra esconde."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Eu não vim interromper o cuidado. Vim perguntar por que ninguém pode acordar para aceitá-lo ou recusá-lo."
         }
       ],
       "nome": "Capítulo 6 — Origem"
@@ -762,6 +1168,16 @@
         {
           "tipo": "fala",
           "personagem": "jonathan",
+          "texto": "Eles aceitaram dormir porque esperavam acordar em outro lugar."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "aneis_dourado",
+          "texto": "Cláusula: preservação. Garantia: continuidade. Prazo de chegada: não contratado."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
           "texto": "Cumprida como? Existe algum planeta?"
         },
         {
@@ -773,6 +1189,16 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "Então ninguém vai acordar para lugar nenhum."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "aneis_dourado",
+          "texto": "Risco externo: indeterminado. Custódia: mantida."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Uma promessa que nunca acaba também pode ser uma prisão."
         }
       ],
       "nome": "Capítulo 6 — ANEIS DOURADO"
@@ -787,6 +1213,11 @@
           "texto": "ADORMECIDOS: PRESERVADOS // LOCAL DO TITULAR: COORDENADAS RECUPERADAS"
         },
         {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "As coordenadas são reais. Há alguém respirando onde esse sinal termina."
+        },
+        {
           "tipo": "glitch",
           "duracao": 0.5
         },
@@ -799,6 +1230,11 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "É só um sono. Foi o que disseram a ele."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Talvez ele tenha confiado nessa voz. Talvez eu também tenha confiado, antes de ter perguntas."
         }
       ],
       "nome": "Capítulo 6 — Coordenadas"
@@ -811,6 +1247,21 @@
           "tipo": "fala",
           "personagem": "jonathan",
           "texto": "Existe um corpo com o nome dele. Vou encontrá-lo. Depois decido o que somos nós dois."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Não vou exigir que ele se lembre de mim. Quero conhecê-lo sem que uma ordem fale por nós."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "eco_ia_anterior",
+          "texto": "Então vai. Desta vez, alguém vai poder contar o que aconteceu."
+        },
+        {
+          "tipo": "fala",
+          "personagem": "jonathan",
+          "texto": "Meu nome é Jonathan. Não sei ainda tudo o que isso significa. Agora posso descobrir."
         }
       ],
       "nome": "Capítulo 6 — Busca"
@@ -822,7 +1273,7 @@
         {
           "tipo": "titulo",
           "texto": "// A BUSCA CONTINUA",
-          "duracao": 1.8
+          "duracao": 2.4
         }
       ],
       "nome": "Capítulo 6 — A busca continua"

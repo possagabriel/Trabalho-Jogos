@@ -124,6 +124,8 @@ class SequenciadorCena:
         self.indice = 0
         self.tempo = 0.0
         self.pausado = False
+        self.historico: list[dict[str, str]] = []
+        self._fala_revelada = False
 
     @property
     def ativo(self) -> bool:
@@ -141,11 +143,22 @@ class SequenciadorCena:
         passo = self.passo
         if passo is None or passo["tipo"] != "fala":
             return ""
+        if self._fala_revelada:
+            return passo["texto"]
         return passo["texto"][:int(self.tempo * self.velocidade)]
+
+    @property
+    def leitura_concluida(self) -> bool:
+        """Indica que a fala está toda visível, sem avançar por tempo."""
+        passo = self.passo
+        return bool(passo and passo["tipo"] == "fala"
+                    and self.texto_visivel == passo["texto"])
 
     def iniciar(self, cena: Cena) -> None:
         """Começa uma cena sem marcar persistência."""
         self.cena = cena
+        self.historico.clear()
+        self._fala_revelada = False
         self.indice = 0
         self.tempo = 0.0
         self.pausado = False
@@ -166,7 +179,11 @@ class SequenciadorCena:
     def _proximo(self) -> None:
         if self.cena is None:
             return
+        passo = self.passo
+        if passo["tipo"] == "fala":
+            self.historico.append({"personagem": passo["personagem"], "texto": passo["texto"]})
         self.indice += 1
+        self._fala_revelada = False
         self.tempo = 0.0
         if self.indice >= len(self.cena.passos):
             self._finalizar(True)
@@ -189,7 +206,7 @@ class SequenciadorCena:
             return
         passo = self.passo
         if passo["tipo"] == "fala" and self.texto_visivel != passo["texto"]:
-            self.tempo = len(passo["texto"]) / self.velocidade
+            self._fala_revelada = True
             return
         atual = self.cena
         self._proximo()
