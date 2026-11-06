@@ -106,3 +106,44 @@ def test_menus_e_subtelas_preservam_preferencias_e_progresso(estilo):
             menu.desenhar(jogo.tela)
     assert jogo.config._dados == antes
     assert progresso == (jogo.loja.moedas, jogo.loja.skin_atual, jogo.loja.lista_desbloqueadas())
+
+
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_memorias_ignora_clique_fora_dos_cartoes(estilo):
+    jogo, menu = novo_menu()
+    jogo.config["estilo_visual"] = estilo
+    from src.runtime.presentation.screens.memory_archive_screen import TelaArquivoMemorias
+
+    arquivo = TelaArquivoMemorias(menu)
+    with mock.patch.object(arquivo, "_ids", return_value=["introducao"]), \
+            mock.patch.object(jogo.cutscene_controller, "rever") as rever:
+        linha = arquivo._linhas()[0]
+        arquivo.tratar_clique((linha.left - 1, linha.centery))
+        rever.assert_not_called()
+        arquivo.tratar_clique(linha.center)
+        rever.assert_called_once_with("introducao")
+
+
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+@pytest.mark.parametrize("tamanho", [(900, 700), (1920, 1080)])
+def test_lobby_loja_memorias_e_recordes_em_duas_resolucoes(estilo, tamanho):
+    from game.layout import Layout
+    from src.runtime.presentation.screens.memory_archive_screen import TelaArquivoMemorias
+
+    jogo, menu = novo_menu()
+    jogo.config["estilo_visual"] = estilo
+    menu.layout = Layout(*tamanho)
+    menu.phase_screen.set_layout(menu.layout)
+    destino = pygame.Surface(tamanho)
+    arquivo = TelaArquivoMemorias(menu)
+    assert destino.get_rect().contains(arquivo._painel())
+    for rect in arquivo._linhas():
+        assert arquivo._painel().contains(rect)
+    menu.phase_screen.shop_open = True
+    with usar_visual(jogo.config):
+        menu.phase_screen.draw(destino)
+        arquivo.desenhar(destino)
+        with mock.patch.object(menu.tela_recordes, "_desenhar_comic",
+                               wraps=menu.tela_recordes._desenhar_comic) as comic:
+            menu.tela_recordes.desenhar(destino)
+            assert comic.call_count == int(estilo == "COMIC")

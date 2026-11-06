@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Lobby e oficina com cabeçalho/painéis reorganizados nos dois estilos; memórias com cartões e clique delimitado; recordes COMIC em cinco quadros. Testes direcionados e Ruff; conferência jogando pendente.
+
 - COMIC compartilha a estrutura do ORIGINAL no principal, hubs, hangar, configurações e confirmações, com tinta/papel/retícula e caches separados; 212 testes direcionados e Ruff aprovados, conferência jogando pendente.
 
 - Configurações ORIGINAL organizadas em seis abas orbitais, ajuda contextual, sliders arrastáveis e subtelas de vídeo/controles consistentes; 207 testes direcionados e Ruff aprovados, conferência jogando pendente.

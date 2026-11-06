@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex refinou lobby, oficina e memórias nos dois estilos e recordes apenas no COMIC; validação direcionada de menus/cutscenes, resoluções 900×700 e 1920×1080 e Ruff. Sem screenshots, dependências ou mudança de balanceamento; conferência jogando pendente.
+
 - Codex unificou a estrutura de menus COMIC/ORIGINAL e preservou o acabamento de quadrinhos no COMIC; testes de paleta/cache escritos primeiro, 212 testes direcionados e Ruff aprovados, incluindo navegação, arraste, confirmação de vídeo e preservação de preferências/progresso. Sem dependências, screenshots ou alteração de gameplay; conferência jogando pendente.
 
 - Codex reorganizou as configurações ORIGINAL em abas orbitais, com ajuda contextual, arraste com prévia e subtelas consistentes; testes de geometria/categorias escritos primeiro, 207 testes direcionados e Ruff aprovados. Sem novas dependências, screenshots ou mudança de gameplay; conferência jogando pendente.

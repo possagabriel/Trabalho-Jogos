@@ -1092,7 +1092,7 @@ def test_lobby_comic_usa_fundo_lettering_e_paineis_de_tinta():
         with mock.patch.object(
             phase_select, "desenhar_fundo", wraps=phase_select.desenhar_fundo,
         ) as fundo, mock.patch.object(
-            phase_select, "painel_tinta", wraps=phase_select.painel_tinta,
+            phase_select, "painel_menu", wraps=phase_select.painel_menu,
         ) as paineis:
             lobby.draw(tela)
 

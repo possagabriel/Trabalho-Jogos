@@ -11,7 +11,6 @@ import pygame
 from src.infrastructure.graphics.comic_pipeline import posterizar
 from src.infrastructure.graphics.comic_render import (
     desenhar_fundo,
-    painel_tinta,
     texto_tinta,
 )
 from src.infrastructure.graphics.comic_theme import (
@@ -20,6 +19,12 @@ from src.infrastructure.graphics.comic_theme import (
     LARANJA,
     PAPEL,
     opcoes_atuais,
+)
+from src.runtime.infrastructure.graphics.menu_panels import (
+    ACENTO_ORIGINAL,
+    TEXTO_ORIGINAL,
+    painel_menu,
+    texto_painel,
 )
 
 from .assets import carregar_imagem
@@ -158,8 +163,8 @@ class PhaseSelectScreen:
                 fundo: tuple, destaque: tuple, espessura: int = 2) -> None:
         """Desenha uma placa angular comic ou o painel legado equivalente."""
         if opcoes_atuais().ativo:
-            placa = painel_tinta(rect.size, tuple(destaque[:3]))
-            surface.blit(placa, (rect.x - 12, rect.y - 12))
+            placa = painel_menu(rect.size, fundo, destaque)
+            surface.blit(placa, rect)
             return
         pygame.draw.rect(surface, fundo, rect, border_radius=10)
         pygame.draw.rect(surface, destaque, rect, espessura, border_radius=10)
@@ -185,7 +190,7 @@ class PhaseSelectScreen:
     def _draw_wallet(self, surface: pygame.Surface,
                      small: pygame.font.Font) -> None:
         """Mantém o saldo visível no lobby usando a fonte de verdade da loja."""
-        rect = self._rect(10, 20, 175, 48)
+        rect = self._rect(670, 20, 205, 48)
         self._painel(surface, rect, (24, 28, 48), LARANJA, 2)
         saldo = self._formatar_moedas(self._saldo_moedas())
         texto = self._texto(f"MOEDAS // {saldo}", 17, PAPEL, small)
@@ -375,8 +380,8 @@ class PhaseSelectScreen:
         title_font = self._fonte("titulo", 46, titulo=True)
         font = self._fonte("normal", 27)
         small = self._fonte("pequena", 21)
-        title = self._texto("SELEÇÃO DE FASES", 46, PAPEL, title_font)
-        surface.blit(title, title.get_rect(center=(self.layout.x(0.5),
+        title = self._texto("LOBBY // FASES", 36, PAPEL, title_font)
+        surface.blit(title, title.get_rect(center=(self._ponto(340, 48)[0],
                                                    self._ponto(0, 48)[1])))
         hint = self._texto(
             "MOVIMENTE A NAVE ATÉ UMA FASE  •  ENTER: INTERAGIR  •  L: LOJA",
@@ -435,13 +440,13 @@ class PhaseSelectScreen:
                     surface, border, rect,
                     self.layout.px(4 if interacting else 2),
                     border_radius=max(1, self.layout.px(10)))
-            num = self._texto(f"FASE {phase.ordem}", 18, border, small)
+            num = self._texto(f"FASE {phase.ordem}", 18, PAPEL if comic else border, small)
             surface.blit(num, num.get_rect(
                 center=(rect.centerx, rect.y + self.layout.px(25))))
             nome = phase.nome.split("—")[-1].strip().upper()
             label = self._texto(
                 nome, 25,
-                PAPEL if comic and not locked else
+                PAPEL if comic else
                 (245, 247, 255) if not locked else (105, 110, 135), font)
             surface.blit(label, label.get_rect(center=(rect.centerx, rect.centery)))
             status_text = {
@@ -449,7 +454,7 @@ class PhaseSelectScreen:
                 PhaseStatus.AVAILABLE: "DISPONÍVEL",
                 PhaseStatus.COMPLETED: "CONCLUÍDA",
             }[status]
-            mark = self._texto(status_text, 17, border, small)
+            mark = self._texto(status_text, 17, PAPEL if comic else border, small)
             surface.blit(mark, mark.get_rect(
                 center=(rect.centerx, rect.bottom - self.layout.px(22))))
             if interacting and not locked:
@@ -542,30 +547,31 @@ class PhaseSelectScreen:
                                                  - self.layout.px(34))))
 
     def _draw_shop(self, surface, font, small):
-        panel = self._rect(285, 500, 590, 168)
-        self._painel(surface, panel, (30, 24, 52), CIANO, 3)
-        titulo = self._texto(
-            "LOJA DO LOBBY // MELHORIAS PERMANENTES", 24, PAPEL, font)
-        surface.blit(titulo, (panel.x + self.layout.px(18),
-                              panel.y + self.layout.px(12)))
-        melhorias = self.jogo.progresso.jogador.get("melhorias", {})
+        surface.blit(self._overlay(surface.get_size(), (0, 0, 0, 220)), (0, 0))
+        panel = self._rect(150, 145, 600, 410)
+        surface.blit(painel_menu(panel.size, (0, 0, 0), ACENTO_ORIGINAL), panel)
+
+        def linha(rotulo: str, y: int, altura: int = 30) -> None:
+            rect = self._rect(178, y, 544, altura)
+            arte = texto_painel(font, rotulo, TEXTO_ORIGINAL, rect.w, rect.h)
+            surface.blit(arte, arte.get_rect(center=rect.center))
+
+        linha("OFICINA // LOJA DO LOBBY", 170, 38)
         saldo = self._formatar_moedas(self._saldo_moedas())
-        linhas = (
-            f"SALDO: {saldo}",
-            f"[1] BLINDAGEM +1 VIDA // {CUSTO_MELHORIA_LOBBY}  "
-            f"NV {self._nivel_melhoria(melhorias, 'blindagem')}",
-            f"[2] MOTOR +0.5 VELOCIDADE // {CUSTO_MELHORIA_LOBBY}  "
-            f"NV {self._nivel_melhoria(melhorias, 'motor')}",
-        )
-        for indice, linha in enumerate(linhas):
-            cor = LARANJA if indice == 0 else CIANO
-            texto = self._texto(linha, 17, cor, small)
-            surface.blit(texto, (panel.x + self.layout.px(18),
-                                 panel.y + self.layout.px(51 + indice * 29)))
-        fechar = self._texto("L FECHA A LOJA", 15, PAPEL, small)
-        surface.blit(fechar, fechar.get_rect(
-            bottomright=(panel.right - self.layout.px(18),
-                         panel.bottom - self.layout.px(10))))
+        linha(f"SALDO DISPONÍVEL: {saldo} MOEDAS", 218)
+        melhorias = self.jogo.progresso.jogador.get("melhorias", {})
+        for i, (nome, efeito, chave) in enumerate((
+                ("BLINDAGEM", "+1 VIDA", "blindagem"),
+                ("MOTOR", "+0.5 VELOCIDADE", "motor"))):
+            y = 272 + i * 94
+            rect = self._rect(174, y, 552, 82)
+            surface.blit(painel_menu(rect.size, (0, 0, 0), ACENTO_ORIGINAL), rect)
+            nivel = self._nivel_melhoria(melhorias, chave)
+            linha(f"[{i + 1}] {nome} · NÍVEL {nivel} · {efeito}", y + 8)
+            estado = ("DISPONÍVEL" if self._saldo_moedas() >= CUSTO_MELHORIA_LOBBY
+                      else "SALDO INSUFICIENTE")
+            linha(f"{CUSTO_MELHORIA_LOBBY} MOEDAS · {estado}", y + 43, 24)
+        linha("1 / 2 COMPRAR · L FECHAR A LOJA", 486, 26)
 
     def _buy_upgrade(self, index: int) -> bool:
         """Compra uma melhoria sem permitir divergência entre loja e save."""

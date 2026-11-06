@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Lobby e loja do lobby ganham hierarquia e saldo legível nos dois estilos; memórias recebem cartões responsivos e clique delimitado; recordes COMIC usam colunas para piloto, nível e pontos.
 - COMIC recebe a estrutura de menus do ORIGINAL, incluindo ajuda contextual, ícones, expositor do hangar e seis abas de configurações, com tipografia de quadrinhos, tinta/papel e retícula; caches distinguem os acabamentos e respeitam as opções de textura.
 - Configurações ORIGINAL passam a usar abas Áudio/Tela/Controles/Visual/Shader/Conforto, ajuda para cada opção e barras arrastáveis; Tab, rolagem e Ctrl+S complementam a navegação. Resolução, remapeamento, calibração e confirmação seguem o acabamento orbital sem piscar.
 - Hangar ORIGINAL recebe catálogo compacto, expositor da nave selecionada, plataforma orbital, estados de compra/equipagem e ações com ícones; a prévia compartilha o estilo e indica visuais bloqueados.
