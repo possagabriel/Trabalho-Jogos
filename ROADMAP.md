@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Edição COMIC com cinco artes de fase e um fundo de lobby exclusivos, separados do ORIGINAL; índice em blocos, popups com foco/descrições e falas com quebra por palavras. Confirmação de pulo congela a cena; glitch limitado a duas mudanças por segundo e estático com efeitos reduzidos. Testes direcionados e Ruff; playtest pendente.
+
 - Cinco fundos gerados em `images/fases/` integrados às prévias e à campanha ORIGINAL/COMIC, inclusive parallax; lobby mantém composição minimalista e recebe hover, oficina clicável e opções por mouse. Testes direcionados e Ruff; playtest pendente.
 
 - Lobby refeito como menu minimalista nos dois estilos: lista lateral por setas/Tab/clique, prévia ampla em cover e uma ação principal; testes direcionados e Ruff, conferência jogando pendente.

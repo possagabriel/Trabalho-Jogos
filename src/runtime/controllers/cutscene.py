@@ -38,6 +38,7 @@ class ControladorCutscene:
         self.revisao = False
         self.pausado = False
         self.confirmacao_pulo = False
+        self.selecao_pulo = 0
         self.segurando_pulo = False
         self.tempo_pulo = 0.0
         self.retrato_atual: str | None = None
@@ -67,6 +68,12 @@ class ControladorCutscene:
     def ativo(self) -> bool:
         """Indica se uma cena está visível."""
         return bool(self.sequenciador.ativo)
+
+    @property
+    def efeitos_reduzidos(self) -> bool:
+        """Informa à apresentação se os efeitos rápidos devem ficar estáticos."""
+        jogo = self._jogo()
+        return jogo is None or jogo.config["intensidade_flash"] != "NORMAL"
 
     def tem_pos_boss(self, cenario_id: int) -> bool:
         """Informa ao avanço se existe cena antes da retomada."""
@@ -131,6 +138,7 @@ class ControladorCutscene:
             self.retrato_atual = None
             self.pausado = False
             self.confirmacao_pulo = False
+            self.selecao_pulo = 0
             self.segurando_pulo = False
             self.tempo_pulo = 0.0
             self.sequenciador.iniciar(cena)
@@ -181,13 +189,15 @@ class ControladorCutscene:
     def atualizar(self, dt: float) -> None:
         """Avança apenas narrativa e rolagem visual durante a cena."""
         jogo = self._jogo()
-        if jogo is None or self.pausado or not self.ativo:
+        if jogo is None or self.pausado or self.confirmacao_pulo or not self.ativo:
             return
         if self.segurando_pulo and not self.confirmacao_pulo:
             self.tempo_pulo += dt
             if self.tempo_pulo >= TEMPO_SEGURAR_PULO:
                 self.confirmacao_pulo = True
                 self.segurando_pulo = False
+                self.selecao_pulo = 0
+                return
         self.sequenciador.atualizar(dt)
         if jogo.avanco_controller.modelo.estado.value in ("FREANDO", "PARADO"):
             jogo.avanco_controller.atualizar(jogo.cenario, dt)
@@ -227,11 +237,12 @@ class ControladorCutscene:
             return
         if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
             pos = jogo.menu._pos_logica(evento.pos)
-            if pos[0] >= 1050 and pos[1] <= 80:
+            if self.caixa.BOTAO_PULAR.collidepoint(pos) and not self.confirmacao_pulo:
                 if self.sequenciador.cena.id in jogo.progresso.cenas_vistas:
                     self.pular_direto()
                 else:
                     self.confirmacao_pulo = True
+                    self.selecao_pulo = 0
             elif self.confirmacao_pulo:
                 if self.caixa.BOTAO_CONFIRMAR.collidepoint(pos):
                     self.pular_direto()
@@ -252,8 +263,14 @@ class ControladorCutscene:
         elif evento.key == pygame.K_BACKSPACE:
             self._pedir_pulo()
         elif self.confirmacao_pulo:
-            if evento.key in (pygame.K_RETURN, jogo.controles.get("atirar", -1)):
-                self.pular_direto()
+            if evento.key in (pygame.K_TAB, pygame.K_LEFT, pygame.K_RIGHT):
+                self.selecao_pulo = 1 - self.selecao_pulo
+            elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER,
+                                 jogo.controles.get("atirar", -1)):
+                if self.selecao_pulo == 0:
+                    self.pular_direto()
+                else:
+                    self.confirmacao_pulo = False
         elif not self.pausado and evento.key in (
                 pygame.K_RETURN, pygame.K_KP_ENTER, jogo.controles.get("atirar", -1)):
             self.sequenciador.confirmar()

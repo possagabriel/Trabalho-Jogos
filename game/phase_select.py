@@ -14,10 +14,7 @@ from src.infrastructure.graphics.comic_render import (
     texto_tinta,
 )
 from src.infrastructure.graphics.comic_theme import (
-    CIANO,
-    FERRUGEM,
     LARANJA,
-    PAPEL,
     opcoes_atuais,
 )
 from src.runtime.infrastructure.graphics.menu_panels import (
@@ -25,6 +22,7 @@ from src.runtime.infrastructure.graphics.menu_panels import (
     FUNDO_ORIGINAL,
     TEXTO_ATIVO_ORIGINAL,
     TEXTO_ORIGINAL,
+    linhas_painel,
     painel_menu,
     texto_painel,
 )
@@ -250,6 +248,9 @@ class PhaseSelectScreen:
             return
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.index_open:
+                if self._index_back_rect().collidepoint(event.pos):
+                    self.index_open = False
+                    self.phase_menu_open = True
                 return
             if self.phase_menu_open:
                 for indice in range(3):
@@ -284,7 +285,10 @@ class PhaseSelectScreen:
             return
 
         if self.phase_menu_open:
-            if event.key in (pygame.K_UP, pygame.K_w):
+            if event.key == pygame.K_TAB:
+                passo = -1 if getattr(event, "mod", 0) & pygame.KMOD_SHIFT else 1
+                self.phase_menu_selection = (self.phase_menu_selection + passo) % 3
+            elif event.key in (pygame.K_UP, pygame.K_w):
                 self.phase_menu_selection = (self.phase_menu_selection - 1) % 3
             elif event.key in (pygame.K_DOWN, pygame.K_s):
                 self.phase_menu_selection = (self.phase_menu_selection + 1) % 3
@@ -408,11 +412,17 @@ class PhaseSelectScreen:
         rect = self._preview_rect()
         phase = self.phases[self.selected]
         visual = opcoes_atuais()
-        chave = (phase.background, rect.size, visual.ativo, visual.hachuras)
+        nome = phase.background.replace(".png", "-comic.png") if visual.ativo else phase.background
+        chave = (nome, rect.size, visual.ativo, visual.hachuras)
         if chave not in self._thumbs_escaladas:
-            if phase.background not in self._thumbs:
-                self._thumbs[phase.background] = carregar_imagem(phase.background)
-            imagem = self._thumbs[phase.background]
+            if nome not in self._thumbs:
+                self._thumbs[nome] = carregar_imagem(nome)
+            imagem = self._thumbs[nome]
+            comic_proprio = visual.ativo and imagem is not None
+            if imagem is None and visual.ativo:
+                if phase.background not in self._thumbs:
+                    self._thumbs[phase.background] = carregar_imagem(phase.background)
+                imagem = self._thumbs[phase.background]
             if imagem is not None:
                 escala = max(rect.w / imagem.get_width(), rect.h / imagem.get_height())
                 arte = pygame.transform.smoothscale(imagem, (
@@ -421,7 +431,7 @@ class PhaseSelectScreen:
                 recorte = pygame.Rect(0, 0, *rect.size)
                 recorte.center = arte.get_rect().center
                 arte = arte.subsurface(recorte).copy()
-                if visual.ativo:
+                if visual.ativo and not comic_proprio:
                     arte = posterizar(arte, visual.hachuras)
                 self._thumbs_escaladas[chave] = arte
         arte = self._thumbs_escaladas.get(chave)
@@ -431,11 +441,31 @@ class PhaseSelectScreen:
         else:
             surface.blit(arte, rect)
 
+    def _draw_comic_background(self, surface: pygame.Surface) -> None:
+        nome = "fases/lobby-comic.png"
+        chave = (nome, surface.get_size())
+        if nome not in self._thumbs:
+            self._thumbs[nome] = carregar_imagem(nome)
+        imagem = self._thumbs[nome]
+        if imagem is None:
+            desenhar_fundo(surface, self.selected + 1)
+            return
+        if chave not in self._thumbs_escaladas:
+            largura, altura = surface.get_size()
+            escala = max(largura / imagem.get_width(), altura / imagem.get_height())
+            arte = pygame.transform.smoothscale(imagem, (
+                max(largura, round(imagem.get_width() * escala)),
+                max(altura, round(imagem.get_height() * escala))))
+            recorte = pygame.Rect(0, 0, largura, altura)
+            recorte.center = arte.get_rect().center
+            self._thumbs_escaladas[chave] = arte.subsurface(recorte).copy()
+        surface.blit(self._thumbs_escaladas[chave], (0, 0))
+
     def draw(self, surface: pygame.Surface) -> None:
         """Apresenta uma lista curta e uma única prévia ampla, sem diagrama de rotas."""
         if opcoes_atuais().ativo:
-            desenhar_fundo(surface, self.selected + 1)
-            surface.blit(self._overlay(surface.get_size(), (*FUNDO_ORIGINAL, 220)), (0, 0))
+            self._draw_comic_background(surface)
+            surface.blit(self._overlay(surface.get_size(), (*FUNDO_ORIGINAL, 70)), (0, 0))
         else:
             surface.fill(FUNDO_ORIGINAL)
         font = self._fonte("normal", 27)
@@ -492,72 +522,62 @@ class PhaseSelectScreen:
             self._draw_shop(surface, font, small)
 
     def _draw_phase_menu(self, surface, font, small):
-        """Menu aberto somente ao interagir fisicamente com uma fase."""
-        shade = self._overlay(surface.get_size(), (0, 0, 0, 175))
-        surface.blit(shade, (0, 0))
+        """Apresenta ações com uma descrição curta para a opção em foco."""
+        surface.blit(self._overlay(surface.get_size(), (*FUNDO_ORIGINAL, 220)), (0, 0))
+        panel = self._rect(245, 160, 410, 380)
+        surface.blit(painel_menu(panel.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL), panel)
         phase = self.phases[self.selected]
-        panel = self._rect(265, 180, 370, 335)
-        self._painel(surface, panel, (32, 30, 58), LARANJA, 4)
-        self._legenda(surface, phase.nome.upper(),
-                      self._rect(280, 210, 340, 42), tamanho=24)
-        options = ("JOGAR FASE", "VER ÍNDICE", "VOLTAR AO LOBBY")
-        for i, text in enumerate(options):
+        self._legenda(surface, "AÇÕES DA FASE", self._rect(265, 177, 370, 25), tamanho=16)
+        self._legenda(surface, phase.nome.upper(), self._rect(265, 211, 370, 38), tamanho=24)
+        for i, text in enumerate(("JOGAR FASE", "VER ÍNDICE", "VOLTAR AO LOBBY")):
             rect = self._option_rect(i)
             selected = i == self.phase_menu_selection
             surface.blit(painel_menu(rect.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL,
-                                     selecionado=selected, botao=True,
-                                     segmentado=False), rect)
+                                     selecionado=selected, botao=True, segmentado=False), rect)
             self._legenda(surface, text, rect, destaque=selected)
-        hint = self._texto(
-            "↑↓ escolher  •  ENTER confirmar  •  ESC fechar",
-            17, CIANO if opcoes_atuais().ativo else (170, 175, 205), small)
-        surface.blit(hint, hint.get_rect(
-            center=(panel.centerx, panel.bottom - self.layout.px(24))))
+        descricao = ("Inicia ou retoma o checkpoint desta fase.",
+                     "Consulte armas, chefes e itens encontrados.",
+                     "Feche este painel e escolha outra fase.")[self.phase_menu_selection]
+        self._legenda(surface, descricao, self._rect(262, 474, 376, 24), tamanho=15)
+        self._legenda(surface, "TAB / ↑↓ ESCOLHER · ENTER CONFIRMAR · ESC FECHAR",
+                      self._rect(260, 509, 380, 20), tamanho=13)
+
+    def _index_back_rect(self) -> pygame.Rect:
+        return self._rect(290, 573, 320, 36)
 
     def _draw_index(self, surface, phase, font, small):
-        """Tela exclusiva do índice; nunca disputa espaço com o lobby."""
-        save = self.jogo.progresso.jogador.get("progresso_campanha", {})
-        stats = save.get("indice_fases", {}).get(phase.id, {})
-        shade = self._overlay(surface.get_size(), (4, 5, 14, 235))
-        surface.blit(shade, (0, 0))
-        panel = self._rect(115, 105, 670, 500)
-        self._painel(surface, panel, (25, 28, 52), LARANJA, 3)
-        title = self._texto(
-            f"ÍNDICE DA {phase.nome.upper()}", 27, PAPEL, font)
-        surface.blit(title, title.get_rect(
-            center=(panel.centerx, panel.y + self.layout.px(45))))
-        armas = stats.get("armas", [])
-        minibosses = stats.get("minibosses", [])
-        rows = [("INIMIGOS ABATIDOS", str(stats.get("inimigos", 0))),
-                ("MINICHEFES",
-                 ", ".join(minibosses) if minibosses else "NENHUM"),
-                ("CHEFE PRINCIPAL",
-                 "DERROTADO" if stats.get("boss") else "NÃO DERROTADO"),
-                ("ARMAS DA FASE",
-                 (", ".join(armas) if armas else "NENHUMA")
-                 + f"  ({len(armas)}/3)"),
-                ("ITENS COLETÁVEIS", f"{len(stats.get('itens', []))} / 3")]
+        """Separa rótulos e conteúdo em cartões, com nomes extensos em duas linhas."""
+        stats = self.jogo.progresso.jogador.get("progresso_campanha", {}).get(
+            "indice_fases", {}).get(phase.id, {})
+        surface.blit(self._overlay(surface.get_size(), (*FUNDO_ORIGINAL, 235)), (0, 0))
+        panel = self._rect(105, 80, 690, 550)
+        surface.blit(painel_menu(panel.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL), panel)
+        self._legenda(surface, "ARQUIVO DA FASE", self._rect(135, 96, 630, 24), tamanho=16)
+        self._legenda(surface, phase.nome.upper(), self._rect(135, 127, 630, 38), tamanho=25)
+        armas, minibosses = stats.get("armas", []), stats.get("minibosses", [])
+        rows = (("INIMIGOS ABATIDOS", str(stats.get("inimigos", 0))),
+                ("MINICHEFES", ", ".join(minibosses) or "Nenhum registrado"),
+                ("CHEFE PRINCIPAL", "Derrotado" if stats.get("boss") else "Não derrotado"),
+                (f"ARMAS ENCONTRADAS · {len(armas)}/3", ", ".join(armas) or "Nenhuma encontrada"),
+                ("ITENS COLETÁVEIS", f"{len(stats.get('itens', []))} / 3 encontrados"))
         for i, (label, value) in enumerate(rows):
-            linha = self._rect(157, 193 + i * 68, 586, 50)
-            y = linha.y
-            self._painel(surface, linha, (43, 45, 73), FERRUGEM, 2)
-            left = self._texto(
-                label, 17,
-                CIANO if opcoes_atuais().ativo else (185, 195, 220), small)
-            right = self._texto(
-                value, 17,
-                PAPEL if opcoes_atuais().ativo else (245, 247, 255), small)
-            surface.blit(left, (panel.x + self.layout.px(60),
-                                y + self.layout.px(15)))
-            surface.blit(right, right.get_rect(
-                midright=(panel.right - self.layout.px(60),
-                          y + self.layout.px(25))))
-        hint = self._texto(
-            "ENTER ou ESC para voltar às opções da fase", 17,
-            CIANO if opcoes_atuais().ativo else (165, 175, 205), small)
-        surface.blit(hint, hint.get_rect(center=(panel.centerx,
-                                                 panel.bottom
-                                                 - self.layout.px(34))))
+            rect = self._rect(135, 180 + i * 76, 630, 68)
+            surface.blit(painel_menu(rect.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL), rect)
+            self._legenda(surface, label, pygame.Rect(rect.x, rect.y + self.layout.px(3),
+                          rect.w, self.layout.px(20)), tamanho=14)
+            fonte = self._fonte("indice", 18)
+            linhas = linhas_painel(fonte, value, rect.w - self.layout.px(32))
+            # A área do conteúdo permanece separada do rótulo mesmo com listas extensas.
+            for linha, texto in enumerate(linhas[:2]):
+                if linha == 1 and len(linhas) > 2:
+                    texto += "…"
+                self._legenda(surface, texto, pygame.Rect(
+                    rect.x + self.layout.px(10), rect.y + self.layout.px(25 + linha * 19),
+                    rect.w - self.layout.px(20), self.layout.px(20)), tamanho=18)
+        botao = self._index_back_rect()
+        surface.blit(painel_menu(botao.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL,
+                                 botao=True, segmentado=False), botao)
+        self._legenda(surface, "ENTER / ESC  VOLTAR ÀS AÇÕES", botao, tamanho=16)
 
     def _draw_shop(self, surface, font, small):
         surface.blit(self._overlay(surface.get_size(), (0, 0, 0, 220)), (0, 0))

@@ -11,6 +11,15 @@ import pygame
 from src.core.constants import ALTURA, LARGURA, NOME_JOGO, VOID_BLACK
 from src.infrastructure.graphics.comic_theme import CIANO, LARANJA, TINTA, opcoes_atuais
 from src.runtime.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
+from src.runtime.infrastructure.graphics.menu_panels import (
+    ACENTO_ORIGINAL,
+    FUNDO_ORIGINAL,
+    TEXTO_ATIVO_ORIGINAL,
+    TEXTO_ORIGINAL,
+    linhas_painel,
+    painel_menu,
+    texto_painel,
+)
 from src.runtime.infrastructure.graphics.smooth import desenhar_painel, desenhar_painel_cartoon
 
 if TYPE_CHECKING:
@@ -140,21 +149,25 @@ class DialogueBox:
         return cor
 
     def _texto(self, tela: pygame.Surface, texto: str, x: int, y: int,
-               largura: int, cor: tuple[int, int, int]) -> None:
-        inicio = x
-        for letra in texto:
-            if letra == "\n":
-                x, y = inicio, y + 34
-                continue
-            glifo = self._glifo(letra, cor)
-            largura_glifo = max(1, glifo.get_width() - 6)
-            if x + largura_glifo > inicio + largura and letra == " ":
-                x, y = inicio, y + 34
-                continue
-            if x + largura_glifo > inicio + largura:
-                x, y = inicio, y + 34
-            tela.blit(glifo, (x, y))
-            x += largura_glifo
+               largura: int, cor: tuple[int, int, int], completo: str | None = None) -> None:
+        # O tamanho é escolhido pelo texto completo, evitando saltos durante a revelação.
+        completo = completo if completo is not None else texto
+        altura = max(1, round(ALTURA * .94) - y)
+        for tamanho in range(27, 13, -1):
+            fonte = fonte_texto(tamanho)
+            linhas = linhas_painel(fonte, completo, largura - 8)
+            passo = fonte.get_linesize() + 3
+            if len(linhas) * passo <= altura:
+                break
+        cursor = 0
+        for indice, linha in enumerate(linhas):
+            inicio = completo.find(linha, cursor)
+            cursor = inicio + len(linha)
+            visiveis = max(0, len(texto) - inicio)
+            trecho = linha[:visiveis]
+            if trecho:
+                arte = self._texto_outline(fonte, trecho, cor, 2)
+                tela.blit(arte, (x, y + indice * passo))
 
     def desenhar(self, tela: pygame.Surface, controle: ControladorCutscene,
                 cor_dimensao: tuple[int, int, int]) -> None:
@@ -168,7 +181,8 @@ class DialogueBox:
         tela.blit(self._sombra, (0, 0))
         tipo = passo["tipo"]
         if tipo == "glitch":
-            indice = int(controle.sequenciador.tempo * 12) % len(self._estaticas)
+            indice = (0 if controle.efeitos_reduzidos else
+                      int(controle.sequenciador.tempo * 2) % len(self._estaticas))
             tela.blit(self._estaticas[indice], (0, 0))
             texto = passo.get("texto", "")
             if texto:
@@ -178,18 +192,24 @@ class DialogueBox:
             self._titulo(tela, passo["texto"].replace("{titulo_jogo}", NOME_JOGO),
                          cor_dimensao)
         elif tipo == "fala":
-            painel = pygame.Rect(110, 500, 1060, 184)
+            painel = pygame.Rect(round(LARGURA * .06), round(ALTURA * .62),
+                                  round(LARGURA * .88), round(ALTURA * .32))
             cor_acento = self._cor_acento(cor_dimensao)
-            _painel(tela, cor_acento, painel,
-                                    espessura_borda=4, glow_raio=0)
+            tela.blit(painel_menu(painel.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL), painel)
             personagem = controle.catalogo.personagens[passo["personagem"]]
             icone = controle.retrato_atual or self._icones[passo["personagem"]]
-            tela.blit(self.obter_retrato(icone), (132, 525))
-            nome = self._texto_outline(self._fonte_nome, personagem["nome"],
-                                       cor_acento, 3)
-            tela.blit(nome, (288, 519))
+            retrato = self.obter_retrato(icone)
+            tela.blit(retrato, (painel.x + 20, painel.y + 32))
+            nome = texto_painel(self._fonte_nome, personagem["nome"], TEXTO_ORIGINAL,
+                                painel.w - 205, 38)
+            tela.blit(nome, (painel.x + 180, painel.y + 17))
             self._texto(tela, controle.sequenciador.texto_visivel,
-                        288, 566, 850, (244, 244, 247))
+                        painel.x + 180, painel.y + 65, painel.w - 210,
+                        TEXTO_ORIGINAL, passo.get("texto", ""))
+            dica = texto_painel(self._fonte_auxiliar,
+                                "ENTER / CLIQUE  REVELAR OU CONTINUAR · ESC  PAUSAR",
+                                TEXTO_ORIGINAL, painel.w - 40, 20)
+            tela.blit(dica, dica.get_rect(midtop=(painel.centerx, painel.bottom + 9)))
         elif tipo == "fade":
             progresso = min(1.0, controle.sequenciador.tempo / max(0.001, passo["duracao"]))
             alfa = int(255 * (1 - progresso if passo.get("direcao") == "entrada"
@@ -212,11 +232,15 @@ class DialogueBox:
                                     espessura_borda=4, glow_raio=0)
             texto = self._fonte_nome.render("Pular esta cena?", True, (244, 244, 247))
             tela.blit(texto, texto.get_rect(center=(640, 312)))
-            for rect, rotulo in ((self.BOTAO_CONFIRMAR, "PULAR"),
-                                 (self.BOTAO_CANCELAR, "CANCELAR")):
-                _painel(tela, cor_acento, rect,
-                                        espessura_borda=4, glow_raio=0)
-                texto_botao = self._fonte_auxiliar.render(rotulo, True, (244, 244, 247))
+            for indice, (rect, rotulo) in enumerate(((self.BOTAO_CONFIRMAR, "PULAR"),
+                                                     (self.BOTAO_CANCELAR, "CONTINUAR CENA"))):
+                selecionado = indice == controle.selecao_pulo
+                tela.blit(painel_menu(rect.size, FUNDO_ORIGINAL, ACENTO_ORIGINAL,
+                                      selecionado=selecionado, botao=True,
+                                      segmentado=False), rect)
+                texto_botao = texto_painel(self._fonte_auxiliar, rotulo,
+                                           TEXTO_ATIVO_ORIGINAL if selecionado else TEXTO_ORIGINAL,
+                                           rect.w - 16, rect.h - 10)
                 tela.blit(texto_botao, texto_botao.get_rect(center=rect.center))
 
     def _titulo(self, tela: pygame.Surface, texto: str,
@@ -228,6 +252,12 @@ class DialogueBox:
                 self._fonte_titulo, texto, cor_titulo, 4,
             )
         superficie = self._titulos[chave]
+        if superficie.get_width() > LARGURA * .88:
+            fator = LARGURA * .88 / superficie.get_width()
+            superficie = pygame.transform.smoothscale(superficie, (
+                round(superficie.get_width() * fator),
+                max(1, round(superficie.get_height() * fator))))
+            self._titulos[chave] = superficie
         tela.blit(superficie, superficie.get_rect(center=(LARGURA // 2, ALTURA // 2)))
 
     def desenhar_seletor(self, tela: pygame.Surface, controle: ControladorCutscene,

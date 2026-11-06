@@ -47,6 +47,11 @@ _FUNDO_POR_CENARIO = {
     6: "imagem-fundo4.png",
 }
 
+_FUNDO_COMIC_POR_CENARIO = {
+    indice: nome.replace(".png", "-comic.png")
+    for indice, nome in _FUNDO_POR_CENARIO.items() if indice <= 5
+}
+
 _CACHE_FUNDO = {"imagens": {}, "carregada": False}
 
 # O fundo e atmosfera; inimigos, projéteis e mira precisam dominar a leitura.
@@ -85,7 +90,7 @@ def _ajustar_cover(img, larg, alt):
     return img
 
 
-def _imagem_fundo(cenario_id=None):
+def _imagem_fundo(cenario_id=None, *, comic: bool = False):
     """Carrega o fundo do cenario no canvas logico e o cacheia.
 
     Cada cenario usa a imagem mapeada em ``_FUNDO_POR_CENARIO``; os demais
@@ -93,7 +98,7 @@ def _imagem_fundo(cenario_id=None):
     """
     if not _CACHE_FUNDO["carregada"]:
         _CACHE_FUNDO["carregada"] = True
-        caminhos = set(_FUNDO_POR_CENARIO.values())
+        caminhos = set(_FUNDO_POR_CENARIO.values()) | set(_FUNDO_COMIC_POR_CENARIO.values())
         caminhos.add(_FUNDO_PADRAO)
         for nome in caminhos:
             img = carregar_imagem(nome)
@@ -102,7 +107,8 @@ def _imagem_fundo(cenario_id=None):
             _CACHE_FUNDO["imagens"][nome] = _ajustar_cover(img, LARGURA, ALTURA)
     if cenario_id is None:
         return _CACHE_FUNDO["imagens"].get(_FUNDO_PADRAO)
-    nome = _FUNDO_POR_CENARIO.get(cenario_id, _FUNDO_PADRAO)
+    catalogo = _FUNDO_COMIC_POR_CENARIO if comic else _FUNDO_POR_CENARIO
+    nome = catalogo.get(cenario_id, _FUNDO_POR_CENARIO.get(cenario_id, _FUNDO_PADRAO))
     imagem = _CACHE_FUNDO["imagens"].get(nome)
     if imagem is None and nome != _FUNDO_PADRAO:
         imagem = _CACHE_FUNDO["imagens"].get(_FUNDO_PADRAO)
@@ -401,8 +407,13 @@ class Cenario:
         if not opcoes.ativo:
             return self.fundo_estatico
         if opcoes.hachuras not in self._fundos_comic:
-            self._fundos_comic[opcoes.hachuras] = posterizar(
-                self.fundo_estatico.copy(), opcoes.hachuras)
+            imagem = _imagem_fundo(self.id, comic=True)
+            if self.id <= 5 and imagem is not None:
+                arte = imagem.copy()
+                _reduzir_contraste_fundo(arte)
+            else:
+                arte = posterizar(self.fundo_estatico.copy(), opcoes.hachuras)
+            self._fundos_comic[opcoes.hachuras] = arte
         return self._fundos_comic[opcoes.hachuras]
 
     def desenhar(self, tela: pygame.Surface, acabamento_cutscene: bool = False) -> None:

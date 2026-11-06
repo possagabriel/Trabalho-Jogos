@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex gerou seis artes COMIC com image_gen integrado, usando as artes locais ORIGINAL como referência das fases e criando um lobby exclusivo; prompts/proveniência em `images/fases/README.md`. Refinou índice, cutscenes e popups, com testes de quebra/navegação/pausa escritos primeiro, validação direcionada e Ruff. Sem screenshots, dependências ou mudança de roteiro/progressão; playtest pendente.
+
 - Codex gerou cinco artes com image_gen integrado, registrou prompts/proveniência/licença em `images/fases/README.md` e integrou os arquivos ao lobby e à campanha ORIGINAL/COMIC com parallax. Refinou seleção e cliques do lobby; testes de lógica/cache escritos primeiro, validação direcionada e Ruff. Sem screenshots ou mudança de balanceamento; playtest pendente.
 
 - Codex refez o lobby na direção minimalista escolhida pelo usuário: lista e prévia ampla em cover, navegação discreta e isolamento dos modais; testes de seleção/bloqueio/geometria escritos primeiro e validação direcionada com Ruff. Sem screenshots ou alterações nas regras de combate/progressão; conferência jogando pendente.

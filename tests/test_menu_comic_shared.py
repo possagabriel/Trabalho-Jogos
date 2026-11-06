@@ -198,3 +198,15 @@ def test_lobby_opcoes_aceitam_clique_e_oficina_nao_vaza_selecao():
     lobby.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
                                           pos=lobby.card_rect(1).center))
     assert lobby.selected == antes
+
+
+def test_indice_volta_por_clique_e_tab_navega_popup():
+    jogo, menu = novo_menu()
+    lobby = menu.phase_screen
+    lobby.index_open = True
+    lobby.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
+                                          pos=lobby._index_back_rect().center))
+    assert not lobby.index_open and lobby.phase_menu_open
+    lobby.phase_menu_selection = 0
+    lobby.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_TAB, mod=0))
+    assert lobby.phase_menu_selection == 1

@@ -161,3 +161,20 @@ def test_botao_pular_exige_clique_de_confirmacao(tmp_path, monkeypatch):
     clique(1100, 40)
     clique(480, 375)
     assert jogo.progresso.cenas_vistas == ["introducao"]
+
+
+def test_confirmacao_de_pulo_congela_cena_e_permite_cancelar_por_tab(tmp_path, monkeypatch):
+    import pygame
+
+    jogo = _jogo(tmp_path, monkeypatch)
+    controle = jogo.cutscene_controller
+    controle.iniciar_gatilho("inicio")
+    controle.confirmacao_pulo = True
+    antes = (controle.sequenciador.indice, controle.sequenciador.tempo)
+    controle.atualizar(10)
+    assert (controle.sequenciador.indice, controle.sequenciador.tempo) == antes
+    controle.tratar_evento(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_TAB))
+    controle.tratar_evento(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
+    assert not controle.confirmacao_pulo
+    assert controle.ativo
+    assert not jogo.progresso.cenas_vistas

@@ -73,6 +73,29 @@ def veu_menu_original(tamanho: tuple[int, int]) -> pygame.Surface:
     return tela
 
 
+@lru_cache(maxsize=256)
+def linhas_painel(fonte: pygame.font.Font, texto: str, largura: int) -> tuple[str, ...]:
+    """Quebra por palavras, preserva parágrafos e divide tokens maiores que a área."""
+    linhas = []
+    for paragrafo in texto.split("\n"):
+        atual = ""
+        for palavra in paragrafo.split():
+            teste = f"{atual} {palavra}".strip()
+            if fonte.size(teste)[0] <= largura:
+                atual = teste
+                continue
+            if atual:
+                linhas.append(atual)
+                atual = ""
+            for letra in palavra:
+                if atual and fonte.size(atual + letra)[0] > largura:
+                    linhas.append(atual)
+                    atual = ""
+                atual += letra
+        linhas.append(atual)
+    return tuple(linhas)
+
+
 def texto_painel(fonte: pygame.font.Font, texto: str, cor: tuple[int, int, int],
                  largura: int, altura: int) -> pygame.Surface:
     """Cacheia texto ajustado à célula sem modificar a fonte compartilhada."""

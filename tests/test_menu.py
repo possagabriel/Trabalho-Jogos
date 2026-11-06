@@ -1096,7 +1096,9 @@ def test_lobby_comic_usa_fundo_lettering_e_paineis_de_tinta():
         ) as paineis:
             lobby.draw(tela)
 
-    fundo.assert_called_once()
+    fundo.assert_not_called()
+    assert "fases/lobby-comic.png" in lobby._thumbs
+    assert "fases/lealdade-comic.png" in lobby._thumbs
     assert paineis.call_count >= 3
 
 

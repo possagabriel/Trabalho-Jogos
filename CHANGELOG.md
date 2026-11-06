@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- COMIC passa a usar seis artes próprias (cinco fases e lobby), com arquivos e caches separados do ORIGINAL. Índice recebe cartões de conteúdo e retorno clicável; popups ganham descrições e foco; cutscenes têm quebra por palavras, títulos ajustados e confirmação de pulo que congela a cena. Avisos temporários reutilizam suas superfícies.
 - Cinco fundos espaciais originais gerados para Lealdade, Função, Identidade, Silêncio e Descarte passam a ser usados no lobby e nas partidas, com cover, contraste e cache COMIC/parallax; lobby recebe seleção por hover, oficina clicável, progresso compacto e opções por mouse.
 - Lobby adota composição minimalista nos dois estilos, com lista lateral, prévia grande sem deformação e seleção por setas/Tab/clique; fases bloqueadas mantêm acesso restrito e Esc fecha a oficina.
 - Lobby e loja do lobby ganham hierarquia e saldo legível nos dois estilos; memórias recebem cartões responsivos e clique delimitado; recordes COMIC usam colunas para piloto, nível e pontos.

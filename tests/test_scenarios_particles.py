@@ -346,3 +346,14 @@ def test_fundos_gerados_tem_cache_comic_independente_do_original():
         assert comic is cenario.obter_fundo_visual()
         assert comic is not original
         assert comic.get_size() == original.get_size()
+
+
+def test_artes_comic_sao_arquivos_separados_sem_modificar_original():
+    from src.runtime.domain.world import scenarios
+
+    for indice, nome in enumerate(("lealdade", "funcao", "identidade", "silencio", "descarte"), 1):
+        original = scenarios._imagem_fundo(indice)
+        comic = scenarios._imagem_fundo(indice, comic=True)
+        assert comic is not None and original is not None
+        assert comic is not original
+        assert pygame.image.tobytes(comic, "RGB") != pygame.image.tobytes(original, "RGB")

@@ -28,3 +28,16 @@ def test_filtro_aplica_tingimento_por_dimensao() -> None:
     cobre = filtrar_fundo_cutscene(origem, (255, 120, 70))
 
     assert pygame.image.tobytes(azul, "RGB") != pygame.image.tobytes(cobre, "RGB")
+
+
+def test_quebra_preserva_palavras_paragrafos_e_limita_tokens_longos():
+    from src.runtime.infrastructure.graphics.fonts import fonte_texto
+    from src.runtime.infrastructure.graphics.menu_panels import linhas_painel
+
+    pygame.font.init()
+    fonte = fonte_texto(22)
+    texto = "Uma memória distante\n" + "X" * 100
+    linhas = linhas_painel(fonte, texto, 160)
+    assert all(fonte.size(linha)[0] <= 160 for linha in linhas)
+    assert any("memória" in linha for linha in linhas)
+    assert "".join(linhas).replace(" ", "") == texto.replace(" ", "").replace("\n", "")
