@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from functools import lru_cache
 from typing import Literal, TypeAlias
 
 import pygame
@@ -33,6 +34,22 @@ TipoProjetil: TypeAlias = Literal[
     "ion", "feixe", "gauss", "nova", "bomba",
 ]
 OrigemProjetil: TypeAlias = Literal["jogador", "inimigo"]
+
+_TIPOS_ESTATICOS = frozenset({"padrao", "laser", "duplo", "metralhadora", "gauss", "feixe"})
+
+
+@lru_cache(maxsize=128)
+def _sprite_estatico(tipo: TipoProjetil, cor: Cor, raio: float,
+                     vel_x: float, vel_y: float, velocidade: float,
+                     origem: OrigemProjetil) -> tuple[pygame.Surface, tuple[int, int]]:
+    """Compõe tiros ORIGINAL sem animação, com limite de memória e origem própria."""
+    margem = max(80, math.ceil(raio * 6.6) + 8)
+    arte = pygame.Surface((margem * 2, margem * 2), pygame.SRCALPHA)
+    modelo = Projetil(margem, margem, vel_x, vel_y, 0, cor, raio, tipo, origem)
+    modelo.speed = velocidade
+    modelo._desenhar_detalhes(arte)
+    area = arte.get_bounding_rect()
+    return arte.subsurface(area).copy(), (area.x - margem, area.y - margem)
 
 ARMARIA = [
     {"nome": "Tiro Padrao", "nivel": 1, "cor": BRANCO, "raio": 4, "vel": 8,
@@ -86,6 +103,8 @@ class Projetil:
         self.tempo = 0
         self.speed = math.hypot(vel_x, vel_y) or 1
         self.alvos_atingidos: set[int] = set()
+        self._cache_visual_chave: tuple | None = None
+        self._cache_visual_sprite: tuple[pygame.Surface, tuple[int, int]] | None = None
 
     @property
     def rect(self) -> pygame.Rect:
@@ -187,6 +206,22 @@ class Projetil:
             desenhar_glow(tela, cor, ponta, 12, brilho)
 
     def desenhar(self, tela: pygame.Surface) -> None:
+        """Desenha tiros fixos por blit e preserva o caminho dos efeitos animados."""
+        if (self.tipo in _TIPOS_ESTATICOS and not self.teleguiado
+                and 0 < self.raio <= 12 and not opcoes_atuais().ativo):
+            chave = (
+                self.tipo, tuple(self.cor), self.raio,
+                self.vel_x, self.vel_y, self.speed, self.origem)
+            # Tiros ativos retêm a arte mesmo após sua saída do cache compartilhado.
+            if self._cache_visual_sprite is None or self._cache_visual_chave != chave:
+                self._cache_visual_sprite = _sprite_estatico(*chave)
+                self._cache_visual_chave = chave
+            sprite, (ox, oy) = self._cache_visual_sprite
+            tela.blit(sprite, (int(self.x) + ox, int(self.y) + oy))
+            return
+        self._desenhar_detalhes(tela)
+
+    def _desenhar_detalhes(self, tela: pygame.Surface) -> None:
         if opcoes_atuais().ativo and self.tipo != "ion":
             trilha_tinta(tela, (self.x, self.y), (self.vel_x, self.vel_y), self.cor)
         x, y = int(self.x), int(self.y)
