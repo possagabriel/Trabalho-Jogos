@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex investigou a tela preta ao selecionar LINEAR, validou com cópia temporária do perfil e janela real (lobby confirmado pelo usuário) e adicionou regressão ORIGINAL/COMIC; falha não reproduzida, sem alterar código de produção ou saves.
+
 - Codex ampliou o roteiro para 161 falas, preservando gatilhos, revelações e âncoras do capítulo 2; gerou dez retratos com image_gen integrado e registrou os prompts em `images/personagens/README.md`. Implementou palco animado e histórico sem spoilers, com testes de leitura/cache/limites escritos primeiro e validação direcionada/Ruff. Sem screenshots ou alterações no combate; playtest narrativo pendente.
 
 - Codex gerou seis artes COMIC com image_gen integrado, usando as artes locais ORIGINAL como referência das fases e criando um lobby exclusivo; prompts/proveniência em `images/fases/README.md`. Refinou índice, cutscenes e popups, com testes de quebra/navegação/pausa escritos primeiro, validação direcionada e Ruff. Sem screenshots, dependências ou mudança de roteiro/progressão; playtest pendente.
