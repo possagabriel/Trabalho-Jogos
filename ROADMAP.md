@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- FPS no LINEAR/ORIGINAL: tiros de aparência fixa usam sprites compartilhados em cache limitado; círculos e polígonos translúcidos reutilizam variantes com alpha exato. Testes direcionados e Ruff; ganho de FPS em playtest pendente.
+
 - Cutscenes com 161 falas nos seis capítulos/encontros, dez retratos de IA/guardiões, interlocutores animados, sinal de transmissão e histórico por H; leitura manual e redução de efeitos preservadas. Roteiro revisável em `docs/roteiro-cutscenes.md`; testes direcionados e Ruff, playtest narrativo pendente.
 
 - Edição COMIC com cinco artes de fase e um fundo de lobby exclusivos, separados do ORIGINAL; índice em blocos, popups com foco/descrições e falas com quebra por palavras. Confirmação de pulo congela a cena; glitch limitado a duas mudanças por segundo e estático com efeitos reduzidos. Testes direcionados e Ruff; playtest pendente.
