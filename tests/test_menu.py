@@ -699,6 +699,29 @@ def test_hubs_preservam_destinos_antigos_em_no_maximo_duas_acoes():
         assert menu.subestado == destino
 
 
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+def test_linear_renderiza_lobby_e_inicia_campanha(estilo):
+    jogo, menu = novo_menu()
+    jogo.config["estilo_visual"] = estilo
+    menu._abrir_jogar()
+    menu._clique(menu.jogar_hub._rects()[1].center)
+    menu.transicao.inicio -= menu.transicao.duracao
+    for _ in range(30):
+        jogo.loop_controller.atualizar()
+    jogo.render_controller.desenhar()
+    assert menu.subestado == "FASES"
+    assert jogo.fade == 0
+    assert not menu.transicao.ativo
+    assert sum(pygame.transform.average_color(jogo.tela_ui)[:3]) > 0
+    assert menu.phase_screen.confirm()
+    for _ in range(150):
+        jogo.loop_controller.atualizar()
+    jogo.render_controller.desenhar()
+    assert jogo.estado is EstadoJogo.CUTSCENE
+    assert jogo.cutscene_controller.ativo
+    assert jogo.fade == 0
+
+
 def test_hub_jogar_sem_save_foca_lobby_e_avisa_ao_ativar_continuar():
     _, menu = novo_menu()
     with mock.patch.object(menu, "_tem_save", return_value=False):

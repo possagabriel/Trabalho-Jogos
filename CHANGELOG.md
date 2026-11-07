@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Tests
+- Abertura do LINEAR recebe regressão de clique, término da transição, renderização do lobby e início da campanha em ORIGINAL/COMIC; usuário confirmou o lobby na janela real, sem reproduzir a tela preta no código atual.
+
 ### Changed
 - Cutscenes recebem diálogos ampliados nos seis capítulos e minibosses, dez retratos originais de IA/guardiões, palco com foco no interlocutor e animações suaves, indicador de transmissão e histórico de leitura por H. Falas aguardam confirmação; revelar texto independe de arredondamento e teclas repetidas não atravessam cenas.
 - COMIC passa a usar seis artes próprias (cinco fases e lobby), com arquivos e caches separados do ORIGINAL. Índice recebe cartões de conteúdo e retorno clicável; popups ganham descrições e foco; cutscenes têm quebra por palavras, títulos ajustados e confirmação de pulo que congela a cena. Avisos temporários reutilizam suas superfícies.
