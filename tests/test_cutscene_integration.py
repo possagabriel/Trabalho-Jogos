@@ -228,3 +228,25 @@ def test_cena_renderiza_todos_os_interlocutores_e_historico(tmp_path, monkeypatc
             controle.historico_aberto = True
             controle.caixa.desenhar(tela, controle, (120, 160, 255))
             controle.historico_aberto = False
+
+
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+@pytest.mark.parametrize("pausada", [False, True])
+def test_cutscene_linear_libera_fade_residual_sem_avancar_gameplay(
+    tmp_path, monkeypatch, estilo, pausada,
+):
+    jogo = _jogo(tmp_path, monkeypatch)
+    jogo.config["estilo_visual"] = estilo
+    jogo.modo_atual = "linear"
+    jogo.cutscene_controller.iniciar_gatilho("inicio")
+    jogo.fade = 255
+    if pausada:
+        jogo.cutscene_controller.pausar()
+    antes = (jogo.jogador.vida, jogo.jogador.pontuacao, jogo.tempo_partida)
+    for _ in range(15):
+        jogo.loop_controller.atualizar()
+    assert jogo.cutscene_controller.ativo
+    assert jogo.fade == 0
+    assert (jogo.jogador.vida, jogo.jogador.pontuacao, jogo.tempo_partida) == antes
+    if pausada:
+        assert jogo.cutscene_controller.sequenciador.tempo == 0
