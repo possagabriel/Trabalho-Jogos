@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - HUD dos especiais explica a carga por abates, evita indicar 100% antes da prontidão e substitui a carga pelo tempo restante de proteção quando Intangível está ativo; seleção da Bomba Vortex continua mostrando seu próprio estado.
+
+- Janela GPU deixa a cadência com o relógio do loop e não força uma espera adicional de VSync, reduzindo atrasos na apresentação; fallback de drivers preservado. Atlas de inimigos que piorou a fluidez foi retirado.
 - Consolidação na main das otimizações de renderização e do catálogo ampliado de skins, preservando as entregas de lobby, cutscenes e regressão LINEAR.
 - Combate LINEAR/ORIGINAL reutiliza sprites de tiros fixos e variantes transparentes de círculos/polígonos, reduzindo chamadas de desenho e cópias por quadro; tiros animados, teleguiados, hitboxes e balanceamento são preservados.
 - Partidas reduzem trabalho de renderização com atlas direcionais sob demanda, sprites compostos de partículas e emissão cosmética por intervalo; fundos usam cache limitado e carregamento individual. Loja recebe Aurora, Vespa, Sentinela, Nautilus, Cobalto e Solar, com silhuetas próprias e refinamento dos cascos existentes; catálogo legado mantém preços personalizados e desbloqueios.
