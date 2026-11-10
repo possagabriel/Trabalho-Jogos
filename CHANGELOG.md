@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   restante e o especial informa a prontidão da Bomba Vortex.
 
 ### Fixed
+- Atualiza a regressão legada de vídeo em test_core para o helper GPU atual e a cadência conduzida pelo loop, corrigindo a falha de CI da PR #77.
 - Cutscenes do LINEAR deixam de ficar cobertas pelo fade escuro residual ao retomar fases/encontros; a transição visual continua mesmo com a narrativa pausada, sem avançar o combate.
 - Botão PRÉVIA do hangar abre a nave selecionada; no ORIGINAL, a prévia bloqueada mantém a equipagem desabilitada e pode ser fechada por Esc.
 - Integração da PR #68 com a main preserva os menus e o mapa da #67, elimina duplicação de seleção/rota e mantém os tiros guiados limitados no LINEAR.

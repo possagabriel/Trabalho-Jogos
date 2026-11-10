@@ -1039,12 +1039,12 @@ def test_aplicar_qualidade_alta_restaura_escala_suave_imediatamente():
     assert jogo._quadros_lentos == 0
 
 
-def test_modo_opengl_tenta_habilitar_vsync():
+def test_modo_opengl_deixa_cadencia_com_o_relogio_do_loop():
     janela = pygame.Surface((900, 700))
     with mock.patch("src.runtime.application.core.pygame.display.set_mode",
                     return_value=janela) as set_mode:
-        assert Jogo._criar_modo_com_vsync((900, 700), pygame.OPENGL) is janela
-    set_mode.assert_called_once_with((900, 700), pygame.OPENGL, vsync=1)
+        assert Jogo._criar_modo_gpu((900, 700), pygame.OPENGL) is janela
+    set_mode.assert_called_once_with((900, 700), pygame.OPENGL, vsync=0)
 
 
 def test_modo_video_usa_resolucao_escolhida_em_tela_cheia():

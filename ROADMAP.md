@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Revisão da PR #77: teste legado do modo OpenGL atualizado para o novo helper e VSync desligado; corrigida a falha identificada no CI sem alterar o ajuste de fluidez confirmado.
+
 - Fluidez: atlas de inimigos retirado após piora relatada; diagnóstico em partida real identificou espera de vídeo em duplicidade com o limite do loop. Janela GPU agora solicita VSync desligado, mantendo o relógio de 60 FPS. Usuário confirmou melhora; 30 testes direcionados e Ruff aprovados, sem promessa de 60 FPS constantes sob carga.
 
 - Tela preta no LINEAR reproduzida no fluxo real: fade residual ficava preso durante cutscenes. Loop agora dissipa o fade também no LINEAR, inclusive em pausa narrativa; 139 testes direcionados e Ruff aprovados; usuário confirmou a cena visível na janela real.
