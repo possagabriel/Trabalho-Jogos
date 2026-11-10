@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Integração das PRs #73, #74, #75 e #77 na main: conflitos de documentação resolvidos sem duplicação; HUD, correção da tela preta e ajuste de vídeo preservados, atlas descartado da #76 ausente. 267 testes direcionados e Ruff aprovados.
+
 - Clareza dos especiais: HUD orienta recarga por abates, reserva 100% para prontidão real e mostra duração/barra de proteção durante intangibilidade; 63 testes direcionados e Ruff aprovados, conferência jogando pendente.
 
 - Fluidez: atlas de inimigos retirado após piora relatada; diagnóstico em partida real identificou espera de vídeo em duplicidade com o limite do loop. Janela GPU agora solicita VSync desligado, mantendo o relógio de 60 FPS. Usuário confirmou melhora; 30 testes direcionados e Ruff aprovados, sem promessa de 60 FPS constantes sob carga.
