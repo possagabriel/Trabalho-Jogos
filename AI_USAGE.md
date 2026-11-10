@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex retirou o atlas após regressão relatada e diagnosticou tempos das etapas durante partidas reais, em cópias temporárias dos dados. Teste temporário sem espera extra de VSync reduziu o tempo de flip de cerca de 8–11 ms para 0,1–0,2 ms; usuário confirmou melhora. Aplicou o ajuste de vídeo com duas regressões escritas primeiro, 30 testes direcionados e Ruff aprovados. Sem benchmark controlado, screenshots, dependências ou mudanças no gameplay; FPS ainda varia com a carga.
+
 - Codex diagnosticou a tela preta navegando pelo loop real com registros e cópia temporária dos dados: CUTSCENE mantinha fade 237 no LINEAR. Corrigiu a dissipação do fade, com quatro regressões escritas primeiro (ORIGINAL/COMIC, cena ativa/pausada), 139 testes direcionados e Ruff aprovados. Usuário confirmou a cena visível após a correção. Sem screenshots, dependências, mudanças de gameplay ou alteração dos saves originais no diagnóstico.
 
 - Codex investigou a tela preta ao selecionar LINEAR, validou com cópia temporária do perfil e janela real (lobby confirmado pelo usuário) e adicionou regressão ORIGINAL/COMIC; falha não reproduzida, sem alterar código de produção ou saves.

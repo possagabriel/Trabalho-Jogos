@@ -340,10 +340,10 @@ class Jogo:
             pass
 
     @staticmethod
-    def _criar_modo_com_vsync(tamanho, flags):
-        """Cria uma janela sincronizada quando SDL e o driver suportarem."""
+    def _criar_modo_gpu(tamanho: tuple[int, int], flags: int) -> pygame.Surface:
+        """Deixa a cadência com o relógio do loop, sem uma segunda espera de vídeo."""
         try:
-            return pygame.display.set_mode(tamanho, flags, vsync=1)
+            return pygame.display.set_mode(tamanho, flags, vsync=0)
         except (pygame.error, TypeError):
             return pygame.display.set_mode(tamanho, flags)
 
@@ -365,7 +365,7 @@ class Jogo:
             raise pygame.error("Resolucao indisponivel em tela cheia")
         if GPU_DISPONIVEL and ApresentadorGPU is not None:
             try:
-                janela = self._criar_modo_com_vsync(
+                janela = self._criar_modo_gpu(
                     tamanho, flags | pygame.OPENGL | pygame.DOUBLEBUF)
                 self._apresentador_gpu = ApresentadorGPU((LARGURA, ALTURA))
                 self._configurar_shader_gpu()
