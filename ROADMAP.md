@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Clareza dos especiais: HUD orienta recarga por abates, reserva 100% para prontidão real e mostra duração/barra de proteção durante intangibilidade; 63 testes direcionados e Ruff aprovados, conferência jogando pendente.
+
 - LINEAR: abertura do lobby ORIGINAL confirmada pelo usuário em teste na janela real com cópia do perfil; regressão automatizada cobre clique, transição e início da campanha nos dois estilos. Tela preta não reproduzida no código atual.
 
 - Integração na main: alterações locais de renderização e skins validadas com 148 testes direcionados e Ruff; trabalhos de lobby/cutscenes e regressão LINEAR já publicados foram preservados.

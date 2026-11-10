@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex priorizou clareza do combate e ajustou o HUD dos especiais, com testes escritos primeiro para carga quase cheia, prontidão, proteção ativa/expirada, troca de especial, limites e estabilidade em ORIGINAL/COMIC a 900×700 e 1920×1080. 63 testes direcionados e Ruff aprovados; sem screenshots, dependências ou mudanças no gameplay, conferência jogando pendente.
+
 - Codex investigou a tela preta ao selecionar LINEAR, validou com cópia temporária do perfil e janela real (lobby confirmado pelo usuário) e adicionou regressão ORIGINAL/COMIC; falha não reproduzida, sem alterar código de produção ou saves.
 
 - Codex consolidou as alterações pendentes para integração na main a pedido do usuário, verificando equivalência das branches já publicadas; 148 testes direcionados e Ruff aprovados.

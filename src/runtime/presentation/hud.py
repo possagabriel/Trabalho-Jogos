@@ -34,6 +34,7 @@ import pygame
 from src.core.constants import (
     ALTURA,
     DIMENSION_GOLD,
+    FPS,
     LARGURA,
 )
 from src.infrastructure.graphics.comic_render import texto_tinta
@@ -46,6 +47,7 @@ from src.infrastructure.graphics.comic_theme import (
     opcoes_atuais,
 )
 from src.infrastructure.ui.layout import Layout
+from src.runtime.domain.entities.player import Jogador
 from src.runtime.domain.entities.weapons import ARMARIA
 from src.runtime.infrastructure.graphics.fonts import fonte_texto, fonte_titulo
 from src.runtime.infrastructure.graphics.smooth import (
@@ -580,6 +582,19 @@ class HudJogo:
         else:
             cooldown = max(1, arma["cooldown"])
             municao = 1 - max(0, jog.cooldown_tiro) / cooldown
+        carga = max(0.0, min(1.0, getattr(jogo, "especial", 0.0)))
+        equipado = getattr(jogo, "especial_atual", "bomba")
+        tempo_intangivel = max(0, getattr(jog, "tempo_intangivel", 0))
+        ativo = equipado == "intangivel" and tempo_intangivel > 0
+        if ativo:
+            status = f"PROTEÇÃO {math.ceil(tempo_intangivel / FPS)}s"
+            duracao = max(1, getattr(jog, "DURACAO_INTANGIBILIDADE",
+                                    Jogador.DURACAO_INTANGIBILIDADE))
+            barra_especial = min(1.0, tempo_intangivel / duracao)
+        else:
+            status = ("PRONTO PARA ATIVAR" if carga >= 1
+                      else f"ABATA INIMIGOS {min(99, int(carga * 100))}%")
+            barra_especial = carga
         return {
             "nome": getattr(jog, "nome", "PILOTO 01"),
             "vida": jog.vida,
@@ -605,9 +620,12 @@ class HudJogo:
             "arma": arma,
             "municao": municao,
             "boost": max(0.0, min(1.0, getattr(jogo, "boost", 1.0))),
-            "especial": max(0.0, min(1.0, getattr(jogo, "especial", 0.0))),
-            "especial_atual": getattr(jogo, "especial_atual", "bomba"),
-            "tempo_intangivel": getattr(jog, "tempo_intangivel", 0),
+            "especial": carga,
+            "especial_atual": equipado,
+            "tempo_intangivel": tempo_intangivel,
+            "especial_status": status,
+            "especial_barra": barra_especial,
+            "especial_ativo": ativo,
             "energia": max(0.0, min(100.0, getattr(jogo, "energia", 100.0))),
             "vel": getattr(jog, "velocidade", 5.0),
             "tecla_esquiva": pygame.key.name(
@@ -949,8 +967,8 @@ class HudJogo:
         painel = self._regioes()["especial"]
         pronto = d["especial"] >= 1.0
         intangivel = d["especial_atual"] == "intangivel"
-        tempo_intangivel = d["tempo_intangivel"]
-        cor = self._paleta["secundaria"] if pronto else CINZA_HUD
+        ativo = d["especial_ativo"]
+        cor = self._paleta["secundaria"] if pronto or ativo else CINZA_HUD
         _painel(tela, layout, painel, cor, fundo=AZUL_PROFUNDO)
         self._texto(
             tela,
@@ -960,17 +978,12 @@ class HudJogo:
             CINZA_HUD,
         )
         self._texto(
-            tela, "[E]", self._celula(painel, 176, 4, 46, 18), self._f_titulo_xs, cor, "direita"
+            tela, "ATIVO" if ativo else "[E]", self._celula(painel, 168, 4, 54, 18),
+            self._f_titulo_xs, cor, "direita"
         )
         self._texto(
             tela,
-            (
-                f"INTANGÍVEL {math.ceil(tempo_intangivel / 60)}s"
-                if tempo_intangivel > 0
-                else "PRONTO PARA ATIVAR"
-                if pronto
-                else f"CARREGANDO {d['especial']:.0%}"
-            ),
+            d["especial_status"],
             self._celula(painel, 12, 36, 210, 13),
             self._f_padrao_xs,
             cor,
@@ -979,7 +992,7 @@ class HudJogo:
             tela,
             layout,
             self._celula(painel, 12, 27, 210, 6),
-            d["especial"],
+            d["especial_barra"],
             self._paleta["secundaria"],
             10,
             raio_canto=2,

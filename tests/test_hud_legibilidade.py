@@ -133,3 +133,62 @@ def test_texto_translucido_preserva_superficie_compartilhada():
     assert modulo_hud._render(fonte, "ESCUDO", (255, 255, 255)) is surf
     assert pygame.image.tobytes(surf, "RGBA") == original
     assert surf.get_alpha() == 255
+
+
+@pytest.mark.parametrize(
+    "carga, equipado, tempo, status, fracao, ativo",
+    [
+        (0, "bomba", 0, "ABATA INIMIGOS 0%", 0, False),
+        (0.456, "bomba", 0, "ABATA INIMIGOS 45%", 0.456, False),
+        (0.9999, "intangivel", 0, "ABATA INIMIGOS 99%", 0.9999, False),
+        (1, "bomba", 0, "PRONTO PARA ATIVAR", 1, False),
+        (0.4, "intangivel", 61, "PROTEÇÃO 2s", 61 / 180, True),
+        (1, "intangivel", 1, "PROTEÇÃO 1s", 1 / 180, True),
+        (1, "bomba", 60, "PRONTO PARA ATIVAR", 1, False),
+        (0.4, "intangivel", 0, "ABATA INIMIGOS 40%", 0.4, False),
+    ],
+)
+def test_especial_distingue_carga_prontidao_e_protecao(
+    carga, equipado, tempo, status, fracao, ativo,
+):
+    jogo = _jogo()
+    jogo.especial = carga
+    jogo.especial_atual = equipado
+    jogo.jogador.tempo_intangivel = tempo
+    antes = (jogo.especial, jogo.jogador.tempo_intangivel)
+    dados = HudJogo()._dados(jogo)
+    assert dados["especial_status"] == status
+    assert dados["especial_barra"] == pytest.approx(fracao)
+    assert dados["especial_ativo"] is ativo
+    assert (jogo.especial, jogo.jogador.tempo_intangivel) == antes
+
+
+@pytest.mark.parametrize("estilo", ["ORIGINAL", "COMIC"])
+@pytest.mark.parametrize("tamanho", [(900, 700), (1920, 1080)])
+def test_especial_ativo_mostra_duracao_sem_piscar(monkeypatch, estilo, tamanho):
+    jogo = _jogo()
+    jogo.especial_atual = "intangivel"
+    jogo.jogador.tempo_intangivel = 90
+    jogo.config = {"estilo_visual": estilo, "intensidade_flash": "REDUZIDA"}
+    hud = HudJogo(Layout(*tamanho))
+    tela = pygame.Surface(tamanho, pygame.SRCALPHA)
+    textos = []
+    original = hud._texto
+
+    def registrar(*args, **kwargs):
+        rect = original(*args, **kwargs)
+        textos.append((args[1], rect))
+        return rect
+
+    monkeypatch.setattr(hud, "_texto", registrar)
+    with usar_visual(jogo.config):
+        hud.desenhar(tela, jogo, tempo=0)
+        pixels = pygame.image.tobytes(tela, "RGBA")
+        tela.fill((0, 0, 0, 0))
+        hud.desenhar(tela, jogo, tempo=0.12)
+    assert pygame.image.tobytes(tela, "RGBA") == pixels
+    assert "PROTEÇÃO 2s" in [texto for texto, _ in textos]
+    assert "ATIVO" in [texto for texto, _ in textos]
+    painel = hud._regioes()["especial"]
+    assert all(painel.contains(rect) for texto, rect in textos
+               if texto in ("INTANGÍVEL", "ATIVO", "PROTEÇÃO 2s"))
