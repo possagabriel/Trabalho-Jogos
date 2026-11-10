@@ -1302,7 +1302,8 @@ class OpenWorldRuntime:
             player.angulo_mira = self._angulo_nave
             player.desenhar(surface, intensidade_propulsor=min(
                 1.5, math.hypot(self.vx, self.vy) / self.SPEED),
-                piscar=False)
+                piscar=False,
+                efeitos_reduzidos=self.visual_config.get("intensidade_flash", "NORMAL") != "NORMAL")
             return
         angle = math.radians(self._angulo_nave - 90)
         cosine, sine = math.cos(angle), math.sin(angle)

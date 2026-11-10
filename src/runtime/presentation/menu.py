@@ -1298,7 +1298,8 @@ class MenuPrincipal:
         estatisticas = self.jogo.progresso.dados["estatisticas"]
         melhor = formatar_pontos(lista[0]["pontos"]) if lista else "0"
         linha = (f"Seu melhor: {melhor} pts  |  "
-                 f"Skins: {len(self.jogo.loja.lista_desbloqueadas())}/10  |  "
+                 f"Skins: {len(self.jogo.loja.lista_desbloqueadas())}/"
+                 f"{len(self.jogo.loja.skins)}  |  "
                  f"Inimigos: {estatisticas['inimigos_derrotados']}  |  "
                  f"Bosses: {jog['bosses_derrotados']}")
         dx, dy, alfa = self._entrada_anim(self._frac_sub(0.55, 0.3),

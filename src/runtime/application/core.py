@@ -1114,7 +1114,9 @@ class Jogo:
             proj.desenhar(self.tela)
         intensidade = (max(1.0, self.jogador.velocidade / 5.0)
                        if self.jogador.em_movimento else 0.0)
-        self.jogador.desenhar(self.tela, self.particulas, intensidade)
+        self.jogador.desenhar(
+            self.tela, self.particulas, intensidade,
+            efeitos_reduzidos=self.config["intensidade_flash"] != "NORMAL")
         if (self.config["mostrar_hitbox"] or pygame.key.get_pressed()[pygame.K_LALT]
                 or pygame.key.get_pressed()[pygame.K_RALT]):
             retangulo_suave(self.tela, CIANO, self.jogador.rect, 4, 2)

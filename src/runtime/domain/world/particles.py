@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import random
+from functools import lru_cache
 from typing import TypeAlias
 
 import pygame
@@ -44,6 +45,8 @@ def _superficie_cor(cor, raio):
         surf = pygame.Surface((raio * 2, raio * 2), pygame.SRCALPHA)
         desenhar_circulo(surf, cor + (255,), (raio, raio), raio)
         _CACHE[chave] = surf
+        if len(_CACHE) > 256:
+            _CACHE.pop(next(iter(_CACHE)))
     return _CACHE[chave]
 
 
@@ -59,7 +62,28 @@ def _superficie_alfa(chave, superficie, alfa):
         variante = superficie.copy()
         variante.set_alpha(nivel * 17)
         _CACHE_ALPHA[chave_cache] = variante
+        if len(_CACHE_ALPHA) > 1024:
+            _CACHE_ALPHA.pop(next(iter(_CACHE_ALPHA)))
     return _CACHE_ALPHA[chave_cache]
+
+
+@lru_cache(maxsize=512)
+def _sprite_particula(cor: Cor, tamanho: int, nivel: int) -> pygame.Surface:
+    """Compõe brilho, contorno e núcleo uma vez por tamanho/cor/opacidade."""
+    alfa = nivel * 17
+    raio = max(2, tamanho * 2)
+    brilho = _superficie_alfa(("glow", cor, raio),
+                              luz_radial(cor, raio, .6), int(alfa * .7))
+    arte = pygame.Surface(brilho.get_size(), pygame.SRCALPHA)
+    arte.blit(brilho, (0, 0))
+    centro = arte.get_rect().center
+    if tamanho >= 3:
+        borda = _superficie_alfa(("contorno", tamanho + 1),
+                                 _superficie_cor((0, 0, 0), tamanho + 1), int(alfa * .8))
+        arte.blit(borda, borda.get_rect(center=centro))
+    nucleo = _superficie_alfa(("cor", cor, tamanho), _superficie_cor(cor, tamanho), alfa)
+    arte.blit(nucleo, nucleo.get_rect(center=centro))
+    return arte
 
 
 class Particula:
@@ -90,23 +114,9 @@ class Particula:
             surf = burst(max(2, int(self.tamanho * 2)), tuple(self.cor))
             tela.blit(surf, surf.get_rect(center=(int(self.x), int(self.y))))
             return
-        alfa = int(255 * self.vida / self.vida_max)
-        tam = max(1, int(self.tamanho))
-        raio_glow = max(2, tam * 2)
-        glow = _superficie_alfa(
-            ("glow", self.cor, raio_glow),
-            luz_radial(self.cor, raio_glow, 0.6), int(alfa * 0.7))
-        gx = int(self.x) - glow.get_width() // 2
-        gy = int(self.y) - glow.get_height() // 2
-        tela.blit(glow, (gx, gy))
-        if tam >= 3:
-            contorno = _superficie_alfa(
-                ("contorno", tam + 1), _superficie_cor((0, 0, 0), tam + 1),
-                int(alfa * 0.8))
-            tela.blit(contorno, (int(self.x - tam - 1), int(self.y - tam - 1)))
-        surf = _superficie_alfa(("cor", self.cor, tam),
-                                _superficie_cor(self.cor, tam), alfa)
-        tela.blit(surf, (int(self.x - tam), int(self.y - tam)))
+        nivel = max(0, min(15, int(15 * self.vida / self.vida_max)))
+        sprite = _sprite_particula(tuple(self.cor), max(1, int(self.tamanho)), nivel)
+        tela.blit(sprite, sprite.get_rect(center=(int(self.x), int(self.y))))
 
 
 class SistemaParticulas:

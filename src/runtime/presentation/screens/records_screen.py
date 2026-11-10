@@ -242,7 +242,8 @@ class TelaRecordesJogo:
         melhor = _pontos(lista[0]["pontos"]) if lista else "0"
         dados = [
             ("MELHOR", melhor, True),
-            ("VISUAIS", f"{len(self.menu.jogo.loja.lista_desbloqueadas())}/10", False),
+            ("VISUAIS", f"{len(self.menu.jogo.loja.lista_desbloqueadas())}/"
+             f"{len(self.menu.jogo.loja.skins)}", False),
             ("ABATES", str(estatisticas["inimigos_derrotados"]), False),
             ("FENDAS", str(jogador["bosses_derrotados"]), False),
         ]

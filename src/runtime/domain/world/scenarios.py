@@ -96,22 +96,18 @@ def _imagem_fundo(cenario_id=None, *, comic: bool = False):
     Cada cenario usa a imagem mapeada em ``_FUNDO_POR_CENARIO``; os demais
     usam ``_FUNDO_PADRAO``. Retorna ``None`` se o arquivo nao existir.
     """
-    if not _CACHE_FUNDO["carregada"]:
-        _CACHE_FUNDO["carregada"] = True
-        caminhos = set(_FUNDO_POR_CENARIO.values()) | set(_FUNDO_COMIC_POR_CENARIO.values())
-        caminhos.add(_FUNDO_PADRAO)
-        for nome in caminhos:
-            img = carregar_imagem(nome)
-            if img is None:
-                continue
-            _CACHE_FUNDO["imagens"][nome] = _ajustar_cover(img, LARGURA, ALTURA)
-    if cenario_id is None:
-        return _CACHE_FUNDO["imagens"].get(_FUNDO_PADRAO)
     catalogo = _FUNDO_COMIC_POR_CENARIO if comic else _FUNDO_POR_CENARIO
     nome = catalogo.get(cenario_id, _FUNDO_POR_CENARIO.get(cenario_id, _FUNDO_PADRAO))
-    imagem = _CACHE_FUNDO["imagens"].get(nome)
+    imagens = _CACHE_FUNDO["imagens"]
+    if nome not in imagens:
+        img = carregar_imagem(nome)
+        imagens[nome] = _ajustar_cover(img, LARGURA, ALTURA) if img is not None else None
+        # Duas dimensões por estilo bastam para a troca; o cenário ativo retém sua referência.
+        if len(imagens) > 4:
+            imagens.pop(next(iter(imagens)))
+    imagem = imagens[nome]
     if imagem is None and nome != _FUNDO_PADRAO:
-        imagem = _CACHE_FUNDO["imagens"].get(_FUNDO_PADRAO)
+        return _imagem_fundo()
     return imagem
 
 

@@ -472,3 +472,16 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def test_catalogo_antigo_recebe_novas_skins_preservando_desbloqueios(tmp_path, monkeypatch):
+    monkeypatch.setattr(shop, "PASTA_DADOS", str(tmp_path))
+    antigos = [dict(cfg) for cfg in SKINS[:10]]
+    antigos[1]["preco"] = 777
+    (tmp_path / "skins.json").write_text(json.dumps(antigos))
+    loja = shop.LojaSkins(moedas=123, desbloqueadas=["padrao", "fenix"], skin_atual="fenix")
+    assert len(loja.skins) >= 16
+    assert loja.skin_atual == "fenix" and loja.moedas == 123
+    assert loja.pegar_skin("fenix").desbloqueada
+    assert loja.pegar_skin("fenix").preco == 777
+    assert not loja.pegar_skin("aurora").desbloqueada

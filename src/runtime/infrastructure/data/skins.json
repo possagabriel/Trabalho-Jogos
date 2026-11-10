@@ -168,5 +168,107 @@
     ],
     "efeito": "buraco_negro",
     "descricao": "Nave do vazio"
+  },
+  {
+    "id": "aurora",
+    "nome": "Aurora",
+    "preco": 600,
+    "cor": [
+      25,
+      217,
+      255
+    ],
+    "cor2": [
+      150,
+      50,
+      200
+    ],
+    "efeito": "nenhum",
+    "descricao": "Asas varridas e núcleo de luz polar"
+  },
+  {
+    "id": "vespa",
+    "nome": "Vespa",
+    "preco": 900,
+    "cor": [
+      255,
+      200,
+      87
+    ],
+    "cor2": [
+      255,
+      150,
+      0
+    ],
+    "efeito": "nenhum",
+    "descricao": "Casco agulha com estabilizadores duplos"
+  },
+  {
+    "id": "sentinela",
+    "nome": "Sentinela",
+    "preco": 1200,
+    "cor": [
+      25,
+      217,
+      255
+    ],
+    "cor2": [
+      244,
+      244,
+      247
+    ],
+    "efeito": "nenhum",
+    "descricao": "Ombreiras facetadas e cabine protegida"
+  },
+  {
+    "id": "nautilus",
+    "nome": "Nautilus",
+    "preco": 1800,
+    "cor": [
+      0,
+      255,
+      100
+    ],
+    "cor2": [
+      25,
+      217,
+      255
+    ],
+    "efeito": "nenhum",
+    "descricao": "Casco orbital com propulsores laterais"
+  },
+  {
+    "id": "cobalto",
+    "nome": "Cobalto",
+    "preco": 2500,
+    "cor": [
+      25,
+      217,
+      255
+    ],
+    "cor2": [
+      25,
+      217,
+      255
+    ],
+    "efeito": "nenhum",
+    "descricao": "Fuselagem dupla e canais luminosos"
+  },
+  {
+    "id": "solar",
+    "nome": "Solar",
+    "preco": 3500,
+    "cor": [
+      255,
+      150,
+      0
+    ],
+    "cor2": [
+      255,
+      200,
+      87
+    ],
+    "efeito": "nenhum",
+    "descricao": "Painéis solares recortados e proa angular"
   }
 ]

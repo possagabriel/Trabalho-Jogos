@@ -76,6 +76,17 @@ def superficie_com_alpha(superficie, alpha):
     return _CACHE_ALPHA[chave]
 
 
+def _alpha_exato(superficie, alpha):
+    """Reutiliza transparência sem quantizar a opacidade nem alterar a origem."""
+    alpha = max(0, min(255, int(alpha)))
+    chave = ("exato", superficie, alpha)
+    if chave not in _CACHE_ALPHA:
+        variante = superficie.copy()
+        variante.set_alpha(alpha)
+        _armazenar_cache(_CACHE_ALPHA, chave, variante, 512)
+    return _CACHE_ALPHA[chave]
+
+
 # ---------------------------------------------------------------------------
 # Easing functions
 # ---------------------------------------------------------------------------
@@ -265,8 +276,7 @@ def desenhar_circulo(tela, cor, centro, raio, espessura=0, brilho=1.0):
     """Desenha circulo anti-aliased na tela."""
     surf = circulo_suave(cor, raio, espessura, brilho)
     if len(cor) > 3 and cor[3] < 255:
-        surf = surf.copy()
-        surf.set_alpha(cor[3])
+        surf = _alpha_exato(surf, cor[3])
     tela.blit(surf, surf.get_rect(center=(int(centro[0]), int(centro[1]))))
 
 
@@ -322,8 +332,7 @@ def desenhar_poligono(tela, cor, pontos, espessura=0, brilho=1.0,
         desenhar_glow(tela, glow_cor, (cx, cy), glow_raio, brilho)
     surf, (ox, oy) = poligono_suave(cor, pontos, espessura, brilho)
     if len(cor) > 3 and cor[3] < 255:
-        surf = surf.copy()
-        surf.set_alpha(cor[3])
+        surf = _alpha_exato(surf, cor[3])
     tela.blit(surf, (ox, oy))
 
 

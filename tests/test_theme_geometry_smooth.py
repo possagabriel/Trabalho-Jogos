@@ -12,6 +12,7 @@ Roda headless:
 import os
 import sys
 import tempfile
+from unittest.mock import Mock, patch
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
@@ -146,6 +147,29 @@ def test_interpolar_cor_clampa():
 # ---------------------------------------------------------------------------
 # smooth: superficies cacheadas
 # ---------------------------------------------------------------------------
+
+def test_circulos_translucidos_reutilizam_copia_sem_mutar_cache():
+    pygame.init()
+    smooth.limpar_cache()
+    base = smooth.circulo_suave((40, 180, 220), 8)
+    pixels = pygame.image.tobytes(base, "RGBA")
+    tela = pygame.Surface((100, 100))
+    origem = Mock(wraps=base)
+    with patch.object(smooth, "circulo_suave", return_value=origem):
+        for _ in range(60):
+            smooth.desenhar_circulo(tela, (40, 180, 220, 123), (50, 50), 8)
+    assert origem.copy.call_count == 1
+    assert base.get_alpha() == 255
+    assert pygame.image.tobytes(base, "RGBA") == pixels
+    referencia = pygame.Surface((100, 100))
+    referencia.fill((12, 20, 38))
+    tela.fill((12, 20, 38))
+    esperado = base.copy()
+    esperado.set_alpha(123)
+    referencia.blit(esperado, esperado.get_rect(center=(50, 50)))
+    smooth.desenhar_circulo(tela, (40, 180, 220, 123), (50, 50), 8)
+    assert pygame.image.tobytes(tela, "RGB") == pygame.image.tobytes(referencia, "RGB")
+
 
 def test_gradiente_vertical_tamanho_e_cache():
     pygame.init()
