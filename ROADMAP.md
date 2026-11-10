@@ -26,6 +26,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 - Clareza dos especiais: HUD orienta recarga por abates, reserva 100% para prontidão real e mostra duração/barra de proteção durante intangibilidade; 63 testes direcionados e Ruff aprovados, conferência jogando pendente.
 
+- Tela preta no LINEAR reproduzida no fluxo real: fade residual ficava preso durante cutscenes. Loop agora dissipa o fade também no LINEAR, inclusive em pausa narrativa; 139 testes direcionados e Ruff aprovados; usuário confirmou a cena visível na janela real.
+
 - LINEAR: abertura do lobby ORIGINAL confirmada pelo usuário em teste na janela real com cópia do perfil; regressão automatizada cobre clique, transição e início da campanha nos dois estilos. Tela preta não reproduzida no código atual.
 
 - Integração na main: alterações locais de renderização e skins validadas com 148 testes direcionados e Ruff; trabalhos de lobby/cutscenes e regressão LINEAR já publicados foram preservados.
