@@ -26,6 +26,12 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 - LINEAR: abertura do lobby ORIGINAL confirmada pelo usuário em teste na janela real com cópia do perfil; regressão automatizada cobre clique, transição e início da campanha nos dois estilos. Tela preta não reproduzida no código atual.
 
+- Integração na main: alterações locais de renderização e skins validadas com 148 testes direcionados e Ruff; trabalhos de lobby/cutscenes e regressão LINEAR já publicados foram preservados.
+
+- FPS no LINEAR/ORIGINAL: tiros de aparência fixa usam sprites compartilhados em cache limitado; círculos e polígonos translúcidos reutilizam variantes com alpha exato. Testes direcionados e Ruff; ganho de FPS em playtest pendente.
+
+- Otimização visual de partidas: rotações preparadas sob demanda, emissão cosmética limitada por tempo, partículas ORIGINAL compostas em um blit e fundos carregados individualmente com cache limitado. Catálogo ampliado para 16 skins com cascos procedurais distintos e migração compatível; testes direcionados/Ruff, playtest de fluidez pendente.
+
 - Cutscenes com 161 falas nos seis capítulos/encontros, dez retratos de IA/guardiões, interlocutores animados, sinal de transmissão e histórico por H; leitura manual e redução de efeitos preservadas. Roteiro revisável em `docs/roteiro-cutscenes.md`; testes direcionados e Ruff, playtest narrativo pendente.
 
 - Edição COMIC com cinco artes de fase e um fundo de lobby exclusivos, separados do ORIGINAL; índice em blocos, popups com foco/descrições e falas com quebra por palavras. Confirmação de pulo congela a cena; glitch limitado a duas mudanças por segundo e estático com efeitos reduzidos. Testes direcionados e Ruff; playtest pendente.

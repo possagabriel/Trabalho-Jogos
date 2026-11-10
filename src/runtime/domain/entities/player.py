@@ -49,7 +49,7 @@ from src.runtime.infrastructure.graphics.cel_shading import (
     sprite_com_contorno,
 )
 from src.runtime.infrastructure.graphics.geometry import losango
-from src.runtime.infrastructure.graphics.ship_sprites import gerar_quadros_direcionais
+from src.runtime.infrastructure.graphics.ship_sprites import AtlasDirecional
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_circulo,
     desenhar_glow,
@@ -142,6 +142,45 @@ SKINS = [
 ]
 
 
+SKINS.extend([
+    {"id": "aurora", "nome": "Aurora", "preco": 600, "cor": CIANO,
+     "cor2": ROXO, "efeito": "nenhum", "descricao": "Asas varridas e núcleo de luz polar"},
+    {"id": "vespa", "nome": "Vespa", "preco": 900, "cor": DOURADO,
+     "cor2": LARANJA, "efeito": "nenhum", "descricao": "Casco agulha com estabilizadores duplos"},
+    {"id": "sentinela", "nome": "Sentinela", "preco": 1200, "cor": AZUL,
+     "cor2": BRANCO, "efeito": "nenhum", "descricao": "Ombreiras facetadas e cabine protegida"},
+    {"id": "nautilus", "nome": "Nautilus", "preco": 1800, "cor": VERDE,
+     "cor2": CIANO, "efeito": "nenhum", "descricao": "Casco orbital com propulsores laterais"},
+    {"id": "cobalto", "nome": "Cobalto", "preco": 2500, "cor": AZUL,
+     "cor2": CIANO, "efeito": "nenhum", "descricao": "Fuselagem dupla e canais luminosos"},
+    {"id": "solar", "nome": "Solar", "preco": 3500, "cor": LARANJA,
+     "cor2": DOURADO, "efeito": "nenhum", "descricao": "Painéis solares recortados e proa angular"},
+])
+
+# Silhuetas visuais: não participam do rect nem dos atributos do jogador.
+_CASCOS = {
+    "fenix": ((0, -22), (-6, -9), (-20, 13), (-8, 9), (0, 18), (8, 9), (20, 13), (6, -9)),
+    "tempestade": ((0, -22), (-9, -5), (-18, -9), (-13, 17), (0, 9), (13, 17), (18, -9), (9, -5)),
+    "sombra": ((0, -23), (-18, 15), (-7, 10), (0, 17), (7, 10), (18, 15)),
+    "dourada": ((0, -22), (-7, -9), (-17, -3), (-16, 16), (0, 9), (16, 16), (17, -3), (7, -9)),
+    "galactica": ((0, -21), (-7, -4), (-21, 3), (-15, 18), (-5, 10), (0, 15),
+                  (5, 10), (15, 18), (21, 3), (7, -4)),
+    "demoniaca": ((0, -22), (-8, -3), (-21, -12), (-15, 18), (0, 8), (15, 18), (21, -12), (8, -3)),
+    "void": ((0, -22), (-17, -7), (-20, 11), (-8, 17), (0, 8), (8, 17), (20, 11), (17, -7)),
+    "aurora": ((0, -22), (-7, -4), (-23, 17), (-5, 10), (0, 17), (5, 10), (23, 17), (7, -4)),
+    "vespa": ((0, -25), (-6, -2), (-15, 6), (-12, 19), (-4, 10), (0, 15),
+              (4, 10), (12, 19), (15, 6), (6, -2)),
+    "sentinela": ((0, -20), (-10, -12), (-20, -5), (-19, 17), (-8, 12), (0, 16),
+                  (8, 12), (19, 17), (20, -5), (10, -12)),
+    "nautilus": ((0, -21), (-7, -12), (-18, -10), (-22, 7), (-14, 19), (0, 12),
+                 (14, 19), (22, 7), (18, -10), (7, -12)),
+    "cobalto": ((-8, -23), (-18, -10), (-16, 19), (-5, 9), (0, 13), (5, 9),
+                (16, 19), (18, -10), (8, -23), (4, -7), (-4, -7)),
+    "solar": ((0, -22), (-6, -4), (-22, -5), (-22, 13), (-8, 13), (0, 8),
+              (8, 13), (22, 13), (22, -5), (6, -4)),
+}
+
+
 class Skin:
     """Representa uma skin de nave com efeito visual proprio."""
 
@@ -155,16 +194,23 @@ class Skin:
         self.descricao = config["descricao"]
         self.desbloqueada = config["preco"] == 0
         self._atlas_direcional: dict[
-            tuple[OpcoesVisuais, int, int], tuple[pygame.Surface, ...]
+            tuple[OpcoesVisuais, int, int], AtlasDirecional
         ] = {}
         self._perfil_atlas: OpcoesVisuais | None = None
+        self._proximo_efeito_ms = 0
 
     def desenhar(self, tela: pygame.Surface, jogador: Jogador,
                  particulas: SistemaParticulas | None = None,
-                 intensidade_propulsor: float = 1.0) -> None:
+                 intensidade_propulsor: float = 1.0,
+                 efeitos_reduzidos: bool = False) -> None:
         """Desenha a nave do jogador com a skin aplicada."""
         x, y = int(jogador.x), int(jogador.y)
-        t = pygame.time.get_ticks() * 0.001
+        agora = pygame.time.get_ticks()
+        t = agora * 0.001
+        reduzido = (efeitos_reduzidos or opcoes_atuais().qualidade == "BAIXA"
+                    or getattr(particulas, "qualidade", "") == "DESEMPENHO")
+        if reduzido:
+            t = 0.0
         direcional = jogador.angulo_mira is not None
         intensidade = max(0.0, min(1.5, intensidade_propulsor))
         if intensidade > 0.05:
@@ -177,10 +223,19 @@ class Skin:
                           0.2 + 0.35 * min(1, intensidade))
             linha_suave(tela, LARANJA, traseira, ponta, 2)
         if direcional:
-            self._desenhar_direcional(tela, x, y, jogador.angulo_mira + jogador.tilt)
+            self._desenhar_direcional(tela, x, y, jogador.angulo_mira + jogador.tilt,
+                                      reduzido=reduzido)
         else:
             self._desenhar_corpo(tela, x, y, jogador.tilt, t)
 
+        if reduzido:
+            return
+        intervalo = {"chamas": 50, "chamas_escuras": 50,
+                     "estrelas": 150, "buraco_negro": 120}.get(self.efeito)
+        if intervalo is not None:
+            if agora < self._proximo_efeito_ms:
+                return
+            self._proximo_efeito_ms = agora + intervalo
         traseira_x, traseira_y = self._traseira(x, y, jogador.angulo_mira or 0)
         if self.efeito == "chamas" and particulas and intensidade > 0.2:
             particulas.chamas(traseira_x, traseira_y, LARANJA, 2)
@@ -191,9 +246,7 @@ class Skin:
         elif self.efeito == "brilho":
             self._desenhar_brilho(tela, x, y, t)
         elif self.efeito == "estrelas" and particulas:
-            if t % 0.15 < 0.02:
-                particulas.rastro(x + random.uniform(-4, 4), y,
-                                  (200, 220, 255), 1.0)
+            particulas.rastro(x + random.uniform(-4, 4), y, (200, 220, 255), 1.0)
         elif self.efeito == "buraco_negro" and particulas:
             particulas.buraco_negro(x, y)
 
@@ -216,14 +269,16 @@ class Skin:
         return x - math.sin(radianos) * 14, y + math.cos(radianos) * 14
 
     def _desenhar_direcional(
-        self, tela: pygame.Surface, x: int, y: int, angulo: float,
+        self, tela: pygame.Surface, x: int, y: int, angulo: float, *, reduzido: bool = False,
     ) -> None:
         """Usa uma sprite pré-renderizada da skin para a direção da mira."""
         opcoes = opcoes_atuais()
         if opcoes != self._perfil_atlas:
             self._atlas_direcional.clear()
             self._perfil_atlas = opcoes
-        if self.efeito in _FREQUENCIAS_POSE:
+        if reduzido or opcoes.qualidade == "BAIXA":
+            fase, tempo_pose = 0, 0.0
+        elif self.efeito in _FREQUENCIAS_POSE:
             fase = (pygame.time.get_ticks() // INTERVALO_POSE_NAVE_MS) % 4
             frequencia = _FREQUENCIAS_POSE[self.efeito]
             tempo_pose = fase * math.pi / (2 * frequencia)
@@ -232,7 +287,7 @@ class Skin:
             tempo_pose = fase * 0.25
         else:
             fase, tempo_pose = 0, 0.0
-        boil = (pygame.time.get_ticks() // 120) % 2 if opcoes.line_boil else 0
+        boil = (pygame.time.get_ticks() // 120) % 2 if opcoes.line_boil and not reduzido else 0
         chave = (opcoes, fase, boil)
         if chave not in self._atlas_direcional:
             base = pygame.Surface(
@@ -242,12 +297,13 @@ class Skin:
             self._desenhar_corpo(base, centro, centro, 0, tempo_pose)
             if self.efeito == "relampago":
                 self._desenhar_relampago(base, centro, centro, tempo_pose)
-            self._atlas_direcional[chave] = gerar_quadros_direcionais(base)
+            self._atlas_direcional[chave] = AtlasDirecional(base)
         sprite = self._atlas_direcional[chave][indice_sprite_direcional(angulo)]
         tela.blit(sprite, sprite.get_rect(center=(x, y)))
 
     def _pontos_nave(self, x, y, tilt):
-        return [(x, y - 20), (x - 15, y + 16), (x, y + 7), (x + 15, y + 16)]
+        pontos = _CASCOS.get(self.id, ((0, -20), (-15, 16), (0, 7), (15, 16)))
+        return [(x + dx, y + dy) for dx, dy in pontos]
 
     def _desenhar_sprite(self, tela, x, y, tilt):
         if opcoes_atuais().ativo and _sprite_padrao() is not None:
@@ -267,16 +323,24 @@ class Skin:
         desenhar_sombra_chapada(tela, pts, deslocamento=(3, 5))
         desenhar_glow(tela, self.cor, (x, y), 22, 0.5)
         poligono_com_contorno(tela, self.cor, pts, espessura_contorno=3)
-        desenhar_poligono(tela, self.cor2, pts, 2)
+        detalhe = (tuple((c + luz) // 2 for c, luz in zip(self.cor2, BRANCO))
+                   if self.id in ("sombra", "void") else self.cor2)
+        desenhar_poligono(tela, detalhe, pts, 2)
+        for sinal in (-1, 1):
+            painel = [(x + sinal * 4, y - 8), (x + sinal * 11, y + 11),
+                      (x + sinal * 5, y + 7)]
+            desenhar_poligono(tela, escurecer_cor(self.cor, .55), painel)
+            linha_suave(tela, detalhe, painel[0], painel[1], 1)
         circulo_com_contorno(tela, AZUL_CLARO, (x, y - 2), 6)
         desenhar_highlight(tela, (x, y - 2), 6, intensidade=0.6)
 
     def _desenhar_transparente(self, tela, x, y, tilt, t):
         alfa = int(120 + 60 * math.sin(t * 3))
         surf = pygame.Surface((44, 44), pygame.SRCALPHA)
-        pts = [(22, 2), (7, 38), (22, 29), (37, 38)]
+        pts = self._pontos_nave(22, 22, tilt)
         desenhar_poligono(surf, self.cor + (alfa,), pts)
-        desenhar_poligono(surf, (150, 60, 200, alfa), pts, 2)
+        desenhar_poligono(surf, self.cor2 + (alfa,), pts, 2)
+        circulo_com_contorno(surf, CIANO, (22, 20), 4)
         tela.blit(surf, (x - 22, y - 22))
 
     def _desenhar_diamante(self, tela, x, y, tilt, t):
@@ -589,7 +653,7 @@ class Jogador:
     def desenhar(self, tela: pygame.Surface,
                  particulas: SistemaParticulas | None = None,
                  intensidade_propulsor: float = 1.0,
-                 piscar: bool = True) -> None:
+                 piscar: bool = True, efeitos_reduzidos: bool = False) -> None:
         if (piscar and self.tempo_intangivel <= 0 and self.invencivel > 0
                 and (self.invencivel // 4) % 2 == 0):
             return
@@ -603,7 +667,8 @@ class Jogador:
                 tela, AZUL_CLARO, (self.x - dx * 24, self.y - dy * 24),
                 self.raio + 8, 0.45,
             )
-        self.skin.desenhar(tela, self, particulas, intensidade_propulsor)
+        self.skin.desenhar(tela, self, particulas, intensidade_propulsor,
+                           efeitos_reduzidos=efeitos_reduzidos)
         if self.tempo_intangivel > 0:
             desenhar_circulo(tela, AZUL_CLARO, (self.x, self.y),
                              self.raio + 12, 2, brilho=1.1)

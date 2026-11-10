@@ -24,7 +24,9 @@ class LojaSkins:
         arquivo = os.path.join(PASTA_DADOS, "skins.json")
         try:
             dados = carregar_json_resiliente(arquivo)
-            return [Skin(c) for c in dados]
+            locais = {c["id"]: c for c in dados}
+            catalogo = [{**c, **locais.pop(c["id"], {})} for c in SKINS]
+            return [Skin(c) for c in [*catalogo, *locais.values()]]
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             self._salvar_catalogo()
             return [Skin(c) for c in SKINS]

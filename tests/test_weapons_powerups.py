@@ -13,6 +13,7 @@ Roda headless:
 import os
 import sys
 import tempfile
+from unittest.mock import patch
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
@@ -28,6 +29,8 @@ import pygame  # noqa: E402
 from game.config import ALTURA, LARGURA  # noqa: E402
 from game.powerups import PowerUp, sortear_tipo  # noqa: E402
 from game.weapons import ARMARIA, CORES_ARCO_IRIS, Projetil  # noqa: E402
+from src.infrastructure.graphics.comic_theme import usar_visual  # noqa: E402
+from src.runtime.domain.entities import weapons  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # ARMARIA
@@ -53,6 +56,75 @@ def test_armaria_niveis_crescentes():
 # ---------------------------------------------------------------------------
 # Projetil
 # ---------------------------------------------------------------------------
+
+def test_tiros_fixos_reutilizam_desenho_sem_alterar_estado():
+    pygame.init()
+    tela = pygame.Surface((LARGURA, ALTURA))
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        for tipo in ("padrao", "duplo", "metralhadora", "laser", "gauss", "feixe"):
+            primeiro = Projetil(200, 200, 3, -8, 2, (110, 210, 240), 4, tipo=tipo)
+            primeiro.desenhar(tela)
+            segundo = Projetil(350, 300, 3, -8, 2, (110, 210, 240), 4, tipo=tipo)
+            estado = dict(vars(segundo))
+            with patch.object(weapons, "linha_suave", wraps=weapons.linha_suave) as linhas:
+                segundo.desenhar(tela)
+                assert {chave: valor for chave, valor in vars(segundo).items()
+                        if not chave.startswith("_cache_visual")} == {
+                            chave: valor for chave, valor in estado.items()
+                            if not chave.startswith("_cache_visual")}
+                segundo.atualizar()
+                segundo.desenhar(tela)
+            assert linhas.call_count == 0, tipo
+            assert segundo.dano == estado["dano"]
+            assert segundo.x == estado["x"] + estado["vel_x"]
+            assert segundo.y == estado["y"] + estado["vel_y"]
+            assert segundo.tempo == 1
+            assert segundo.rect.center == (int(segundo.x), int(segundo.y))
+
+
+def test_tiros_animados_e_comic_continuam_dinamicos():
+    pygame.init()
+    tela = pygame.Surface((LARGURA, ALTURA))
+    for estilo, tipo, guiado in (("ORIGINAL", "espiral", False),
+                                  ("ORIGINAL", "padrao", True),
+                                  ("COMIC", "padrao", False)):
+        projetil = Projetil(200, 200, 3, -8, 2, (110, 210, 240), 4,
+                            tipo=tipo, teleguiado=guiado)
+        with usar_visual({"estilo_visual": estilo}):
+            projetil.desenhar(tela)
+            with patch.object(weapons, "linha_suave", wraps=weapons.linha_suave) as linhas:
+                projetil.atualizar()
+                projetil.desenhar(tela)
+            assert linhas.call_count > 0, (estilo, tipo)
+
+
+def test_cache_de_tiros_preserva_contorno_apos_reflexao_e_limita_memoria():
+    pygame.init()
+    tela = pygame.Surface((LARGURA, ALTURA))
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        tiro = Projetil(200, 200, 0, -8, 2, (110, 210, 240), 4)
+        tiro.desenhar(tela)
+        tiro.refletir()
+        tiro.desenhar(tela)
+        assert tela.get_at((200, 191))[:3] == weapons.CONTORNO_PROJETIL_CLARO
+        for indice in range(160):
+            tiro.cor = (indice, 210, 240)
+            tiro.desenhar(tela)
+    assert weapons._sprite_estatico.cache_info().currsize <= 128
+
+
+def test_tiro_ativo_nao_reconstroi_sprite_apos_rotacao_do_cache_global():
+    pygame.init()
+    tela = pygame.Surface((LARGURA, ALTURA))
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        tiro = Projetil(200, 200, 0, -8, 2, (110, 210, 240), 4)
+        tiro.desenhar(tela)
+        for indice in range(160):
+            Projetil(200, 200, indice / 100, -8, 2, (110, 210, 240), 4).desenhar(tela)
+        with patch.object(weapons, "linha_suave", wraps=weapons.linha_suave) as linhas:
+            tiro.desenhar(tela)
+        assert linhas.call_count == 0
+
 
 def test_projetil_movimento():
     proj = Projetil(100, 100, 5, -3, 2, (255, 255, 255), 4)

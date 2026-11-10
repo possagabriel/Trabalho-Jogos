@@ -112,6 +112,8 @@ def test_skin_padrao_fallback_sem_sprite():
 
 def test_sprites_direcionais_preservam_skins_e_reutilizam_cache():
     pygame.init()
+    if pygame.display.get_surface() is None:
+        pygame.display.set_mode((1, 1))
     jogador = novo_jogador()
     jogador.angulo_mira = 90
     tela = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
@@ -400,3 +402,54 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def test_atlas_direcional_prepara_apenas_orientacoes_utilizadas():
+    from src.runtime.infrastructure.graphics.ship_sprites import AtlasDirecional
+
+    base = pygame.Surface((40, 40), pygame.SRCALPHA)
+    with mock.patch("pygame.transform.rotozoom", wraps=pygame.transform.rotozoom) as girar:
+        atlas = AtlasDirecional(base)
+        assert girar.call_count == 0
+        primeiro = atlas[3]
+        assert atlas[3] is primeiro
+        assert girar.call_count == 1
+        atlas[4]
+        assert girar.call_count == 2
+
+
+def test_skin_void_limita_emissao_cosmetica_sem_mudar_jogador():
+    skin = Skin(next(cfg for cfg in SKINS if cfg["id"] == "void"))
+    jogador = Jogador(skin=skin)
+    particulas = mock.Mock()
+    tela = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+    antes = (jogador.vida, jogador.raio, jogador.velocidade)
+    with mock.patch("pygame.time.get_ticks", return_value=0):
+        for _ in range(20):
+            skin.desenhar(tela, jogador, particulas)
+    assert particulas.buraco_negro.call_count == 1
+    assert (jogador.vida, jogador.raio, jogador.velocidade) == antes
+
+
+
+def test_skins_novas_tem_silhuetas_proprias_e_nao_mudam_atributos():
+    novos = {"aurora", "vespa", "sentinela", "nautilus", "cobalto", "solar"}
+    jogador = Jogador()
+    antes = (jogador.rect, jogador.velocidade, jogador.vida, jogador.bonus_dano)
+    silhuetas = set()
+    for cfg in SKINS:
+        if cfg["id"] not in novos:
+            continue
+        skin = Skin(cfg)
+        jogador.equipar_skin(skin)
+        silhuetas.add(tuple(skin._pontos_nave(0, 0, 0)))
+        assert (jogador.rect, jogador.velocidade, jogador.vida, jogador.bonus_dano) == antes
+    assert len(silhuetas) == len(novos)
+
+
+def test_efeitos_reduzidos_nao_emitem_particulas_cosmeticas():
+    skin = Skin(next(cfg for cfg in SKINS if cfg["id"] == "void"))
+    particulas = mock.Mock()
+    skin.desenhar(pygame.Surface((200, 200)), Jogador(skin=skin), particulas,
+                  efeitos_reduzidos=True)
+    particulas.buraco_negro.assert_not_called()

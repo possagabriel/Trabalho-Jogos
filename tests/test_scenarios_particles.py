@@ -357,3 +357,30 @@ def test_artes_comic_sao_arquivos_separados_sem_modificar_original():
         assert comic is not None and original is not None
         assert comic is not original
         assert pygame.image.tobytes(comic, "RGB") != pygame.image.tobytes(original, "RGB")
+
+
+def test_fundo_carrega_apenas_imagem_solicitada(monkeypatch):
+    from unittest.mock import Mock
+
+    from src.runtime.domain.world import scenarios
+
+    carregar = Mock(return_value=pygame.Surface((64, 36)))
+    monkeypatch.setattr(scenarios, "carregar_imagem", carregar)
+    monkeypatch.setattr(scenarios, "_CACHE_FUNDO", {"imagens": {}, "carregada": False})
+    imagem = scenarios._imagem_fundo(1)
+    assert scenarios._imagem_fundo(1) is imagem
+    carregar.assert_called_once_with("fases/lealdade.png")
+    scenarios._imagem_fundo(1, comic=True)
+    assert carregar.call_count == 2
+
+
+def test_particula_original_compoe_o_sprite_em_um_unico_blit():
+    from unittest.mock import Mock
+
+    from src.infrastructure.graphics.comic_theme import usar_visual
+    from src.runtime.domain.world.particles import Particula
+
+    tela = Mock()
+    with usar_visual({"estilo_visual": "ORIGINAL"}):
+        Particula(100, 100, (100, 150, 200), (0, 0), 4, 20).desenhar(tela)
+    assert tela.blit.call_count == 1

@@ -2,6 +2,12 @@
 
 - Codex investigou a tela preta ao selecionar LINEAR, validou com cópia temporária do perfil e janela real (lobby confirmado pelo usuário) e adicionou regressão ORIGINAL/COMIC; falha não reproduzida, sem alterar código de produção ou saves.
 
+- Codex consolidou as alterações pendentes para integração na main a pedido do usuário, verificando equivalência das branches já publicadas; 148 testes direcionados e Ruff aprovados.
+
+- Codex otimizou o desenho dos tiros fixos ORIGINAL e a reutilização de transparência, com testes escritos antes da implementação para chamadas repetidas, estado/colisão, reflexão, limite de cache, animações/COMIC e alpha exato. Sem benchmarks, screenshots, dependências ou alteração de gameplay; playtest de FPS pendente.
+
+- Codex otimizou caminhos visuais de partidas por inspeção do código e ampliou o catálogo de 10 para 16 skins procedurais. Testes de rotações sob demanda, emissão/cache e migração escritos primeiro; validação direcionada e Ruff, sem benchmarks, screenshots, novas dependências ou mudanças nas hitboxes/atributos. Corrigida a inicialização SDL do teste direcional isolado; playtest de fluidez pendente.
+
 - Codex ampliou o roteiro para 161 falas, preservando gatilhos, revelações e âncoras do capítulo 2; gerou dez retratos com image_gen integrado e registrou os prompts em `images/personagens/README.md`. Implementou palco animado e histórico sem spoilers, com testes de leitura/cache/limites escritos primeiro e validação direcionada/Ruff. Sem screenshots ou alterações no combate; playtest narrativo pendente.
 
 - Codex gerou seis artes COMIC com image_gen integrado, usando as artes locais ORIGINAL como referência das fases e criando um lobby exclusivo; prompts/proveniência em `images/fases/README.md`. Refinou índice, cutscenes e popups, com testes de quebra/navegação/pausa escritos primeiro, validação direcionada e Ruff. Sem screenshots, dependências ou mudança de roteiro/progressão; playtest pendente.
