@@ -11,7 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Abertura do LINEAR recebe regressão de clique, término da transição, renderização do lobby e início da campanha em ORIGINAL/COMIC; usuário confirmou o lobby na janela real, sem reproduzir a tela preta no código atual.
 
 ### Changed
-- Inimigos comuns no ORIGINAL compartilham sprites compostos e rotações sob demanda, reduzindo o redesenho de sombras, contornos e brilhos durante o combate; COMIC e efeitos pulsantes mantêm o caminho dinâmico, sem mudar hitboxes ou balanceamento.
 - Consolidação na main das otimizações de renderização e do catálogo ampliado de skins, preservando as entregas de lobby, cutscenes e regressão LINEAR.
 - Combate LINEAR/ORIGINAL reutiliza sprites de tiros fixos e variantes transparentes de círculos/polígonos, reduzindo chamadas de desenho e cópias por quadro; tiros animados, teleguiados, hitboxes e balanceamento são preservados.
 - Partidas reduzem trabalho de renderização com atlas direcionais sob demanda, sprites compostos de partículas e emissão cosmética por intervalo; fundos usam cache limitado e carregamento individual. Loja recebe Aurora, Vespa, Sentinela, Nautilus, Cobalto e Solar, com silhuetas próprias e refinamento dos cascos existentes; catálogo legado mantém preços personalizados e desbloqueios.
@@ -40,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   restante e o especial informa a prontidão da Bomba Vortex.
 
 ### Fixed
+- Retira o atlas de inimigos comuns após regressão de fluidez relatada no combate; restaura o desenho anterior e mantém a correção do fade no LINEAR.
 - Cutscenes do LINEAR deixam de ficar cobertas pelo fade escuro residual ao retomar fases/encontros; a transição visual continua mesmo com a narrativa pausada, sem avançar o combate.
 - Botão PRÉVIA do hangar abre a nave selecionada; no ORIGINAL, a prévia bloqueada mantém a equipagem desabilitada e pode ser fechada por Esc.
 - Integração da PR #68 com a main preserva os menus e o mapa da #67, elimina duplicação de seleção/rota e mantém os tiros guiados limitados no LINEAR.

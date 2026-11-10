@@ -24,7 +24,7 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
-- FPS no combate ORIGINAL: corpos de inimigos comuns e suas rotações usam atlas compartilhados sob demanda, com limite de 16 atlas; sinais de dano/invisibilidade e efeitos dinâmicos preservados. 40 testes direcionados e Ruff aprovados; ganho de FPS em playtest pendente.
+- Atlas de inimigos retirado após o usuário relatar piora de FPS no combate; caminho de desenho anterior restaurado e correção da tela preta preservada. Diagnóstico do gargalo em andamento.
 
 - Tela preta no LINEAR reproduzida no fluxo real: fade residual ficava preso durante cutscenes. Loop agora dissipa o fade também no LINEAR, inclusive em pausa narrativa; 139 testes direcionados e Ruff aprovados; usuário confirmou a cena visível na janela real.
 

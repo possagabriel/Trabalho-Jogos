@@ -39,8 +39,6 @@ from game.enemies import (  # noqa: E402
 )
 from game.player import Jogador  # noqa: E402
 from game.scenarios import Cenario  # noqa: E402
-from src.infrastructure.graphics.comic_theme import usar_visual  # noqa: E402
-from src.runtime.domain.entities import enemies as modulo_inimigos  # noqa: E402
 
 
 def novo_jogador():
@@ -437,68 +435,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-def test_inimigos_original_compartilham_corpo_mesmo_em_rotacoes_distintas():
-    pygame.init()
-    modulo_inimigos._atlas_forma.cache_clear()
-    tela = pygame.Surface((LARGURA, ALTURA))
-    with usar_visual({"estilo_visual": "ORIGINAL"}):
-        with patch.object(modulo_inimigos, "poligono_com_contorno",
-                          wraps=modulo_inimigos.poligono_com_contorno) as compor:
-            for indice in range(60):
-                inimigo = Inimigo("scout", 1, x=100 + indice, y=200)
-                inimigo.angulo = indice * 0.1
-                estado = dict(vars(inimigo))
-                inimigo.desenhar(tela)
-                assert vars(inimigo) == estado
-            assert compor.call_count == 1
-
-
-def test_cache_inimigos_preserva_flash_invisibilidade_e_superficie():
-    pygame.init()
-    tela = pygame.Surface((LARGURA, ALTURA))
-    inimigo = Inimigo("scout", 1, x=100, y=100)
-    inimigo.angulo = 0
-    with usar_visual({"estilo_visual": "ORIGINAL"}):
-        inimigo.desenhar(tela)
-        normal = pygame.image.tobytes(tela, "RGB")
-        tela.fill((0, 0, 0))
-        inimigo.flash = 4
-        inimigo.desenhar(tela)
-        assert pygame.image.tobytes(tela, "RGB") != normal
-        inimigo.flash = 0
-        tela.fill((0, 0, 0))
-        inimigo.desenhar(tela)
-        assert pygame.image.tobytes(tela, "RGB") == normal
-        inimigo.invisivel = 1
-        tela.fill((0, 0, 0))
-        inimigo.desenhar(tela)
-        assert pygame.transform.average_color(tela)[:3] == (0, 0, 0)
-
-
-def test_comic_e_inimigos_pulsantes_mantem_desenho_dinamico():
-    pygame.init()
-    tela = pygame.Surface((LARGURA, ALTURA))
-    for estilo, tipo in (("COMIC", "scout"), ("ORIGINAL", "bomba"),
-                         ("ORIGINAL", "distorcao")):
-        inimigo = Inimigo(tipo, 1, x=200, y=200)
-        with usar_visual({"estilo_visual": estilo}):
-            with patch.object(modulo_inimigos, "desenhar_glow",
-                              wraps=modulo_inimigos.desenhar_glow) as brilho:
-                inimigo.desenhar(tela)
-                inimigo.desenhar(tela)
-            assert brilho.call_count >= 2
-
-
-def test_atlas_inimigos_tem_limite_de_memoria():
-    pygame.init()
-    modulo_inimigos._atlas_forma.cache_clear()
-    tela = pygame.Surface((LARGURA, ALTURA))
-    with usar_visual({"estilo_visual": "ORIGINAL"}):
-        for indice in range(40):
-            inimigo = Inimigo("scout", 1, x=200, y=200)
-            inimigo.cor = (indice, 150, 200)
-            inimigo.desenhar(tela)
-    assert modulo_inimigos._atlas_forma.cache_info().currsize <= 16
