@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Abertura do LINEAR recebe regressão de clique, término da transição, renderização do lobby e início da campanha em ORIGINAL/COMIC; usuário confirmou o lobby na janela real, sem reproduzir a tela preta no código atual.
 
 ### Changed
+- Inimigos comuns no ORIGINAL compartilham sprites compostos e rotações sob demanda, reduzindo o redesenho de sombras, contornos e brilhos durante o combate; COMIC e efeitos pulsantes mantêm o caminho dinâmico, sem mudar hitboxes ou balanceamento.
 - Consolidação na main das otimizações de renderização e do catálogo ampliado de skins, preservando as entregas de lobby, cutscenes e regressão LINEAR.
 - Combate LINEAR/ORIGINAL reutiliza sprites de tiros fixos e variantes transparentes de círculos/polígonos, reduzindo chamadas de desenho e cópias por quadro; tiros animados, teleguiados, hitboxes e balanceamento são preservados.
 - Partidas reduzem trabalho de renderização com atlas direcionais sob demanda, sprites compostos de partículas e emissão cosmética por intervalo; fundos usam cache limitado e carregamento individual. Loja recebe Aurora, Vespa, Sentinela, Nautilus, Cobalto e Solar, com silhuetas próprias e refinamento dos cascos existentes; catálogo legado mantém preços personalizados e desbloqueios.

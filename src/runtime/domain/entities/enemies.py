@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import random
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 import pygame
@@ -24,6 +25,7 @@ from src.core.constants import (
     VERDE,
     VERMELHO,
 )
+from src.infrastructure.graphics.comic_theme import opcoes_atuais
 from src.runtime.domain.entities.weapons import Projetil
 from src.runtime.infrastructure.graphics.cel_shading import (
     barra_vida_cartoon,
@@ -44,6 +46,7 @@ from src.runtime.infrastructure.graphics.geometry import (
     quadrado,
     triangulo,
 )
+from src.runtime.infrastructure.graphics.ship_sprites import AtlasDirecional
 from src.runtime.infrastructure.graphics.smooth import (
     desenhar_circulo,
     desenhar_glow,
@@ -106,6 +109,19 @@ FORMAS = {
     "distorcao": "circulo_pulsante", "assombra": "circulo_pulsante",
     "celestial": "estrela", "sentinela": "olho",
 }
+
+
+@lru_cache(maxsize=16)
+def _atlas_forma(forma: str, raio: float, cor: tuple[int, int, int]) -> AtlasDirecional:
+    """Compartilha a composição ORIGINAL por forma/cor/tamanho, sem estado de combate."""
+    margem = math.ceil(raio * 1.6) + 12
+    base = pygame.Surface((margem * 2 + 1, margem * 2 + 1), pygame.SRCALPHA)
+    # Molde apenas visual: não inicializa movimento, ataques ou sorteios de spawn.
+    molde = object.__new__(Inimigo)
+    molde.raio = raio
+    molde.angulo = 0.0
+    molde._desenhar_forma_detalhada(base, (margem, margem), cor, forma)
+    return AtlasDirecional(base)
 
 
 class Inimigo:
@@ -337,6 +353,17 @@ class Inimigo:
         self._desenhar_forma(tela, centro, cor, forma)
 
     def _desenhar_forma(self, tela, centro, cor, forma):
+        if not opcoes_atuais().ativo:
+            atlas = _atlas_forma(forma, self.raio, tuple(cor))
+            indice = (0 if forma in ("circulo", "circulo_pulsante", "cruz") else
+                      round(self.angulo * len(atlas) / math.tau) % len(atlas))
+            sprite = atlas[indice]
+            tela.blit(sprite, sprite.get_rect(center=centro))
+            return
+        self._desenhar_forma_detalhada(tela, centro, cor, forma)
+
+    def _desenhar_forma_detalhada(self, tela, centro, cor, forma):
+        """Compõe a arte original antes de aplicar a orientação cacheada."""
         x, y = centro
         if forma == "circulo":
             desenhar_glow(tela, cor, (x, y), self.raio * 1.5, 0.5)

@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- FPS no combate ORIGINAL: corpos de inimigos comuns e suas rotações usam atlas compartilhados sob demanda, com limite de 16 atlas; sinais de dano/invisibilidade e efeitos dinâmicos preservados. 40 testes direcionados e Ruff aprovados; ganho de FPS em playtest pendente.
+
 - Tela preta no LINEAR reproduzida no fluxo real: fade residual ficava preso durante cutscenes. Loop agora dissipa o fade também no LINEAR, inclusive em pausa narrativa; 139 testes direcionados e Ruff aprovados; usuário confirmou a cena visível na janela real.
 
 - LINEAR: abertura do lobby ORIGINAL confirmada pelo usuário em teste na janela real com cópia do perfil; regressão automatizada cobre clique, transição e início da campanha nos dois estilos. Tela preta não reproduzida no código atual.
