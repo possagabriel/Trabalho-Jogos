@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import random
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Mapping
 
 import pygame
@@ -81,6 +82,9 @@ class Boss:
         self.alvo = None
         self.fase_anterior = 1
         self.pulso_fase = 0
+        self.aviso_ataques: tuple[str, ...] = ()
+        self.alvo_ataque: tuple[float, float] | None = None
+        self._angulo_aviso = 0.0
 
     @property
     def rect(self) -> pygame.Rect:
@@ -145,6 +149,13 @@ class Boss:
             self.enraivecido = True
 
         self.timer_ataque -= 1
+        if (self.nome in ("PRISMA", "ORACULO", "OBELISCO")
+                and 0 < self.timer_ataque <= 30 and not self.aviso_ataques):
+            disponiveis = self._ataques_por_fase()
+            self.aviso_ataques = tuple(random.sample(
+                disponiveis, min(self.fase_atual, 2, len(disponiveis))))
+            self.alvo_ataque = (jogador.x, jogador.y)
+            self._angulo_aviso = self.angulo
         if self.timer_ataque <= 0:
             self.timer_ataque = self._intervalo_ataque()
             novos = self._atacar(jogador)
@@ -196,12 +207,18 @@ class Boss:
         disponiveis = self._ataques_por_fase()
         if not disponiveis:
             return []
-        escolhidos = random.sample(
-            disponiveis, min(self.fase_atual, 2, len(disponiveis)),
-        )
+        if self.aviso_ataques:
+            escolhidos = self.aviso_ataques
+            if self.alvo_ataque is not None:
+                jogador = SimpleNamespace(x=self.alvo_ataque[0], y=self.alvo_ataque[1])
+        else:
+            escolhidos = random.sample(
+                disponiveis, min(self.fase_atual, 2, len(disponiveis)))
         projs = []
         for nome in escolhidos:
             projs += self._executar_ataque(nome, jogador, x, y)
+        self.aviso_ataques = ()
+        self.alvo_ataque = None
         return projs
 
     def _tiros_teleguiados(self, jogador, x, y):
@@ -227,17 +244,22 @@ class Boss:
             for desvio in (-0.18, 0.0, 0.18)
         ]
 
+    def angulos_ataque_especial(self, nome: str, mira: float) -> tuple[float, ...]:
+        """Retorna as mesmas direções para o aviso e a salva dos novos guardiões."""
+        if nome == "tridente":
+            return tuple(mira + lado * 0.26 for lado in (-1, 0, 1))
+        if nome == "orbita":
+            giro = self._angulo_aviso if self.aviso_ataques else self.angulo
+            return tuple(mira + giro * 0.25 + i * math.tau / 10 for i in range(2, 9))
+        if nome == "fratura":
+            return tuple(mira + lado * (0.22 + passo * 0.18)
+                         for lado in (-1, 1) for passo in range(3))
+        return ()
+
     def _executar_ataque(self, nome, jogador, x, y):
         if nome in ("tridente", "orbita", "fratura"):
             mira = math.atan2(jogador.y - y, jogador.x - x)
-            if nome == "tridente":
-                angulos = [mira + lado * 0.26 for lado in (-1, 0, 1)]
-            elif nome == "orbita":
-                angulos = [mira + self.angulo * 0.25 + i * math.tau / 10
-                           for i in range(2, 9)]
-            else:
-                angulos = [mira + lado * (0.22 + passo * 0.18)
-                           for lado in (-1, 1) for passo in range(3)]
+            angulos = self.angulos_ataque_especial(nome, mira)
             return [Projetil(x, y, math.cos(a) * 3.6, math.sin(a) * 3.6,
                              1, self.cor, 5, origem="inimigo") for a in angulos]
         if nome == "leque":
@@ -285,7 +307,11 @@ class Boss:
         self.flash = 6
         return self.vida <= 0
 
-    def desenhar(self, tela: pygame.Surface) -> None:
+    def desenhar(self, tela: pygame.Surface, *, efeitos_reduzidos: bool = False) -> None:
+        if self.nome in ("PRISMA", "ORACULO", "OBELISCO"):
+            from src.runtime.infrastructure.graphics.boss_art import desenhar_guardiao
+            if desenhar_guardiao(tela, self, efeitos_reduzidos):
+                return
         x, y = int(self.x), int(self.y)
         cor = BRANCO if self.flash > 0 else self.cor
         centro = (x, y)

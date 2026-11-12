@@ -154,14 +154,24 @@ class ControladorPausa:
         jogo = self.jogo
         jogo._pausa_dialogo = Dialogo(
             "Sair da Missao",
-            "Tem certeza que deseja voltar ao menu? O progresso desta sessao sera salvo.",
+            ("Voltar ao lobby? A fase e o nível alcançados serão salvos."
+             if jogo.modo_atual == "linear" else
+             "Voltar ao menu? O progresso desta sessão será salvo."),
             self.confirmar_saida, lambda: None, layout=jogo.layout)
 
     def confirmar_saida(self) -> None:
-        """Salva a sessao e retorna ao menu principal."""
+        """Salva a sessão e retorna ao lobby do LINEAR ou ao menu do mundo aberto."""
         jogo = self.jogo
+        jogo._salvar_tudo()
+        if jogo.profile_service.save_error:
+            jogo._pausa_dialogo = Dialogo(
+                "Falha ao salvar", "Seu progresso ainda não foi gravado. Tente sair novamente.",
+                lambda: None, lambda: None, layout=jogo.layout)
+            return
         jogo.estado = "MENU"
         jogo.fade = 255
-        jogo._salvar_tudo()
         jogo.trauma = 0.0
-        jogo.menu._voltar_menu()
+        if jogo.modo_atual == "linear":
+            jogo.menu._abrir_lobby()
+        else:
+            jogo.menu._voltar_menu()

@@ -79,7 +79,10 @@ def test_cenario_do_nivel():
     assert cenario_do_nivel(5) == 1
     assert cenario_do_nivel(6) == 2
     assert cenario_do_nivel(30) == 6
-    assert cenario_do_nivel(999) == 6
+    assert cenario_do_nivel(31) == 7
+    assert cenario_do_nivel(36) == 8
+    assert cenario_do_nivel(41) == 9
+    assert cenario_do_nivel(999) == 9
 
 
 def test_cenarios_desenham():

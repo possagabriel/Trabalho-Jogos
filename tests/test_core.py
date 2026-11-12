@@ -237,7 +237,7 @@ def test_confirmar_saida_restaura_menu_e_remove_tremor():
         jogo.pausa_controller.confirmar_saida()
 
     assert jogo.estado is EstadoJogo.MENU
-    assert jogo.menu.subestado == "MENU"
+    assert jogo.menu.subestado == "FASES"
     assert jogo.trauma == 0.0
     assert jogo.fade == 255
     salvar.assert_called_once()

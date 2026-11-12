@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Revisão das PRs #79–#83: conflitos resolvidos e smoke test alinhado às nove fases. Prisma, Oráculo e Obelisco recebem PNGs originais com alpha, quadros em cache, energia de fase e avisos das salvas; hitboxes e valores de dano preservados. LINEAR salva ao iniciar níveis e retorna ao lobby na fase atual, sem sobrescrever checkpoint ao selecionar perfil; falha de gravação mantém a pausa. 195 testes direcionados e Ruff aprovados; playtest pendente.
+
 - Main local reúne cards de jogador (#81), preparo gradual de fundos/mapa leve/patrulha e drops fixos no mundo aberto (#82) e três fases/bosses LINEAR (#83). Conflitos de documentação preservaram as três entregas; contadores de perfis/LINEAR atualizados para nove bosses. 547 testes direcionados e Ruff aprovados; playtest de fluidez e dificuldade pendente.
 
 - Cards de jogador: nave ampliada e estática em cache, nome completo, estatísticas e ação por piloto; cartões mais largos com paginação por foco. 20 testes direcionados e Ruff aprovados, conferência jogando pendente.
