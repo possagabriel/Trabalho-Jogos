@@ -1,5 +1,9 @@
 # Registro de uso de IA
 
+- A pedido do usuário, Codex suavizou os nove tiros com menor amplitude, ataque gradual e menor modulação; substituiu o acerto agudo por impacto eletrônico abafado. Regressão de limites de amplitude e identidade escrita primeiro; testes direcionados e Ruff aprovados, mixagem auditiva pendente.
+
+- Codex implementou emissores FM para as nove armas e trilha synthwave procedural, corrigiu amplitude PCM e leitura WAV como arquivo, com regressões escritas primeiro para áudio audível, timbres, volume, ausência de dispositivo, cache/RNG e disparos nos dois modos. Testes direcionados e Ruff aprovados; sem dependências ou assets externos. Pixabay bloqueou downloads (HTTP 403); avaliação auditiva pendente.
+
 - Codex revisou todos os PRs abertos (#73/#74/#75/#77), resolveu conflitos de documentação e integrou seus históricos na main a pedido do usuário. Confirmou equivalência prévia da #73 e ausência do atlas rejeitado da #76; 348 testes dos módulos envolvidos e Ruff aprovados. Sem alterações de gameplay, dependências, screenshots ou benchmarks adicionais.
 
 - Codex priorizou clareza do combate e ajustou o HUD dos especiais, com testes escritos primeiro para carga quase cheia, prontidão, proteção ativa/expirada, troca de especial, limites e estabilidade em ORIGINAL/COMIC a 900×700 e 1920×1080. 63 testes direcionados e Ruff aprovados; sem screenshots, dependências ou mudanças no gameplay, conferência jogando pendente.

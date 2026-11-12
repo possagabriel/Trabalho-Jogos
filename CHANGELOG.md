@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Abertura do LINEAR recebe regressão de clique, término da transição, renderização do lobby e início da campanha em ORIGINAL/COMIC; usuário confirmou o lobby na janela real, sem reproduzir a tela preta no código atual.
 
 ### Changed
+- Áudio futurista: nove timbres suaves por arma no LINEAR e mundo aberto, impacto eletrônico abafado, trilha synthwave em cache e correção PCM/WAV; testes direcionados e Ruff aprovados, avaliação ouvindo no jogo pendente. Pixabay permanece pendente por bloqueio de download HTTP 403.
 - Integra as PRs #73, #74, #75 e #77 na main, consolidando histórico/documentação, HUD de especiais, correção do fade no LINEAR e ajuste de cadência GPU; mantém fora o atlas de inimigos descartado após regressão.
 - HUD dos especiais explica a carga por abates, evita indicar 100% antes da prontidão e substitui a carga pelo tempo restante de proteção quando Intangível está ativo; seleção da Bomba Vortex continua mostrando seu próprio estado.
 
