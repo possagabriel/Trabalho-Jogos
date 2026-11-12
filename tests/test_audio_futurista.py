@@ -46,6 +46,19 @@ def test_efeitos_preservam_volume_e_reutilizam_sons() -> None:
         assert gerenciador._sons[f"tiro_{arma['tipo']}"] is som
 
 
+def test_tiros_suaves_e_impacto_proprio_sem_pico_estridente() -> None:
+    gerenciador = sounds.Sons()
+    for arma in ARMARIA:
+        dados = sounds._amostras_tiro(arma['tipo'])
+        assert max(abs(v) for v in dados) <= 0.13
+        assert abs(dados[0]) < 0.001
+    impacto = gerenciador._sons['acerto']
+    assert 0.07 <= impacto.get_length() <= 0.16
+    pcm = [v[0] / 32767 for v in struct.iter_unpack('<h', impacto.get_raw())]
+    assert 0.03 < max(abs(v) for v in pcm) <= 0.13
+    assert impacto.get_raw() != gerenciador._sons['tiro_padrao'].get_raw()
+
+
 def test_sem_dispositivo_de_audio_nao_interrompe_jogo() -> None:
     with mock.patch.object(pygame.mixer, 'init', side_effect=pygame.error('sem audio')):
         gerenciador = sounds.Sons()

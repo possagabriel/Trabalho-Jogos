@@ -84,14 +84,31 @@ def _amostras_tiro(tipo: str) -> tuple[float, ...]:
     for i in range(total):
         progresso = i / total
         local = (progresso * pulsos) % 1
-        ataque = min(1.0, local * duracao / pulsos / 0.003)
+        ataque = min(1.0, local * duracao / pulsos / 0.005)
         envelope = ataque * (1 - local) ** 2
         frequencia = inicio * (fim / inicio) ** progresso
         fase += math.tau * frequencia / SAMPLE_RATE
-        modulador = math.sin(fase * 1.97) * modulacao * (1 - local)
-        sinal = math.sin(fase + modulador)
-        grave = math.sin(fase * 0.5) * 0.2
-        dados.append((sinal + grave) * envelope * 0.24)
+        modulador = math.sin(fase * 1.97) * modulacao * 0.55 * (1 - local)
+        sinal = 0.6 * math.sin(fase) + 0.4 * math.sin(fase + modulador)
+        grave = math.sin(fase * 0.5) * 0.15
+        dados.append((sinal + grave) * envelope * 0.11)
+    return tuple(dados)
+
+
+@lru_cache(maxsize=1)
+def _amostras_impacto() -> tuple[float, ...]:
+    """Impacto eletrônico abafado, com ataque suave e cauda curta."""
+    total = int(SAMPLE_RATE * 0.11)
+    dados = []
+    fase = 0.0
+    for i in range(total):
+        t = i / SAMPLE_RATE
+        progresso = i / total
+        fase += math.tau * (180 + 380 * math.exp(-t * 60)) / SAMPLE_RATE
+        envelope = min(1.0, t / 0.003) * (1 - progresso) ** 3
+        corpo = math.sin(fase) * 0.8
+        textura = math.sin(fase * 2.41) * 0.2 * math.exp(-t * 40)
+        dados.append((corpo + textura) * envelope * 0.12)
     return tuple(dados)
 
 
@@ -137,7 +154,7 @@ class Sons:
             _sweep(300, 1400, 0.7, 0.3, "seno"))
         self._sons["gameover"] = self._novo_som(
             _sweep(400, 70, 1.0, 0.5, "seno"))
-        self._sons["acerto"] = self._novo_som(_tone(2100, 0.05, 0.22))
+        self._sons["acerto"] = self._novo_som(_amostras_impacto())
         self._sons["escudo"] = self._novo_som(
             _sweep(900, 220, 0.3, 0.4, "seno"))
         self._sons["arma"] = self._novo_som(
