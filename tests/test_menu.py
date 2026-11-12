@@ -1038,6 +1038,8 @@ def test_lobby_abre_selecao_de_fases_sem_reiniciar_campanha():
     # inicial que este caso cobre, em vez de depender da ordem dos testes.
     jogo.progresso.jogador["progresso_campanha"].update(
         {"fases_concluidas": [], "fase_atual": "lealdade", "nivel_atual": 1})
+    jogo.progresso.jogador.update(
+        fases_liberadas=[1], cenarios_desbloqueados=[1], nivel_maximo=1)
     menu._abrir_lobby()
     assert menu.subestado == "FASES"
     assert menu.phase_screen.nova_campanha_pendente is False

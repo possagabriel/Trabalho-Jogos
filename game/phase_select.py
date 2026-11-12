@@ -17,7 +17,7 @@ from src.infrastructure.graphics.comic_theme import (
     LARANJA,
     opcoes_atuais,
 )
-from src.runtime.domain.campaign_catalog import FASES_CAMPANHA
+from src.runtime.domain.campaign_catalog import FASES_CAMPANHA, fases_liberadas
 from src.runtime.infrastructure.graphics.menu_panels import (
     ACENTO_ORIGINAL,
     FUNDO_ORIGINAL,
@@ -76,7 +76,7 @@ def get_phase_status(phase_id: str, save_data: dict,
         return PhaseStatus.COMPLETED
     if current is None:
         return PhaseStatus.LOCKED
-    if current.ordem == 1:
+    if current.ordem in fases_liberadas(save_data):
         return PhaseStatus.AVAILABLE
     req = current.requisito
     if req is None and current.ordem > 1:
@@ -226,8 +226,8 @@ class PhaseSelectScreen:
         self.shop_open = False
         self.interaction_phase = None
         self.statuses = {
-            phase.id: (PhaseStatus.AVAILABLE if phase.ordem == 1
-                       else PhaseStatus.LOCKED)
+            phase.id: (PhaseStatus.AVAILABLE if phase.ordem in fases_liberadas(
+                self.jogo.progresso.jogador) else PhaseStatus.LOCKED)
             for phase in self.phases
         }
 

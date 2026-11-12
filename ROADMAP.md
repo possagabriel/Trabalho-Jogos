@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Fases já alcançadas/concluídas permanecem liberadas por piloto no lobby, inclusive ao reiniciar a campanha ou reabrir o jogo. LINEAR abre a seleção com o progresso existente; desbloqueios legados são recuperados de níveis, cenários e fases concluídas. 207 testes direcionados e Ruff aprovados; conferência jogando pendente.
+
 - Revisão das PRs #79–#83: conflitos resolvidos e smoke test alinhado às nove fases. Prisma, Oráculo e Obelisco recebem PNGs originais com alpha, quadros em cache, energia de fase e avisos das salvas; hitboxes e valores de dano preservados. LINEAR salva ao iniciar níveis e retorna ao lobby na fase atual, sem sobrescrever checkpoint ao selecionar perfil; falha de gravação mantém a pausa. 195 testes direcionados e Ruff aprovados; playtest pendente.
 
 - Main local reúne cards de jogador (#81), preparo gradual de fundos/mapa leve/patrulha e drops fixos no mundo aberto (#82) e três fases/bosses LINEAR (#83). Conflitos de documentação preservaram as três entregas; contadores de perfis/LINEAR atualizados para nove bosses. 547 testes direcionados e Ruff aprovados; playtest de fluidez e dificuldade pendente.
