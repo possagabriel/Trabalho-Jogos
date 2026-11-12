@@ -9,7 +9,7 @@ from typing import Any
 
 import pygame
 
-from src.core.constants import ALTURA, LARGURA
+from src.core.constants import ALTURA, FPS, LARGURA
 from src.core.event_bus import GameEventType, publicar_evento
 from src.infrastructure.graphics.comic_theme import (
     LARANJA,
@@ -21,6 +21,7 @@ from src.infrastructure.ui.layout import Layout
 from src.runtime.domain.entities.bosses import Boss
 from src.runtime.domain.entities.enemies import Inimigo
 from src.runtime.domain.entities.minibosses.registry import criar_miniboss
+from src.runtime.domain.entities.minibosses.states import Ataque
 from src.runtime.domain.entities.player import SKINS, Jogador, Skin
 from src.runtime.domain.entities.powerups import PowerUp
 from src.runtime.domain.entities.weapons import Projetil
@@ -33,6 +34,7 @@ from src.runtime.domain.world.boss_patterns import (
     posicao_patrulha,
 )
 from src.runtime.domain.world.meteor_storm import TempestadeMeteoros
+from src.runtime.domain.world.patrols import Patrulha
 from src.runtime.domain.world.region_background import SectorBackground
 from src.runtime.domain.world.scenarios import CENARIOS, Cenario
 from src.runtime.domain.world.scroll import EstadoAvanco
@@ -88,7 +90,7 @@ class OpenWorldRuntime:
                  dimension: int = 1, bosses: int = 0,
                  cooldowns: Mapping[str, object] | None = None,
                  rng: random.Random | None = None,
-                 toca_boss: object = None) -> None:
+                 toca_boss: object = None, patrulhas_derrotadas: object = None) -> None:
         self.dimension = max(1, min(6, int(dimension)))
         self.REGION_ID = self.REGION_IDS[self.dimension - 1]
         self.REGION_NAME = CENARIOS[self.dimension - 1]["nome"]
@@ -102,6 +104,7 @@ class OpenWorldRuntime:
         )
         self.enemies = self._create_enemies()
         self.BOSS_LAIR = self._escolher_toca(toca_boss)
+        self._centros_patrulhas = self._escolher_arenas()
         self.SPAWN = self._choose_spawn(position)
         self.x, self.y = position or self.SPAWN
         self.x = max(0.0, min(self.width, float(self.x)))
@@ -137,12 +140,7 @@ class OpenWorldRuntime:
         self._cenario.configurar_avanco(
             quality, (0.0, 1.0), True, True, self.visual_config,
             4101 + self.dimension)
-        self.miniboss = criar_miniboss(
-            "censor", self.dimension, self._cenario,
-            random.Random(4101 + self.dimension))
-        self.miniboss.entrando = False
-        self.miniboss.movimento_livre = self._movimentar_patrulha
-        self._miniboss_world = (6300.0, 3300.0)
+        self._criar_patrulhas(patrulhas_derrotadas)
         self.boss = Boss(self.dimension * 5, self._cenario)
         self.boss.x, self.boss.y = self.BOSS_LAIR
         self.boss.entrando = False
@@ -171,10 +169,10 @@ class OpenWorldRuntime:
             f"TOCA // {self.boss.nome}", True, (255, 202, 102))
         self._boss_comic_label = self._font_marker.render(
             f"TOCA // {self.boss.nome}", True, LARANJA)
-        self._mini_label = self._font_marker.render(
-            "CENSOR // PATRULHA", True, (255, 124, 201))
-        self._mini_comic_label = self._font_marker.render(
-            "CENSOR // PATRULHA", True, PAPEL)
+        self._patrol_labels = {
+            p.ident: tuple(self._font_marker.render(p.boss.nome, True, cor)
+                           for cor in ((255, 124, 201), PAPEL)) for p in self.patrulhas
+        }
         self._minimap_label = self._font_marker.render(
             "MINIMAPA", True, (205, 220, 245))
         self._minimap_comic_label = self._font_marker.render(
@@ -202,8 +200,8 @@ class OpenWorldRuntime:
         destinos = []
         if not self.boss_defeated:
             destinos.append(("boss", f"TOCA // {self.boss.nome}", self.BOSS_LAIR))
-        if not self.miniboss_defeated:
-            destinos.append(("patrulha", "PATRULHA // CENSOR", self._miniboss_world))
+        destinos.extend((p.ident, f"PATRULHA // {p.boss.nome}", self._posicao_patrulha(p))
+                        for p in self._patrulhas_vivas())
         destinos.extend((f"setor_{i}", f"SETOR // {nome}", centro)
                         for i, (nome, centro, _cor) in enumerate(self.SECTORS))
         destinos.extend((f"portal_{i}", f"PORTAL {i + 1} > {portal.target + 1}",
@@ -252,7 +250,7 @@ class OpenWorldRuntime:
             vida = max(0.0, min(1.0, self.boss.vida / max(1, self.boss.vida_max)))
             return f"EM COMBATE // {self.boss.nome.upper()} // {vida:.0%}"
         if self.miniboss_active and not self.miniboss_defeated:
-            return "EM COMBATE // PATRULHA CENSOR"
+            return f"PATRULHA // {self.miniboss.nome}"
         setor = min(self.SECTORS, key=lambda item: math.dist((self.x, self.y), item[1]))
         return f"SETOR {setor[0]} // SHIFT: TURBO // M: MAPA"
 
@@ -287,6 +285,8 @@ class OpenWorldRuntime:
             center = self.SECTORS[self._rng.randrange(len(self.SECTORS))][1]
             candidate = (center[0] + self._rng.uniform(-1050, 1050),
                          center[1] + self._rng.uniform(-820, 820))
+            if any(math.dist(candidate, centro) < 500 for centro in self._centros_patrulhas):
+                continue
             if math.dist(candidate, self.BOSS_LAIR) < 900:
                 continue
             if any(math.dist(candidate, hole.position) < hole.influence + 100
@@ -330,12 +330,81 @@ class OpenWorldRuntime:
             return ponto
         return self.__class__.BOSS_LAIR
 
+    def _escolher_arenas(self) -> list[tuple[float, float]]:
+        """Distribui arenas estáveis longe de portais, poços, rochas e toca."""
+        rng = random.Random(8110 + self.dimension)
+        centros = []
+        bases = [(6300.0, 3300.0), *(setor[1] for setor in self.SECTORS)]
+        for base in bases:
+            for tentativa in range(300):
+                ponto = base if tentativa == 0 else (
+                    base[0] + rng.uniform(-1800, 1800),
+                    base[1] + rng.uniform(-1400, 1400))
+                if not (600 < ponto[0] < self.width - 600
+                        and 600 < ponto[1] < self.height - 600):
+                    continue
+                if math.dist(ponto, self.BOSS_LAIR) < 1200:
+                    continue
+                if any(math.dist(ponto, c) < 700 for c in centros):
+                    continue
+                if any(math.dist(ponto, h.position) < h.influence + 400
+                       for h in self.anomalies.black_holes):
+                    continue
+                if any(math.dist(ponto, p.position) < 600 for p in self.anomalies.wormholes):
+                    continue
+                if any(math.dist(ponto, (r.x, r.y)) < r.radius + 160
+                       for r in self.asteroids.nearby(*ponto, 220)):
+                    continue
+                centros.append(ponto)
+                break
+            else:
+                raise RuntimeError("Não foi possível reservar arena de patrulha")
+        return centros
+
+    def _criar_patrulhas(self, derrotadas: object = None) -> None:
+        salvas = derrotadas if isinstance(derrotadas, (list, tuple)) else []
+        self.patrulhas = []
+        for i, chave in enumerate(("censor", "bastiao", "espectro", "matriz",
+                                   "cartografo", "eco", "cronista")):
+            boss = criar_miniboss(chave, self.dimension, self._cenario,
+                                  random.Random(4101 + self.dimension * 10 + i))
+            boss.entrando = False
+            boss.movimento_livre = self._movimentar_patrulha
+            ident = "patrulha" if i == 0 else f"patrulha_{i}"
+            patrulha = Patrulha(ident, boss, self._centros_patrulhas[i], i, ident in salvas)
+            boss.x, boss.y = patrulha.posicao(0)
+            self.patrulhas.append(patrulha)
+        self._patrulha_atual = self.patrulhas[0]
+        self.miniboss = self._patrulha_atual.boss
+        self._miniboss_world = (self.miniboss.x, self.miniboss.y)
+        self._lacaios_mundo = []
+
+    def _patrulhas_vivas(self) -> list[Patrulha]:
+        return [p for p in self.patrulhas if not p.derrotada and p.boss.vida > 0
+                and not (p is self._patrulha_atual and self.miniboss_defeated)]
+
+    def _posicao_patrulha(self, p: Patrulha) -> tuple[float, float]:
+        if p is self._patrulha_atual and self.miniboss_active:
+            return self._miniboss_world
+        return p.posicao(self.elapsed)
+
     def _movimentar_patrulha(self, boss, jogador, dt: float) -> None:
-        """Patrulha uma área do mundo sem depender da câmera ou perseguir a nave."""
-        tempo = boss.t / 60
-        self._miniboss_world = (6300 + math.sin(tempo * 0.42) * 95,
-                               3300 + math.cos(tempo * 0.58) * 48)
+        """Preserva a emboscada; os outros cascos orbitam a própria arena."""
+        if boss.chave == "espectro" and isinstance(boss.estado, Ataque):
+            return
+        self._miniboss_world = self._patrulha_atual.posicao(boss.t / FPS)
         boss.x, boss.y = self._screen_position(self._miniboss_world)
+
+    def _projetar_efeitos_patrulha(self, sentido: int) -> None:
+        """Transporta avisos fixos do mundo à tela e de volta sem seguir a nave."""
+        boss = self.miniboss
+        dx, dy = sentido * round(self.camera_x), sentido * round(self.camera_y)
+        for zona in boss.zonas:
+            zona.move_ip(dx, dy)
+        destino = boss.estrategia.destino
+        if destino is not None:
+            boss.estrategia.destino = (destino[0] + sentido * self.camera_x,
+                                       destino[1] + sentido * self.camera_y)
 
     def _protected_zones(self) -> tuple[tuple[float, float, float], ...]:
         """Reserva áreas fixas para manter IDs dos asteroides estáveis no save."""
@@ -355,13 +424,13 @@ class OpenWorldRuntime:
             *((*portal.position, 320.0) for portal in self.anomalies.wormholes),
             *((*hole.position, 300.0) for hole in self.anomalies.black_holes),
         )
-        for row in range(12):
-            for column in range(18):
-                index = row * 18 + column
+        for row in range(14):
+            for column in range(20):
+                index = row * 20 + column
                 base_x = (column + rng.uniform(0.22, 0.78)) * (
-                    self.width / 18)
+                    self.width / 20)
                 base_y = (row + rng.uniform(0.22, 0.78)) * (
-                    self.height / 12)
+                    self.height / 14)
                 if any(math.hypot(base_x - px, base_y - py) < safe
                        for px, py, safe in safe_positions):
                     continue
@@ -408,6 +477,8 @@ class OpenWorldRuntime:
         down = keys[controls.get("baixo", pygame.K_DOWN)] or keys[pygame.K_s]
         dx = float(bool(right)) - float(bool(left))
         dy = float(bool(down)) - float(bool(up))
+        if self.miniboss_active and self.miniboss.inverte_controles:
+            dx, dy = -dx, -dy
         magnitude = math.hypot(dx, dy)
         if magnitude:
             dx /= magnitude
@@ -552,6 +623,8 @@ class OpenWorldRuntime:
                 dispersao_duplo_graus=game.config["dispersao_duplo_graus"],
                 dispersao_espiral_graus=game.config["dispersao_espiral_graus"],
             )
+            if self.miniboss_active:
+                self.miniboss.observar_tiros(shots)
             for shot in shots:
                 shot.x += self.camera_x
                 shot.y += self.camera_y
@@ -582,12 +655,17 @@ class OpenWorldRuntime:
 
     def _activate_encounters(self, game) -> None:
         """Arma encounters ao chegar perto de seus pontos no mapa."""
-        if (not self.miniboss_defeated and not self.miniboss_active
-                and math.hypot(self.x - self.miniboss.x,
-                               self.y - self.miniboss.y) < 205):
-            self.miniboss_active = True
-            game.sons.tocar("boss")
-        if (not self.boss_defeated and not self.boss_active
+        if not self.miniboss_active and not self.boss_active:
+            for p in self._patrulhas_vivas():
+                if math.dist((self.x, self.y), (p.boss.x, p.boss.y)) < 205:
+                    self._patrulha_atual = p
+                    self.miniboss = p.boss
+                    self.miniboss.t = self.elapsed * FPS
+                    self._miniboss_world = (p.boss.x, p.boss.y)
+                    self.miniboss_active, self.miniboss_defeated = True, False
+                    game.sons.tocar("boss")
+                    break
+        if (not self.boss_defeated and not self.boss_active and not self.miniboss_active
                 and math.hypot(self.x - self.BOSS_LAIR[0],
                                self.y - self.BOSS_LAIR[1]) < 320):
             self.boss_active = True
@@ -663,6 +741,11 @@ class OpenWorldRuntime:
             enemy.x, enemy.y = self._screen_position((enemy.x, enemy.y))
             game.inimigos.append(enemy)
 
+        for enemy in self._lacaios_mundo:
+            enemy.x, enemy.y = self._screen_position((enemy.x, enemy.y))
+            if dt > 0:
+                game.projeteis.extend(enemy.atualizar(game.jogador))
+            game.inimigos.append(enemy)
         game.cenario = self._cenario
         game.boss = self.boss if self.boss_active and not self.boss_defeated else None
         if game.boss is not None:
@@ -674,7 +757,12 @@ class OpenWorldRuntime:
         if game.miniboss is not None:
             self.miniboss.x, self.miniboss.y = self._screen_position(
                 (self.miniboss.x, self.miniboss.y))
+            self._projetar_efeitos_patrulha(-1)
             game.miniboss_controller.atualizar(dt)
+            if (self.miniboss.chave == "espectro"
+                    and not isinstance(self.miniboss.estado, Ataque)):
+                self.miniboss.x, self.miniboss.y = self._screen_position(
+                    self._patrulha_atual.posicao(self.miniboss.t / FPS))
             if game.miniboss is None or self.miniboss.vida <= 0:
                 self.miniboss_defeated = True
 
@@ -714,9 +802,24 @@ class OpenWorldRuntime:
             self.miniboss.x += self.camera_x
             self.miniboss.y += self.camera_y
             self._miniboss_world = (self.miniboss.x, self.miniboss.y)
+            self._projetar_efeitos_patrulha(1)
+        self._finalizar_patrulha(game)
         self._place_hostiles_in_world()
         if not player.vivo:
             game._fim_de_jogo()
+
+    def _finalizar_patrulha(self, game) -> None:
+        self._lacaios_mundo = [enemy for enemy in self.miniboss.lacaios
+                               if enemy in game.inimigos and enemy.vida > 0]
+        for enemy in self._lacaios_mundo:
+            enemy.x += self.camera_x
+            enemy.y += self.camera_y
+        self._lacaios_mundo = [e for e in self._lacaios_mundo
+                               if math.dist((e.x, e.y), self._patrulha_atual.centro) < 1500]
+        if self.miniboss_active and self.miniboss_defeated:
+            self._patrulha_atual.derrotada = True
+            self.miniboss_active = False
+            self.progress_dirty = True
 
     @staticmethod
     def _segment_distance(x: float, y: float, x1: float, y1: float,
@@ -809,6 +912,7 @@ class OpenWorldRuntime:
             "boss_derrotado": self.boss_defeated,
             "asteroides": self.asteroids.cooldowns(),
             "toca_boss": list(self.BOSS_LAIR),
+            "patrulhas_derrotadas": [p.ident for p in self.patrulhas if p.derrotada],
         }
 
     def advance_dimension(self, game=None) -> bool:
@@ -827,6 +931,7 @@ class OpenWorldRuntime:
         )
         self.enemies = self._create_enemies()
         self.BOSS_LAIR = self._escolher_toca()
+        self._centros_patrulhas = self._escolher_arenas()
         self.SPAWN = self._choose_spawn()
         self.x, self.y = self.SPAWN
         self.vx = self.vy = 0.0
@@ -847,12 +952,7 @@ class OpenWorldRuntime:
         self._cenario.configurar_avanco(
             quality, (0.0, 1.0), True, True, self.visual_config,
             4101 + next_dimension)
-        self.miniboss = criar_miniboss(
-            "censor", next_dimension, self._cenario,
-            random.Random(4101 + next_dimension))
-        self.miniboss.entrando = False
-        self.miniboss.movimento_livre = self._movimentar_patrulha
-        self._miniboss_world = (6300.0, 3300.0)
+        self._criar_patrulhas()
         self.miniboss_active = self.miniboss_defeated = False
         self.boss = Boss(next_dimension * 5, self._cenario)
         self.boss.entrando = False
@@ -1109,9 +1209,9 @@ class OpenWorldRuntime:
             surface.blit(self._boss_label,
                          (min(bx + 24, area.right - self._boss_label.get_width() - 5),
                           by - self._boss_label.get_height() // 2))
-        if not self.miniboss_defeated:
-            ponto = self.ponto_mapa(self._miniboss_world)
-            arte = miniatura_entidade(self.miniboss, comic, 30)
+        for p in self._patrulhas_vivas():
+            ponto = self.ponto_mapa(self._posicao_patrulha(p))
+            arte = miniatura_entidade(p.boss, comic, 30)
             surface.blit(arte, arte.get_rect(center=ponto))
 
     def _draw_map_legend(self, surface: pygame.Surface, area: pygame.Rect,
@@ -1142,13 +1242,13 @@ class OpenWorldRuntime:
         for enemy, base_x, base_y, orbit, phase in self.enemies:
             enemy.x = base_x + math.sin(self.elapsed * 0.65 + phase) * orbit
             enemy.y = base_y + math.cos(self.elapsed * 0.48 + phase) * orbit * 0.55
-        mini_x = 6300 + math.sin(self.elapsed * 0.42) * 95
-        mini_y = 3300 + math.cos(self.elapsed * 0.58) * 48
+        for p in self.patrulhas:
+            if p is self._patrulha_atual and self.miniboss_active:
+                p.boss.x, p.boss.y = self._miniboss_world
+            else:
+                p.boss.x, p.boss.y = p.posicao(self.elapsed)
         if not self.miniboss_active:
-            self.miniboss.x, self.miniboss.y = mini_x, mini_y
-            self._miniboss_world = (mini_x, mini_y)
-        else:
-            self.miniboss.x, self.miniboss.y = self._miniboss_world
+            self._miniboss_world = (self.miniboss.x, self.miniboss.y)
         if not self.boss_active:
             self.boss.x, self.boss.y = self.BOSS_LAIR
 
@@ -1236,16 +1336,26 @@ class OpenWorldRuntime:
                 enemy.desenhar(surface)
             enemy.x, enemy.y = world_x, world_y
 
-        world_mini = self._miniboss_world
-        self.miniboss.x, self.miniboss.y = self._screen_position(
-            world_mini)
-        if (not self.miniboss_defeated
-                and -100 <= self.miniboss.x <= LARGURA + 100
-                and -100 <= self.miniboss.y <= ALTURA + 100):
-            self.miniboss.desenhar(surface)
-            label = self._mini_comic_label if comic else self._mini_label
-            surface.blit(label, (self.miniboss.x - 70, self.miniboss.y - 60))
-        self.miniboss.x, self.miniboss.y = world_mini
+        for p in self._patrulhas_vivas():
+            boss = p.boss
+            posicao = (boss.x, boss.y)
+            boss.x, boss.y = self._screen_position(posicao)
+            if ((boss is self.miniboss and self.miniboss_active)
+                    or (-160 <= boss.x <= LARGURA + 160 and -160 <= boss.y <= ALTURA + 160)):
+                if boss is self.miniboss:
+                    self._projetar_efeitos_patrulha(-1)
+                boss.desenhar(surface)
+                label = self._patrol_labels[p.ident][int(comic)]
+                surface.blit(label, (boss.x - label.get_width() / 2, boss.y - 70))
+                if boss is self.miniboss:
+                    self._projetar_efeitos_patrulha(1)
+            boss.x, boss.y = posicao
+        for enemy in self._lacaios_mundo:
+            posicao = (enemy.x, enemy.y)
+            enemy.x, enemy.y = self._screen_position(posicao)
+            if -60 <= enemy.x <= LARGURA + 60 and -60 <= enemy.y <= ALTURA + 60:
+                enemy.desenhar(surface)
+            enemy.x, enemy.y = posicao
 
     def project_targets_for_ui(self, game) -> None:
         """Mantém mira hover e indicadores alinhados aos alvos na tela."""
@@ -1488,10 +1598,11 @@ class OpenWorldRuntime:
                 if marker is not None:
                     pygame.draw.circle(self._minimap, PAPEL if comic else (219, 137, 126),
                                        marker, 2)
-        mini = point(self._miniboss_world) if self.miniboss.vida > 0 else None
-        if mini is not None:
-            arte = miniatura_entidade(self.miniboss, comic, 18)
-            self._minimap.blit(arte, arte.get_rect(center=mini))
+        for p in self._patrulhas_vivas():
+            mini = point(self._posicao_patrulha(p))
+            if mini is not None:
+                arte = miniatura_entidade(p.boss, comic, 18)
+                self._minimap.blit(arte, arte.get_rect(center=mini))
         boss = point(self.BOSS_LAIR) if self.boss.vida > 0 else None
         if boss is not None:
             arte = miniatura_entidade(self.boss, comic, 22)

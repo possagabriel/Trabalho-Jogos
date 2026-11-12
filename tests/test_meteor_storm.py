@@ -60,3 +60,13 @@ def test_pausa_nao_avanca_e_tempestade_termina_com_intervalo():
     assert chuva.estado == "calma"
     assert not chuva.meteoros
     assert 14 <= chuva.proxima_chuva <= 28
+
+
+@pytest.mark.parametrize("semente", range(12))
+def test_lancamentos_escalonados_nao_formam_fileiras(semente):
+    chuva = iniciar(semente)
+    atrasos = [m.atraso for m in chuva.meteoros]
+    assert all(b - a >= 0.08 for a, b in zip(atrasos, atrasos[1:]))
+    origens = [m.origem_y if chuva.vertical else m.origem_x for m in chuva.meteoros]
+    assert max(origens) - min(origens) > 180
+    assert max(atrasos) + 6 < chuva.DURACAO_CHUVA + 1

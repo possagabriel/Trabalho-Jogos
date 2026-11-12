@@ -592,7 +592,7 @@ def test_mesmo_setor_muda_de_aparencia_em_cada_dimensao():
 def test_destinos_incluem_setores_portais_e_apenas_encontros_pendentes():
     world = OpenWorldRuntime()
     destinos = world.destinos_navegacao()
-    assert len(destinos) == 2 + len(world.SECTORS) + len(world.anomalies.wormholes)
+    assert len(destinos) == 8 + len(world.SECTORS) + len(world.anomalies.wormholes)
     assert world.destino_atual()[0] == "boss"
     world.alternar_destino(1)
     assert world.destino_atual()[0] == "patrulha"
@@ -600,6 +600,8 @@ def test_destinos_incluem_setores_portais_e_apenas_encontros_pendentes():
     assert "patrulha" not in {item[0] for item in world.destinos_navegacao()}
     assert world.destino_atual()[0] == "boss"
     world.boss_defeated = True
+    for p in world.patrulhas:
+        p.derrotada = True
     assert world.destino_atual()[0] == "setor_0"
 
 
@@ -624,7 +626,7 @@ def test_mapa_seleciona_destino_sem_mover_nave_ou_acionar_combate():
     world.map_open = True
     game = SimpleNamespace(estado=EstadoJogo.JOGANDO, menu_equipamento=False, controles={})
     inicio = (world.x, world.y, world.elapsed)
-    for key in (pygame.K_RIGHT, pygame.K_RIGHT):
+    for key in (pygame.K_RIGHT,) * (1 + len(world.patrulhas)):
         assert strategy.handle_event(game, pygame.event.Event(pygame.KEYDOWN, key=key))
     assert world.destino_atual()[0] == "setor_0"
     world.update(1 / 60, Teclas(pygame.K_RIGHT), {}, game)
@@ -636,7 +638,7 @@ def test_mapa_seleciona_destino_sem_mover_nave_ou_acionar_combate():
 
 def test_distancia_do_destino_acompanha_posicao_e_chegada():
     world = OpenWorldRuntime()
-    world.alternar_destino(2)
+    world.alternar_destino(1 + len(world.patrulhas))
     world.x, world.y = world.SECTORS[0][1]
     assert "NO DESTINO" in world.texto_navegacao()
     world.x += 1000
@@ -726,7 +728,7 @@ def test_rota_mapa_liga_nave_ao_destino_sem_mudar_fisica(monkeypatch, estilo):
 
 def test_seta_usa_destino_escolhido_mesmo_apos_derrota_do_boss(monkeypatch):
     world = OpenWorldRuntime()
-    world.alternar_destino(2)
+    world.alternar_destino(1 + len(world.patrulhas))
     world.boss_defeated = True
     alvos = []
     monkeypatch.setattr(world, "_screen_position", lambda alvo: alvos.append(alvo) or (-10, -10))

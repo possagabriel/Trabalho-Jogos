@@ -78,9 +78,9 @@ class TempestadeMeteoros:
             posicao = transversal
             while abs(posicao - self.corredor) < self.LARGURA_CORREDOR / 2 + raio:
                 posicao = transversal + self._rng.uniform(-extensao / 2 - 80, extensao / 2 + 80)
-            inicio = longitudinal - self.sentido * (distancia + self._rng.uniform(0, 90))
+            inicio = longitudinal - self.sentido * (distancia + self._rng.uniform(0, 320))
             velocidade = self.sentido * self._rng.uniform(420, 540)
-            atraso = indice // 6 * 0.8
+            atraso = indice * 0.12 + self._rng.uniform(0, 0.035)
             x, y = (posicao, inicio) if self.vertical else (inicio, posicao)
             vx, vy = (0.0, velocidade) if self.vertical else (velocidade, 0.0)
             meteoro = Meteoro(x, y, vx, vy, raio, atraso, x, y, x, y)
