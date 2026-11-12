@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Arsenal com grade responsiva, ícones e prévia lateral; ↑/↓ percorrem fileiras e seções mantendo a coluna, ←/→ e WASD navegam, Esc fecha. Armas/especiais equipados ficam identificados. 123 testes direcionados e Ruff aprovados, conferência jogando pendente.
+
 - Fases já alcançadas/concluídas permanecem liberadas por piloto no lobby, inclusive ao reiniciar a campanha ou reabrir o jogo. LINEAR abre a seleção com o progresso existente; desbloqueios legados são recuperados de níveis, cenários e fases concluídas. 207 testes direcionados e Ruff aprovados; conferência jogando pendente.
 
 - Revisão das PRs #79–#83: conflitos resolvidos e smoke test alinhado às nove fases. Prisma, Oráculo e Obelisco recebem PNGs originais com alpha, quadros em cache, energia de fase e avisos das salvas; hitboxes e valores de dano preservados. LINEAR salva ao iniciar níveis e retorna ao lobby na fase atual, sem sobrescrever checkpoint ao selecionar perfil; falha de gravação mantém a pausa. 195 testes direcionados e Ruff aprovados; playtest pendente.

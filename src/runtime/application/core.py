@@ -81,7 +81,10 @@ from src.runtime.presentation.dimension_transition import (
     INICIO_FLASH,
     INICIO_REVELACAO,
 )
-from src.runtime.presentation.equipment_overlay import desenhar_menu_equipamento
+from src.runtime.presentation.equipment_overlay import (
+    desenhar_menu_equipamento,
+    mover_selecao_equipamento,
+)
 from src.runtime.presentation.hud import HudJogo
 from src.runtime.presentation.menu import Dialogo, MenuPrincipal
 from src.runtime.presentation.screens.pause_screen import desenhar_pausa_original
@@ -1030,13 +1033,19 @@ class Jogo:
 
     def _tratar_menu_equipamento(self, evento):
         """Navega pelo arsenal aberto com TAB durante a partida."""
-        if evento.key in (pygame.K_UP, pygame.K_w, pygame.K_DOWN, pygame.K_s):
-            self.linha_equipamento = 1 - self.linha_equipamento
-            self.indice_equipamento = 0
-        elif evento.key in (pygame.K_LEFT, pygame.K_a):
-            self.indice_equipamento -= 1
-        elif evento.key in (pygame.K_RIGHT, pygame.K_d):
-            self.indice_equipamento += 1
+        direcoes = {
+            pygame.K_UP: (0, -1), pygame.K_w: (0, -1),
+            pygame.K_DOWN: (0, 1), pygame.K_s: (0, 1),
+            pygame.K_LEFT: (-1, 0), pygame.K_a: (-1, 0),
+            pygame.K_RIGHT: (1, 0), pygame.K_d: (1, 0),
+        }
+        if evento.key == pygame.K_ESCAPE:
+            self.menu_equipamento = False
+        elif evento.key in direcoes:
+            self.linha_equipamento, self.indice_equipamento = mover_selecao_equipamento(
+                self.linha_equipamento, self.indice_equipamento,
+                (len(self.jogador.armas_desbloqueadas), len(self.especiais_desbloqueados)),
+                direcoes[evento.key])
         elif evento.key in (pygame.K_RETURN, pygame.K_SPACE):
             if self.linha_equipamento == 0:
                 armas = self.jogador.armas_desbloqueadas
