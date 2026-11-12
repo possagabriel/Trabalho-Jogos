@@ -41,6 +41,32 @@ def test_pilotos_cards_verticais_contidos_e_navegaveis(tmp_path, monkeypatch, ta
         pygame.KEYDOWN, key=pygame.K_LEFT, unicode=''))
     assert screen.selection == inicio
 
+@pytest.mark.parametrize('estilo', ['ORIGINAL', 'COMIC'])
+@pytest.mark.parametrize('flash', ['NORMAL', 'REDUZIDO'])
+def test_clique_mundo_aberto_atualiza_desenha_e_continua(
+        tmp_path, monkeypatch, estilo, flash):
+    monkeypatch.setenv('INCARNATE_DATA_DIR', str(tmp_path))
+    jogo = Jogo(sons=Mock())
+    perfil = jogo.profile_service.create('Piloto')
+    jogo.ativar_perfil(perfil.id)
+    jogo.config['estilo_visual'] = estilo
+    jogo.config['intensidade_flash'] = flash
+    desenho_nave = Mock(wraps=jogo.jogador.desenhar)
+    monkeypatch.setattr(jogo.jogador, 'desenhar', desenho_nave)
+    jogo.menu._abrir_jogar()
+    hub = jogo.menu.jogar_hub
+    indice = next(i for i, entry in enumerate(hub.entries) if entry[1] == 'mundo_aberto')
+    hub.tratar_clique(hub._rects()[indice].center)
+    assert jogo.modo_atual == 'mundo_aberto'
+    jogo._atualizar()
+    jogo.render_controller.desenhar()
+    assert desenho_nave.call_args.kwargs['efeitos_reduzidos'] == (flash != 'NORMAL')
+    estrategia = jogo.estrategia_modo
+    estrategia.save(jogo)
+    assert estrategia.continue_game(jogo)
+    jogo._atualizar()
+    jogo.render_controller.desenhar()
+
 
 def test_start_without_profile_uses_default_controls(tmp_path, monkeypatch):
     monkeypatch.setenv("INCARNATE_DATA_DIR", str(tmp_path))

@@ -1,10 +1,14 @@
 # Registro de uso de IA
 
+- Codex integrou à main local, por pedido explícito, a main remota com áudio (#78), os cards verticais (#80) e a correção do mundo aberto (#79), resolvendo conflitos de documentação/testes sem descartar nenhum dos fluxos. 173 testes direcionados e Ruff aprovados; sem screenshots, benchmarks ou mudanças adicionais de gameplay.
+
 - Codex reorganizou Pilotos em cartões verticais com nave central, nome em até duas linhas, progresso separado e cartão de criação. Teste de geometria/navegação escrito primeiro; 13 testes direcionados e Ruff aprovados, sem screenshots ou alterações de gameplay. Integração à main local autorizada pelo usuário; conferência jogando pendente.
 
 - A pedido do usuário, Codex suavizou os nove tiros com menor amplitude, ataque gradual e menor modulação; substituiu o acerto agudo por impacto eletrônico abafado. Regressão de limites de amplitude e identidade escrita primeiro; testes direcionados e Ruff aprovados, mixagem auditiva pendente.
 
 - Codex implementou emissores FM para as nove armas e trilha synthwave procedural, corrigiu amplitude PCM e leitura WAV como arquivo, com regressões escritas primeiro para áudio audível, timbres, volume, ausência de dispositivo, cache/RNG e disparos nos dois modos. Testes direcionados e Ruff aprovados; sem dependências ou assets externos. Pixabay bloqueou downloads (HTTP 403); avaliação auditiva pendente.
+
+- Codex reproduziu o fechamento do mundo aberto no fluxo de clique/atualização/desenho com perfil temporário: `.get()` não existe em Configuracoes. Regressão escrita primeiro, correção por acesso de chave com fallback e validação da opção de reduzir efeitos; 75 testes direcionados e Ruff aprovados. Sem screenshots, dependências ou alterações de gameplay; conferência jogando pendente.
 
 - Codex revisou todos os PRs abertos (#73/#74/#75/#77), resolveu conflitos de documentação e integrou seus históricos na main a pedido do usuário. Confirmou equivalência prévia da #73 e ausência do atlas rejeitado da #76; 348 testes dos módulos envolvidos e Ruff aprovados. Sem alterações de gameplay, dependências, screenshots ou benchmarks adicionais.
 
