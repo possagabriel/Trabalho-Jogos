@@ -6,6 +6,7 @@ import json
 import os
 from typing import TYPE_CHECKING
 
+from src.runtime.domain.campaign_catalog import FASES_CAMPANHA, fases_liberadas
 from src.shared.persistence import carregar_json_resiliente, salvar_json_atomico
 from src.shared.user_data import diretorio_dados
 
@@ -48,6 +49,7 @@ class SistemaProgressao:
                 "minibosses_derrotados": 0,
                 "nivel_maximo": 1,
                 "cenarios_desbloqueados": [1],
+                "fases_liberadas": [1],
                 "melhorias": {"blindagem": 0, "motor": 0},
                 "progresso_campanha": {
                     "fases_concluidas": [], "subbosses_derrotados": [],
@@ -139,8 +141,9 @@ class SistemaProgressao:
         contagens[chave] = contagens.get(chave, 0) + 1
 
     def resetar_fases(self):
-        """Inicia campanha preservando memórias já desbloqueadas no perfil."""
+        """Inicia campanha preservando memórias e fases já liberadas no perfil."""
         vistas = list(self.cenas_vistas)
+        self.jogador["fases_liberadas"] = list(fases_liberadas(self.jogador))
         self.jogador["progresso_campanha"] = {
             "fases_concluidas": [], "subbosses_derrotados": [],
             "bosses_derrotados": [], "fragmentos": [], "indice_fases": {},
@@ -154,10 +157,11 @@ class SistemaProgressao:
     def registrar_checkpoint(self, nivel: int) -> None:
         """Guarda a fase e o nivel que devem ser retomados no Lobby."""
         nivel = max(1, int(nivel))
-        fases = ["lealdade", "funcao", "identidade", "silencio", "descarte"]
+        fases = [fase[0] for fase in FASES_CAMPANHA]
         indice = min((nivel - 1) // 5, len(fases) - 1)
         self.campanha["fase_atual"] = fases[indice]
         self.campanha["nivel_atual"] = nivel
+        self.jogador["fases_liberadas"] = list(fases_liberadas(self.jogador))
 
     def registrar_fase_concluida(self, nivel_boss: int) -> None:
         """Marca a fase do boss como concluida e libera a proxima no Lobby."""

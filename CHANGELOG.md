@@ -15,9 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Mundo aberto: fundos preparados por etapas com revelação suave; mapa usa miniaturas na resolução final, sem gerar artes grandes ao abrir. Toca do boss varia e persiste no save; miniboss patrulha coordenadas do mundo sem agendamento LINEAR; recompensas permanecem no drop e continuam coletáveis. Testes direcionados e Ruff aprovados, fluidez em partida real pendente.
+- Fases já alcançadas/concluídas permanecem liberadas por piloto no lobby, inclusive ao reiniciar a campanha ou reabrir o jogo. LINEAR abre a seleção com o progresso existente; desbloqueios legados são recuperados de níveis, cenários e fases concluídas. 207 testes direcionados e Ruff aprovados; conferência jogando pendente.
+
+- Revisão das PRs #79–#83: conflitos resolvidos e smoke test alinhado às nove fases. Prisma, Oráculo e Obelisco recebem PNGs originais com alpha, quadros em cache, energia de fase e avisos das salvas; hitboxes e valores de dano preservados. LINEAR salva ao iniciar níveis e retorna ao lobby na fase atual, sem sobrescrever checkpoint ao selecionar perfil; falha de gravação mantém a pausa. 195 testes direcionados e Ruff aprovados; playtest pendente.
+
+- Main local reúne cards de jogador (#81), preparo gradual de fundos/mapa leve/patrulha e drops fixos no mundo aberto (#82) e três fases/bosses LINEAR (#83). Conflitos de documentação preservaram as três entregas; contadores de perfis/LINEAR atualizados para nove bosses. 547 testes direcionados e Ruff aprovados; playtest de fluidez e dificuldade pendente.
 
 - Cards de jogador: nave ampliada e estática em cache, nome completo, estatísticas e ação por piloto; cartões mais largos com paginação por foco. 20 testes direcionados e Ruff aprovados, conferência jogando pendente.
+
+- Mundo aberto: fundos preparados por etapas com revelação suave; mapa usa miniaturas na resolução final, sem gerar artes grandes ao abrir. Toca do boss varia e persiste no save; miniboss patrulha coordenadas do mundo sem agendamento LINEAR; recompensas permanecem no drop e continuam coletáveis. Testes direcionados e Ruff aprovados, fluidez em partida real pendente.
+
+- LINEAR recebe Cinturão de Íons/Prisma, Arquivo Estelar/Oráculo e Horizonte Fractal/Obelisco nos níveis 31–45, com ataques e arte procedural próprios. Lobby expõe também o Plano Divino existente e permite desbloquear/retomar os novos capítulos; layout compacto e checkpoints compatíveis. Testes direcionados e Ruff aprovados; playtest de dificuldade pendente.
 - Main local reúne áudio futurista com tiros suaves/impacto, correção da abertura do mundo aberto e cards verticais dos pilotos. Conflitos resolvidos preservando as regressões; 173 testes direcionados e Ruff aprovados. Conferência jogando pendente.
 - Pilotos: cartões verticais lado a lado com nave, nome, progresso e indicação ATIVO; navegação por ←/→, mouse e roda preserva criação/CRUD e limite de perfis. 13 testes direcionados e Ruff aprovados, com geometria em 900×700 e 1920×1080; conferência jogando pendente.
 - Áudio futurista: nove timbres suaves por arma no LINEAR e mundo aberto, impacto eletrônico abafado, trilha synthwave em cache e correção PCM/WAV; testes direcionados e Ruff aprovados, avaliação ouvindo no jogo pendente. Pixabay permanece pendente por bloqueio de download HTTP 403.

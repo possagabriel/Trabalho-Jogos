@@ -42,7 +42,7 @@ class LinearModeStrategy:
     def start_new(self, game: Jogo) -> bool:
         game.modo_atual = self.mode_id
         game.profile_service.set_last_mode(self.mode_id)
-        game.menu._abrir_fases(nova_campanha=True)
+        game.menu._abrir_fases()
         return True
 
     def continue_game(self, game: Jogo) -> bool:

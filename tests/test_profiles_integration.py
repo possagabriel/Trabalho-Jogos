@@ -85,7 +85,7 @@ def test_card_mostra_identidade_e_progresso_do_jogador(tmp_path, monkeypatch, es
     partes_nome = [rotulo for rotulo in rotulos if rotulo and set(rotulo) == {'W'}]
     assert ''.join(partes_nome) == nome
     assert '4.321 moedas' in rotulos
-    assert '4' in rotulos and '2/6' in rotulos
+    assert '4' in rotulos and '2/9' in rotulos
     assert '> PILOTO ATIVO' in rotulos
 
 @pytest.mark.parametrize('estilo', ['ORIGINAL', 'COMIC'])

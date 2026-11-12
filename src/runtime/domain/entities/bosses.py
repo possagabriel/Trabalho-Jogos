@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import random
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Mapping
 
 import pygame
@@ -81,6 +82,9 @@ class Boss:
         self.alvo = None
         self.fase_anterior = 1
         self.pulso_fase = 0
+        self.aviso_ataques: tuple[str, ...] = ()
+        self.alvo_ataque: tuple[float, float] | None = None
+        self._angulo_aviso = 0.0
 
     @property
     def rect(self) -> pygame.Rect:
@@ -145,6 +149,13 @@ class Boss:
             self.enraivecido = True
 
         self.timer_ataque -= 1
+        if (self.nome in ("PRISMA", "ORACULO", "OBELISCO")
+                and 0 < self.timer_ataque <= 30 and not self.aviso_ataques):
+            disponiveis = self._ataques_por_fase()
+            self.aviso_ataques = tuple(random.sample(
+                disponiveis, min(self.fase_atual, 2, len(disponiveis))))
+            self.alvo_ataque = (jogador.x, jogador.y)
+            self._angulo_aviso = self.angulo
         if self.timer_ataque <= 0:
             self.timer_ataque = self._intervalo_ataque()
             novos = self._atacar(jogador)
@@ -196,12 +207,18 @@ class Boss:
         disponiveis = self._ataques_por_fase()
         if not disponiveis:
             return []
-        escolhidos = random.sample(
-            disponiveis, min(self.fase_atual, 2, len(disponiveis)),
-        )
+        if self.aviso_ataques:
+            escolhidos = self.aviso_ataques
+            if self.alvo_ataque is not None:
+                jogador = SimpleNamespace(x=self.alvo_ataque[0], y=self.alvo_ataque[1])
+        else:
+            escolhidos = random.sample(
+                disponiveis, min(self.fase_atual, 2, len(disponiveis)))
         projs = []
         for nome in escolhidos:
             projs += self._executar_ataque(nome, jogador, x, y)
+        self.aviso_ataques = ()
+        self.alvo_ataque = None
         return projs
 
     def _tiros_teleguiados(self, jogador, x, y):
@@ -227,7 +244,24 @@ class Boss:
             for desvio in (-0.18, 0.0, 0.18)
         ]
 
+    def angulos_ataque_especial(self, nome: str, mira: float) -> tuple[float, ...]:
+        """Retorna as mesmas direções para o aviso e a salva dos novos guardiões."""
+        if nome == "tridente":
+            return tuple(mira + lado * 0.26 for lado in (-1, 0, 1))
+        if nome == "orbita":
+            giro = self._angulo_aviso if self.aviso_ataques else self.angulo
+            return tuple(mira + giro * 0.25 + i * math.tau / 10 for i in range(2, 9))
+        if nome == "fratura":
+            return tuple(mira + lado * (0.22 + passo * 0.18)
+                         for lado in (-1, 1) for passo in range(3))
+        return ()
+
     def _executar_ataque(self, nome, jogador, x, y):
+        if nome in ("tridente", "orbita", "fratura"):
+            mira = math.atan2(jogador.y - y, jogador.x - x)
+            angulos = self.angulos_ataque_especial(nome, mira)
+            return [Projetil(x, y, math.cos(a) * 3.6, math.sin(a) * 3.6,
+                             1, self.cor, 5, origem="inimigo") for a in angulos]
         if nome == "leque":
             return [Projetil(x, y, dx, 4, 1, self.cor, 5, origem="inimigo")
                     for dx in (-2, 0, 2)]
@@ -273,7 +307,11 @@ class Boss:
         self.flash = 6
         return self.vida <= 0
 
-    def desenhar(self, tela: pygame.Surface) -> None:
+    def desenhar(self, tela: pygame.Surface, *, efeitos_reduzidos: bool = False) -> None:
+        if self.nome in ("PRISMA", "ORACULO", "OBELISCO"):
+            from src.runtime.infrastructure.graphics.boss_art import desenhar_guardiao
+            if desenhar_guardiao(tela, self, efeitos_reduzidos):
+                return
         x, y = int(self.x), int(self.y)
         cor = BRANCO if self.flash > 0 else self.cor
         centro = (x, y)
@@ -329,6 +367,19 @@ class Boss:
                 desenhar_glow(tela, ROSA, self.alvo, 20, 0.8)
                 circulo_com_contorno(tela, ROSA, self.alvo, 12,
                                     espessura_contorno=2)
+        elif self.nome in ("PRISMA", "ORACULO", "OBELISCO"):
+            lados = {"PRISMA": 3, "ORACULO": 8, "OBELISCO": 4}[self.nome]
+            pts = poligono(centro, self.raio, lados, self.angulo)
+            desenhar_glow(tela, cor, centro, self.raio * 1.3, 0.35)
+            desenhar_sombra_chapada(tela, pts, deslocamento=(5, 7))
+            poligono_com_contorno(tela, cor, pts, espessura_contorno=4)
+            contra = poligono(centro, self.raio * 0.62, lados, -self.angulo)
+            desenhar_poligono(tela, BRANCO, contra, espessura=2)
+            circulo_com_contorno(tela, cor, centro, self.raio * 0.22,
+                                espessura_contorno=3)
+            for lado in (-1, 1):
+                ponto = (x + lado * self.raio * 0.7, y)
+                circulo_com_contorno(tela, BRANCO, ponto, 5, espessura_contorno=2)
         elif self.nome == "ANEIS":
             self._desenhar_aneis(tela, centro, x, y, cor)
         elif self.nome == "ANEIS DOURADO":
@@ -383,4 +434,13 @@ BOSSES_POR_CENARIO = {
         "ataques": ["combinado", "espiral", "teleguiado"],
         "alvo_y": ALTURA // 2, "efeito": "mega", "part_qtd": 140,
         "nivel": 30},
+    7: {"nome": "PRISMA", "cor": CIANO, "raio": 58, "vida": 240,
+        "pontos": 1700, "mov": "zigzag", "ataques": ["tridente", "leque", "espiral"],
+        "alvo_y": 160, "efeito": "espiral", "part_qtd": 48, "nivel": 35},
+    8: {"nome": "ORACULO", "cor": AZUL, "raio": 64, "vida": 270,
+        "pontos": 1900, "mov": "infinito", "ataques": ["orbita", "8dir", "teleguiado"],
+        "alvo_y": 180, "efeito": "estrela", "part_qtd": 56, "nivel": 40},
+    9: {"nome": "OBELISCO", "cor": ROSA, "raio": 68, "vida": 300,
+        "pontos": 2200, "mov": "gira", "ataques": ["fratura", "tridente", "orbita"],
+        "alvo_y": 170, "efeito": "pulsacao", "part_qtd": 64, "nivel": 45},
 }

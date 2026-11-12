@@ -83,7 +83,7 @@ class ControladorProgressao:
         jogo.cenario = Cenario(1)
         jogo._aplicar_qualidade_grafica()
         jogo.avanco_controller.reiniciar(jogo.cenario)
-        self.iniciar_nivel(1)
+        self.iniciar_nivel(1, salvar_checkpoint=zerar_estado)
         jogo.mensagens.append(MensagemFlutuante(
             f"Bem-vindo, {nome}!", LARGURA // 2, ALTURA // 2 + 20, CIANO, 110))
         if zerar_estado:
@@ -154,7 +154,7 @@ class ControladorProgressao:
             jogo.progresso.sincronizar_loja(jogo.loja)
             jogo.progresso.salvar_arquivo()
 
-    def iniciar_nivel(self, nivel: int) -> None:
+    def iniciar_nivel(self, nivel: int, *, salvar_checkpoint: bool = True) -> None:
         """Configura as ondas ou o boss correspondente ao nivel."""
         jogo = self.jogo
         jogo.miniboss_controller.cancelar()
@@ -167,6 +167,9 @@ class ControladorProgressao:
         jogo.mensagens.append(MensagemFlutuante(
             f"NIVEL {nivel}", LARGURA // 2, ALTURA // 2, CIANO, 80))
         self.verificar_desbloqueio_arma()
+        if salvar_checkpoint and jogo.profile_service.active and jogo.modo_atual == "linear":
+            jogo.progresso.registrar_checkpoint(nivel)
+            jogo.progresso.salvar_arquivo()
         if nivel % 5 == 0:
             self.progresso_visual.reiniciar(unidades=0, nivel_de_boss=True)
             jogo.boss = Boss(nivel, jogo.cenario)

@@ -1107,7 +1107,8 @@ class Jogo:
         for inimigo in self.inimigos:
             inimigo.desenhar(self.tela)
         if self.boss:
-            self.boss.desenhar(self.tela)
+            self.boss.desenhar(
+                self.tela, efeitos_reduzidos=self.config["intensidade_flash"] != "NORMAL")
         if self.miniboss:
             self.miniboss.desenhar(self.tela)
         for proj in self.projeteis:
@@ -1256,7 +1257,9 @@ class Jogo:
         opcoes = [
             ("CONTINUAR", (25, 150, 75), "retomar a missao"),
             ("CONFIGURACOES", (50, 90, 170), "ajustar opcoes"),
-            ("SAIR DA MISSAO", (170, 50, 55), "voltar ao menu"),
+            ("VOLTAR AO LOBBY" if self.modo_atual == "linear" else "SAIR DA MISSAO",
+             (170, 50, 55), "salvar e voltar ao lobby" if self.modo_atual == "linear"
+             else "voltar ao menu"),
         ]
         btn_w, btn_h = 320, 54
         btn_x = LARGURA // 2 - btn_w // 2

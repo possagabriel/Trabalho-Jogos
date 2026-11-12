@@ -88,8 +88,10 @@ def desenhar_pausa_original(jogo: Jogo, tema: dict, *, configuracoes: bool = Fal
     texto("ESC RETOMA A MISSÃO", pygame.Rect(painel.x + layout.px(20),
           painel.y + layout.px(77), painel.w - layout.px(40), layout.px(22)),
           16, cor=MENU_COR_TEXTO_SECUNDARIO)
+    linear = getattr(jogo, "modo_atual", "linear") == "linear"
     itens = (("CONTINUAR", "Retomar a missão"), ("CONFIGURAÇÕES", "Áudio, tema e vídeo"),
-             ("VOLTAR AO MENU", "Salvar a sessão e sair"))
+             ("VOLTAR AO LOBBY" if linear else "VOLTAR AO MENU",
+              "Salvar a fase e voltar" if linear else "Salvar a sessão e sair"))
     for indice, ((rotulo, dica), botao) in enumerate(zip(itens, botoes)):
         caixa(botao, indice == jogo._pausa_selecao,
               tema["terciaria"] if indice == 2 else borda)
