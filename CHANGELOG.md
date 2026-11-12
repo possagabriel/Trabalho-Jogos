@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Mundo aberto: corrigido fechamento no primeiro desenho da nave com Configuracoes real, usando acesso por chave e fallback; regressão de clique, atualização, desenho e retomada em ORIGINAL/COMIC com efeitos normais/reduzidos. 75 testes direcionados e Ruff aprovados; conferência jogando pendente.
+
 ### Tests
 - Abertura do LINEAR recebe regressão de clique, término da transição, renderização do lobby e início da campanha em ORIGINAL/COMIC; usuário confirmou o lobby na janela real, sem reproduzir a tela preta no código atual.
 

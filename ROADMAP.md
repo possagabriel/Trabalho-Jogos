@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Mundo aberto: corrigido fechamento no primeiro desenho da nave com Configuracoes real, usando acesso por chave e fallback; regressão de clique, atualização, desenho e retomada em ORIGINAL/COMIC com efeitos normais/reduzidos. 75 testes direcionados e Ruff aprovados; conferência jogando pendente.
+
 - Integração das PRs #73, #74, #75 e #77 na main: conflitos de documentação resolvidos sem duplicação; HUD, correção da tela preta e ajuste de vídeo preservados, atlas descartado da #76 ausente. 348 testes direcionados e Ruff aprovados.
 
 - Clareza dos especiais: HUD orienta recarga por abates, reserva 100% para prontidão real e mostra duração/barra de proteção durante intangibilidade; 63 testes direcionados e Ruff aprovados, conferência jogando pendente.

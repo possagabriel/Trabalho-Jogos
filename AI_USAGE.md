@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex reproduziu o fechamento do mundo aberto no fluxo de clique/atualização/desenho com perfil temporário: `.get()` não existe em Configuracoes. Regressão escrita primeiro, correção por acesso de chave com fallback e validação da opção de reduzir efeitos; 75 testes direcionados e Ruff aprovados. Sem screenshots, dependências ou alterações de gameplay; conferência jogando pendente.
+
 - Codex revisou todos os PRs abertos (#73/#74/#75/#77), resolveu conflitos de documentação e integrou seus históricos na main a pedido do usuário. Confirmou equivalência prévia da #73 e ausência do atlas rejeitado da #76; 348 testes dos módulos envolvidos e Ruff aprovados. Sem alterações de gameplay, dependências, screenshots ou benchmarks adicionais.
 
 - Codex priorizou clareza do combate e ajustou o HUD dos especiais, com testes escritos primeiro para carga quase cheia, prontidão, proteção ativa/expirada, troca de especial, limites e estabilidade em ORIGINAL/COMIC a 900×700 e 1920×1080. 63 testes direcionados e Ruff aprovados; sem screenshots, dependências ou mudanças no gameplay, conferência jogando pendente.
