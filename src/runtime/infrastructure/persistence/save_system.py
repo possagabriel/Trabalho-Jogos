@@ -6,6 +6,7 @@ import json
 import os
 from typing import TYPE_CHECKING
 
+from src.runtime.domain.campaign_catalog import FASES_CAMPANHA
 from src.shared.persistence import carregar_json_resiliente, salvar_json_atomico
 from src.shared.user_data import diretorio_dados
 
@@ -154,7 +155,7 @@ class SistemaProgressao:
     def registrar_checkpoint(self, nivel: int) -> None:
         """Guarda a fase e o nivel que devem ser retomados no Lobby."""
         nivel = max(1, int(nivel))
-        fases = ["lealdade", "funcao", "identidade", "silencio", "descarte"]
+        fases = [fase[0] for fase in FASES_CAMPANHA]
         indice = min((nivel - 1) // 5, len(fases) - 1)
         self.campanha["fase_atual"] = fases[indice]
         self.campanha["nivel_atual"] = nivel

@@ -24,9 +24,13 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Main local reúne cards de jogador (#81), preparo gradual de fundos/mapa leve/patrulha e drops fixos no mundo aberto (#82) e três fases/bosses LINEAR (#83). Conflitos de documentação preservaram as três entregas; contadores de perfis/LINEAR atualizados para nove bosses. 547 testes direcionados e Ruff aprovados; playtest de fluidez e dificuldade pendente.
+
 - Cards de jogador: nave ampliada e estática em cache, nome completo, estatísticas e ação por piloto; cartões mais largos com paginação por foco. 20 testes direcionados e Ruff aprovados, conferência jogando pendente.
 
 - Mundo aberto: fundos preparados por etapas com revelação suave; mapa usa miniaturas na resolução final, sem gerar artes grandes ao abrir. Toca do boss varia e persiste no save; miniboss patrulha coordenadas do mundo sem agendamento LINEAR; recompensas permanecem no drop e continuam coletáveis. Testes direcionados e Ruff aprovados, fluidez em partida real pendente.
+
+- LINEAR recebe Cinturão de Íons/Prisma, Arquivo Estelar/Oráculo e Horizonte Fractal/Obelisco nos níveis 31–45, com ataques e arte procedural próprios. Lobby expõe também o Plano Divino existente e permite desbloquear/retomar os novos capítulos; layout compacto e checkpoints compatíveis. Testes direcionados e Ruff aprovados; playtest de dificuldade pendente.
 
 - Main local reúne áudio futurista com tiros suaves/impacto, correção da abertura do mundo aberto e cards verticais dos pilotos. Conflitos resolvidos preservando as regressões; 173 testes direcionados e Ruff aprovados. Conferência jogando pendente.
 

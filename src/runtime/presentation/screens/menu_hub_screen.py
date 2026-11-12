@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.infrastructure.graphics.theme import MENU_RESUMO_CONTINUAR_FONT_SIZE
+from src.runtime.domain.campaign_catalog import FASES_CAMPANHA
 from src.runtime.infrastructure.graphics.menu_animation import FocoAnimado, desenhar_trilha_foco
 from src.runtime.infrastructure.graphics.menu_panels import (
     ACENTO_ORIGINAL,
@@ -186,7 +187,8 @@ class MenuHubScreen:
         if action == "linear":
             status = "CONTINUAR" if summary.get("started") else "NOVO"
             return (f"{status} · DIM. {summary.get('dimension', 1)} · NÍVEL "
-                    f"{summary.get('level', 1)} · BOSSES {summary.get('bosses', 0)}/6",
+                    f"{summary.get('level', 1)} · BOSSES "
+                    f"{summary.get('bosses', 0)}/{len(FASES_CAMPANHA)}",
                     f"MOEDAS {coins} · TEMPO {hours:02d}h{minutes:02d}")
         status = "CONTINUAR" if summary.get("started") else "NOVO"
         return (f"{status} · REGIÕES {summary.get('regions', 0)}/6 · ECOS "

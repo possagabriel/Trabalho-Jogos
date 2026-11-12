@@ -17,6 +17,7 @@ from src.infrastructure.graphics.comic_theme import (
     LARANJA,
     opcoes_atuais,
 )
+from src.runtime.domain.campaign_catalog import FASES_CAMPANHA
 from src.runtime.infrastructure.graphics.menu_panels import (
     ACENTO_ORIGINAL,
     FUNDO_ORIGINAL,
@@ -196,11 +197,8 @@ class PhaseSelectScreen:
         self._legenda(surface, f"OFICINA · {saldo} MOEDAS", rect, tamanho=17)
 
     def _default_phases(self):
-        names = [("lealdade", "Fase 1 — Lealdade", "fases/lealdade.png"),
-                 ("funcao", "Fase 2 — Função", "fases/funcao.png"),
-                 ("identidade", "Fase 3 — Identidade", "fases/identidade.png"),
-                 ("silencio", "Fase 4 — Silêncio", "fases/silencio.png"),
-                 ("descarte", "Fase 5 — Descarte", "fases/descarte.png")]
+        names = [(identificador, f"Fase {indice} — {nome}", fundo)
+                 for indice, (identificador, nome, fundo) in enumerate(FASES_CAMPANHA, 1)]
         return [PhaseData(i, n, bg, k, None if k == 1 else names[k-2][0])
                 for k, (i, n, bg) in enumerate(names, 1)]
 
@@ -344,7 +342,8 @@ class PhaseSelectScreen:
 
     def card_rect(self, index: int) -> pygame.Rect:
         """Retorna uma linha da lista lateral de capítulos."""
-        return self._rect(30, 145 + index * 74, 220, 62)
+        passo = min(74, 390 // max(1, len(self.phases)))
+        return self._rect(30, 145 + index * passo, 220, passo - 4)
 
     def _preview_rect(self) -> pygame.Rect:
         return self._rect(280, 130, 590, 370)
@@ -416,9 +415,14 @@ class PhaseSelectScreen:
         chave = (nome, rect.size, visual.ativo, visual.hachuras)
         if chave not in self._thumbs_escaladas:
             if nome not in self._thumbs:
-                self._thumbs[nome] = carregar_imagem(nome)
+                if phase.background.startswith("procedural:"):
+                    from src.runtime.domain.world.scenarios import Cenario
+                    self._thumbs[nome] = Cenario(phase.ordem).fundo_estatico
+                else:
+                    self._thumbs[nome] = carregar_imagem(nome)
             imagem = self._thumbs[nome]
-            comic_proprio = visual.ativo and imagem is not None
+            comic_proprio = (visual.ativo and imagem is not None
+                             and not phase.background.startswith("procedural:"))
             if imagem is None and visual.ativo:
                 if phase.background not in self._thumbs:
                     self._thumbs[phase.background] = carregar_imagem(phase.background)
@@ -482,16 +486,16 @@ class PhaseSelectScreen:
                                          selecionado=True, botao=True, segmentado=False), rect)
             nome = phase.nome.split("—")[-1].strip().upper()
             self._legenda(surface, f"{phase.ordem:02d}  {nome}", pygame.Rect(
-                rect.x, rect.y + self.layout.px(4), rect.w, self.layout.px(28)),
-                destaque=selecionado)
+                rect.x, rect.y + self.layout.px(1), rect.w, self.layout.px(23)),
+                destaque=selecionado, tamanho=17 if len(self.phases) > 5 else 20)
             estado = {
                 PhaseStatus.LOCKED: "BLOQUEADA",
                 PhaseStatus.AVAILABLE: "DISPONÍVEL",
                 PhaseStatus.COMPLETED: "CONCLUÍDA",
             }[self.statuses[phase.id]]
             self._legenda(surface, estado, pygame.Rect(
-                rect.x, rect.bottom - self.layout.px(25), rect.w, self.layout.px(22)),
-                destaque=selecionado, tamanho=14)
+                rect.x, rect.bottom - self.layout.px(17), rect.w, self.layout.px(16)),
+                destaque=selecionado, tamanho=12)
         self._draw_preview(surface)
         phase = self.phases[self.selected]
         self._legenda(surface, f"CAPÍTULO {phase.ordem:02d} / {len(self.phases):02d}",

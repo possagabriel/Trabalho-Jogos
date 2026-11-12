@@ -24,7 +24,7 @@ from src.runtime.domain.world.scroll import (
 from src.runtime.infrastructure.graphics.landmarks import CamadaMarcos
 
 QUALIDADE_CAMADAS = {"BAIXA": (3, 28), "MEDIA": (4, 52), "ALTA": (5, 84)}
-LIMITE_LINHAS_DIMENSAO = {1: 52, 2: 60, 3: 44, 4: 48, 5: 70, 6: 56}
+LIMITE_LINHAS_DIMENSAO = {1: 52, 2: 60, 3: 44, 4: 48, 5: 70, 6: 56, 7: 56, 8: 56, 9: 56}
 FATORES = (0.16, 0.3, 0.52, 0.85, 1.2)
 ESTILOS = {
     1: ("estrela", "nebulosa", "estrela", "detrito"),
@@ -33,6 +33,9 @@ ESTILOS = {
     4: ("nebulosa", "cristal", "estrela", "cristal"),
     5: ("estrela", "fenda", "estrela", "detrito"),
     6: ("nebulosa", "grade", "estrela", "cristal"),
+    7: ("nebulosa", "fenda", "estrela", "detrito"),
+    8: ("estrela", "grade", "cristal", "detrito"),
+    9: ("nebulosa", "cristal", "fenda", "estrela"),
 }
 
 
@@ -309,7 +312,8 @@ class ParallaxBackground:
                  opcoes.hachuras, cor_fundo_cutscene)
         if chave not in self._bases:
             if opcoes.ativo:
-                if self.cenario.id <= 5 and self.cenario.fundo_imagem is not None:
+                if ((self.cenario.id <= 5 and self.cenario.fundo_imagem is not None)
+                        or self.cenario.id >= 7):
                     fonte = self.cenario.obter_fundo_visual()
                 else:
                     fonte = fundo_comic((LARGURA, ALTURA), self.cenario.id,

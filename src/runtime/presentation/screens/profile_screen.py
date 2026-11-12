@@ -10,6 +10,7 @@ import pygame
 
 from src.core.constants import CIANO, DOURADO, VERDE, VERMELHO, VOID_BLACK
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
+from src.runtime.domain.campaign_catalog import FASES_CAMPANHA
 from src.runtime.domain.entities.player import Jogador
 from src.runtime.infrastructure.graphics.menu_panels import (
     ACENTO_ORIGINAL,
@@ -215,12 +216,12 @@ class ProfileScreen:
         else:
             progress = profile.progress
             defeated = progress.get("bosses_por_tipo", {})
-            bosses = min(6, sum(1 for value in defeated.values()
+            bosses = min(len(FASES_CAMPANHA), sum(1 for value in defeated.values()
                                 if type(value) is int and value > 0)
                          if isinstance(defeated, dict) else 0)
             for coluna, (titulo, valor) in enumerate((
                     ("DIMENSÃO", str(progress.get('dimensao_maxima', 1))),
-                    ("BOSSES", f"{bosses}/6"))):
+                    ("BOSSES", f"{bosses}/{len(FASES_CAMPANHA)}"))):
                 x = rect.x + rect.width * (0.28 + coluna * 0.44)
                 self._draw_text(surface, fonte, titulo,
                                 (x, rect.y + rect.height * 0.665), TEXTO_ORIGINAL)
