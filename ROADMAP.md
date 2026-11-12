@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Cards de jogador: nave ampliada e estática em cache, nome completo, estatísticas e ação por piloto; cartões mais largos com paginação por foco. 20 testes direcionados e Ruff aprovados, conferência jogando pendente.
+
 - Main local reúne áudio futurista com tiros suaves/impacto, correção da abertura do mundo aberto e cards verticais dos pilotos. Conflitos resolvidos preservando as regressões; 173 testes direcionados e Ruff aprovados. Conferência jogando pendente.
 
 - Pilotos: cartões verticais lado a lado com nave, nome, progresso e indicação ATIVO; navegação por ←/→, mouse e roda preserva criação/CRUD e limite de perfis. 13 testes direcionados e Ruff aprovados, com geometria em 900×700 e 1920×1080; conferência jogando pendente.
