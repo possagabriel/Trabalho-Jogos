@@ -9,7 +9,21 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.core.constants import CIANO, DOURADO, VERDE, VERMELHO, VOID_BLACK
-from src.runtime.infrastructure.graphics.menu_panels import painel_menu
+from src.infrastructure.graphics.comic_theme import opcoes_atuais
+from src.runtime.domain.entities.player import Jogador
+from src.runtime.infrastructure.graphics.menu_panels import (
+    ACENTO_ORIGINAL,
+    BORDA_ORIGINAL,
+    FUNDO_ORIGINAL,
+    PAINEL_ORIGINAL,
+    TEXTO_ORIGINAL,
+    cor_menu,
+    linhas_painel,
+    painel_menu,
+    plataforma_hangar,
+    texto_painel,
+)
+from src.runtime.infrastructure.graphics.smooth import linha_suave
 
 if TYPE_CHECKING:
     from src.runtime.presentation.menu import MenuPrincipal
@@ -31,6 +45,7 @@ class ProfileScreen:
         self._initial_create = False
         self._scroll_offset = 0
         self._visible_profile_indices: list[int] = []
+        self._cache_retratos: dict[tuple, pygame.Surface] = {}
         self._entries = None
         self.refresh()
 
@@ -41,6 +56,7 @@ class ProfileScreen:
 
     def refresh(self) -> None:
         """Atualiza os cartões e inicia a criação se ainda não houver perfil."""
+        self._cache_retratos.clear()
         self._entries = self.menu.jogo.profile_service.list_profiles()
         if not self._entries:
             self.selection = 0
@@ -71,16 +87,19 @@ class ProfileScreen:
         scale = layout.escala
         w, h = layout.largura, layout.altura
         self._draw_text(surface, self.menu.fonte_cabecalho,
-                        "PERFIS DE JOGADOR", (w // 2, int(48 * scale)), CIANO)
+                        "PILOTOS", (w // 2, layout.px(38)), TEXTO_ORIGINAL)
+        self._draw_text(surface, layout.fonte_texto(18),
+                        "Seu nome. Sua nave. Sua jornada.",
+                        (w // 2, layout.px(72)), TEXTO_ORIGINAL)
         profiles = self._profiles()
         self.cards = []
-        top = int(88 * scale)
+        top = layout.px(100)
         footer_top = h - int(84 * scale)
-        gap = layout.px(12)
+        gap = layout.px(16)
         margem = layout.px(36)
         available = w - margem * 2
         # Reserva uma coluna para criar perfil, mesmo ao paginar catálogos maiores.
-        visible_count = max(1, min(5, (available + gap) // (layout.px(118) + gap) - 1))
+        visible_count = max(1, min(3, (available + gap) // (layout.px(215) + gap) - 1))
         max_offset = max(0, len(profiles) - visible_count)
         if self.selection < self._scroll_offset:
             self._scroll_offset = self.selection
@@ -93,7 +112,7 @@ class ProfileScreen:
             min(len(profiles), self._scroll_offset + visible_count),
         ))
         colunas = len(self._visible_profile_indices) + 1
-        card_w = min(layout.px(190), (available - gap * (colunas - 1)) // colunas)
+        card_w = min(layout.px(250), (available - gap * (colunas - 1)) // colunas)
         card_h = min(layout.px(430), footer_top - top - layout.px(20))
         card_x = (w - (card_w * colunas + gap * (colunas - 1))) // 2
         card_y = top + (footer_top - top - card_h) // 2
@@ -109,6 +128,12 @@ class ProfileScreen:
         self.cards.append(new_rect)
         self._draw_new_card(surface, new_rect, new_index, scale)
 
+        if len(profiles) > visible_count:
+            primeiro = self._scroll_offset + 1
+            ultimo = self._scroll_offset + len(self._visible_profile_indices)
+            self._draw_text(surface, layout.fonte_texto(16),
+                            f"{primeiro}–{ultimo} de {len(profiles)} pilotos  ·  ← / →",
+                            (w // 2, footer_top - layout.px(9)), TEXTO_ORIGINAL)
         self._draw_footer(surface, profiles, scale, footer_top)
         if self.mode:
             self._draw_dialog(surface, profiles, scale)
@@ -121,79 +146,124 @@ class ProfileScreen:
                             (w // 2, h - int(46 * scale)), color,
                             max_width=w - int(48 * scale))
 
+    def _criar_retrato(self, skin, tamanho: tuple[int, int]) -> pygame.Surface:
+        """Compõe uma nave ampliada e estática; o chamador mantém o resultado em cache."""
+        arte = pygame.Surface((180, 180), pygame.SRCALPHA)
+        piloto = Jogador(skin=skin)
+        piloto.x, piloto.y = 90, 90
+        piloto.desenhar(arte, intensidade_propulsor=0.6, piscar=False, efeitos_reduzidos=True)
+        area = arte.get_bounding_rect().inflate(16, 16).clip(arte.get_rect())
+        fator = min(tamanho[0] / area.width, tamanho[1] / area.height)
+        nave = pygame.transform.smoothscale(arte.subsurface(area),
+                (max(1, round(area.width * fator)), max(1, round(area.height * fator))))
+        retrato = pygame.Surface(tamanho, pygame.SRCALPHA)
+        retrato.blit(plataforma_hangar(tamanho), (0, 0))
+        retrato.blit(nave, nave.get_rect(center=(tamanho[0] // 2, tamanho[1] // 2)))
+        return retrato
+
     def _draw_profile_card(self, surface, rect, profile, index, scale) -> None:
         layout = self.menu.layout
         active = self.menu.jogo.profile_service.active
         is_active = bool(active and profile.id == active.id)
         focused = index == self.selection
-        border = DOURADO if focused else CIANO
-        surface.blit(painel_menu(rect.size, (20, 31, 50), border,
-                                 selecionado=focused, raio=layout.px(9), botao=True), rect)
-        max_text = rect.width - layout.px(20)
-        fonte = layout.fonte_texto(18)
-        self._draw_text(surface, fonte, f"{'>' if focused else ''} PILOTO {index + 1:02}",
-                        (rect.centerx, rect.y + rect.height * 0.07), border,
-                        max_width=max_text)
-        if not profile.damaged:
-            skin = self.menu.jogo.loja.pegar_skin(profile.progress.get("skin_atual", "padrao"))
-            if skin is not None:
-                self.menu._desenhar_preview_skin(
-                    surface, skin, rect.centerx, rect.y + rect.height * 0.29)
-        cor_nome = VERMELHO if profile.damaged else DOURADO if is_active else CIANO
-        # Duas linhas com fonte dimensionada para preservar o nome completo.
-        nome_fonte = layout.fonte_texto(22)
-        meio = (len(profile.name) + 1) // 2
-        linhas = ([profile.name] if nome_fonte.size(profile.name)[0] <= max_text
-                  else [profile.name[:meio].rstrip(), profile.name[meio:].lstrip()])
-        tamanho = 22
-        while max(nome_fonte.size(linha)[0] for linha in linhas) > max_text and tamanho > 14:
-            tamanho -= 1
-            nome_fonte = layout.fonte_texto(tamanho)
+        destaque = ACENTO_ORIGINAL if focused else BORDA_ORIGINAL
+        margem = layout.px(18)
+        max_text = rect.width - margem * 2
+        fonte = layout.fonte_texto(16)
+        surface.blit(painel_menu(rect.size, PAINEL_ORIGINAL, destaque,
+                                 selecionado=False, raio=layout.px(14), botao=True), rect)
+        self._draw_text(surface, fonte, f"PILOTO / {index + 1:02}",
+                        (rect.x + margem, rect.y + layout.px(25)), TEXTO_ORIGINAL,
+                        anchor="midleft")
+        if is_active:
+            self._draw_text(surface, fonte, "ATIVO",
+                            (rect.right - margem, rect.y + layout.px(25)), DOURADO,
+                            anchor="midright")
+        hero = pygame.Rect(rect.x + margem, rect.y + rect.height * 0.12,
+                           max_text, rect.height * 0.36)
+        surface.blit(painel_menu(hero.size, FUNDO_ORIGINAL, BORDA_ORIGINAL,
+                                 raio=layout.px(10)), hero)
+        skin = None if profile.damaged else self.menu.jogo.loja.pegar_skin(
+            profile.progress.get("skin_atual", "padrao"))
+        if skin is not None:
+            tamanho = (hero.width - layout.px(12), hero.height - layout.px(12))
+            chave = (skin.id, tamanho, opcoes_atuais())
+            if chave not in self._cache_retratos:
+                if len(self._cache_retratos) >= 12:
+                    self._cache_retratos.pop(next(iter(self._cache_retratos)))
+                self._cache_retratos[chave] = self._criar_retrato(skin, tamanho)
+            surface.blit(self._cache_retratos[chave],
+                         (hero.x + layout.px(6), hero.y + layout.px(6)))
+        else:
+            self._draw_text(surface, layout.fonte_titulo(44), "!", hero.center, VERMELHO)
+
+        # Nome completo com quebra por palavras; tokens longos também cabem no cartão.
+        nome_fonte = layout.fonte_titulo(24)
+        linhas = linhas_painel(nome_fonte, profile.name, max_text)
         for linha, texto in enumerate(linhas):
             self._draw_text(surface, nome_fonte, texto,
-                            (rect.centerx, rect.y + rect.height * 0.47
-                             + linha * nome_fonte.get_linesize()), cor_nome,
+                            (rect.centerx, rect.y + rect.height * 0.53
+                             + linha * nome_fonte.get_linesize()), TEXTO_ORIGINAL,
                             max_width=max_text)
         if profile.damaged:
-            detalhes = ("DANIFICADO", "Não pode ativar", "R: renomear", "Del: excluir")
-            cor_detalhe = VERMELHO
+            self._draw_text(surface, fonte, "PERFIL DANIFICADO",
+                            (rect.centerx, rect.y + rect.height * 0.72), VERMELHO,
+                            max_width=max_text)
+            self._draw_text(surface, fonte, "R renomear · Del excluir",
+                            (rect.centerx, rect.y + rect.height * 0.79), TEXTO_ORIGINAL,
+                            max_width=max_text)
         else:
             progress = profile.progress
             defeated = progress.get("bosses_por_tipo", {})
             bosses = min(6, sum(1 for value in defeated.values()
                                 if type(value) is int and value > 0)
                          if isinstance(defeated, dict) else 0)
+            for coluna, (titulo, valor) in enumerate((
+                    ("DIMENSÃO", str(progress.get('dimensao_maxima', 1))),
+                    ("BOSSES", f"{bosses}/6"))):
+                x = rect.x + rect.width * (0.28 + coluna * 0.44)
+                self._draw_text(surface, fonte, titulo,
+                                (x, rect.y + rect.height * 0.665), TEXTO_ORIGINAL)
+                self._draw_text(surface, layout.fonte_titulo(24), valor,
+                                (x, rect.y + rect.height * 0.72), TEXTO_ORIGINAL)
             moedas = f"{int(progress.get('moedas', 0)):,}".replace(",", ".")
-            detalhes = (f"{moedas} moedas", f"Dimensão {progress.get('dimensao_maxima', 1)}",
-                        f"Bosses {bosses}/6", self._human_access(profile.last_access))
-            cor_detalhe = VERDE
-        for linha, texto in enumerate(detalhes):
-            self._draw_text(surface, fonte, texto,
-                            (rect.centerx, rect.y + rect.height * (0.65 + linha * 0.07)),
-                            cor_detalhe, max_width=max_text)
-        if is_active:
-            self._draw_text(surface, fonte, "ATIVO",
-                            (rect.centerx, rect.y + rect.height * 0.94), DOURADO,
+            self._draw_text(surface, fonte, f"{moedas} moedas",
+                            (rect.centerx, rect.y + rect.height * 0.79), DOURADO,
                             max_width=max_text)
+            self._draw_text(surface, layout.fonte_texto(14),
+                            self._human_access(profile.last_access),
+                            (rect.centerx, rect.y + rect.height * 0.84), TEXTO_ORIGINAL,
+                            max_width=max_text)
+        linha_suave(surface, cor_menu(destaque),
+                    (rect.x + margem, rect.y + rect.height * 0.895),
+                    (rect.right - margem, rect.y + rect.height * 0.895), 1)
+        acao = ("INDISPONÍVEL" if profile.damaged else
+                "PILOTO ATIVO" if is_active else "ATIVAR PILOTO")
+        self._draw_text(surface, layout.fonte_texto(17),
+                        f"> {acao}" if focused else acao,
+                        (rect.centerx, rect.y + rect.height * 0.945),
+                        VERMELHO if profile.damaged else DOURADO if focused else TEXTO_ORIGINAL,
+                        max_width=max_text)
 
     def _draw_new_card(self, surface, rect, index, scale) -> None:
         layout = self.menu.layout
         disabled = self.new_profile_disabled
         focused = index == self.selection
-        color = (150, 158, 172) if disabled else CIANO
-        surface.blit(painel_menu(rect.size, (24, 35, 51), color,
-                                 selecionado=focused, raio=layout.px(9), botao=True), rect)
-        fonte = layout.fonte_texto(20)
-        linhas = ("+", "NOVO", "PILOTO")
-        for linha, texto in enumerate(linhas):
-            self._draw_text(surface, fonte, texto,
-                            (rect.centerx, rect.y + rect.height * (0.30 + linha * 0.12)),
-                            color, max_width=rect.width - layout.px(16))
-        if disabled:
-            self._draw_text(surface, layout.fonte_texto(16),
-                            f"Limite: {self.menu.jogo.profile_service.max_profiles}",
-                            (rect.centerx, rect.y + rect.height * 0.78), color,
-                            max_width=rect.width - layout.px(16))
+        cor = ACENTO_ORIGINAL if focused else BORDA_ORIGINAL
+        surface.blit(painel_menu(rect.size, FUNDO_ORIGINAL, cor,
+                                 raio=layout.px(14), botao=True), rect)
+        max_text = rect.width - layout.px(28)
+        for texto, tamanho, proporcao in (("+", 54, 0.30), ("NOVO PILOTO", 23, 0.48),
+                                         ("Uma nova jornada", 16, 0.59),
+                                         ("começa com você.", 16, 0.64)):
+            self._draw_text(surface, layout.fonte_texto(tamanho), texto,
+                            (rect.centerx, rect.y + rect.height * proporcao),
+                            TEXTO_ORIGINAL, max_width=max_text)
+        rodape = (f"LIMITE: {self.menu.jogo.profile_service.max_profiles} PILOTOS"
+                  if disabled else "> CRIAR PILOTO" if focused else "CRIAR PILOTO")
+        self._draw_text(surface, layout.fonte_texto(16), rodape,
+                        (rect.centerx, rect.y + rect.height * 0.945),
+                        TEXTO_ORIGINAL if disabled else DOURADO, max_width=max_text)
 
     def _draw_footer(self, surface, profiles, scale, footer_top) -> None:
         profile = profiles[self.selection] if self.selection < len(profiles) else None
@@ -311,7 +381,8 @@ class ProfileScreen:
                    max_width: int | None = None, anchor: str = "center") -> None:
         if max_width is not None:
             text = self._fit(font, text, max_width)
-        image = font.render(text, True, color)
+        image = texto_painel(font, text, color, max(1, font.size(text)[0]),
+                             font.get_linesize())
         rect = image.get_rect(**{anchor: position})
         surface.blit(image, rect)
 
