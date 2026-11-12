@@ -67,8 +67,10 @@ class ControladorMiniboss:
         if boss.vida <= 0:
             self.derrotar()
             return
+        livre = getattr(jogo, "modo_atual", "linear") == "mundo_aberto"
         boss.lacaios[:] = [i for i in boss.lacaios
-                          if i in jogo.inimigos and i.vida > 0 and i.y <= ALTURA + 60]
+                          if i in jogo.inimigos and i.vida > 0
+                          and (livre or i.y <= ALTURA + 60)]
         jogo.projeteis.extend(boss.atualizar(jogo.jogador, dt))
         jogo.inimigos.extend(boss.novos_lacaios)
         boss.novos_lacaios.clear()

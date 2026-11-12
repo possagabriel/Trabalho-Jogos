@@ -63,6 +63,7 @@ def test_estado_salvo_contém_região_posição_e_checkpoint():
         "boss_derrotado": False,
         "asteroides": {},
         "toca_boss": list(world.BOSS_LAIR),
+        "patrulhas_derrotadas": [],
     }
 
 

@@ -24,6 +24,7 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Mundo aberto: meteoros escalonados sem salvas em fileira; sete patrulhas distintas por dimensão, população ampliada, avisos fixos no mundo, lacaios persistentes e derrotas salvas. 187 testes direcionados e Ruff aprovados; playtest de ritmo e dificuldade pendente.
 - Arsenal com grade responsiva, ícones e prévia lateral; ↑/↓ percorrem fileiras e seções mantendo a coluna, ←/→ e WASD navegam, Esc fecha. Armas/especiais equipados ficam identificados. 123 testes direcionados e Ruff aprovados, conferência jogando pendente.
 
 - Fases já alcançadas/concluídas permanecem liberadas por piloto no lobby, inclusive ao reiniciar a campanha ou reabrir o jogo. LINEAR abre a seleção com o progresso existente; desbloqueios legados são recuperados de níveis, cenários e fases concluídas. 207 testes direcionados e Ruff aprovados; conferência jogando pendente.
