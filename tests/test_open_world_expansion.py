@@ -69,7 +69,7 @@ def test_mapa_ampliado_distribui_asteroides_por_toda_a_area():
     world = OpenWorldRuntime()
 
     assert world.REGION_SIZE == (19200.0, 13200.0)
-    assert world.BOSS_LAIR[0] > 16000
+    assert 1200 <= world.BOSS_LAIR[0] <= world.width - 1200
     quadrantes = {
         (int(rock.x >= world.width / 2), int(rock.y >= world.height / 2))
         for rock in world.asteroids.asteroids
@@ -468,8 +468,7 @@ def test_fundo_comeca_e_termina_a_troca_gradualmente(monkeypatch):
     second = pygame.Surface((LARGURA, ALTURA))
     first.fill((220, 20, 20))
     second.fill((20, 20, 220))
-    monkeypatch.setattr(background, "surface_for_sector",
-                        lambda sector, _comic: first if sector == 0 else second)
+    background._surfaces.update({(0, False): first, (1, False): second})
     surface = pygame.Surface((LARGURA, ALTURA))
 
     background.update(*world.SECTORS[1][1], 0.0)

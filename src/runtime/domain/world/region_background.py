@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import math
 import random
+from time import perf_counter
 
 import pygame
 
 from src.core.constants import ALTURA, LARGURA
 from src.runtime.domain.world.scenarios import CENARIOS
-from src.runtime.infrastructure.graphics.nebula_background import criar_fundo_nebuloso
-from src.runtime.infrastructure.graphics.nebula_background import desenhar_planeta as _planeta
+from src.runtime.infrastructure.graphics.nebula_background import etapas_fundo_nebuloso
+from src.runtime.infrastructure.graphics.nebula_background import etapas_planeta as _planeta
 from src.runtime.infrastructure.graphics.smooth import luz_radial
 
 
@@ -84,6 +85,14 @@ class SectorBackground:
         self._interrupted = False
         self._sources: dict[bool, pygame.Surface] = {}
         self._surfaces: dict[tuple[int, bool], pygame.Surface] = {}
+        self._tasks = {}
+        self._reveals: dict[tuple[int, bool], float] = {}
+        self._reveal_surfaces: dict[tuple[int, bool], pygame.Surface] = {}
+        self._fallbacks = {}
+        for comic in (False, True):
+            plano = pygame.Surface((LARGURA, ALTURA))
+            plano.fill(CENARIOS[self.dimension - 1]["topo"] if not comic else (37, 37, 43))
+            self._fallbacks[comic] = plano
         self._blend = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
 
     def _nearest(self, x: float, y: float) -> int:
@@ -94,6 +103,17 @@ class SectorBackground:
     def update(self, x: float, y: float, dt: float) -> None:
         """Segue o setor próximo com transição contínua e ritmo suavizado."""
         self.transition_to(x, y)
+        # Etapas pequenas: nenhuma nebulosa ou planeta inteiro é criado no desenho.
+        limite = perf_counter() + 0.002
+        while self._tasks and perf_counter() < limite:
+            key = next(iter(self._tasks))
+            try:
+                next(self._tasks[key])
+            except StopIteration:
+                del self._tasks[key]
+                self._reveals[key] = 0.0
+        for key in self._reveals:
+            self._reveals[key] = min(1.0, self._reveals[key] + max(0.0, dt) / 0.5)
         if not self._transitioning:
             return
         self.transition = min(1.0, self.transition + max(0.0, dt) / self.TRANSITION_SECONDS)
@@ -129,17 +149,44 @@ class SectorBackground:
                 source = pygame.Surface((LARGURA, ALTURA))
                 self._sources[comic] = source
             if not self._interrupted:
-                source.blit(self.surface_for_sector(self.current_sector, comic), (0, 0))
-            self._blend.blit(self.surface_for_sector(self.target_sector, comic), (0, 0))
+                source.blit(self._visual_sector(self.current_sector, comic), (0, 0))
+            self._blend.blit(self._visual_sector(self.target_sector, comic), (0, 0))
             self._blend.set_alpha(amount)
             source.blit(self._blend, (0, 0))
         self._interrupted = True
 
-    def surface_for_sector(self, sector: int, comic: bool) -> pygame.Surface:
-        """Obtém a composição cacheada de um setor e estilo de apresentação."""
+    def _visual_sector(self, sector: int, comic: bool) -> pygame.Surface:
+        """Usa somente arte pronta; prepara a próxima composição em pequenas etapas."""
         key = (sector, comic)
-        if key in self._surfaces:
+        if key not in self._surfaces:
+            if key not in self._tasks:
+                # Prioriza o setor solicitado, antes de composições de antecipação.
+                self._tasks = {key: self._etapas_surface(sector, comic), **self._tasks}
+            return self._fallbacks[comic]
+        alpha = self._reveals.get(key, 1.0)
+        if alpha >= 1:
+            self._reveal_surfaces.pop(key, None)
             return self._surfaces[key]
+        if key not in self._reveal_surfaces:
+            self._reveal_surfaces[key] = pygame.Surface((LARGURA, ALTURA))
+        mistura = self._reveal_surfaces[key]
+        mistura.blit(self._fallbacks[comic], (0, 0))
+        self._blend.blit(self._surfaces[key], (0, 0))
+        self._blend.set_alpha(round(255 * self._eased(alpha)))
+        mistura.blit(self._blend, (0, 0))
+        return mistura
+
+    def surface_for_sector(self, sector: int, comic: bool) -> pygame.Surface:
+        """Prepara composição completa para ferramentas e carregamentos explícitos."""
+        key = (sector, comic)
+        if key not in self._surfaces:
+            for _ in self._etapas_surface(sector, comic):
+                pass
+        return self._surfaces[key]
+
+    def _etapas_surface(self, sector: int, comic: bool):
+        """Produz gás, planetas e acabamento com pontos de interrupção entre linhas."""
+        key = (sector, comic)
         rng = random.Random(self.dimension * 1009 + sector * 97 + int(comic))
         scene = CENARIOS[self.dimension - 1]
         accent = self.sectors[sector][2]
@@ -149,29 +196,33 @@ class SectorBackground:
             top = _misturar((37, 37, 43), accent, 0.22)
             bottom = _misturar((52, 46, 43), accent, 0.16)
         gas = _misturar(scene["cores_principais"][0], accent, 0.25)
-        result = criar_fundo_nebuloso((LARGURA, ALTURA), top, bottom, gas,
-                                      self.dimension * 1009 + sector * 97, comic)
+        result = None
+        for etapa in etapas_fundo_nebuloso((LARGURA, ALTURA), top, bottom, gas,
+                                           self.dimension * 1009 + sector * 97, comic):
+            if etapa is not None:
+                result = etapa
+            yield
+        assert result is not None
 
         for _ in range(95):
             x, y = rng.randrange(LARGURA), rng.randrange(ALTURA)
             color = _misturar(accent, (185, 198, 220), rng.uniform(0.2, 0.65))
             pygame.draw.circle(result, color, (x, y), rng.choice((1, 1, 2)))
-        self._draw_motif(result, sector, accent, rng)
+        yield from self._draw_motif(result, sector, accent, rng)
         if comic:
             ink = _misturar(top, (7, 10, 18), 0.4)
             for y in range(8, ALTURA, 24):
                 for x in range(8 + (y // 24 % 2) * 12, LARGURA, 24):
                     pygame.draw.circle(result, ink, (x, y), 1)
         self._surfaces[key] = result
-        return result
 
     def _draw_motif(self, surface: pygame.Surface, sector: int,
-                    accent: tuple[int, int, int], rng: random.Random) -> None:
+                    accent: tuple[int, int, int], rng: random.Random):
         """Atribui uma silhueta própria a cada uma das seis áreas."""
         jitter = rng.randrange(-55, 56)
         if sector == 0:
             _estrela(surface, (1110 + jitter, 145), 32, (230, 181, 94))
-            _planeta(surface, (125 + jitter, 535), 154,
+            yield from _planeta(surface, (125 + jitter, 535), 154,
                      _misturar(accent, (145, 111, 91), 0.5), craters=True)
             for _ in range(55):
                 x = rng.randrange(105, 575)
@@ -188,7 +239,7 @@ class SectorBackground:
             _cometa(surface, (710, 115), (159, 216, 230), 125)
         elif sector == 2:
             _estrela(surface, (1150, 135), 80, (217, 142, 93))
-            _planeta(surface, (140 + jitter, 530), 175,
+            yield from _planeta(surface, (140 + jitter, 530), 175,
                      _misturar(accent, (165, 132, 96), 0.55), rings=True)
         elif sector == 3:
             center = (1020 + jitter, 175)
@@ -199,7 +250,7 @@ class SectorBackground:
             _galaxia(surface, (1080 + jitter, 170), _misturar(accent, (15, 20, 34), 0.6))
             _estrela(surface, (180, 560), 9, (157, 177, 205))
         else:
-            _planeta(surface, (1140 + jitter, 535), 180,
+            yield from _planeta(surface, (1140 + jitter, 535), 180,
                      _misturar(accent, (110, 172, 198), 0.6), craters=True)
             _estrela(surface, (265, 470), 16, (153, 218, 234))
             _cometa(surface, (655, 130), (151, 216, 231), 135)
@@ -207,9 +258,13 @@ class SectorBackground:
     def render(self, surface: pygame.Surface, comic: bool) -> None:
         """Desenha o setor atual e mistura gradualmente o próximo."""
         source = (self._sources[comic] if self._interrupted else
-                  self.surface_for_sector(self.current_sector, comic))
+                  self._visual_sector(self.current_sector, comic))
         surface.blit(source, (0, 0))
+        for sector in range(len(self.sectors)):
+            key = (sector, comic)
+            if key not in self._surfaces and key not in self._tasks:
+                self._tasks[key] = self._etapas_surface(sector, comic)
         if self._transitioning:
-            self._blend.blit(self.surface_for_sector(self.target_sector, comic), (0, 0))
+            self._blend.blit(self._visual_sector(self.target_sector, comic), (0, 0))
             self._blend.set_alpha(round(255 * self._eased(self.transition)))
             surface.blit(self._blend, (0, 0))

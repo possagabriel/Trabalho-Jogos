@@ -62,6 +62,7 @@ def test_estado_salvo_contém_região_posição_e_checkpoint():
         "proxima_dimensao": 0,
         "boss_derrotado": False,
         "asteroides": {},
+        "toca_boss": list(world.BOSS_LAIR),
     }
 
 

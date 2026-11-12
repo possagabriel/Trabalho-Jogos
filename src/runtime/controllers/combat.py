@@ -405,9 +405,13 @@ class ControladorCombate:
         sessao = self.sessao
         moedas_antes = sessao.jogador.moedas_jogo
         restantes = []
+        livre = getattr(sessao, "modo_atual", "linear") == "mundo_aberto"
         for powerup in sessao.powerups:
-            powerup.atualizar()
-            if powerup.y > ALTURA + 30:
+            if livre:
+                powerup.tempo += 1
+            else:
+                powerup.atualizar()
+            if not livre and powerup.y > ALTURA + 30:
                 continue
             elif powerup.rect.colliderect(sessao.jogador.rect):
                 mensagem = powerup.aplicar(sessao.jogador, sessao.desbloquear_skin)

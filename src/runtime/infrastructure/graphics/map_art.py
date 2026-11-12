@@ -9,10 +9,8 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.infrastructure.graphics.comic_theme import usar_visual
-from src.runtime.infrastructure.graphics.anomaly_visuals import camada_anomalia
-from src.runtime.infrastructure.graphics.nebula_background import criar_fundo_nebuloso
+from src.runtime.infrastructure.graphics.anomaly_visuals import _pixel_buraco_negro, _pixel_tunel
 from src.runtime.infrastructure.graphics.smooth import desenhar_circulo
-from src.runtime.infrastructure.graphics.world_objects import arte_asteroide
 
 if TYPE_CHECKING:
     from src.runtime.domain.entities.bosses import Boss
@@ -31,7 +29,15 @@ def _reduzir(arte: pygame.Surface, tamanho: int) -> pygame.Surface:
 @lru_cache(maxsize=48)
 def miniatura_anomalia(portal: bool, comic: bool, tamanho: int) -> pygame.Surface:
     """Usa o mesmo disco de acreção ou túnel visto na exploração."""
-    return _reduzir(camada_anomalia(portal, comic, True), tamanho)
+    # Amostra a mesma função visual diretamente na resolução do ícone.
+    arte = pygame.Surface((tamanho, tamanho), pygame.SRCALPHA)
+    pixel = _pixel_tunel if portal else _pixel_buraco_negro
+    alcance = 145 if portal else 190
+    for y in range(tamanho):
+        for x in range(tamanho):
+            arte.set_at((x, y), pixel((x + 0.5) / tamanho * alcance * 2 - alcance,
+                                      (y + 0.5) / tamanho * alcance * 2 - alcance, comic))
+    return arte
 
 
 @lru_cache(maxsize=8)
@@ -46,11 +52,17 @@ def miniatura_fenda(comic: bool, tamanho: int) -> pygame.Surface:
     return _reduzir(tela, tamanho)
 
 
-@lru_cache(maxsize=1024)
+@lru_cache(maxsize=4096)
 def miniatura_rocha(forma: tuple[tuple[int, int], ...], raio: int,
                     comic: bool, tamanho: int) -> pygame.Surface:
     """Conserva a silhueta e as crateras de cada asteroide."""
-    return _reduzir(arte_asteroide(forma, raio, comic), tamanho)
+    arte = pygame.Surface((tamanho, tamanho), pygame.SRCALPHA)
+    fator = (tamanho - 1) / max(1, raio * 2)
+    pontos = [(round(tamanho / 2 + x * fator), round(tamanho / 2 + y * fator))
+              for x, y in forma]
+    cor = (170, 151, 133) if comic else (116, 137, 155)
+    pygame.draw.polygon(arte, cor, pontos)
+    return arte
 
 
 @lru_cache(maxsize=32)
@@ -84,6 +96,10 @@ def miniatura_nave(skin: Skin, angulo: int, comic: bool, tamanho: int) -> pygame
 @lru_cache(maxsize=12)
 def fundo_mapa(tamanho: tuple[int, int], dimensao: int, comic: bool) -> pygame.Surface:
     """Oferece contexto espacial discreto, preparado uma vez por dimensão."""
-    arte = criar_fundo_nebuloso(tamanho, (6, 10, 18), (2, 5, 10),
-                               (35, 57, 76), 7100 + dimensao, comic)
+    arte = pygame.Surface(tamanho)
+    topo, base = ((36, 33, 33), (20, 19, 22)) if comic else ((6, 10, 18), (2, 5, 10))
+    for y in range(tamanho[1]):
+        t = y / max(1, tamanho[1] - 1)
+        cor = tuple(round(a + (b - a) * t) for a, b in zip(topo, base))
+        pygame.draw.line(arte, cor, (0, y), (tamanho[0], y))
     return arte

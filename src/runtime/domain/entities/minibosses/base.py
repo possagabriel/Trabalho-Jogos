@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import random
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any, Callable, Mapping
 
 import pygame
 
@@ -38,6 +38,7 @@ class Miniboss(Boss, ABC):
         self.lacaios: list[Inimigo] = []
         self.novos_lacaios: list[Inimigo] = []
         self.zonas: list[pygame.Rect] = []
+        self.movimento_livre: Callable[[Miniboss, Jogador, float], None] | None = None
         self.ultimo_disparo: list[tuple[float, float, float, int, tuple, str]] = []
 
     @abstractmethod
@@ -77,7 +78,10 @@ class Miniboss(Boss, ABC):
         while dt > 1e-9:
             passo = min(dt, self.estado.restante)
             self.t += passo * FPS
-            self.estrategia.mover(self, jogador, passo)
+            if self.movimento_livre is not None:
+                self.movimento_livre(self, jogador, passo)
+            else:
+                self.estrategia.mover(self, jogador, passo)
             self.estado.restante -= passo
             dt -= passo
             if self.estado.restante <= 1e-9:
