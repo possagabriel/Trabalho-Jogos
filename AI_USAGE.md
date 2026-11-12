@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- LINEAR recebe Cinturão de Íons/Prisma, Arquivo Estelar/Oráculo e Horizonte Fractal/Obelisco nos níveis 31–45, com ataques e arte procedural próprios. Lobby expõe também o Plano Divino existente e permite desbloquear/retomar os novos capítulos; layout compacto e checkpoints compatíveis. Testes direcionados e Ruff aprovados; playtest de dificuldade pendente.
+
 - Codex integrou à main local, por pedido explícito, a main remota com áudio (#78), os cards verticais (#80) e a correção do mundo aberto (#79), resolvendo conflitos de documentação/testes sem descartar nenhum dos fluxos. 173 testes direcionados e Ruff aprovados; sem screenshots, benchmarks ou mudanças adicionais de gameplay.
 
 - Codex reorganizou Pilotos em cartões verticais com nave central, nome em até duas linhas, progresso separado e cartão de criação. Teste de geometria/navegação escrito primeiro; 13 testes direcionados e Ruff aprovados, sem screenshots ou alterações de gameplay. Integração à main local autorizada pelo usuário; conferência jogando pendente.

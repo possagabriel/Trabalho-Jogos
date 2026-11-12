@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- LINEAR recebe Cinturão de Íons/Prisma, Arquivo Estelar/Oráculo e Horizonte Fractal/Obelisco nos níveis 31–45, com ataques e arte procedural próprios. Lobby expõe também o Plano Divino existente e permite desbloquear/retomar os novos capítulos; layout compacto e checkpoints compatíveis. Testes direcionados e Ruff aprovados; playtest de dificuldade pendente.
+
 - Main local reúne áudio futurista com tiros suaves/impacto, correção da abertura do mundo aberto e cards verticais dos pilotos. Conflitos resolvidos preservando as regressões; 173 testes direcionados e Ruff aprovados. Conferência jogando pendente.
 
 - Pilotos: cartões verticais lado a lado com nave, nome, progresso e indicação ATIVO; navegação por ←/→, mouse e roda preserva criação/CRUD e limite de perfis. 13 testes direcionados e Ruff aprovados, com geometria em 900×700 e 1920×1080; conferência jogando pendente.

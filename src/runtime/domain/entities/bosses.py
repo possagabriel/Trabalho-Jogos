@@ -228,6 +228,18 @@ class Boss:
         ]
 
     def _executar_ataque(self, nome, jogador, x, y):
+        if nome in ("tridente", "orbita", "fratura"):
+            mira = math.atan2(jogador.y - y, jogador.x - x)
+            if nome == "tridente":
+                angulos = [mira + lado * 0.26 for lado in (-1, 0, 1)]
+            elif nome == "orbita":
+                angulos = [mira + self.angulo * 0.25 + i * math.tau / 10
+                           for i in range(2, 9)]
+            else:
+                angulos = [mira + lado * (0.22 + passo * 0.18)
+                           for lado in (-1, 1) for passo in range(3)]
+            return [Projetil(x, y, math.cos(a) * 3.6, math.sin(a) * 3.6,
+                             1, self.cor, 5, origem="inimigo") for a in angulos]
         if nome == "leque":
             return [Projetil(x, y, dx, 4, 1, self.cor, 5, origem="inimigo")
                     for dx in (-2, 0, 2)]
@@ -329,6 +341,19 @@ class Boss:
                 desenhar_glow(tela, ROSA, self.alvo, 20, 0.8)
                 circulo_com_contorno(tela, ROSA, self.alvo, 12,
                                     espessura_contorno=2)
+        elif self.nome in ("PRISMA", "ORACULO", "OBELISCO"):
+            lados = {"PRISMA": 3, "ORACULO": 8, "OBELISCO": 4}[self.nome]
+            pts = poligono(centro, self.raio, lados, self.angulo)
+            desenhar_glow(tela, cor, centro, self.raio * 1.3, 0.35)
+            desenhar_sombra_chapada(tela, pts, deslocamento=(5, 7))
+            poligono_com_contorno(tela, cor, pts, espessura_contorno=4)
+            contra = poligono(centro, self.raio * 0.62, lados, -self.angulo)
+            desenhar_poligono(tela, BRANCO, contra, espessura=2)
+            circulo_com_contorno(tela, cor, centro, self.raio * 0.22,
+                                espessura_contorno=3)
+            for lado in (-1, 1):
+                ponto = (x + lado * self.raio * 0.7, y)
+                circulo_com_contorno(tela, BRANCO, ponto, 5, espessura_contorno=2)
         elif self.nome == "ANEIS":
             self._desenhar_aneis(tela, centro, x, y, cor)
         elif self.nome == "ANEIS DOURADO":
@@ -383,4 +408,13 @@ BOSSES_POR_CENARIO = {
         "ataques": ["combinado", "espiral", "teleguiado"],
         "alvo_y": ALTURA // 2, "efeito": "mega", "part_qtd": 140,
         "nivel": 30},
+    7: {"nome": "PRISMA", "cor": CIANO, "raio": 58, "vida": 240,
+        "pontos": 1700, "mov": "zigzag", "ataques": ["tridente", "leque", "espiral"],
+        "alvo_y": 160, "efeito": "espiral", "part_qtd": 48, "nivel": 35},
+    8: {"nome": "ORACULO", "cor": AZUL, "raio": 64, "vida": 270,
+        "pontos": 1900, "mov": "infinito", "ataques": ["orbita", "8dir", "teleguiado"],
+        "alvo_y": 180, "efeito": "estrela", "part_qtd": 56, "nivel": 40},
+    9: {"nome": "OBELISCO", "cor": ROSA, "raio": 68, "vida": 300,
+        "pontos": 2200, "mov": "gira", "ataques": ["fratura", "tridente", "orbita"],
+        "alvo_y": 170, "efeito": "pulsacao", "part_qtd": 64, "nivel": 45},
 }

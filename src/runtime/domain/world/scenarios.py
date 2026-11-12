@@ -2,10 +2,11 @@
 
 import math
 import random
+from copy import deepcopy
 
 import pygame
 
-from src.core.constants import ALTURA, LARGURA
+from src.core.constants import ALTURA, AZUL, BRANCO, CIANO, LARGURA, ROSA, ROXO
 from src.infrastructure.graphics.comic_pipeline import posterizar
 from src.infrastructure.graphics.comic_render import desenhar_fundo
 from src.infrastructure.graphics.comic_theme import opcoes_atuais
@@ -96,6 +97,8 @@ def _imagem_fundo(cenario_id=None, *, comic: bool = False):
     Cada cenario usa a imagem mapeada em ``_FUNDO_POR_CENARIO``; os demais
     usam ``_FUNDO_PADRAO``. Retorna ``None`` se o arquivo nao existir.
     """
+    if cenario_id is not None and cenario_id > 6:
+        return None
     catalogo = _FUNDO_COMIC_POR_CENARIO if comic else _FUNDO_POR_CENARIO
     nome = catalogo.get(cenario_id, _FUNDO_POR_CENARIO.get(cenario_id, _FUNDO_PADRAO))
     imagens = _CACHE_FUNDO["imagens"]
@@ -179,7 +182,7 @@ class Estrela:
 
 
 class Cenario:
-    """Um dos seis cenarios do jogo, com visual e efeitos proprios."""
+    """Cenário do catálogo, com visual e efeitos próprios."""
 
     def __init__(self, cenario_id):
         cfg = CENARIOS[cenario_id - 1]
@@ -331,6 +334,16 @@ class Cenario:
                 pygame.draw.aalines(camada, cor + (125,), False, pontos)
             for raio in (75, 110, 150):
                 pygame.draw.circle(camada, cor + (75,), (1050, 185), raio, 2)
+        elif self.id >= 7:
+            # Geometrias de expedição compõem corredores periféricos, deixando a mira livre.
+            for lado in (-1, 1):
+                x = LARGURA // 2 + lado * 470
+                for camada_id in range(4):
+                    r = 55 + camada_id * 28
+                    pts = [(x + math.cos(i * math.tau / (self.id - 4)) * r,
+                            140 + math.sin(i * math.tau / (self.id - 4)) * r)
+                           for i in range(self.id - 4)]
+                    desenhar_poligono(camada, cor, pts, espessura=1, brilho=0.25)
         else:
             # Raios e anel ritual do plano divino.
             centro = (LARGURA // 2, 115)
@@ -644,6 +657,23 @@ CENARIOS = [
 ]
 
 
+# Expedições posteriores à campanha original reutilizam os sistemas de mundo existentes.
+for _id, _origem, _nome, _paleta in (
+        (7, 3, "CINTURÃO DE ÍONS", (CIANO, AZUL, BRANCO)),
+        (8, 4, "ARQUIVO ESTELAR", (AZUL, CIANO, ROXO)),
+        (9, 5, "HORIZONTE FRACTAL", (ROSA, ROXO, BRANCO))):
+    _cfg = deepcopy(CENARIOS[_origem - 1])
+    _cfg.update(id=_id, nome=_nome, cores_principais=list(_paleta),
+                cor_transicao=_paleta[0], cor_estrela=_paleta[1])
+    _cfg["topo"] = tuple(round(c * 0.18) for c in _paleta[0])
+    _cfg["base"] = tuple(round(c * 0.035) for c in _paleta[1])
+    _cfg["cores_nebulosa"] = [tuple(round(c * 0.55) for c in cor) for cor in _paleta]
+    for _marco in _cfg["marcos"]:
+        _marco["id"] = f"expedicao_{_id}_{_marco['id']}"
+        _marco["cor"] = _paleta[0]
+    CENARIOS.append(_cfg)
+
+
 def cenario_do_nivel(nivel):
     """Retorna o id do cenario correspondente ao nivel."""
-    return min((nivel - 1) // 5 + 1, 6)
+    return min(max(1, (nivel - 1) // 5 + 1), len(CENARIOS))

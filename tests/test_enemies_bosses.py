@@ -301,7 +301,7 @@ def test_sortear_inimigo_especial():
 # ---------------------------------------------------------------------------
 
 def test_bosses_por_cenario():
-    assert len(BOSSES_POR_CENARIO) == 6
+    assert len(BOSSES_POR_CENARIO) == 9
     for cid, cfg in BOSSES_POR_CENARIO.items():
         for chave in ("nome", "cor", "raio", "vida", "pontos", "mov",
                       "ataques", "alvo_y", "efeito", "nivel"):

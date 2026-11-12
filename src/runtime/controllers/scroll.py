@@ -73,7 +73,7 @@ class ControladorAvanco:
 
     def _velocidade(self, cenario_id: int) -> float:
         velocidades = _ler(self.config, "avanco_velocidades", {})
-        padrao = VELOCIDADES_AVANCO_PADRAO[str(cenario_id)]
+        padrao = VELOCIDADES_AVANCO_PADRAO.get(str(cenario_id), VELOCIDADES_AVANCO_PADRAO["6"])
         valor = velocidades.get(str(cenario_id), padrao) if isinstance(velocidades, dict) \
             else padrao
         intensidade = _numero(_ler(self.config, "avanco_intensidade", 1), 1, 0, 2)

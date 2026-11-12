@@ -42,7 +42,7 @@ from game.scenarios import (  # noqa: E402
 # ---------------------------------------------------------------------------
 
 def test_cenarios_configuracao():
-    assert len(CENARIOS) == 6
+    assert len(CENARIOS) == 9
     for cfg in CENARIOS:
         assert cfg["id"] >= 1
         assert cfg["nome"]
@@ -148,7 +148,7 @@ def test_cenario_do_nivel():
     assert cenario_do_nivel(11) == 3
     assert cenario_do_nivel(25) == 5
     assert cenario_do_nivel(30) == 6
-    assert cenario_do_nivel(999) == 6
+    assert cenario_do_nivel(999) == 9
 
 
 def test_ajustar_cover():
