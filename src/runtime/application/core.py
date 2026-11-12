@@ -950,7 +950,7 @@ class Jogo:
                 if self.miniboss:
                     self.miniboss.observar_tiros(novos)
                 self.tiros_disparados += 1
-                self.sons.tocar("tiro")
+                self.sons.tocar(f"tiro_{novos[0].tipo}")
 
         if self.fila_onda:
             self.timer_spawn += 1

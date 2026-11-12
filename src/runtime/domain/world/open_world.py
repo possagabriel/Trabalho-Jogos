@@ -522,7 +522,7 @@ class OpenWorldRuntime:
             self.projectiles.extend(shots)
             if shots:
                 game.mira.ativar_pulso()
-                game.sons.tocar("tiro")
+                game.sons.tocar(f"tiro_{shots[0].tipo}")
 
         self._place_hostiles_in_world()
         self._update_world_encounters(dt, game)

@@ -4,6 +4,7 @@ import io
 import math
 import random
 import struct
+from functools import lru_cache
 
 import pygame
 
@@ -19,7 +20,7 @@ def _wav_bytes(samples):
     out += b"data"
     out += struct.pack("<I", n * 2)
     for s in samples:
-        out += struct.pack("<h", int(max(-32768, min(32767, s))))
+        out += struct.pack("<h", int(max(-1.0, min(1.0, s)) * 32767))
     return bytes(out)
 
 
@@ -59,8 +60,43 @@ def _ruido(duracao, vol):
     return [random.uniform(-1, 1) * vol * (1 - i / n) for i in range(n)]
 
 
+# Frequências, duração, modulação FM e número de pulsos: identidade de cada emissor.
+_PERFIS_TIRO = {
+    "padrao": (820, 260, 0.12, 1.4, 1),
+    "laser": (2100, 650, 0.16, 0.4, 1),
+    "duplo": (900, 380, 0.22, 1.8, 2),
+    "plasma": (280, 65, 0.36, 4.5, 1),
+    "metralhadora": (680, 140, 0.055, 3.0, 1),
+    "espiral": (480, 1250, 0.32, 2.6, 3),
+    "ion": (110, 720, 0.52, 5.0, 1),
+    "gauss": (3200, 90, 0.20, 0.8, 1),
+    "nova": (190, 35, 0.60, 6.0, 1),
+}
+
+
+@lru_cache(maxsize=9)
+def _amostras_tiro(tipo: str) -> tuple[float, ...]:
+    """Sintetiza emissores FM uma vez; pulsos múltiplos pertencem ao mesmo disparo."""
+    inicio, fim, duracao, modulacao, pulsos = _PERFIS_TIRO[tipo]
+    total = int(SAMPLE_RATE * duracao)
+    fase = 0.0
+    dados = []
+    for i in range(total):
+        progresso = i / total
+        local = (progresso * pulsos) % 1
+        ataque = min(1.0, local * duracao / pulsos / 0.003)
+        envelope = ataque * (1 - local) ** 2
+        frequencia = inicio * (fim / inicio) ** progresso
+        fase += math.tau * frequencia / SAMPLE_RATE
+        modulador = math.sin(fase * 1.97) * modulacao * (1 - local)
+        sinal = math.sin(fase + modulador)
+        grave = math.sin(fase * 0.5) * 0.2
+        dados.append((sinal + grave) * envelope * 0.24)
+    return tuple(dados)
+
+
 class Sons:
-    """Gerencia efeitos sonoros e musica ambiente procedural."""
+    """Gerencia emissores futuristas e música synthwave procedural."""
 
     def __init__(self):
         self.habilitado = True
@@ -75,12 +111,14 @@ class Sons:
 
     def _novo_som(self, samples):
         try:
-            return pygame.mixer.Sound(buffer=_wav_bytes(samples))
+            return pygame.mixer.Sound(file=io.BytesIO(_wav_bytes(samples)))
         except pygame.error:
             return None
 
     def _criar_sons(self):
-        self._sons["tiro"] = self._novo_som(_sweep(950, 400, 0.09, 0.15))
+        for tipo in _PERFIS_TIRO:
+            self._sons[f"tiro_{tipo}"] = self._novo_som(_amostras_tiro(tipo))
+        self._sons["tiro"] = self._sons["tiro_padrao"]
         self._sons["explosao"] = self._novo_som(_ruido(0.3, 0.45))
         self._sons["dano"] = self._novo_som(_sweep(200, 70, 0.25, 0.45))
         self._sons["coleta"] = self._novo_som(
@@ -118,23 +156,39 @@ class Sons:
         except pygame.error:
             pass
 
-    def _gerar_musica(self):
-        bpm = 120
-        batida = 60 / bpm
-        bloco = int(batida * SAMPLE_RATE)
-        total = bloco * 16
-        dados = [0.0] * total
-        baixo = [110, 110, 130.8, 110, 87.3, 87.3, 98, 110,
-                 110, 110, 130.8, 110, 98, 98, 87.3, 110]
-        melodia = [220, 261.6, 329.6, 392, 329.6, 261.6, 220, 174.6,
-                   220, 261.6, 329.6, 392, 440, 392, 329.6, 261.6]
-        for b in range(16):
-            for i in range(bloco):
-                v_baixo = _onda_val(baixo[b], i, "quadrada") * 0.18
-                v_mel = _onda_val(melodia[b], i, "seno") * 0.10
-                dados[b * bloco + i] = v_baixo + v_mel
-        pico = max(abs(x) for x in dados) or 1.0
-        return [x / pico * 0.7 for x in dados]
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def _gerar_musica() -> tuple[float, ...]:
+        """Loop synthwave: baixo pulsante, arpejos FM, pads e bateria eletrônica."""
+        batida = 60 / 112
+        total = int(32 * batida * SAMPLE_RATE)
+        dados = []
+        acordes = ((55, 65.406, 82.407), (43.654, 55, 65.406),
+                   (65.406, 82.407, 98), (48.999, 61.735, 73.416))
+        for i in range(total):
+            t = i / SAMPLE_RATE
+            pulso = t / batida
+            acorde = acordes[int(pulso // 8) % 4]
+            passo = int(pulso * 2)
+            local = (pulso * 2) % 1
+            nota = acorde[passo % 3] * (4 if passo % 4 else 8)
+            arp = math.sin(math.tau * nota * t + 1.1 * math.sin(math.tau * nota * 2 * t))
+            arp *= math.exp(-local * 6) * min(1, local * 90) * 0.10
+            baixo = math.sin(math.tau * acorde[0] * t) * 0.15
+            baixo *= (0.3 + 0.7 * math.sin(math.pi * (pulso % 1)) ** 2)
+            pad = sum(math.sin(math.tau * f * 2 * t) for f in acorde) * 0.025
+            tempo_kick = (pulso % 1) * batida
+            kick = math.sin(math.tau * (45 * tempo_kick + 1.5 *
+                                        (1 - math.exp(-tempo_kick * 45))))
+            kick *= math.exp(-tempo_kick * 23) * 0.18
+            # Ruído determinístico local, sem consumir o RNG da jogabilidade.
+            ruido = math.sin(i * 12.9898) * 43758.5453
+            ruido = (ruido % 1) * 2 - 1
+            hat = ruido * math.exp(-local * 45) * min(1, local * 150) * 0.035
+            snare = ruido * math.exp(-tempo_kick * 32) * 0.06 if int(pulso) % 2 else 0
+            fade = min(1.0, t / 0.02, (total / SAMPLE_RATE - t) / 0.02)
+            dados.append((baixo + pad + arp + kick + hat + snare) * fade)
+        return tuple(dados)
 
     def tocar(self, nome):
         if not self.habilitado:
@@ -167,7 +221,7 @@ class Sons:
                 except pygame.error:
                     pass
     def pausar_musica(self) -> None:
-        """Suspende a trilha procedural durante uma cena."""
+        """Suspende a trilha durante uma cena."""
         if self.habilitado:
             try:
                 pygame.mixer.music.pause()
@@ -175,7 +229,7 @@ class Sons:
                 pass
 
     def retomar_musica(self) -> None:
-        """Retoma a trilha procedural já carregada."""
+        """Retoma a trilha já carregada."""
         if self.habilitado:
             try:
                 pygame.mixer.music.unpause()
