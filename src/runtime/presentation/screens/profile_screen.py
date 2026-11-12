@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.core.constants import CIANO, DOURADO, VERDE, VERMELHO, VOID_BLACK
+from src.runtime.infrastructure.graphics.menu_panels import painel_menu
 
 if TYPE_CHECKING:
     from src.runtime.presentation.menu import MenuPrincipal
@@ -75,11 +76,11 @@ class ProfileScreen:
         self.cards = []
         top = int(88 * scale)
         footer_top = h - int(84 * scale)
-        gap = max(3, int(7 * scale))
-        available = footer_top - top
-        min_card_h = max(43, int(52 * scale))
-        max_rows = max(2, (available + gap) // (min_card_h + gap))
-        visible_count = max(1, min(5, max_rows - 1))
+        gap = layout.px(12)
+        margem = layout.px(36)
+        available = w - margem * 2
+        # Reserva uma coluna para criar perfil, mesmo ao paginar catálogos maiores.
+        visible_count = max(1, min(5, (available + gap) // (layout.px(118) + gap) - 1))
         max_offset = max(0, len(profiles) - visible_count)
         if self.selection < self._scroll_offset:
             self._scroll_offset = self.selection
@@ -91,22 +92,20 @@ class ProfileScreen:
             self._scroll_offset,
             min(len(profiles), self._scroll_offset + visible_count),
         ))
-        rows = len(self._visible_profile_indices) + 1
-        card_h = max(43, min(int(78 * scale),
-                             (available - gap * (rows - 1)) // rows))
-        card_x = int(56 * scale)
-        card_w = w - card_x * 2
-        for row, index in enumerate(self._visible_profile_indices):
+        colunas = len(self._visible_profile_indices) + 1
+        card_w = min(layout.px(190), (available - gap * (colunas - 1)) // colunas)
+        card_h = min(layout.px(430), footer_top - top - layout.px(20))
+        card_x = (w - (card_w * colunas + gap * (colunas - 1))) // 2
+        card_y = top + (footer_top - top - card_h) // 2
+        for coluna, index in enumerate(self._visible_profile_indices):
             profile = profiles[index]
-            rect = pygame.Rect(card_x, top + row * (card_h + gap),
-                               card_w, card_h)
+            rect = pygame.Rect(card_x + coluna * (card_w + gap), card_y, card_w, card_h)
             self.cards.append(rect)
             self._draw_profile_card(surface, rect, profile, index, scale)
 
         new_index = len(profiles)
-        new_rect = pygame.Rect(card_x, top + len(self._visible_profile_indices)
-                               * (card_h + gap),
-                               card_w, card_h)
+        new_rect = pygame.Rect(card_x + len(self._visible_profile_indices) * (card_w + gap),
+                               card_y, card_w, card_h)
         self.cards.append(new_rect)
         self._draw_new_card(surface, new_rect, new_index, scale)
 
@@ -123,81 +122,78 @@ class ProfileScreen:
                             max_width=w - int(48 * scale))
 
     def _draw_profile_card(self, surface, rect, profile, index, scale) -> None:
+        layout = self.menu.layout
         active = self.menu.jogo.profile_service.active
         is_active = bool(active and profile.id == active.id)
         focused = index == self.selection
-        pygame.draw.rect(surface, (20, 31, 50), rect,
-                         border_radius=max(4, int(9 * scale)))
         border = DOURADO if focused else CIANO
-        pygame.draw.rect(surface, border, rect, max(2, int(2 * scale)),
-                         border_radius=max(4, int(9 * scale)))
-        if focused:
-            focus_mark = self.menu.fonte_media.render(">", True, border)
-            surface.blit(focus_mark, (rect.x + int(10 * scale),
-                                      rect.centery - focus_mark.get_height() // 2))
-        if profile.damaged:
-            name_color = VERMELHO
-        else:
-            name_color = DOURADO if is_active else CIANO
-
-        skin = None
+        surface.blit(painel_menu(rect.size, (20, 31, 50), border,
+                                 selecionado=focused, raio=layout.px(9), botao=True), rect)
+        max_text = rect.width - layout.px(20)
+        fonte = layout.fonte_texto(18)
+        self._draw_text(surface, fonte, f"{'>' if focused else ''} PILOTO {index + 1:02}",
+                        (rect.centerx, rect.y + rect.height * 0.07), border,
+                        max_width=max_text)
         if not profile.damaged:
-            skin_id = profile.progress.get("skin_atual", "padrao")
-            skin = self.menu.jogo.loja.pegar_skin(skin_id)
-        if skin is not None:
-            self.menu._desenhar_preview_skin(
-                surface, skin, rect.x + int(38 * scale), rect.centery)
-
-        text_x = rect.x + int(76 * scale)
-        max_text = rect.right - text_x - int(16 * scale)
-        if is_active:
-            badge_width = self.menu.fonte_pequena.size("ATIVO")[0]
-            max_text -= badge_width + int(8 * scale)
-        name = self._fit(self.menu.fonte_media, profile.name, max_text)
-        self._draw_text(surface, self.menu.fonte_media, name,
-                        (text_x, rect.y + int(20 * scale)), name_color,
-                        anchor="topleft")
+            skin = self.menu.jogo.loja.pegar_skin(profile.progress.get("skin_atual", "padrao"))
+            if skin is not None:
+                self.menu._desenhar_preview_skin(
+                    surface, skin, rect.centerx, rect.y + rect.height * 0.29)
+        cor_nome = VERMELHO if profile.damaged else DOURADO if is_active else CIANO
+        # Duas linhas com fonte dimensionada para preservar o nome completo.
+        nome_fonte = layout.fonte_texto(22)
+        meio = (len(profile.name) + 1) // 2
+        linhas = ([profile.name] if nome_fonte.size(profile.name)[0] <= max_text
+                  else [profile.name[:meio].rstrip(), profile.name[meio:].lstrip()])
+        tamanho = 22
+        while max(nome_fonte.size(linha)[0] for linha in linhas) > max_text and tamanho > 14:
+            tamanho -= 1
+            nome_fonte = layout.fonte_texto(tamanho)
+        for linha, texto in enumerate(linhas):
+            self._draw_text(surface, nome_fonte, texto,
+                            (rect.centerx, rect.y + rect.height * 0.47
+                             + linha * nome_fonte.get_linesize()), cor_nome,
+                            max_width=max_text)
         if profile.damaged:
-            details = "Perfil danificado — não pode ser ativado"
-            detail_color = VERMELHO
+            detalhes = ("DANIFICADO", "Não pode ativar", "R: renomear", "Del: excluir")
+            cor_detalhe = VERMELHO
         else:
             progress = profile.progress
             defeated = progress.get("bosses_por_tipo", {})
             bosses = min(6, sum(1 for value in defeated.values()
                                 if type(value) is int and value > 0)
                          if isinstance(defeated, dict) else 0)
-            coins = int(progress.get("moedas", 0))
-            coins_text = f"{coins:,}".replace(",", ".")
-            details = (f"{coins_text} moedas · Dimensão "
-                       f"{progress.get('dimensao_maxima', 1)} · "
-                       f"Bosses {bosses}/6 · {self._human_access(profile.last_access)}")
-            detail_color = VERDE
-        details = self._fit(self.menu.fonte_pequena, details, max_text)
-        self._draw_text(surface, self.menu.fonte_pequena, details,
-                        (text_x, rect.y + int(52 * scale)), detail_color,
-                        anchor="topleft")
+            moedas = f"{int(progress.get('moedas', 0)):,}".replace(",", ".")
+            detalhes = (f"{moedas} moedas", f"Dimensão {progress.get('dimensao_maxima', 1)}",
+                        f"Bosses {bosses}/6", self._human_access(profile.last_access))
+            cor_detalhe = VERDE
+        for linha, texto in enumerate(detalhes):
+            self._draw_text(surface, fonte, texto,
+                            (rect.centerx, rect.y + rect.height * (0.65 + linha * 0.07)),
+                            cor_detalhe, max_width=max_text)
         if is_active:
-            badge = self.menu.fonte_pequena.render("ATIVO", True, DOURADO)
-            surface.blit(badge, (rect.right - badge.get_width() - int(14 * scale),
-                                 rect.y + int(7 * scale)))
+            self._draw_text(surface, fonte, "ATIVO",
+                            (rect.centerx, rect.y + rect.height * 0.94), DOURADO,
+                            max_width=max_text)
 
     def _draw_new_card(self, surface, rect, index, scale) -> None:
-        limit = self.menu.jogo.profile_service.max_profiles
+        layout = self.menu.layout
         disabled = self.new_profile_disabled
         focused = index == self.selection
         color = (150, 158, 172) if disabled else CIANO
-        pygame.draw.rect(surface, (24, 35, 51), rect,
-                         border_radius=max(4, int(9 * scale)))
-        pygame.draw.rect(surface, color if focused else (82, 101, 122), rect,
-                         max(2, int(2 * scale)),
-                         border_radius=max(4, int(9 * scale)))
-        label = f"+ NOVO PERFIL  —  Limite de {limit} perfis" if disabled \
-            else "+ NOVO PERFIL"
-        if focused:
-            label = "> " + label
-        self._draw_text(surface, self.menu.fonte_media, label,
-                        (rect.centerx, rect.centery), color,
-                        max_width=rect.width - int(24 * scale))
+        surface.blit(painel_menu(rect.size, (24, 35, 51), color,
+                                 selecionado=focused, raio=layout.px(9), botao=True), rect)
+        fonte = layout.fonte_texto(20)
+        linhas = ("+", "NOVO", "PILOTO")
+        for linha, texto in enumerate(linhas):
+            self._draw_text(surface, fonte, texto,
+                            (rect.centerx, rect.y + rect.height * (0.30 + linha * 0.12)),
+                            color, max_width=rect.width - layout.px(16))
+        if disabled:
+            self._draw_text(surface, layout.fonte_texto(16),
+                            f"Limite: {self.menu.jogo.profile_service.max_profiles}",
+                            (rect.centerx, rect.y + rect.height * 0.78), color,
+                            max_width=rect.width - layout.px(16))
 
     def _draw_footer(self, surface, profiles, scale, footer_top) -> None:
         profile = profiles[self.selection] if self.selection < len(profiles) else None
@@ -208,7 +204,7 @@ class ProfileScreen:
         elif profile.damaged:
             hint = "R renomear · Delete excluir · Esc voltar"
         else:
-            hint = "Enter ativar · R renomear · Delete excluir · X exportar · Esc voltar"
+            hint = "←/→ escolher · Enter ativar · R nome · Del excluir · X exportar · Esc voltar"
         self._draw_text(surface, self.menu.fonte_pequena, hint,
                         (surface.get_width() // 2, footer_top + int(16 * scale)),
                         CIANO, max_width=surface.get_width() - int(40 * scale))
@@ -486,10 +482,10 @@ class ProfileScreen:
                     if len(self.text) < self.menu.jogo.profile_service.max_name_length:
                         self.text += event.unicode
                 return
-            if event.key in (pygame.K_UP, pygame.K_w):
+            if event.key in (pygame.K_UP, pygame.K_w, pygame.K_LEFT, pygame.K_a):
                 self.selection = (self.selection - 1) % (len(profiles) + 1)
                 self.message = ""
-            elif event.key in (pygame.K_DOWN, pygame.K_s):
+            elif event.key in (pygame.K_DOWN, pygame.K_s, pygame.K_RIGHT, pygame.K_d):
                 self.selection = (self.selection + 1) % (len(profiles) + 1)
                 self.message = ""
             elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):

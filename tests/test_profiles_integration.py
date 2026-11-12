@@ -6,11 +6,40 @@ import json
 from unittest.mock import Mock
 
 import pygame
+import pytest
 
 from src.core import settings
 from src.core.settings import DEFAULT_CONTROLES
+from src.infrastructure.ui.layout import Layout
 from src.runtime.application.core import Jogo
 from src.runtime.domain.entities.powerups import PowerUp
+
+
+@pytest.mark.parametrize('tamanho', [(900, 700), (1920, 1080)])
+def test_pilotos_cards_verticais_contidos_e_navegaveis(tmp_path, monkeypatch, tamanho):
+    monkeypatch.setenv('INCARNATE_DATA_DIR', str(tmp_path))
+    jogo = Jogo(sons=Mock())
+    for indice in range(jogo.profile_service.max_profiles):
+        jogo.profile_service.create(f'Piloto {indice + 1}')
+    jogo.menu.layout = Layout(*tamanho)
+    jogo.menu._recriar_fontes()
+    screen = jogo.menu.profile_screen
+    screen.refresh()
+    screen.draw(pygame.Surface(tamanho))
+    assert len(screen.cards) == jogo.profile_service.max_profiles + 1
+    for card in screen.cards:
+        assert card.height > card.width
+        assert pygame.Rect((0, 0), tamanho).contains(card)
+        assert card.bottom < tamanho[1] - jogo.menu.layout.px(84)
+    for i, card in enumerate(screen.cards):
+        assert not any(card.colliderect(outro) for outro in screen.cards[i + 1:])
+    inicio = screen.selection
+    screen.handle_event(pygame.event.Event(
+        pygame.KEYDOWN, key=pygame.K_RIGHT, unicode=''))
+    assert screen.selection == inicio + 1
+    screen.handle_event(pygame.event.Event(
+        pygame.KEYDOWN, key=pygame.K_LEFT, unicode=''))
+    assert screen.selection == inicio
 
 
 def test_start_without_profile_uses_default_controls(tmp_path, monkeypatch):
