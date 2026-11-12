@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Codex reorganizou Pilotos em cartões verticais com nave central, nome em até duas linhas, progresso separado e cartão de criação. Teste de geometria/navegação escrito primeiro; 13 testes direcionados e Ruff aprovados, sem screenshots ou alterações de gameplay. Integração à main local autorizada pelo usuário; conferência jogando pendente.
+
 - A pedido do usuário, Codex suavizou os nove tiros com menor amplitude, ataque gradual e menor modulação; substituiu o acerto agudo por impacto eletrônico abafado. Regressão de limites de amplitude e identidade escrita primeiro; testes direcionados e Ruff aprovados, mixagem auditiva pendente.
 
 - Codex implementou emissores FM para as nove armas e trilha synthwave procedural, corrigiu amplitude PCM e leitura WAV como arquivo, com regressões escritas primeiro para áudio audível, timbres, volume, ausência de dispositivo, cache/RNG e disparos nos dois modos. Testes direcionados e Ruff aprovados; sem dependências ou assets externos. Pixabay bloqueou downloads (HTTP 403); avaliação auditiva pendente.

@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Pilotos: cartões verticais lado a lado com nave, nome, progresso e indicação ATIVO; navegação por ←/→, mouse e roda preserva criação/CRUD e limite de perfis. 13 testes direcionados e Ruff aprovados, com geometria em 900×700 e 1920×1080; conferência jogando pendente.
+
 - Áudio futurista: nove timbres suaves por arma no LINEAR e mundo aberto, impacto eletrônico abafado, trilha synthwave em cache e correção PCM/WAV; testes direcionados e Ruff aprovados, avaliação ouvindo no jogo pendente. Pixabay permanece pendente por bloqueio de download HTTP 403.
 
 - Integração das PRs #73, #74, #75 e #77 na main: conflitos de documentação resolvidos sem duplicação; HUD, correção da tela preta e ajuste de vídeo preservados, atlas descartado da #76 ausente. 348 testes direcionados e Ruff aprovados.
