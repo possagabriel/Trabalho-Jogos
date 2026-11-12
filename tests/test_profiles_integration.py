@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pygame
 import pytest
 
 from src.core import settings
 from src.core.settings import DEFAULT_CONTROLES
+from src.infrastructure.graphics.comic_theme import usar_visual
 from src.infrastructure.ui.layout import Layout
 from src.runtime.application.core import Jogo
 from src.runtime.domain.entities.powerups import PowerUp
@@ -26,7 +27,7 @@ def test_pilotos_cards_verticais_contidos_e_navegaveis(tmp_path, monkeypatch, ta
     screen = jogo.menu.profile_screen
     screen.refresh()
     screen.draw(pygame.Surface(tamanho))
-    assert len(screen.cards) == jogo.profile_service.max_profiles + 1
+    assert 2 <= len(screen.cards) <= 4
     for card in screen.cards:
         assert card.height > card.width
         assert pygame.Rect((0, 0), tamanho).contains(card)
@@ -40,6 +41,52 @@ def test_pilotos_cards_verticais_contidos_e_navegaveis(tmp_path, monkeypatch, ta
     screen.handle_event(pygame.event.Event(
         pygame.KEYDOWN, key=pygame.K_LEFT, unicode=''))
     assert screen.selection == inicio
+    vistos = set(screen._visible_profile_indices)
+    for indice in range(jogo.profile_service.max_profiles):
+        screen.selection = indice
+        screen.draw(pygame.Surface(tamanho))
+        assert indice in screen._visible_profile_indices
+        vistos.update(screen._visible_profile_indices)
+    assert vistos == set(range(jogo.profile_service.max_profiles))
+
+
+def test_retrato_de_piloto_e_reutilizado_sem_animacao(tmp_path, monkeypatch):
+    monkeypatch.setenv('INCARNATE_DATA_DIR', str(tmp_path))
+    jogo = Jogo(sons=Mock())
+    perfil = jogo.profile_service.create('Ana')
+    jogo.ativar_perfil(perfil.id)
+    screen = jogo.menu.profile_screen
+    screen.refresh()
+    surface = pygame.Surface((jogo.menu.layout.largura, jogo.menu.layout.altura))
+    with patch.object(
+            screen, '_criar_retrato', wraps=screen._criar_retrato) as criar:
+        screen.draw(surface)
+        screen.draw(surface)
+        assert criar.call_count == 1
+
+
+@pytest.mark.parametrize('estilo', ['ORIGINAL', 'COMIC'])
+def test_card_mostra_identidade_e_progresso_do_jogador(tmp_path, monkeypatch, estilo):
+    monkeypatch.setenv('INCARNATE_DATA_DIR', str(tmp_path))
+    jogo = Jogo(sons=Mock())
+    nome = 'W' * jogo.profile_service.max_name_length
+    perfil = jogo.profile_service.create(nome)
+    jogo.ativar_perfil(perfil.id)
+    screen = jogo.menu.profile_screen
+    screen.refresh()
+    jogador = screen._profiles()[0]
+    jogador.progress.update(moedas=4321, dimensao_maxima=4,
+                            bosses_por_tipo={'hexagono': 1, 'mutante': 2})
+    surface = pygame.Surface((jogo.menu.layout.largura, jogo.menu.layout.altura))
+    with usar_visual({'estilo_visual': estilo}), patch.object(
+            screen, '_draw_text', wraps=screen._draw_text) as texto:
+        screen.draw(surface)
+    rotulos = [chamada.args[2] for chamada in texto.call_args_list]
+    partes_nome = [rotulo for rotulo in rotulos if rotulo and set(rotulo) == {'W'}]
+    assert ''.join(partes_nome) == nome
+    assert '4.321 moedas' in rotulos
+    assert '4' in rotulos and '2/6' in rotulos
+    assert '> PILOTO ATIVO' in rotulos
 
 @pytest.mark.parametrize('estilo', ['ORIGINAL', 'COMIC'])
 @pytest.mark.parametrize('flash', ['NORMAL', 'REDUZIDO'])
@@ -218,7 +265,7 @@ def test_new_profile_card_disables_at_configured_limit(tmp_path, monkeypatch):
     assert screen.message == f"Limite de {service.max_profiles} perfis"
     surface = pygame.Surface((jogo.menu.layout.largura, jogo.menu.layout.altura))
     screen.draw(surface)
-    assert len(screen.cards) == service.max_profiles + 1
+    assert 2 <= len(screen.cards) <= 4
     assert screen.cards[-1].bottom <= jogo.menu.layout.altura
 
 

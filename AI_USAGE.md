@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Cards de jogador: nave ampliada e estática em cache, nome completo, estatísticas e ação por piloto; cartões mais largos com paginação por foco. 20 testes direcionados e Ruff aprovados, conferência jogando pendente.
+
 - Codex integrou à main local, por pedido explícito, a main remota com áudio (#78), os cards verticais (#80) e a correção do mundo aberto (#79), resolvendo conflitos de documentação/testes sem descartar nenhum dos fluxos. 173 testes direcionados e Ruff aprovados; sem screenshots, benchmarks ou mudanças adicionais de gameplay.
 
 - Codex reorganizou Pilotos em cartões verticais com nave central, nome em até duas linhas, progresso separado e cartão de criação. Teste de geometria/navegação escrito primeiro; 13 testes direcionados e Ruff aprovados, sem screenshots ou alterações de gameplay. Integração à main local autorizada pelo usuário; conferência jogando pendente.
