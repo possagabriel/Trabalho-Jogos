@@ -24,6 +24,8 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
+- Mundo aberto: fundos preparados por etapas com revelação suave; mapa usa miniaturas na resolução final, sem gerar artes grandes ao abrir. Toca do boss varia e persiste no save; miniboss patrulha coordenadas do mundo sem agendamento LINEAR; recompensas permanecem no drop e continuam coletáveis. Testes direcionados e Ruff aprovados, fluidez em partida real pendente.
+
 - Main local reúne áudio futurista com tiros suaves/impacto, correção da abertura do mundo aberto e cards verticais dos pilotos. Conflitos resolvidos preservando as regressões; 173 testes direcionados e Ruff aprovados. Conferência jogando pendente.
 
 - Pilotos: cartões verticais lado a lado com nave, nome, progresso e indicação ATIVO; navegação por ←/→, mouse e roda preserva criação/CRUD e limite de perfis. 13 testes direcionados e Ruff aprovados, com geometria em 900×700 e 1920×1080; conferência jogando pendente.

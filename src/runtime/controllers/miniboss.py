@@ -48,10 +48,12 @@ class ControladorMiniboss:
     def atualizar(self, dt: float = 1 / FPS) -> None:
         """Executa apenas durante gameplay; bosses principais têm prioridade."""
         jogo = self.jogo
-        novo = jogo.miniboss_spawner.atualizar(
-            dt, jogo.jogador.nivel, jogo.cenario, onda=jogo.ondas_miniboss,
-            bloqueado=jogo.boss is not None or not jogo.jogador.vivo,
-        )
+        novo = None
+        if getattr(jogo, "modo_atual", "linear") != "mundo_aberto":
+            novo = jogo.miniboss_spawner.atualizar(
+                dt, jogo.jogador.nivel, jogo.cenario, onda=jogo.ondas_miniboss,
+                bloqueado=jogo.boss is not None or not jogo.jogador.vivo,
+            )
         if novo is not None:
             jogo.miniboss = novo
             jogo.mensagens.append(MensagemFlutuante(

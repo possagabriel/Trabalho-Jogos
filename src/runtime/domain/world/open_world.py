@@ -87,7 +87,8 @@ class OpenWorldRuntime:
                  visual_config: Mapping[str, Any] | None = None,
                  dimension: int = 1, bosses: int = 0,
                  cooldowns: Mapping[str, object] | None = None,
-                 rng: random.Random | None = None) -> None:
+                 rng: random.Random | None = None,
+                 toca_boss: object = None) -> None:
         self.dimension = max(1, min(6, int(dimension)))
         self.REGION_ID = self.REGION_IDS[self.dimension - 1]
         self.REGION_NAME = CENARIOS[self.dimension - 1]["nome"]
@@ -100,6 +101,7 @@ class OpenWorldRuntime:
             protected=self._protected_zones(),
         )
         self.enemies = self._create_enemies()
+        self.BOSS_LAIR = self._escolher_toca(toca_boss)
         self.SPAWN = self._choose_spawn(position)
         self.x, self.y = position or self.SPAWN
         self.x = max(0.0, min(self.width, float(self.x)))
@@ -139,6 +141,7 @@ class OpenWorldRuntime:
             "censor", self.dimension, self._cenario,
             random.Random(4101 + self.dimension))
         self.miniboss.entrando = False
+        self.miniboss.movimento_livre = self._movimentar_patrulha
         self._miniboss_world = (6300.0, 3300.0)
         self.boss = Boss(self.dimension * 5, self._cenario)
         self.boss.x, self.boss.y = self.BOSS_LAIR
@@ -301,10 +304,43 @@ class OpenWorldRuntime:
             return candidate
         return self.__class__.SPAWN
 
+    def _escolher_toca(self, salva: object = None) -> tuple[float, float]:
+        """Escolhe arena segura por partida; uma continuação conserva a toca salva."""
+        if isinstance(salva, (tuple, list)) and len(salva) == 2:
+            try:
+                x, y = float(salva[0]), float(salva[1])
+                if (math.isfinite(x) and math.isfinite(y)
+                        and 1200 <= x <= self.width - 1200
+                        and 1200 <= y <= self.height - 1200):
+                    return x, y
+            except (TypeError, ValueError):
+                pass
+        for _ in range(150):
+            ponto = (self._rng.uniform(1400, self.width - 1400),
+                     self._rng.uniform(1400, self.height - 1400))
+            if any(math.dist(ponto, hole.position) < hole.influence + 800
+                   for hole in self.anomalies.black_holes):
+                continue
+            if any(math.dist(ponto, portal.position) < 900
+                   for portal in self.anomalies.wormholes):
+                continue
+            if any(math.dist(ponto, (r.x, r.y)) < r.radius + 160
+                   for r in self.asteroids.nearby(*ponto, 220)):
+                continue
+            return ponto
+        return self.__class__.BOSS_LAIR
+
+    def _movimentar_patrulha(self, boss, jogador, dt: float) -> None:
+        """Patrulha uma área do mundo sem depender da câmera ou perseguir a nave."""
+        tempo = boss.t / 60
+        self._miniboss_world = (6300 + math.sin(tempo * 0.42) * 95,
+                               3300 + math.cos(tempo * 0.58) * 48)
+        boss.x, boss.y = self._screen_position(self._miniboss_world)
+
     def _protected_zones(self) -> tuple[tuple[float, float, float], ...]:
         """Reserva áreas fixas para manter IDs dos asteroides estáveis no save."""
         return (
-            (*self.__class__.SPAWN, 440.0), (*self.BOSS_LAIR, 410.0),
+            (*self.__class__.SPAWN, 440.0), (*self.__class__.BOSS_LAIR, 410.0),
             *((*hole.position, hole.influence) for hole in self.anomalies.black_holes),
             *((*portal.position, 320.0) for portal in self.anomalies.wormholes),
         )
@@ -315,7 +351,7 @@ class OpenWorldRuntime:
         tipos = tuple(CENARIOS[self.dimension - 1]["inimigos"])
         patrulhas = []
         safe_positions = (
-            (*self.__class__.SPAWN, 390.0), (*self.BOSS_LAIR, 420.0),
+            (*self.__class__.SPAWN, 390.0), (*self.__class__.BOSS_LAIR, 420.0),
             *((*portal.position, 320.0) for portal in self.anomalies.wormholes),
             *((*hole.position, 300.0) for hole in self.anomalies.black_holes),
         )
@@ -772,6 +808,7 @@ class OpenWorldRuntime:
             "proxima_dimensao": self._pending_dimension or 0,
             "boss_derrotado": self.boss_defeated,
             "asteroides": self.asteroids.cooldowns(),
+            "toca_boss": list(self.BOSS_LAIR),
         }
 
     def advance_dimension(self, game=None) -> bool:
@@ -789,6 +826,7 @@ class OpenWorldRuntime:
             protected=self._protected_zones(),
         )
         self.enemies = self._create_enemies()
+        self.BOSS_LAIR = self._escolher_toca()
         self.SPAWN = self._choose_spawn()
         self.x, self.y = self.SPAWN
         self.vx = self.vy = 0.0
@@ -813,6 +851,7 @@ class OpenWorldRuntime:
             "censor", next_dimension, self._cenario,
             random.Random(4101 + next_dimension))
         self.miniboss.entrando = False
+        self.miniboss.movimento_livre = self._movimentar_patrulha
         self._miniboss_world = (6300.0, 3300.0)
         self.miniboss_active = self.miniboss_defeated = False
         self.boss = Boss(next_dimension * 5, self._cenario)

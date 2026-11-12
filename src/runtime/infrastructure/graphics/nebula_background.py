@@ -2,6 +2,7 @@
 
 import math
 import random
+from collections.abc import Iterator
 
 import pygame
 
@@ -15,9 +16,9 @@ def _amostra(malha: list[list[float]], x: float, y: float) -> float:
     return a * (1 - fy) + b * fy
 
 
-def criar_fundo_nebuloso(tamanho: tuple[int, int], topo: tuple[int, int, int],
+def etapas_fundo_nebuloso(tamanho: tuple[int, int], topo: tuple[int, int, int],
                          base: tuple[int, int, int], acento: tuple[int, int, int],
-                         semente: int, comic: bool) -> pygame.Surface:
+                         semente: int, comic: bool) -> Iterator[pygame.Surface | None]:
     """Compõe gás turbulento, poeira escura e luz indireta em uma base suave.
 
     A composição é preparada em baixa resolução e ampliada uma única vez;
@@ -53,13 +54,17 @@ def criar_fundo_nebuloso(tamanho: tuple[int, int], topo: tuple[int, int, int],
                                        + c * (0.06 + nuvem * 0.68)) * exposicao)
                         for a, b, c in zip(topo, base, luz))
             tela.set_at((x, y), tuple(round(c) for c in cor))
+        if y % 2 == 1:
+            tela.unlock()
+            yield None
+            tela.lock()
     tela.unlock()
-    return pygame.transform.smoothscale(tela, tamanho)
+    yield pygame.transform.smoothscale(tela, tamanho)
 
 
-def desenhar_planeta(tela: pygame.Surface, centro: tuple[int, int], raio: int,
+def etapas_planeta(tela: pygame.Surface, centro: tuple[int, int], raio: int,
                      cor: tuple[int, int, int], *, rings: bool = False,
-                     craters: bool = False) -> None:
+                     craters: bool = False) -> Iterator[None]:
     """Desenha um planeta distante com volume, terminador e atmosfera discreta."""
     x, y = centro
     luz = tuple(min(210, round(c * 1.1 + 20)) for c in cor)
@@ -83,8 +88,30 @@ def desenhar_planeta(tela: pygame.Surface, centro: tuple[int, int], raio: int,
             pixel = tuple(min(180, round(c * (0.08 + difusa * 0.65) * textura + brilho * atmosfera))
                           for c, brilho in zip(cor, luz))
             tela.set_at((x + dx, y + dy), pixel)
+        if dy % 2 == 1:
+            tela.unlock()
+            yield None
+            tela.lock()
     tela.unlock()
     if rings:
         pygame.draw.arc(tela, tuple(round(c * 0.65) for c in luz),
                         (x - raio * 2, y - raio // 3, raio * 4, raio * 2 // 3),
                         math.pi, math.tau, 3)
+
+
+def criar_fundo_nebuloso(tamanho: tuple[int, int], topo: tuple[int, int, int],
+                         base: tuple[int, int, int], acento: tuple[int, int, int],
+                         semente: int, comic: bool) -> pygame.Surface:
+    """Compõe a arte completa para chamadores que preparam recursos fora do frame."""
+    for etapa in etapas_fundo_nebuloso(tamanho, topo, base, acento, semente, comic):
+        if etapa is not None:
+            return etapa
+    raise RuntimeError("Fundo sem composição final")
+
+
+def desenhar_planeta(tela: pygame.Surface, centro: tuple[int, int], raio: int,
+                     cor: tuple[int, int, int], *, rings: bool = False,
+                     craters: bool = False) -> None:
+    """Compõe o planeta completo quando não há orçamento de quadros a respeitar."""
+    for _ in etapas_planeta(tela, centro, raio, cor, rings=rings, craters=craters):
+        pass

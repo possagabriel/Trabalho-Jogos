@@ -1,5 +1,7 @@
 # Registro de uso de IA
 
+- Mundo aberto: fundos preparados por etapas com revelação suave; mapa usa miniaturas na resolução final, sem gerar artes grandes ao abrir. Toca do boss varia e persiste no save; miniboss patrulha coordenadas do mundo sem agendamento LINEAR; recompensas permanecem no drop e continuam coletáveis. Testes direcionados e Ruff aprovados, fluidez em partida real pendente.
+
 - Codex integrou à main local, por pedido explícito, a main remota com áudio (#78), os cards verticais (#80) e a correção do mundo aberto (#79), resolvendo conflitos de documentação/testes sem descartar nenhum dos fluxos. 173 testes direcionados e Ruff aprovados; sem screenshots, benchmarks ou mudanças adicionais de gameplay.
 
 - Codex reorganizou Pilotos em cartões verticais com nave central, nome em até duas linhas, progresso separado e cartão de criação. Teste de geometria/navegação escrito primeiro; 13 testes direcionados e Ruff aprovados, sem screenshots ou alterações de gameplay. Integração à main local autorizada pelo usuário; conferência jogando pendente.

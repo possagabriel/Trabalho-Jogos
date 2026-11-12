@@ -137,6 +137,7 @@ class OpenWorldModeStrategy:
             point, elapsed, game.config, dimension,
             bosses if type(bosses) is int else 0,
             cooldowns if isinstance(cooldowns, dict) else {},
+            toca_boss=state.get("toca_boss", OpenWorldRuntime.BOSS_LAIR),
         )
         pending = state.get("proxima_dimensao", 0)
         if type(pending) is int and dimension < pending <= 6:
