@@ -864,6 +864,30 @@ def test_hud_nativo_fica_abaixo_dos_fades_de_tela():
     assert not jogo._hud_nativo_visivel()
 
 
+def test_pixels_do_mundo_gpu_sao_opacos_sem_srcalpha():
+    from src.runtime.infrastructure.graphics.gpu_renderer import ApresentadorGPU
+
+    apresentador = object.__new__(ApresentadorGPU)
+    superficie = pygame.Surface((8, 8))
+    superficie.fill((20, 40, 60))
+
+    pixels, _ = apresentador._pixels(superficie)
+
+    assert pixels[3] == 255
+
+
+def test_pixels_da_interface_gpu_preservam_alpha():
+    from src.runtime.infrastructure.graphics.gpu_renderer import ApresentadorGPU
+
+    apresentador = object.__new__(ApresentadorGPU)
+    superficie = pygame.Surface((8, 8), pygame.SRCALPHA)
+    superficie.fill((20, 40, 60, 128))
+
+    pixels, _ = apresentador._pixels(superficie)
+
+    assert pixels[3] == 128
+
+
 def test_status_do_shader_distingue_configuracao_e_fallback():
     jogo = Jogo()
     jogo._apresentador_gpu = None

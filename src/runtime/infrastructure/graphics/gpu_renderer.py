@@ -362,14 +362,23 @@ class ApresentadorGPU:
         self._uniforme_1f("saturacao", self.saturacao_shader)
 
     def _pixels(self, superficie):
-        """Retorna o buffer sem copia quando a Surface usa o formato nativo."""
+        """Retorna o buffer sem copia apenas quando a Surface tem alpha real.
+
+        Superficies opacas de 32 bits guardam zero no byte alpha. Envia-las
+        como BGRA faz a textura do mundo desaparecer em drivers exigentes,
+        deixando preto o cenario enquanto o HUD continua visivel.
+        """
         largura, altura = superficie.get_size()
-        if (superficie.get_bytesize() == 4 and
+        if (superficie.get_flags() & pygame.SRCALPHA and
+                superficie.get_bytesize() == 4 and
                 superficie.get_pitch() == largura * 4 and
                 superficie.get_shifts()[:3] == (16, 8, 0)):
             tipo_buffer = ctypes.c_ubyte * (largura * altura * 4)
             return tipo_buffer.from_buffer(superficie.get_view("1")), GL_BGRA
-        return pygame.image.tobytes(superficie, "RGBA"), GL_RGBA
+        pixels = bytearray(pygame.image.tobytes(superficie, "RGBA"))
+        if not superficie.get_flags() & pygame.SRCALPHA:
+            pixels[3::4] = b"\xff" * (largura * altura)
+        return pixels, GL_RGBA
 
     def _enviar_textura(self, textura, superficie):
         glActiveTexture(GL_TEXTURE0)

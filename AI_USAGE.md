@@ -1,6 +1,6 @@
 # Registro de uso de IA
 
-- Codex ajustou a apresentação GPU para compor mundo e interface em uma textura quando o shader comic não está ativo, evitando o fundo preto com HUD visível relatado no notebook. Duas regressões escritas primeiro, 83 testes de core e Ruff aprovados, sem dependências, screenshots ou mudanças de gameplay; conferência na janela real pendente.
+- Codex corrigiu o upload de superfícies opacas na apresentação GPU para garantir alpha 255 quando a surface não tem SRCALPHA, eliminando o fundo preto com HUD visível no LINEAR. Duas regressões escritas primeiro em test_core.py, 85 testes de core e Ruff aprovados, sem dependências ou mudanças de gameplay.
 - Mundo aberto: meteoros escalonados sem salvas em fileira; sete patrulhas distintas por dimensão, população ampliada, avisos fixos no mundo, lacaios persistentes e derrotas salvas. 187 testes direcionados e Ruff aprovados; playtest de ritmo e dificuldade pendente.
 - Arsenal com grade responsiva, ícones e prévia lateral; ↑/↓ percorrem fileiras e seções mantendo a coluna, ←/→ e WASD navegam, Esc fecha. Armas/especiais equipados ficam identificados. 123 testes direcionados e Ruff aprovados, conferência jogando pendente.
 

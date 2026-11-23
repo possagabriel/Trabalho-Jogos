@@ -24,7 +24,7 @@ e funcionalidades está em [auditoria de integração](docs/integration-2026-10-
 
 ## Em validação
 
-- Apresentação GPU sem shader compõe mundo e interface em uma única textura, evitando fundo preto com HUD visível ao entrar na LINEAR em notebooks com PyOpenGL; 83 testes de core e Ruff aprovados, conferência na janela real pendente.
+- Apresentação GPU garante canal alpha opaco (255) para superfícies sem SRCALPHA no upload para textura, evitando fundo preto com HUD visível no LINEAR sob PyOpenGL; 85 testes de core e Ruff aprovados; conferência na janela real pendente.
 - Mundo aberto: meteoros escalonados sem salvas em fileira; sete patrulhas distintas por dimensão, população ampliada, avisos fixos no mundo, lacaios persistentes e derrotas salvas. 187 testes direcionados e Ruff aprovados; playtest de ritmo e dificuldade pendente.
 - Arsenal com grade responsiva, ícones e prévia lateral; ↑/↓ percorrem fileiras e seções mantendo a coluna, ←/→ e WASD navegam, Esc fecha. Armas/especiais equipados ficam identificados. 123 testes direcionados e Ruff aprovados, conferência jogando pendente.
 
