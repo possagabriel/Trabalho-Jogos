@@ -813,6 +813,34 @@ def test_hud_nativo_recria_canvas_apenas_quando_muda_a_area():
     assert jogo._hud_superficie_nativa is not anterior
 
 
+def test_apresentador_gpu_sem_shader_compoe_mundo_e_interface_em_uma_textura():
+    jogo = Jogo()
+    jogo.config["estilo_visual"] = "ORIGINAL"
+    jogo._apresentador_gpu = mock.Mock()
+    composto = jogo._quadro_composto()
+
+    jogo._apresentar()
+
+    args, kwargs = jogo._apresentador_gpu.apresentar.call_args
+    assert args[0] is composto
+    assert kwargs["interface"] is None
+
+
+def test_apresentador_gpu_com_shader_preserva_interface_separada():
+    jogo = Jogo()
+    jogo.config["estilo_visual"] = "COMIC"
+    jogo.config["shader_comic"] = True
+    jogo._apresentador_gpu = mock.Mock()
+    jogo._apresentador_gpu.shader_disponivel = True
+    jogo.shader_comic_ativo = mock.Mock(return_value=True)
+
+    jogo._apresentar()
+
+    args, kwargs = jogo._apresentador_gpu.apresentar.call_args
+    assert args[0] is jogo.tela
+    assert kwargs["interface"] is jogo.tela_ui
+
+
 def test_apresentador_cpu_compoe_hud_nativo_no_viewport():
     jogo = Jogo()
     jogo.janela = pygame.Surface((1280, 720))

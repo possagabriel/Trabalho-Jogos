@@ -622,8 +622,14 @@ class Jogo:
 
     def _apresentar_gpu(self, destino, tamanho_janela,
                         efeito_borda=None) -> None:
-        """Envia mundo e UI ao apresentador conforme a opção de preservação."""
-        preservar = self.config["preservar_interface"]
+        """Envia mundo e UI ao apresentador conforme a opção de preservação.
+
+        Sem shader ativo não há acabamento do qual preservar a interface. Nesse
+        caso o mundo e a UI viajam em uma única textura: drivers que falham ao
+        atualizar a textura do mundo deixariam o fundo preto com o HUD visível.
+        """
+        preservar = bool(
+            self.config["preservar_interface"] and self.shader_comic_ativo())
         quadro = self.tela if preservar else self._quadro_composto()
         interface = self.tela_ui if preservar else None
         self._apresentador_gpu.apresentar(
