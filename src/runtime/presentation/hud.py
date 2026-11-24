@@ -596,6 +596,7 @@ class HudJogo:
                       else f"ABATA INIMIGOS {min(99, int(carga * 100))}%")
             barra_especial = carga
         return {
+            "modo": getattr(jogo, "modo_atual", "linear"),
             "nome": getattr(jog, "nome", "PILOTO 01"),
             "vida": jog.vida,
             "vida_max": jog.max_vida,
@@ -871,20 +872,19 @@ class HudJogo:
         area = painel.inflate(-layout.px(24), 0)
         area.height = layout.px(20)
         area.y += layout.px(12)
-        self._texto(
-            tela,
-            f"SETOR {d['cenario']:02d}  /  ONDA {d['nivel']:02d}",
-            area,
-            self._f_titulo_xs,
-            CINZA_HUD,
-            "centro",
+        cabecalho = (
+            f"MUNDO ABERTO // DIMENSÃO {d['cenario']:02d}"
+            if d.get("modo") == "mundo_aberto"
+            else f"SETOR {d['cenario']:02d}  /  ONDA {d['nivel']:02d}"
         )
+        self._texto(tela, cabecalho, area, self._f_titulo_xs, CINZA_HUD, "centro")
         area.y += layout.px(24)
         self._texto(
             tela, d["regiao"].upper(), area, self._f_titulo_s, self._paleta["primaria"], "centro"
         )
-        barra = pygame.Rect(area.x, area.bottom + layout.px(10), area.w, layout.px(3))
-        _barra_fina(tela, layout, barra, d["progresso"], self._paleta["primaria"], brilho=False)
+        if d.get("modo") != "mundo_aberto":
+            barra = pygame.Rect(area.x, area.bottom + layout.px(10), area.w, layout.px(3))
+            _barra_fina(tela, layout, barra, d["progresso"], self._paleta["primaria"], brilho=False)
 
     def _base_esquerda(self, tela, d, t):
         layout = self.layout

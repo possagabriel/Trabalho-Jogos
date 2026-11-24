@@ -2,9 +2,23 @@
 
 Origem: cinco imagens originais geradas com a ferramenta integrada image_gen, a pedido do usuário, em 2026-11-06. Sem imagens de referência externas fornecidas. Distribuídas sob a licença do repositório (LICENSE). Os arquivos anteriores foram preservados.
 
+Em 2026-11-23 foram adicionadas três artes originais para Cinturão de Íons, Arquivo Estelar e Horizonte Fractal, geradas com image_gen a pedido do usuário. São usadas como fundo da campanha e prévia do lobby, preservando o centro livre e a composição 16:9. Distribuídas sob a licença do repositório (LICENSE).
+
 Uso: prévias do lobby e cenários da campanha, com centro livre e pontos de interesse nas bordas. Acabamento COMIC aplicado pelo pipeline existente.
 
 ## Prompts finais
+
+### ion.png
+
+Arte panorâmica de ficção científica para INCARNATE: cinturão de asteroides carregados de energia azul-violeta em torno de um planeta distante, arcos de íons luminosos e formações rochosas nas bordas, centro escuro amplo para gameplay, sem texto ou interface.
+
+### arquivo.png
+
+Arte panorâmica de ficção científica para INCARNATE: arquivo celestial ancestral com monólitos de pedra escura flutuantes, anéis orbitais elegantes e constelações turquesa discretas, estruturas monumentais nas bordas e centro escuro amplo para gameplay, sem texto ou interface.
+
+### horizonte.png
+
+Arte panorâmica de ficção científica para INCARNATE: horizonte espacial impossível com penhascos fractais angulares e arcos geométricos recuando até uma singularidade distante, luz magenta e ciano nas bordas, centro escuro amplo para gameplay, sem texto ou interface.
 
 ### lealdade.png
 

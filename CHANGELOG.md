@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Fundos ilustrados exclusivos para Cinturão de Íons, Arquivo Estelar e Horizonte Fractal, exibidos na campanha e nas prévias do lobby.
+
+### Fixed
+- HUD do mundo aberto identifica a dimensão e deixa de exibir onda e progresso do modo LINEAR.
+
 ### Fixed
 - Apresentação GPU: sem shader ativo, mundo e interface voltam a uma única textura, evitando fundo preto com HUD visível ao entrar na LINEAR em notebooks com PyOpenGL. 83 testes de core e Ruff aprovados; conferência jogando pendente.
 - Mundo aberto: corrigido fechamento no primeiro desenho da nave com Configuracoes real, usando acesso por chave e fallback; regressão de clique, atualização, desenho e retomada em ORIGINAL/COMIC com efeitos normais/reduzidos. 75 testes direcionados e Ruff aprovados; conferência jogando pendente.

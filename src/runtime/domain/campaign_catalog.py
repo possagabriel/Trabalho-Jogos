@@ -10,9 +10,9 @@ FASES_CAMPANHA = (
     ("silencio", "Silêncio", "fases/silencio.png"),
     ("descarte", "Descarte", "fases/descarte.png"),
     ("plano_divino", "Plano Divino", "imagem-fundo4.png"),
-    ("ion", "Cinturão de Íons", "procedural:7"),
-    ("arquivo", "Arquivo Estelar", "procedural:8"),
-    ("horizonte", "Horizonte Fractal", "procedural:9"),
+    ("ion", "Cinturão de Íons", "fases/ion.png"),
+    ("arquivo", "Arquivo Estelar", "fases/arquivo.png"),
+    ("horizonte", "Horizonte Fractal", "fases/horizonte.png"),
 )
 
 
