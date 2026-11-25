@@ -121,6 +121,24 @@ def test_mundo_aberto_reserva_topo_direito_para_o_minimapa(monkeypatch):
     assert chamadas
 
 
+def test_cabecalho_mundo_aberto_nao_mostra_onda_ou_progresso_linear(monkeypatch):
+    jogo = JogoFake()
+    jogo.modo_atual = "mundo_aberto"
+    hud = _hud()
+    hud._paleta = hud_runtime._paleta_fase(jogo.cenario)
+    textos = []
+    barras = []
+    monkeypatch.setattr(hud, "_texto", lambda _tela, texto, *_args, **_kwargs:
+                        textos.append(str(texto)))
+    monkeypatch.setattr(hud_runtime, "_barra_fina",
+                        lambda *_args, **_kwargs: barras.append(True))
+
+    hud._topo_centro(_tela(), hud._dados(jogo), 0)
+
+    assert textos == ["MUNDO ABERTO // DIMENSÃO 03", "DEEP SPACE"]
+    assert not barras
+
+
 def test_monitor_de_desempenho_e_renderizado_quando_habilitado():
     jogo = JogoFake()
     jogo.config = {

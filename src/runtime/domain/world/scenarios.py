@@ -36,8 +36,7 @@ def _superficie_alpha(raio, cor):
 # Imagens de fundo por cenario (na pasta images/)
 # ---------------------------------------------------------------------------
 
-# As cinco fases do lobby compartilham suas artes com a campanha.
-# A sexta dimensão mantém o cenário existente.
+# As fases do lobby compartilham suas artes com a campanha.
 _FUNDO_PADRAO = "imagem-fundo.png"
 _FUNDO_POR_CENARIO = {
     1: "fases/lealdade.png",
@@ -46,6 +45,9 @@ _FUNDO_POR_CENARIO = {
     4: "fases/silencio.png",
     5: "fases/descarte.png",
     6: "imagem-fundo4.png",
+    7: "fases/ion.png",
+    8: "fases/arquivo.png",
+    9: "fases/horizonte.png",
 }
 
 _FUNDO_COMIC_POR_CENARIO = {
@@ -97,7 +99,7 @@ def _imagem_fundo(cenario_id=None, *, comic: bool = False):
     Cada cenario usa a imagem mapeada em ``_FUNDO_POR_CENARIO``; os demais
     usam ``_FUNDO_PADRAO``. Retorna ``None`` se o arquivo nao existir.
     """
-    if cenario_id is not None and cenario_id > 6:
+    if cenario_id is not None and cenario_id > 9:
         return None
     catalogo = _FUNDO_COMIC_POR_CENARIO if comic else _FUNDO_POR_CENARIO
     nome = catalogo.get(cenario_id, _FUNDO_POR_CENARIO.get(cenario_id, _FUNDO_PADRAO))

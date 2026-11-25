@@ -91,6 +91,15 @@ def test_parallax_usa_fundo_original_com_veu(monkeypatch):
     assert luma_com_veu < luma_sem_veu * 0.8
 
 
+@pytest.mark.parametrize("cenario_id", [7, 8, 9])
+def test_ultimas_fases_carregam_artes_proprias(cenario_id):
+    pygame.init()
+    imagem = scenarios._imagem_fundo(cenario_id)
+
+    assert imagem is not None
+    assert imagem.get_size() == (scenarios.LARGURA, scenarios.ALTURA)
+
+
 @pytest.mark.parametrize("com_parallax", [False, True])
 def test_comic_preserva_pixels_com_e_sem_veu(monkeypatch, com_parallax):
     pygame.init()

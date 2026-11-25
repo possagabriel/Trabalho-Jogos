@@ -8,6 +8,7 @@ import pytest
 from game.phase_select import PhaseStatus, get_phase_status
 from src.infrastructure.graphics.comic_theme import usar_visual
 from src.runtime.application.core import Jogo
+from src.runtime.domain.campaign_catalog import FASES_CAMPANHA
 from src.runtime.domain.entities.bosses import BOSSES_POR_CENARIO, Boss
 from src.runtime.domain.entities.player import Jogador
 from src.runtime.domain.world.scenarios import CENARIOS, Cenario, cenario_do_nivel
@@ -27,7 +28,10 @@ def test_novas_fases_tem_boss_proprio_e_ataque_distinto(cenario, nivel):
     tiros = boss._executar_ataque(boss.ataques[0], Jogador(), 500, 160)
     assert len(tiros) >= 3
     assert all(0 < (t.vel_x ** 2 + t.vel_y ** 2) ** 0.5 <= 5 for t in tiros)
-    assert mundo.fundo_imagem is None
+    assert mundo.fundo_imagem is not None
+    assert FASES_CAMPANHA[cenario - 1][2] == (
+        f"fases/{ {7: 'ion', 8: 'arquivo', 9: 'horizonte'}[cenario] }.png"
+    )
 
 
 def test_lobby_libera_e_retoma_as_tres_fases_novas(tmp_path, monkeypatch):
